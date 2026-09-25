@@ -688,19 +688,39 @@ every point.
 > drawn (D-078's rule). Months with fewer than three closings are a **gap in the line, not a zero** —
 > a zero would draw a crash that did not happen.
 >
-> **What it costs in page space, measured, and it is too much as laid out today:**
+> **What it costs in page space — measured twice, and the first answer is void.**
+>
+> Under the OLD architecture the chart took page 1's entire listing set and added a page (2 → 3,
+> `[3, 6]` → `[0, 6, 3]`). That was measured before §7.1 variant A moved the masthead into the
+> body, and it is recorded here only because the reversal is the point: **re-measured under variant
+> A, the chart is free.**
 >
 > | | pages | listings per page |
 > |---|---|---|
-> | `market_snapshot` without the chart | 2 | 3, 6 |
-> | `market_snapshot` with the chart | **3** | **0**, 6, 3 |
+> | `market_snapshot` without the chart | 2 | 0, 9 |
+> | `market_snapshot` with the chart | **2** | **0, 9** |
 >
-> A 180px chart takes page 1's entire listing set and adds a page — the same shape as the
-> eight-line narrative box, and the same answer: **do not commit the spec to this height.** The
-> chart is built and correct; where it goes is not settled, and it should not be settled before
-> §7.1's masthead move, which changes what page 1 holds. The options are a shorter chart, the chart
-> in place of the hero stat rather than alongside it, or `market_snapshot` accepting three pages —
-> and only the first is free.
+> Nothing moves, because page 1 already cannot fit a row of cards and the chart lands in space that
+> was going to waste. **This is what "do not settle placement on numbers measured under the old
+> architecture" meant in practice** — the same chart, the same fixture, opposite answers.
+>
+> **The page-1 budget, which is what makes the free lunch conditional:**
+>
+> | page 1 of `market_snapshot` | | |
+> |---|---|---|
+> | masthead | 1.39in | 14% |
+> | hero stat | 1.14in | 12% |
+> | narrative box | 1.42in | 15% |
+> | stats bar | 2.42in | 25% |
+> | section heading + note | 0.78in | 8% |
+> | **before a single listing** | **7.15in** | **74%** |
+> | free | 2.52in | |
+> | a row of three cards | 2.77in | **short by 0.25in** |
+>
+> So the chart is free *while* page 1 is 0.25in short of a card row. Recover that 0.25in — from
+> 3.56in of metric blocks carrying six numbers — and a row of three listings comes back, and the
+> chart stops being free. **Those are one decision, not two**, and it is the decision D-102 is
+> already waiting on.
 
 **Effort: L.** Blocked by A and by open decision 01.
 

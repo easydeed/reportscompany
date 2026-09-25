@@ -526,6 +526,13 @@ class MarketReportBuilder:
             # it so the gradient flows from the agent's brand identity correctly.
             "header_bg": _darken(primary_color, 0.35),
             "report_title": header_ctx.get("title") or "Market Report",
+            # The running head carries the BRAND; the page-1 masthead carries
+            # the report title. They used to carry the same words 40px apart.
+            "brand_name": (
+                (self.report_data.get("branding") or {}).get("company_name")
+                or (self.report_data.get("branding") or {}).get("agent_name")
+                or ""
+            ),
             "city": header_ctx.get("city") or "",
             "lookback_days": header_ctx.get("lookback_days") or 30,
             "subtitle_text": subtitle_text,

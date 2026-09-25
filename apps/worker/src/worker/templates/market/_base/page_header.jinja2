@@ -79,7 +79,16 @@
 </head>
 <body>
 <div class="running-head">
-  <span class="rh-name">{{ report_title }}{% if city %} <span class="rh-city">— {{ city }}</span>{% endif %}</span>
+  {# BRAND ON THE LEFT, NOT THE REPORT TITLE. The masthead directly below this
+     on page 1 already says the title, and the first version of this band said
+     it again within 40px. On page 4 the useful thing is whose report this is,
+     not a re-announcement of a title the reader has already read. Falls back to
+     the agent's own name when there is no company, and to the title only when
+     there is neither — a band with nothing in it is worse than a repeat. #}
+  <span class="rh-name">
+    {{- brand_name or report_title -}}
+    {% if city %} <span class="rh-city">— {{ city }}</span>{% endif %}
+  </span>
   {% if total_count %}
   <span class="rh-meta">{{ total_count }} {{ report_title }}</span>
   {% endif %}

@@ -5011,6 +5011,37 @@ Whichever is chosen, the capacities are pinned in
 `apps/worker/tests/test_narrative_box.py::PAGE_1_CAPACITY` (what page 1 holds), so the two cannot
 drift apart again without the suite saying so.
 
+**THE BREAKDOWN, 2026-09-25 — and it sharpens the question rather than answering it.** After §7.1
+variant A, `market_snapshot`'s page 1 holds **zero** listings, with all nine on page 2. That is a
+count; here is what is actually on the page, measured element by element with margins included:
+
+| page 1 of `market_snapshot` | | |
+|---|---|---|
+| masthead | 1.39in | 14% |
+| hero stat | 1.14in | 12% |
+| narrative box | 1.42in | 15% |
+| stats bar | 2.42in | 25% |
+| section heading + truncation note | 0.78in | 8% |
+| **used before a single listing** | **7.15in** | **74%** |
+| free | 2.52in | |
+| a row of three cards | 2.77in | |
+
+**Page 1 misses its card row by 0.25in.** Not by a page, not by half a page — by a quarter inch out
+of nine and two thirds. And **3.56in of page 1, 37%, is two metric blocks presenting six numbers**
+(`hero-stat` 1.14in and `stats-bar` 2.42in).
+
+So there are two different questions hiding in "how many listings should page 1 hold":
+
+1. **Is the metrics block too tall?** Trimming 0.25in — 10% off the stats bar, or 7% across both —
+   puts a row of three listings back on page 1 without touching the cap, the layout or the sample.
+2. **What should page 1 be?** Masthead, metrics and narrative with every listing on page 2 may be
+   the better document: a cover page that reads, then the inventory. That is a deliberate choice,
+   and it is available for free today.
+
+**And it is entangled with §7.3's chart.** Measured: the trend chart costs `market_snapshot`
+nothing at all right now — 2 pages either way — because it lands in the 2.52in that is going to
+waste. Recover the 0.25in and the chart stops being free. **One decision, not three.**
+
 ---
 
 ### D-103 — every continuation page pays for a full masthead, and the space reserved for it is larger than the masthead

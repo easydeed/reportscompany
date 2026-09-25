@@ -128,3 +128,37 @@ def test_the_pdfshift_margins_are_zero_because_the_documents_carry_their_own():
         )
     assert '.rh-gap' in (MARKET / "page_header.jinja2").read_text(encoding="utf-8")
     assert '.pf-gap' in (MARKET / "page_footer.jinja2").read_text(encoding="utf-8")
+
+
+# ── the running head's content ───────────────────────────────────────────────
+
+def _running_head(branding):
+    from worker.market_builder import MarketReportBuilder
+    data = {"report_type": "closed", "city": "Irvine", "lookback_days": 30,
+            "listings": [], "metrics": {}, "counts": {"Closed": 40},
+            "branding": branding}
+    html = MarketReportBuilder(data).render_page_header_html()
+    return re.search(r'<span class="rh-name">(.*?)</span>\s*</span>', html, re.S).group(1)
+
+
+def test_the_running_head_carries_the_brand_not_the_report_title():
+    """They used to say the same words 40px apart on page 1.
+
+    On page 4 the useful thing is whose report this is; the report title is
+    already on page 1's masthead, and the count in the band's right slot still
+    names it in passing.
+    """
+    head = _running_head({"company_name": "Luxury Estates Realty",
+                          "agent_name": "Jennifer Martinez", "primary_color": "#1B365D"})
+    assert "Luxury Estates Realty" in head
+    assert "Closed Sales" not in head, "the band is repeating the masthead's headline"
+
+
+def test_the_running_head_falls_back_to_the_agent_then_to_the_title():
+    """A band with nothing in it is worse than a repeat, so the fallback chain
+    has to be exercised rather than assumed."""
+    agent_only = _running_head({"agent_name": "Jennifer Martinez", "primary_color": "#1B365D"})
+    assert "Jennifer Martinez" in agent_only
+
+    neither = _running_head({"primary_color": "#1B365D"})
+    assert "Closed Sales" in neither, "with no brand at all the band must not be empty"
