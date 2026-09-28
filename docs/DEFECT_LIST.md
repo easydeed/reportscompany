@@ -7,7 +7,7 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-23, against `feat/workstream-c-consolidation`, cut from `main` at `8ae1e6b`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-24, against `feat/workstream-d-market-pdfs`, cut from `main` at `850e2dd`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 33 | Real, unfixed |
-| `fixed` | 63 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 36 | Real, unfixed |
+| `fixed` | 68 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **100** | D-001 … D-100, contiguous, no duplicates |
+| **Total** | **108** | D-001 … D-108, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 14. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 16. (Sums to 36, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4858,6 +4858,901 @@ that test's expected set becoming empty.
 ---
 
 
+### D-101 — the "view in browser" link on a market report opened a different build than the PDF
+
+**Severity:** WRONG · **Affects:** every market report — `report_generations.html_url`, surfaced in the app in three places
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`, code + migration 0057
+
+One report, two renderings, and a customer could open both.
+
+**The PDF** is built by `MarketReportBuilder` (`tasks.py:1676-1708`), server-side, from
+`templates/market/`. It is the only market-report PDF path: all three `render_pdf` call sites in
+the worker pass `html_content`, so the `html_content=None` branch that navigates to
+`/print/{run_id}` has no caller.
+
+**The link was that URL anyway.** `render_pdf` built `print_url = f"{effective_base}/print/{run_id}"`
+unconditionally and returned it whether or not the render had come from it (`pdf_engine.py:83`
+and `:163`). Confirmed by reading both renderers end to end: **when `html_content` is passed,
+`print_url` is used for nothing inside either function.** It is not in the PDFShift payload, not
+navigated to, not logged as the source — it is only returned. The docstring called it *"the
+URL/HTML that was rendered"*, which in that case it was not. `tasks.py:1700,1750` wrote it to
+`report_generations.html_url`.
+
+**That route renders the legacy build**: `apps/web/app/print/[runId]/page.tsx:141-148` maps each
+report type to one of the seven `apps/web/templates/trendy-*.html` files and a builder in
+`apps/web/lib/templates.ts`. The differences are not cosmetic:
+
+| | PDF (`MarketReportBuilder`) | that route (`/print/{runId}`) |
+|---|---|---|
+| table rows per page | 13 on page 1, then 25 — CSS flow | fixed 15 (`ROWS_PER_PAGE = 15`, three call sites) |
+| gallery cards per page | 6 then 9 | fixed 6 (`CARDS_PER_PAGE = 6`) |
+| branding | themed header, Outfit, AI narrative | none of those — `tasks.py:1592` says the legacy path *"produced unbranded PDFs missing the Outfit font, themed header, and AI narrative"* |
+| `open_houses` | its own gallery render | reuses the inventory template (`page.tsx:146`) |
+
+**CORRECTION to this entry as first filed.** It said the link was *"shown in the app and sent to
+customers"*. The second half was taken from `apps/worker/ENV_TEMPLATE.md:62`, which describes it
+as a *"view in browser"* link *"shown to customers"* — prose, not code. **The email does not carry
+it.** `email/send.py:182-216` builds the CTA from `pdf_url`, so the email and its attachment agree.
+The exposure is the app UI (`components/report-builder/index.tsx:213`,
+`app/app/reports/[id]/page.tsx:292`, `app/app/reports/page.tsx:107`) and the `report.completed`
+webhook payload (`tasks.py:1943`). Narrower than filed, and worth correcting rather than leaving a
+claim sourced from a doc.
+
+**The fix, both halves.**
+
+1. **`render_pdf` no longer returns a URL that rendered nothing.** The second element of its return
+   is now `None` whenever `html_content` was passed, in both engines, with the reason at the
+   return and at the call site. `apps/worker/tests/test_pdf_source_url.py` asserts both directions
+   — the HTML path returns None *and* the URL path still returns its URL, because a test for the
+   first alone also passes against a function that returns None always. Three regressions applied
+   and seen to fail: each engine reverted to the old behaviour, and the over-correction.
+2. **Migration 0057 clears the rows already written.** The code fix is forward-only; every existing
+   row keeps its link and the app keeps showing it. `0057_clear_stale_view_in_browser_links.sql`
+   nulls `html_url` where it matches the print path. Nothing is lost that cannot be reconstructed
+   from the row's own id — and what would be reconstructed is the wrong document.
+
+**The link is now gone rather than corrected, and that is a product gap, not a fix.** Restoring
+"view in browser" means serving the `html_content` that was actually rendered — it is already
+self-contained, with images base64-embedded before the PDF call — at a URL. That is separate work
+and not filed as a defect, because nothing is currently wrong; something is merely absent.
+
+**ANSWERED 2026-09-24 — `INTERNAL_RENDER_TOKEN` is NOT set** (Jerry, from recollection; asked to
+confirm from the Vercel dashboard, and this entry should be updated with which it was).
+`apps/api/ENV_TEMPLATE.md:95` says that when it is empty the data route is disabled and
+`/print/{runId}` renders *"Report Not Found"*.
+
+**So the realised harm is zero.** Nobody ever saw the legacy build through this path — a customer
+clicking "view in browser" got an error page, not a different report. The defect was real and the
+exposure was not, and those are worth recording as two separate facts rather than one. It also
+means migration 0057 removes an error page rather than a wrong document, and the second thing this
+answer might have created — chasing who saw what — does not exist.
+
+**An evidence-class note, because this entry got it wrong once already.** Both halves of this
+paragraph and the "sent to customers" claim corrected above come from `ENV_TEMPLATE.md`, which is
+prose about runtime behaviour. It was right this time and wrong last time, and neither outcome
+makes it evidence. It is the same class as reading a docs page for production's Postgres version
+(§0.6, *a description of what code does is a hypothesis*): a documented environment variable is a
+statement about a deployment, and only the deployment can confirm it. Hence the ask to check the
+dashboard rather than closing on the recollection.
+
+**Do not resolve the route by deleting it.** `docs/DEAD_CODE.md:34` exists because two separate
+documents declared `/print/[runId]` removed while it was live. This entry is evidence it is live in
+a way neither considered — reachable by a person, not by the renderer.
+
+### D-102 — the three report types documented as one page all render two
+
+**Severity:** ROUGH · **Affects:** `market_snapshot`, `price_bands`, `featured_listings` PDFs
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`; page-1 composition decided and built
+
+`market_builder.PDF_CONFIG` splits the eight types into two modes in its own comment:
+
+> SNAPSHOT (**1-page**, curated sample): market_snapshot, price_bands, featured_listings
+> CATALOG (multi-page, ALL matching listings): closed, inventory, new_listings, new_listings_gallery, open_houses
+
+Measured through the production path — `MarketReportBuilder` → Letter with PDFShift's reservations
+(1.4in top, 1.0in bottom) → Chromium's paginator, `scripts/measure_market_pagination.py`:
+
+| report type | cap | pages | listings per page |
+|---|---|---|---|
+| `market_snapshot` | 9 | **2** | 3, 6 |
+| `price_bands` | 8 | **2** | 4, 4 |
+| `featured_listings` | 12 | **2** | 6, 6 |
+
+All three spill. The caps are set as though the first page held the whole sample and it does not:
+page 1 carries the hero stat, the section header and the narrative, so it holds roughly a third to
+a half of what a continuation page holds.
+
+**The measurement is conservative.** The fixture renders with `photo_url: None` because the
+container has no network. Real listings carry photos, which make cards taller, so a real render
+cannot be shorter than this one.
+
+**MEASURED 2026-09-24 — page 2 is pure listing spillover, and it is not a few orphans.** Asked
+directly: is page 2 a whole section, or a couple of rows that did not fit? Neither. Extracting
+page 2's text for each type, it contains **nothing but listing cards** — no heading, no section, no
+footer content — and it holds between a half and two thirds of the sample:
+
+| report type | cap | page 1 | page 2 | page 2 contains |
+|---|---|---|---|---|
+| `market_snapshot` | 9 | 3 | **6** | six listing cards, nothing else |
+| `price_bands` | 8 | 4 | **4** | four listing cards, nothing else |
+| `featured_listings` | 12 | 6 | **6** | six listing cards, nothing else |
+
+So the config is wrong rather than the pagination: the caps are two to three times what page 1
+holds. They were set to the size of a good sample without anyone measuring the page it had to fit
+on.
+
+**Page-1 capacity is now a fixed number, which makes the cap a decision someone can actually
+make.** Before §7.2's narrative box was fixed, capacity moved with the copy and there was no number
+to set a cap against. It is now pinned per type in
+`apps/worker/tests/test_narrative_box.py::PAGE_1_CAPACITY` — 3 for `market_snapshot` and
+`price_bands`, 6 for `featured_listings`, with a narrative.
+
+**THE DECISION, IN THE TERMS IT SHOULD BE DECIDED IN — [JERRY].** This is not a pagination target
+and it is not blocking anything. It is one trade, and both sides are already measured, so it can be
+settled without re-deriving any of it:
+
+| | keep the cap | cut the cap to page-1 capacity |
+|---|---|---|
+| `market_snapshot` | 9 listings, **2 pages** | 3 listings, **1 page** |
+| `price_bands` | 8 listings, **2 pages** | 3 listings, **1 page** |
+| `featured_listings` | 12 listings, **2 pages** | 6 listings, **1 page** |
+
+**Page count against sample size, and nothing else moves.** Cutting the cap does not change the
+layout, the metrics, the narrative or the branding — only how many listings the agent's client
+sees. Keeping it does not break anything either; it makes `PDF_CONFIG`'s own "1-page" comment
+false, which is what this entry is.
+
+A third answer is available and costs nothing: keep the caps and **correct the comment** to say
+these are two-page reports. That closes the defect as filed — a comment disagreeing with the
+renderer — and leaves the product exactly as it is.
+
+Whichever is chosen, the capacities are pinned in
+`apps/worker/tests/test_market_layout_map.py` (caps) and
+`apps/worker/tests/test_narrative_box.py::PAGE_1_CAPACITY` (what page 1 holds), so the two cannot
+drift apart again without the suite saying so.
+
+**THE BREAKDOWN, 2026-09-25 — and it sharpens the question rather than answering it.** After §7.1
+variant A, `market_snapshot`'s page 1 holds **zero** listings, with all nine on page 2. That is a
+count; here is what is actually on the page, measured element by element with margins included:
+
+| page 1 of `market_snapshot` | | |
+|---|---|---|
+| masthead | 1.39in | 14% |
+| hero stat | 1.14in | 12% |
+| narrative box | 1.42in | 15% |
+| stats bar | 2.42in | 25% |
+| section heading + truncation note | 0.78in | 8% |
+| **used before a single listing** | **7.15in** | **74%** |
+| free | 2.52in | |
+| a row of three cards | 2.77in | |
+
+**Page 1 misses its card row by 0.25in.** Not by a page, not by half a page — by a quarter inch out
+of nine and two thirds. And **3.56in of page 1, 37%, is two metric blocks presenting FIVE numbers**
+(`hero-stat` 1.14in and `stats-bar` 2.42in). *An earlier note here said six; it is five, counted
+off the markup.*
+
+**WHAT THE FIVE ARE, AND WHETHER ANY IS SAID TWICE.**
+
+| block | figure | set at |
+|---|---|---|
+| `hero-stat` | Median Sale Price | 56px |
+| `stats-bar` | Avg Days on Market · Months of Inventory (+ pace) · Price per Sq Ft · List-to-Sale Ratio | 14px |
+
+**Nothing is duplicated.** The hero carries a figure the stats bar does not, and no stats row
+restates another. So on the face of it the trim is a trade rather than a free saving.
+
+**It is not, and this is the part that decides it: the 0.25in is available entirely from
+whitespace.**
+
+| | |
+|---|---|
+| `stats-bar` own top + bottom margins | **0.50in** |
+| the four rows together | 1.90in (0.474in each: 14px of text in 10px/10px padding) |
+| the shortfall to recover | **0.25in** |
+
+The stats bar's own margins are twice the shortfall, on a block that already sits between two
+others carrying their own spacing. Halving them — 24px to 12px — recovers the quarter inch exactly
+and **removes no information at all**. Trimming the hero's 56px figure, or the rows' 10px padding,
+are two further sources of the same order.
+
+So the decision is not "which number do we drop". It is "is 24px of margin above and below the
+stats bar worth more than three listings on page 1", and it can be taken without touching the cap,
+the layout or the sample.
+
+---
+
+**THE TRIM WAS TAKEN, AND IT DID NOT WORK. THE REASON IS THE FINDING.** 2026-09-25.
+
+`.stats-bar`'s margins went 24px to 12px. It recovers exactly what it was measured to recover, and
+page 1 still holds zero listings:
+
+| | free on page 1 | a row of three | |
+|---|---|---|---|
+| before the trim | 2.519in | 2.772in | short by 0.253in |
+| after the trim | 2.769in | 2.772in | **short by 0.003in** |
+
+Three thousandths of an inch. The obvious move is to shave 1px off something else, and that is the
+move to refuse: **a layout that fits by 0.003in is a coincidence, not a fit.** Before taking it, the
+question is what varies — and the answer is that page 1's chrome varies by far more than the
+slack being fought over.
+
+**THE MASTHEAD WRAPS ON THE CITY NAME**, measured:
+
+| | masthead | used on page 1 | a row of three |
+|---|---|---|---|
+| Irvine | 1.21in | 6.90in | short by 0.003in |
+| **Rancho Santa Margarita** | **1.51in** | 7.20in | **short by 0.303in** |
+| Irvine, long filter label | 1.38in | 7.07in | short by 0.175in |
+| with an agent logo | 1.21in | 6.90in | short by 0.003in |
+
+A two-line title costs 0.30in — a hundred times the slack. So a trim sized to make Irvine fit gives
+Irvine three listings on page 1 and Rancho Santa Margarita none.
+
+**That is the §7.2 problem again, one block higher up.** §7.2 fixed the narrative box because
+page-1 capacity cannot depend on the length of model-generated prose. It equally cannot depend on
+the length of a city name, and the masthead is now the variable block. Cities are unbounded; there
+is no trim that makes this deterministic.
+
+**So the real options are two, and neither is "trim a bit more":**
+
+1. **Page 1 is a cover.** Masthead, metrics, narrative, and every listing from page 2. Deterministic
+   for every city, every affiliate, and what ships today. Costs nothing.
+2. **Bound the masthead's height** the way the narrative box was bounded — a fixed title area, with
+   long city names set smaller rather than wrapped. Then page 1 holds a row of three for everyone.
+   That is a design change to the most prominent element in the document, and it is a real piece of
+   work rather than a margin edit.
+
+**The trim is kept**, because 0.50in of margin duplicating separation two neighbours already
+provide is worth removing on its own terms, and because option 2 needs that 0.25in as well. It
+changes no page count for any of the eight report types today, and this entry says so rather than
+claiming a win.
+
+**And the chart stays free**, since page 1 still cannot fit a row: `market_snapshot` is 2 pages with
+or without it. That conditional resolves only if option 2 is taken.
+
+---
+
+**THE SURVEY: WHAT ELSE ON PAGE 1 IS UNBOUNDED?** 2026-09-25. Two instances of the same failure —
+model prose (§7.2) and now a city name — is enough to ask the general question rather than wait for
+a third. **Page-1 capacity is a fiction wherever any input on the page is unbounded**, so every
+input was stretched one at a time and every element re-measured.
+
+Enumerated rather than listed from memory: the elements come from walking `.page-content`'s
+children, the inputs from the string-valued keys the builder is handed. A block that grows shows up
+whether or not anyone predicted it.
+
+| input stretched | grew | by |
+|---|---|---|
+| **city** | masthead | **+0.300in** |
+| **filter label** | masthead | **+0.172in** |
+| AI narrative, 40 sentences | — | 0 — capped by §7.2, the cap proving itself |
+| months-of-supply pace label | — | 0 — a constant in `moi.py`, not an input |
+| median price at $123,456,789 | — | 0 |
+| counts at 2,666,664 | — | 0 |
+| company / agent name | — | 0 — not on page 1's body at all; running head and footer |
+
+**Each zero has a positive control.** A zero delta means bounded only if the value reached the page,
+so every stretched value was also grepped in the rendered HTML. Six of the seven rendered. The
+seventh, the company name, does not appear in page 1's body, which is why it cannot affect it.
+
+**The same seven, across all eight report types: identical. Always the masthead, always +0.300 and
++0.172.** Combined, when both are long: masthead 1.394in to **1.866in, +0.472in**.
+
+**SO THE ANSWER IS BETTER THAN EXPECTED: IT IS JUST THOSE TWO, AND THEY ARE THE SAME ELEMENT.**
+Option 2 is not bound-the-masthead-and-whatever-else-turns-up. Nothing else turns up. Bounding the
+masthead's two text lines — title and subtitle — makes page-1 capacity deterministic for every city,
+every filter label and every report type at once, and it is one change to one block.
+
+Everything else on that page is already fixed, numeric, a code constant, or capped. The narrative
+box is the precedent and it works: stretched to forty sentences, it moved page 1 by nothing.
+
+---
+
+**BUILT 2026-09-25 — the masthead is bounded, and page 1 is the same height for every city.**
+
+`.masthead-title` and `.masthead-subtitle` are each one line in a box whose height is in **pixels**,
+so the title's size can step down without the box moving: 24 → 21 → 18 → 16 → 14, chosen in
+`MarketReportBuilder._masthead_title_px` from a measured character ladder. `white-space: nowrap`
+stops the wrap; `text-overflow: ellipsis` is the backstop past the smallest step.
+
+| | masthead | page 1 used | verdict |
+|---|---|---|---|
+| Irvine | 1.21in | 6.846in | **fits by 0.052in** |
+| Rancho Santa Margarita | 1.21in | 6.846in | **fits by 0.052in** |
+| Rancho Santa Margarita and San Juan Capistrano | 1.21in | 6.846in | **fits by 0.052in** |
+| long filter label | 1.21in | 6.846in | **fits by 0.052in** |
+| with an agent logo | 1.21in | 6.846in | **fits by 0.052in** |
+
+One number, every case. Before the bound the same table read 0.003in short for Irvine and 0.303in
+short for Rancho Santa Margarita.
+
+**The last 0.010in came from `.masthead`'s bottom margin, 18px to 12px**, matching the rhythm
+`.stats-bar` now uses. Trimming to fit is sound *here* and was not before: the page is the same
+height for every input, so there is no case this makes fit at another's expense. That distinction
+is the whole reason the earlier 0.003in trim was refused.
+
+**`market_snapshot` page 1 has its row of three back** — `[3, 6]`, still two pages — and
+`PAGE_1_CAPACITY` is re-pinned. These are the first numbers on that page that are properties of the
+layout rather than of a fixture.
+
+**The ellipsis backstop was made to fire rather than assumed.** A 98-character title reaches it: the
+text measures 665px in a 474px box, the ellipsis shows, and **the box stays 29px** — the property
+that matters holds even when the backstop triggers.
+
+**ONE FIDELITY CAVEAT, STATED.** This container has no network, so Google Fonts do not load and
+every measurement above is in the fallback stack; production renders Outfit. The ladder is cut ~12%
+against that, and — more to the point — **the height does not depend on the ladder being right.** A
+step that is slightly too large in Outfit costs an ellipsis, not a wrapped line and not a shifted
+page. The determinism survives the uncertainty; only the type size is approximate.
+
+**WHAT IS STILL OPEN HERE.** The caps still exceed what page 1 holds, so all three "1-page"
+snapshot types are still two pages — `market_snapshot` `[3, 6]`, `price_bands` `[3, 5]`,
+`featured_listings` `[6, 6]`. The trade is unchanged and now cleanly stated, because the capacities
+are real: **cut each cap to page-1 capacity for a one-page report with a smaller sample, keep the
+caps for two pages, or correct the comment.** Jerry's call.
+
+**AND THE CHART CONDITIONAL RESOLVED, AS PREDICTED.** With page 1 holding three listings again, the
+§7.3 trend chart is no longer free on `market_snapshot`: with it, `[0, 9]`; without it, `[3, 6]`.
+Both are two pages. So the choice is **three listings on page 1, or the twelve-month price trend** —
+not both. On `inventory` the chart remains free: five pages either way.
+
+So there are two different questions hiding in "how many listings should page 1 hold":
+
+1. **Is the metrics block too tall?** Trimming 0.25in — 10% off the stats bar, or 7% across both —
+   puts a row of three listings back on page 1 without touching the cap, the layout or the sample.
+2. **What should page 1 be?** Masthead, metrics and narrative with every listing on page 2 may be
+   the better document: a cover page that reads, then the inventory. That is a deliberate choice,
+   and it is available for free today.
+
+**And it is entangled with §7.3's chart.** Measured: the trend chart costs `market_snapshot`
+nothing at all right now — 2 pages either way — because it lands in the 2.52in that is going to
+waste. Recover the 0.25in and the chart stops being free. **One decision, not three.**
+
+---
+
+---
+
+## CLOSED 2026-09-28 — page 1 carries the trend, listings begin on page 2
+
+**Jerry's decision, with the reasoning recorded so it survives the people who made it.**
+
+The measurement that framed it: page 1 holds **either** a row of three listings **or** the
+twelve-month price trend, never both. Both give a two-page report carrying the same nine listings,
+so this decides what page 1 **leads with**, not what the report contains.
+
+**Why the chart won.**
+
+- **Nothing is lost.** Same two pages, same nine listings, different first page.
+- **It is the only element on that page a client cannot get elsewhere.** Listings are on Zillow,
+  Redfin and their own saved search. A twelve-month median for their specific market, computed from
+  MLS closings, requires us.
+- **It matches the reader.** These reports go on a schedule to an agent's sphere — past clients,
+  not active buyers. Those readers want to know what their house is doing, not what is for sale.
+- **Page 1 becomes a coherent market summary** — hero stat, narrative, metrics, trend — rather than
+  half a summary and half a truncated feed.
+
+**RECORDED AGAINST IT.** Listings are photographs, and photographs draw the eye where a line chart
+does not. If the audience were active buyers the listings would be the hook. **If the product's
+primary reader ever changes, revisit this rather than inherit it.**
+
+**The final page-1 composition, measured:**
+
+| page 1 | |
+|---|---|
+| masthead | 1.21in |
+| hero stat | 1.14in |
+| AI narrative | 1.42in |
+| stats bar | 2.17in |
+| **trend chart** | **1.87in** |
+| listings | none — the section breaks to page 2 |
+
+**Confirmed across the whole title ladder, not just the fixture's city:**
+
+| city | title | pages | page-1 listings |
+|---|---|---|---|
+| Irvine | 24px | 2 | 0 |
+| Tustin | 24px | 2 | 0 |
+| San Juan Capistrano | 18px | 2 | 0 |
+| Rancho Santa Margarita | 16px | 2 | 0 |
+| Rancho Santa Margarita and San Juan Capistrano | 14px | 2 | 0 |
+| four cities, 79 characters | 14px | 2 | 0 |
+
+One answer at every step, which is what the masthead bound bought.
+
+**The break is conditional and that is deliberate.** `force-new-page` is applied only when the
+chart renders. With no trend data there is nothing to give the page up for, and an unconditional
+break would leave 2.8in of white above it. Two deterministic states, both pinned — not a third
+variable. The section heading and truncation note sit inside the section that breaks, so they
+travel with the listings rather than stranding at the foot of page 1 above nothing.
+
+**Asserted structurally**, because this failure is invisible: if the chart stopped rendering, the
+break would go with it and the report would quietly revert to three listings on page 1 — no error,
+no visual damage, a different document than the one chosen. Four regressions applied and seen to
+fail: the chart silently not rendering, the break removed, the break made unconditional, and
+`market_snapshot` losing its series.
+
+**PAGE_1_CAPACITY IS NOW EMITTED RATHER THAN TYPED.** These numbers have been re-pinned three
+times, and each time they were read off a terminal and retyped — which is exactly how the defect
+board's own summary header went stale: the derivation was right every time and the transcription
+was the weak step. `python3 scripts/measure_market_pagination.py --emit-capacity` prints the dict
+literal, so re-pinning is a paste. The regeneration stays a deliberate, reviewed act — the diff is
+what a reviewer reads — which is the same contract as `golden/themes.json` and
+`regen_theme_golden.py`.
+
+**What this entry no longer claims.** It opened as "three report types documented as 1-page render
+two". `market_snapshot` is settled above. `price_bands` `[3, 5]` and `featured_listings` `[6, 6]`
+are still two pages against a `PDF_CONFIG` comment that says one — a stale comment now rather than
+an open question, since the capacities are known and the trade is stated. Correcting that comment
+is the remaining work and it is not a decision.
+
+
+### D-103 — every continuation page pays for a full masthead, and the space reserved for it is larger than the masthead
+
+**Severity:** ROUGH · **Affects:** every market report PDF, worst on the long ones
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`, §7.1 variant A
+
+Two separate costs, both measured, both on every page.
+
+**1. The hero repeats at full size.** `page_header.jinja2` is passed to PDFShift's `header` param
+with `start_at: 1`, so the same gradient masthead is painted on page 1 and on page 18. Master plan
+§7.1 asks for a full masthead on page 1 (~150pt) and a **one-line running head after (~38pt)**.
+Measured at Letter width, the masthead renders **1.165in (83.9pt)** — smaller than §7.1 wants on
+page 1, and more than double what it wants on every page after.
+
+**2. The reservations are larger than what they hold.** `pdf_engine.render_pdf_pdfshift` reserves
+`header.height 1.3in` and `footer.height 0.9in`, and its own comment says those *"MUST match the
+actual rendered content height of the templates — too small clips content, too large leaves
+whitespace"*. Measured:
+
+| | reserved | renders at | slack |
+|---|---|---|---|
+| header | 1.300in | **1.165in** | 0.135in |
+| footer | 0.900in | **0.781in** | 0.119in |
+
+Plus `margin.top 0.1in` and `margin.bottom 0.1in`. **2.4in of every 11in page (21.8%) is reserved
+for 1.946in of paint.**
+
+**A constraint to design around, recorded but NOT verified.** `tasks.py:1679-1683` states that
+PDFShift requires `header.start_at` and `footer.start_at` to match when either is greater than 1.
+If that is true, §7.1's architecture cannot be built the obvious way — moving the running head to
+`start_at: 2` also moves the footer off page 1 — and the masthead has to move into the body for
+page 1 instead. **That claim is a code comment, not a measurement**, and it should be checked
+against PDFShift before the page architecture is designed around it either way.
+
+> **ANSWERED 2026-09-24 by running the probe. The constraint is real, and it is worse than a
+> refusal.** `scripts/probe_pdfshift_start_at.py`, four renders of one four-page document:
+>
+> | case | `header.start_at` | `footer.start_at` | PDFShift's response | what it actually did |
+> |---|---|---|---|---|
+> | A control | 1 | 1 | 200 | header 1-4, footer 1-4 — as asked |
+> | B matched | 2 | 2 | 200 | header 2-4, footer 2-4 — as asked |
+> | **C split** | **2** | **1** | **200** | **header 2-4, footer 2-4 — NOT as asked** |
+> | **D split** | **1** | **2** | **200** | **header 2-4, footer 2-4 — NOT as asked** |
+>
+> **PDFShift accepts differing values and silently applies `max(header, footer)` to both.** Ask for
+> the footer from page 1 and the header from page 2 and you get neither: you get both from page 2,
+> with a 200 and no warning.
+>
+> **This is why the probe searched the rendered pages for markers instead of trusting the status
+> code.** A probe that checked only whether the request was accepted would have reported the
+> constraint as imaginary, and code written on that answer would believe it had a split while
+> shipping reports with no footer on page 1. The failure mode the instrument was designed to catch
+> is the one that happened. Reading PDFShift's documentation would have produced the same wrong
+> answer — the API does not document a coercion it performs silently.
+>
+> **So §7.1 as written is unbuildable.** A full masthead on page 1, a slim running head after, and
+> a footer on every page is `header.start_at=2` with `footer.start_at=1` — case C exactly. See the
+> §7.1 correction in the master plan for the architecture that replaces it.
+
+**FIXED 2026-09-24 — §7.1 variant A, which closes both halves of this entry.**
+
+The masthead moved out of PDFShift's `header` slot and into the document body, where it renders
+once, at the top of the flow — which in a paged document is what "page 1 only" means — as content
+under CSS control. The header slot carries a slim running head instead. **Both `start_at` values
+stay at 1**, so nothing is asked to differ and nothing is coerced; the running head therefore
+appears on page 1 as well, above the masthead, which §7.1 never excluded.
+
+That also settles the reservations, because the masthead is no longer a height negotiated with a
+vendor:
+
+| | before | after |
+|---|---|---|
+| top | 1.3in reserved / 1.165in painted, + 0.1in margin | **0.44in / 0.417in**, no margin |
+| bottom | 0.9in / 0.781in, + 0.1in margin | **0.89in / 0.885in**, no margin |
+| reserved per page | 2.4in of 11in (21.8%) | **1.33in (12.1%)** |
+
+Both PDFShift margins are 0 and the breathing room moved inside the header and footer documents —
+a CSS `padding-top` applies once at the start of the flow, not after each page break, so
+continuation pages would otherwise sit flush against the band.
+
+Measured: `closed` goes 6 pages to **5** and 25 rows a continuation page to **29**; `new_listings`
+18 pages to **16**. Page 1 holds slightly less, since it now pays for the masthead as content
+rather than every page paying for it as a reservation. `market_snapshot`'s page 1 drops to zero
+listings, which is quantisation of a three-card row rather than a fault — the report is still two
+pages and every listing is on page 2.
+
+`apps/worker/tests/test_page_architecture.py` guards all four legs structurally, because none of
+them shows up in rendered HTML: the `start_at` pair, the header slot carrying the running head and
+not the masthead, the masthead being called from the body, and each reservation matching what its
+document paints. Five regressions applied and seen to fail. **The `start_at` gate is the one that
+earns its keep** — that change fails loudly nowhere, because PDFShift answers 200 and simply drops
+page 1's footer.
+
+### D-104 — the market narrative shipped whatever the API returned, including sentences it had cut off
+
+**Severity:** WRONG · **Affects:** the "AI Market Insight" paragraph on page 1 of every market report PDF
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`
+
+`generate_market_pdf_narrative` sends `max_tokens: 150` to GPT-4o. When a model reaches that
+ceiling the API returns what it had written so far, with `finish_reason: "length"`, and the text
+ends mid-sentence. **Nothing in the worker read `finish_reason`** — confirmed by grep, it appeared
+nowhere in `apps/worker/src`. The string went back to the builder like any other and rendered under
+the heading "AI Market Insight" in a customer's PDF.
+
+**THIS SHIPPED.** The code path has been live in production for as long as the market PDF has had
+an AI narrative — every report generated in that time went through a function that returned a
+cut-off sentence as readily as a complete one. That is the fact worth carrying, separately from the
+fix.
+
+What is NOT established is how often it fired. 150 tokens is roughly 110 words against a prompt
+asking for 2-3 sentences, so it takes a verbose answer to reach the ceiling — and **nothing
+recorded it either way**, which is most of the point. There is no log line to count, because the
+condition was never examined. Estimating a rate from the prompt would be reasoning about a model's
+behaviour from its instructions, which is the same class of claim §0.6 warns about; the honest
+answer is that the exposure is unmeasured and now cannot be measured retrospectively.
+
+Found while implementing §7.2's narrative cap, not looked for.
+
+**A second way the same thing happened.** Even a complete narrative that is simply long pushed
+page 1's table down, because the narrative box grew with its copy. That is the variability §7.2
+removes, and with the box now fixed it would instead overflow the box.
+
+**Both are now generation failures rather than layout ones**, which is where they are visible:
+
+- `finish_reason == "length"` → drop the narrative, log at ERROR naming the report and city.
+- `len(narrative) > NARRATIVE_MAX_CHARS` (380, measured against the four-line box) → same.
+
+Every layout already renders without a narrative, so the report is complete either way. A half
+sentence is not.
+
+**The boundary is tested from both sides.** `test_narrative_guards.py` asserts a cut narrative and
+an over-budget one are dropped, *and* that one exactly at the budget is kept — without that, both
+guards could be off by one in the strict direction and every ordinary narrative would be silently
+discarded, which looks exactly like "the AI is not configured". It also pins that the quote-unwrap
+runs before the budget check, since measuring a quoted string two characters long decides the
+boundary case.
+
+Six regressions applied and seen to fail, covering both guards, the box height and the budget in
+both directions.
+
+
+---
+
+### D-105 — days on market is read from a path the feed does not use, so every DOM is computed and closed comps are overstated by the escrow period
+
+**Severity:** WRONG · **Affects:** the DOM column and Avg DOM on every market report, and anywhere else `extract.py`'s `days_on_market` reaches
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`
+
+Found 2026-09-28 while checking whether `closed`'s DOM column was sound enough to build a
+distribution chart on. It is not, and the reason is not the one the register recorded.
+
+**THE PATH IS WRONG.** `compute/extract.py:30` reads
+
+```python
+dom = _int(p.get("daysOnMarket"))
+```
+
+SimplyRETS puts it at **`p["mls"]["daysOnMarket"]`**. Confirmed against this repo's own fixture:
+`tests/fixtures/listing_closed_minimal.json` has no top-level `daysOnMarket` and carries `16` at
+`mls.daysOnMarket`, and `tests/test_new_metrics.py:334` reads it from that path and asserts on it.
+
+So the lookup returns `None` for every listing, always, and every DOM in the product comes from
+the fallback branch. **This is the same defect as `closeDate`**, which lives at
+`row["sales"]["closeDate"]` and whose top-level read returned `None` for every row — recorded in
+the master plan's decision-01 note, and evidently not swept for.
+
+**THE COMMENT ABOVE IT DOCUMENTS THE SYMPTOM AS A PROPERTY OF THE FEED.**
+
+```python
+# DOM: Use API value if available, otherwise calculate from dates
+# SimplyRETS doesn't return daysOnMarket for Closed listings
+```
+
+The feed does return it. It does not return it *at the path being read*. A true observation about
+the code's behaviour was written down as a fact about the vendor, and then relied on — the
+documentation-as-evidence trap, one layer further in than usual, because the documentation is a
+code comment written by someone watching the right symptom.
+
+**WHAT THE NUMBER MEANS NOW, AND WHAT IT SHOULD MEAN.** Measured on the fixture above:
+
+| | days |
+|---|---|
+| feed `daysOnMarket` — list → contract, the industry's DOM | **16** |
+| computed `close_date − list_date`, what ships | **42** |
+| escrow, contract → close | 26 |
+| **overstatement** | **26 days, 162% high** |
+
+`test_new_metrics.py:331` already states the distinction in as many words: *"SimplyRETS
+daysOnMarket = days from listing to contract only. It does NOT equal escrow_days +
+marketing_days (which spans list→close)."* The test knew; the extractor did not.
+
+**Scope.** Closed rows are wrong as described. Active and pending rows fall back to
+`now − list_date`, which is the right notion for a listing that has not sold, so those are
+defensible — but they are computed rather than read, so they will also disagree with the feed's
+own figure wherever it differs.
+
+**Why this blocks §7.3's DOM distribution chart, which is how it was found.** A histogram over
+this column would be a distribution of marketing-plus-escrow presented under a label every agent
+reads as marketing. Charting it would make a wrong number look authoritative, which is worse than
+not charting it — so the chart waits for the fix rather than shipping alongside it.
+
+**The fix is one line plus a decision.** Read `mls.daysOnMarket` first. Then decide what the
+column should show when the feed has no value: list→close is available and honest if labelled as
+such, but it is not DOM. Both halves need doing; the read alone changes numbers on live reports.
+
+---
+
+**FIXED 2026-09-28 — path corrected, comment corrected, and the sweep run.**
+
+`extract.py` now reads `mls.daysOnMarket` first, falls back to the top level for deployments that
+put it there, and when the feed carries nothing derives **the same quantity** from
+`sales.contractDate` rather than a different one. A closed sale with neither reports `None`, which
+the table already renders as `-` — D-056's rule: no sentinel, and the caller says so in words.
+Active and pending rows keep `now − list_date`, which is the right notion for a listing that has
+not sold; only closed rows changed.
+
+On the fixture: **42 → 16**, the feed's own number.
+
+The comment is replaced with what was actually observed. The old one said the vendor does not
+return the field; what was observed is that *the lookup returned None*, and it returned None
+because it was the wrong key.
+
+**THE SWEEP, ENUMERATED WITH `ast` RATHER THAN BY READING.** Every `<expr>.get("key")` in
+`extract.py` — 22 of them — resolved to the path it reads and checked against both captured
+fixtures' actual shape:
+
+| | |
+|---|---|
+| reads checked | 22 |
+| **`daysOnMarket` — read top-level, feed has `mls.daysOnMarket`** | **D-105, fixed here** |
+| **`bathrooms` — read as `property.bathrooms`, feed has `bathsFull`/`bathsHalf`** | **D-106, filed** |
+| `status` — flagged, then verified fine: the expression reads `mls.status` first and the top-level `p.get("status")` is an unreachable fallback | dead code, not a defect |
+| the other 19 | read where the feed puts them |
+
+**The sweep's first run examined 10 of its own 22 reads and reported completeness**, because
+`(addr or {}).get("city")` unparses as `(addr or {})` and did not match the list of row variables.
+Fixed to unwrap the guard, and to print what it skips instead of dropping it. An incomplete sweep
+that looks complete is worse than no sweep — §0.6, *enumerate the parts that are there*.
+
+**NOT CONFIRMED AGAINST A LIVE PAYLOAD, AND THAT IS NAMED RATHER THAN GLOSSED.** This container has
+no SimplyRETS credentials, so the sweep ran against `tests/fixtures/listing_{closed,active}_minimal.json`
+— captured responses, real in shape, but two of them. `tools/dump_market_snapshot.py` needs
+`SIMPLYRETS_USERNAME`/`PASSWORD` and would settle it in one call. What the fixtures cannot rule out
+is a deployment that DOES populate `property.bathrooms` or a top-level `daysOnMarket`; both reads
+are kept as fallbacks for exactly that reason, so the fix is correct either way.
+
+**THE REPO HELD BOTH ANSWERS.** `tests/test_new_metrics.py:334` reads
+`closed_listing["mls"]["daysOnMarket"]` and asserts on it — the correct path, in a passing test,
+in the same repository as the wrong one. Nothing compared the two files.
+`apps/worker/tests/test_extract_field_paths.py` now runs the extractor over the same fixtures those
+tests use, so they cannot disagree in silence again.
+
+**Three regressions applied and seen to fail** — the original top-level-only read, `close − list`
+substituted again, and the contract-derived branch removed.
+
+**The first attempt at the first one MISSED.** Reverting to the old read left the contract-derived
+branch computing 16 on this fixture, the same answer by a different route, so the assertion could
+not tell "read it" from "worked it out". A second test now sets the feed's value to a number
+neither derivation can produce, which makes the read the only way to obtain it. Two independent
+paths agreeing on one input is the same shape as a test reading its expectation from the code
+under test: the assertion is true and it is not evidence.
+
+**BLAST RADIUS.** DOM reaches, by grep rather than recollection: `report_builders.py` (24 sites),
+`email/template.py` (18), the market macros (10), `compute/market_trends.py` (9),
+`property_builder.py` (6), `tasks.py` (5), `market_builder.py` (3), `ai_overview.py` (3),
+`ai_market_narrative.py` (3), `ai_insights.py` (2), and five property-report templates. Concretely
+the figures that move are the market report's **DOM column** and **Avg DOM**, the stats bar's
+**Avg Days on Market**, the property report's **Market Trends** average, and any **AI narrative**
+that quotes them — the narrative is generated from these numbers, so past commentary described a
+market that was slower than it was.
+
+**Every closed comp's DOM falls by that listing's escrow period** — contract to close, 26 days on
+the only real sample available. Reports already sent are not corrected by this; the entry records
+that plainly rather than implying a retroactive fix.
+
+
+---
+
+### D-106 — bathroom counts are read from a key the feed does not have, so every listing ships without one
+
+**Severity:** WRONG · **Affects:** the Bd/Ba column, every listing card's bath chip, the AI overview's property line
+**Status:** `open`
+
+Found by the D-105 sweep, not looked for. Same shape, same file, one line apart.
+
+`compute/extract.py:54` reads
+
+```python
+baths = _float((pr or {}).get("bathrooms"))
+```
+
+SimplyRETS' `property` object carries **`bathsFull`** and **`bathsHalf`**. There is no
+`bathrooms` key. Confirmed against both captured fixtures, whose `property` objects hold
+`acres, area, bathsFull, bathsHalf, bedrooms, cooling, garageSpaces, heating, lotSizeArea,
+lotSizeAreaUnits, pool, stories, subType, subTypeText, type, view, yearBuilt` — and running the
+extractor over them returns `bathrooms: None` for both.
+
+**It fails invisibly, which is why it has lasted.** Every consumer guards:
+
+- `macros.jinja2:271` renders the closed table's Bd/Ba as `{{ l.beds }}/{{ l.baths | default('-') }}`, so it prints **`3/-`**
+- the listing cards emit the bath chip under `{% if listing.baths %}`, so it simply is not there
+- `email/template.py:704` and `ai_overview.py:159` are both `if`-guarded the same way
+
+No error, no blank where a number should be, no log line. A bathroom count is one of the three
+figures a reader looks for on a comp, and the reports have never carried it.
+
+**The fix needs a decision, which is why it is filed rather than done in the same commit as
+D-105.** `bathsFull` and `bathsHalf` are two integers and the product wants one number. The
+convention agents use is `full + half/2` rendered as `2.5`, but "2 full and 1 half" is also
+written `2.1` in some MLS markets, and the extractor's own comment says *"Keep as float (e.g., 2.5
+baths)"* — which says what it expected and not what the feed provides. Pick the convention
+deliberately, then read both keys.
+
+**Do not close this by reading `bathsFull` alone.** A three-bed with two full baths and a powder
+room would render `2`, which is wrong in the direction that matters to a seller.
+
+**THE CONVENTION QUESTION, NAMED RATHER THAN LEFT OPEN — [JERRY].** There are two sensible rules
+and only two:
+
+| | a home with 2 full baths and a powder room reads | |
+|---|---|---|
+| **decimal — halves as `.5`** | **`2.5`** | MLS convention; what an agent expects to read, and what the extractor's own comment already assumed ("Keep as float (e.g., 2.5 baths)") |
+| explicit — full plus half | `2+1`, or `2F 1H` | unambiguous about which is which, and unfamiliar on a market report |
+
+**Recommended: the decimal.** It is the industry convention, every comparable portal shows it that
+way, and the report's Bd/Ba column has room for one number per side and not two. The explicit form
+buys precision a reader of a market comp does not need — they are scanning for "is this like my
+house", not auditing fixture counts.
+
+The rule to implement once confirmed: `bathsFull + (bathsHalf × 0.5)`, rendered without a trailing
+`.0`, and `None` when both keys are absent rather than `0`.
+
+**Awaiting Jerry's confirmation, not blocked on it for the diagnosis** — the read is wrong either
+way, and only the rendering rule is in question.
+
+
+---
+
+### D-107 — the price-band stat cards show the first four bands and never say so
+
+**Severity:** ROUGH · **Affects:** `price_bands` PDFs for any market with more than four bands
+**Status:** `open`
+
+`macros.jinja2`, `pricebands_layout`:
+
+```jinja
+{% for band in price_bands[:4] %}
+```
+
+A market with six price bands renders four cards. Nothing on the page says the other two exist,
+and nothing in the code says why four.
+
+**Surfaced by the §7.3 band chart**, which renders every band — so a six-band report now shows four
+cards above six bars. The chart's caption names the discrepancy as a stopgap ("the cards above show
+the first 4; the chart shows all 6"), which is a caption apologising for a layout rather than a fix.
+
+**IT IS NOT PROTECTING AGAINST ANYTHING, WHICH IS THE POINT.** The obvious defence of a cap is that
+more cards would break the row. Measured, with the cap lifted:
+
+| | cards | width each | label lines | row height |
+|---|---|---|---|---|
+| capped at four | 4 | 79px | 2 | 84.8px |
+| all six | 6 | 56px | 3 | 95.2px |
+
+Nothing overflows, nothing truncates, no label is clipped. `.stat-cards` is `display: flex` with
+`flex: 1` children — not a four-column grid — so the cards simply divide the row. Six costs
+**10.4px of height** and a tighter label. That is an aesthetic cost, not a constraint, and it is
+being paid in hidden information instead.
+
+**No recorded intent.** The `[:4]` dates to the repository's squashed base commit, so there is no
+commit message, no comment, and nobody to ask. It is as likely to be a slice someone wrote while
+the layout had four bands as a decision.
+
+**Two ways to close it, and the first is now the cheaper one:**
+
+1. **Show every band.** Costs 10.4px. The cards and the chart then agree, and the chart's caption
+   loses the clause explaining why they do not — which is the better outcome, since that clause
+   exists only to describe this defect.
+2. **Keep four and say so on the card row** — "4 of 6 bands" — rather than leaving the reader to
+   infer it from a chart further down.
+
+**Recommended: the first.** A report that hides two price bands from an agent who is showing it to
+a client is worse than a slightly tighter row of cards, and the 10.4px is available — page 1 of
+`price_bands` gives up one listing to the chart already and stays at two pages.
+
+Left open rather than taken, because it changes what a shipping report looks like and the
+measurement is what the decision needs, not more analysis.
+
+
+---
+
+### D-108 — numeric fields are shown with `{% if value %}`, so a legitimate zero renders as nothing
+
+**Severity:** ROUGH · **Affects:** studios (no bed count), and any metric that can honestly be zero
+**Status:** `open`
+
+Found by applying §0.6's *knowledge transfers by search* rule immediately after filing it: grepping
+the market macros for the shape behind the `selectattr` mistake, in its other syntax.
+
+Jinja's `{% if x %}` is falsy for `0`, so every one of these hides the row or chip when the value
+is a real zero rather than missing:
+
+| site | zero means | how likely |
+|---|---|---|
+| `{% if listing.beds %}` — the bd chip, twice | **a studio** | common in condo and urban markets |
+| `{% if stats.avg_dom %}` — Avg Days on Market | everything sold the day it listed | rare, and **newly reachable**: D-105 now reads the feed's DOM, and a same-day sale reports 0 |
+| `{% if stats.months_of_inventory %}` — Months of Inventory | nothing is for sale | rare, and it is **D-056's own metric** — that defect was a sentinel 0 rendering as a measurement, and `moi.py` returns `None` for "not enough data" precisely so 0 can mean zero |
+
+`price_per_sqft`, `list_to_sale_ratio`, `list_price` and `sqft` use the same shape and cannot
+honestly be zero, so they are correct by accident rather than by design.
+
+**The studio case is the one that will actually be seen.** A studio renders `2 ba · 620 sf` with no
+bed figure at all — not "0 bd", not "studio", just an absent chip, which reads as missing data on
+a listing where the data is present and interesting.
+
+**The fix is `is not none`, not a rewrite** — `{% if listing.beds is not none %}` — plus a decision
+on how a zero should read in each case. `0 bd` is technically right and unidiomatic; **"Studio" is
+what an agent would write**, and that is a copy choice rather than a template one, which is why
+this is filed rather than taken.
+
+**Not urgent, and recorded because the class is the point.** This is the same call as the trend
+chart's gap-versus-zero and the band chart's empty band, in a third syntax. The grep that found it
+took under a minute and is the practice the §0.6 entry argues for.
+
+---
+
+**THE FULL SWEEP, 2026-09-28.** Every Jinja conditional in every template, matched against numeric
+leaf names **derived from real built contexts** rather than from a list of numeric-looking names —
+the builders' `stats`, `header` and `listings` contexts were walked and every `int`/`float` leaf
+collected, then matched against every bare `{% if ... %}`. Comparisons, `is not none` and boolean
+chains are excluded; they are already explicit about what they test.
+
+**40 conditionals, 17 distinct expressions, 3 files** — wider than the two found by hand, and
+including the property report, which the original entry did not mention.
+
+| expression | zero means | verdict |
+|---|---|---|
+| `listing.beds` · `property.bedrooms` | **a studio** | **fix** — common, and the chip vanishes entirely |
+| `listing.days_on_market` | **listed and sold the same day** | **fix** — newly reachable: D-105 now reads the feed's value, and the sweep's own baseline notes a DOM of 0 is real |
+| `stats.months_of_inventory` | **nothing is for sale** | **fix** — D-056's own metric; `moi.py` returns `None` for "not enough data" precisely so 0 can mean zero |
+| `stats.avg_dom` | every sale closed the day it listed | **fix** — rare but the same class, and free to do alongside |
+| `header.total_count` · `total_count` | **the query matched nothing** | **fix, differently** — an empty report is an empty-state question, not a hidden field |
+| `listing.sqft` · `l.sqft` · `property.sqft` | land, or bad data | **leave** — 0 sqft on a dwelling is wrong data, and land carries `None` rather than 0 |
+| `listing.baths` · `property.bathrooms` | no bathroom | **leave** — not a habitable dwelling, and D-106 means it is `None` today regardless |
+| `listing.list_price` · `stats.price_per_sqft` · `stats.list_to_sale_ratio` | — | **leave** — unreachable; correct by accident rather than by design |
+| `stats.median_close_price` | — | **leave** — this one is a deliberate fallback chain (`{% if close %}…{% elif list %}`), not an absence check |
+| `band.count` | an empty price band | **already fixed** — draws "none" |
+
+**Each case needs a rendering, and none of them is "hide the field":**
+
+| | renders as |
+|---|---|
+| 0 bedrooms | **"Studio"** — what an agent writes; `0 bd` is correct and reads as a data error |
+| 0 days on market | `0` — or "New", which is the MLS convention for a same-day listing |
+| 0 months of inventory | `0` **with the pace label**, since the label is what makes it a measurement |
+| 0 avg DOM | `0` |
+| 0 total count | not a field to render — the report should say it matched nothing, which is a separate piece of work |
+
+**The mechanical half is `is not none`;** the copy is the part that needs deciding, which is why
+this stays open rather than being taken as a sweep-and-replace.
+
+`scripts/sweep_zero_conditionals.py` re-runs the enumeration, so the list above can be regenerated
+rather than re-derived by eye when a template changes.
+
+
+---
+
+
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)
 
 - **Can any existing schedule make `compute_next_run` raise?** Deliberately NOT filed as a
@@ -4887,6 +5782,17 @@ that test's expected set becoming empty.
   **Zero rows in sections 1 and 2** → close as unreachable, with the query as the evidence.
   **Any rows** → file it, and the fix is both sides: a guard in the ticker that marks the
   schedule failed rather than spinning, and cleanup of the rows.
+
+- **A live SimplyRETS payload, on the same trip as the production probe.** D-105 and D-106 were
+  both diagnosed against `tests/fixtures/listing_*.json` — captured responses, real in shape, and
+  two of them. `tools/dump_market_snapshot.py` fetches a live page with `SIMPLYRETS_USERNAME` /
+  `SIMPLYRETS_PASSWORD` and `scripts/sweep_extract_field_paths.py` re-runs the whole field sweep
+  against whatever it returns. **Same credentials as the probe, so it is one trip rather than
+  two.** This project has been caught three times by a fixture that did not match production
+  (D-084's filter behaviour, the `closeDate` path, and now these), and both fixes retain the old
+  read as a fallback precisely because the fixtures cannot rule out a deployment that populates
+  it. What the live payload settles: whether any other field is read at a path this particular
+  feed does not use.
 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
 - **Production env values** (T2.9/T2.10). Partially answered by the P2B trace above for the API service; the worker and Vercel sets are still outstanding — see "What I still need" above for exactly which variables settle which defect.

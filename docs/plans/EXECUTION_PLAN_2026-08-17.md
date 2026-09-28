@@ -190,6 +190,48 @@ it.**
   only because a test ran after the change, since it used the right construct with a
   different string.
 
+  **AND A SUBSTRING IS NOT A CONSTRUCT.** *Added 2026-09-25, from three false positives in a
+  single session, all the same shape — a token matched inside a longer token:*
+
+  | the check | what it hit instead |
+  |---|---|
+  | `"height:" in rule` | `line-height:`, which every text rule has |
+  | `"more-listings-note" not in html` | the `.more-listings-note` CSS rule in the stylesheet |
+  | `"masthead" not in header_template` | the comment explaining why the masthead is not in it |
+
+  Every one of them failed *safe* — the assertion fired and the build went red — so each cost
+  minutes rather than shipping. That is luck about which direction the mistake ran, not a
+  property of the method: the same match written as a positive assertion (`assert "height:" in
+  rule`) passes forever on `line-height:` and guards nothing at all.
+
+  **Match the thing, not text that contains the thing.** A CSS declaration is `(?:^|[;{])\s*prop
+  \s*:`, not `prop:`. Markup is `class="name"` or an attribute, not the bare class name, which
+  also occurs in the stylesheet and in prose. A Python symbol is a `def`/`class`/import or an AST
+  node, not an identifier that is also a substring of six others. A config key is the parsed
+  value, not a line that mentions it.
+
+  The tell is that the needle would still match if the surrounding characters were anything at
+  all. When a real parser is available — an AST, a CSS parser, an HTML parser, the config
+  loader — use it; text search is the fallback, and its needle has to carry its own boundaries.
+
+  **AND THE HONEST PART: THIS RULE HAS NOW BEEN BROKEN FOUR TIMES BY THE PERSON WHO FILED IT, AND
+  CAUGHT FOUR TIMES BY A REGRESSION RATHER THAN BY RECALL.** A fourth instance landed three days
+  after the rule was written — `force-new-page`, matched in the stylesheet instead of the markup —
+  in a test written by someone who had the rule in mind that week.
+
+  Read as a scorecard that looks like a dead rule. It is not, and the distinction matters for
+  anyone deciding whether to keep it: **this class is not preventable prospectively.** At the
+  moment of writing `"height:" in rule` or `"force-new-page" not in html`, the needle IS the
+  intent — the mistake is invisible from inside the sentence that expresses it, in the same way
+  `minimum - 1` is the natural way to say "below the minimum". Every one of the four was obvious
+  within seconds of seeing it fail and invisible while being written.
+
+  So the rule's job is not to stop the hand. It is to make the failure legible when the regression
+  produces it — to turn "why is this test red" into "ah, the substring" in one step instead of ten
+  — and the thing that actually catches it is **running the check against input you know is bad**.
+  A rule that can only be applied in hindsight is an argument for the regression discipline, not
+  evidence against itself. Keep both; expect the fifth.
+
 - **A check that reports damage after committing it is decoration. A guard refuses to
   commit.** `deactivate_live_schedules.sql` ended with `SELECT COUNT(*) AS
   schedule_runs_retained` — a number printed after the transaction's work was done, with
@@ -541,6 +583,114 @@ it.**
   that it was written from reading. And when such an artefact is produced by instrument, wire the
   instrument into the suite: the same drift that made seven entries wrong on the day they were
   written will make them wrong again six months after they were right.
+
+- **A test that reads its expected value from the thing under test cannot fail. Write the
+  expectation down, in the test, as a second copy someone has to change on purpose.**
+
+  *Added 2026-09-24 from Workstream D.* A test checked that each report type renders no more
+  listings than its configured cap. It read the cap from `PDF_CONFIG[t]["cap"]`, sized its input at
+  `cap + 25`, and asserted the render produced exactly `cap`. Every part of that is reasonable and
+  the whole is inert: changing a cap changes the expectation and the input together, so the
+  assertion holds at any value. Changing `closed` from 200 to 150 was applied deliberately and
+  **the suite stayed green.** It was found only because the regression was run.
+
+  This is close to *a detector's silence*, and it is worth separating from it. That rule is about a
+  check whose instrument may have stopped working — a regex that matches nothing, a fixture that
+  stopped reaching the code. The remedy is to watch it find something. **This one is about a check
+  that is working exactly as written and asserts nothing**, because its two sides are the same
+  value read twice. Running it against bad input is the only thing that tells them apart, which is
+  the third time this month that step has been the whole of the evidence.
+
+  The tell is syntactic and easy to look for: **the expected value and the actual value trace back
+  to the same expression.** `assert render(cfg.cap) == cfg.cap`. `assert f(DEFAULT) == DEFAULT`.
+  `assert len(items) == len(source)` where `items` came from `source`. A golden file compared
+  against a regeneration of itself. A round-trip that serialises with the same function it
+  deserialises with. Each of those passes forever and reads like coverage.
+
+  The fix is a pinned literal, and the cost is the point: `RENDERED_LISTING_CAP = {"closed": 200,
+  …}` means a cap change fails the suite until someone writes the new number down in a second
+  place. That is not duplication to be factored out — **it is the assertion**. Where the value is
+  genuinely derived and a literal would be absurd, derive it by a different route than the code
+  under test does, and say in the test why the two routes are independent.
+
+  *Recurred the same day, in tests written after this rule was filed.* The §7.3 trend chart gates a
+  minimum sample per month, and its tests built fixtures of `MIN_CLOSED_FOR_MEDIAN - 1` and
+  `MIN_CLOSED_FOR_MEDIAN` closings. Lowering the threshold from 3 to 1 moved both fixtures with it;
+  the suite stayed green and the regression was MISSED. Knowing the rule did not prevent writing
+  the shape, because the shape is what expressing the intent naturally produces — "a month below
+  the minimum" is most directly written as `minimum - 1`. **Treat the rule as something to check
+  for after writing a test, not only as something to remember while writing one**: after each new
+  gate, look at where its expected value came from, and if the answer is "the code", change it or
+  run the regression that proves otherwise.
+
+- **When you measure a thing made of parts, enumerate the parts that are there. Do not write down
+  the list you expect and measure that.**
+
+  *Added 2026-09-25 from Workstream D.* A page-1 budget was needed: what occupies the first page of
+  a market report, and what each piece costs in vertical space. The measurement walked a
+  hand-written list of selectors — masthead, metric tiles, narrative, heading, note — and reported
+  4.73in used with 4.94in free. **The list had missed `.stats-bar`, the tallest block on the
+  page.** The real figures are 7.15in used and 2.52in free, which is the difference between "page 1
+  has room to spare" and "page 1 misses its next row by a quarter of an inch".
+
+  It was caught, and it was caught by luck rather than by a check: the wrong numbers said 4.94in
+  free against a 2.69in card, which should have fitted, while the paginator had already reported
+  zero cards on that page. The contradiction was visible only because both numbers happened to be
+  in front of me at once. Had the missing block been shorter, the sum would have been merely wrong.
+
+  **The fix is the method, not more care.** Walk the container's children in document order and
+  report every one of them, including the ones you did not predict; let anything unrecognised
+  appear as an unnamed row rather than vanish. A selector list encodes a belief about what is on the
+  page. The DOM is the page. This is the same shape as writing the block map by reading the
+  builders, and as reading `ENV_TEMPLATE.md` for a runtime fact: **an inventory assembled from
+  memory is a hypothesis wearing the costume of a measurement**, and it is worse than an obviously
+  partial one, because it looks complete.
+
+  Where enumeration is genuinely impossible, make the total falsifiable instead: measure the parts
+  AND the whole independently and assert they agree. A sum that must equal a separately measured
+  container catches a missing part by itself, without depending on a second number happening to
+  contradict it.
+
+- **A distinction you drew in one place does not propagate to the next place by having been
+  written down. When you make a semantic call, grep for the shape and check every other site.**
+
+  *Added 2026-09-28 from Workstream D.* The trend chart draws a careful line between two kinds of
+  absence: a month with no closings is a **gap** in a median series, because the median of nothing
+  is not a quantity, and a **real zero** in a count series, because "no homes sold" is a fact about
+  the month. That distinction was reasoned about, written into the module docstring, asserted in
+  two tests, and described in a commit message.
+
+  Days later the band chart was written with `bands | selectattr('count')`, which silently drops a
+  band with zero listings — the same mistake, one macro down the same file, by the same hand, with
+  the rule still on screen. "Nothing is for sale above $1.6M" is a fact about the market and one of
+  the more useful things on that page.
+
+  **This is the fifth or sixth instance of the pattern**, not the first: the caps read from the
+  config they were testing, `minimum - 1`, the substring matches, the hand-written element list,
+  the sweep that examined 10 of its 22 reads. Each time the general lesson had already been
+  written down, and each time it was rediscovered locally rather than applied.
+
+  **Why writing it down does not work, and what does.** A rule is recalled when something cues it,
+  and the cue for "is this absence a gap or a zero?" is *thinking about absence* — which is exactly
+  what you are not doing while writing a filter that reads as "the bands that have counts". The
+  knowledge is indexed under the concept and the mistake occurs under the syntax.
+
+  So index it under the syntax. **When a semantic call is made about absence, ordering, rounding,
+  or units, grep for the construct that encodes it** — `selectattr`, `if x:` on a numeric,
+  `or` as a default, `filter(None, …)` — across the module and its siblings, and check each hit
+  against the same question. Minutes, and it transfers the decision to every site at once instead
+  of waiting for each to be rediscovered.
+
+  The corollary for review: a commit that establishes a distinction should say where else the shape
+  appears and that those were checked, in the same way a commit that fixes a defect names the
+  regression. "Fixed here" invites the next instance; "checked the other four" closes them.
+
+  *Run against itself the same day.* Grepping the market macros for the shape took under a minute
+  and found the same call in a third syntax — Jinja's `{% if x %}` is falsy for `0`, so
+  `{% if listing.beds %}` hides the bed count on a **studio**, and `{% if stats.avg_dom %}` hides
+  Avg DOM at zero, which D-105 has just made reachable. Filed as **D-108**. Two `selectattr` sites
+  existed and both were already correct; the defect had moved syntax, which is exactly what
+  searching for the concept rather than the string is for.
 
 ---
 

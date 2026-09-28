@@ -46,7 +46,7 @@ def render_pdf_playwright(
     footer_html: Optional[str] = None,
     header_start_at: int = 1,
     footer_start_at: int = 1,
-) -> Tuple[str, str]:
+) -> Tuple[str, Optional[str]]:
     """
     Render PDF using local Playwright/Chromium.
 
@@ -66,7 +66,19 @@ def render_pdf_playwright(
             Playwright for now).
 
     Returns:
-        (pdf_path, print_url): Local path to PDF and the URL that was rendered
+        (pdf_path, source_url): The local path to the PDF, and the URL the PDF
+            was rendered FROM — which is None whenever `html_content` was
+            passed, because then it was rendered from that string and no URL
+            produced it.
+
+            This is not a "view this report in a browser" link and must not be
+            stored as one. `{print_base}/print/{run_id}` renders the LEGACY
+            build (apps/web/app/print/[runId]/page.tsx + the trendy-*.html
+            templates), which is a different document from the one this
+            function just produced: different pagination, no themed header, no
+            AI narrative. Returning it for an html_content render is how
+            `report_generations.html_url` came to point at a document the
+            customer was never sent. See D-101.
 
     Raises:
         Exception: If Playwright fails to launch or render
@@ -83,7 +95,15 @@ def render_pdf_playwright(
     print_url = f"{effective_base}/print/{run_id}"
     pdf_path = os.path.join(PDF_DIR, f"{run_id}.pdf")
     
-    print(f"🎭 Rendering PDF with Playwright: {print_url}")
+    # SOURCE-URL-IS-NOT-A-VIEW-URL (D-101) — `print_url` is where this render
+    # WOULD have come from if no html_content had been passed. When it was, the
+    # document came from the string and this URL rendered nothing, so it is not
+    # logged as the source and not returned as one. See the return below.
+    source_url = None if html_content else print_url
+    print(
+        f"🎭 Rendering PDF with Playwright: "
+        f"{print_url if source_url else f'HTML string, {len(html_content)} chars'}"
+    )
     
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -119,7 +139,7 @@ def render_pdf_playwright(
         browser.close()
     
     print(f"✅ PDF generated: {pdf_path} ({os.path.getsize(pdf_path)} bytes)")
-    return pdf_path, print_url
+    return pdf_path, source_url
 
 
 def render_pdf_pdfshift(
@@ -131,7 +151,7 @@ def render_pdf_pdfshift(
     footer_html: Optional[str] = None,
     header_start_at: int = 1,
     footer_start_at: int = 1,
-) -> Tuple[str, str]:
+) -> Tuple[str, Optional[str]]:
     """
     Render PDF using PDFShift cloud API.
 
@@ -150,7 +170,19 @@ def render_pdf_pdfshift(
         footer_start_at: First page index where the footer should appear.
 
     Returns:
-        (pdf_path, print_url): Local path to PDF and the URL/HTML that was rendered
+        (pdf_path, source_url): The local path to the PDF, and the URL the PDF
+            was rendered FROM — which is None whenever `html_content` was
+            passed, because then it was rendered from that string and no URL
+            produced it.
+
+            This is not a "view this report in a browser" link and must not be
+            stored as one. `{print_base}/print/{run_id}` renders the LEGACY
+            build (apps/web/app/print/[runId]/page.tsx + the trendy-*.html
+            templates), which is a different document from the one this
+            function just produced: different pagination, no themed header, no
+            AI narrative. Returning it for an html_content render is how
+            `report_generations.html_url` came to point at a document the
+            customer was never sent. See D-101.
 
     Raises:
         httpx.HTTPError: If API request fails
@@ -170,19 +202,24 @@ def render_pdf_pdfshift(
     # rule remains the source of truth (legacy behavior preserved).
     if header_html or footer_html:
         margin = {
-            # HERO-MARGIN-STACK-FIX — PDFShift treats margin.top and
-            # header.height as ADDITIVE (header rendered inside header.height
-            # slot, then margin.top is applied below it). Originally we
-            # reserved 1.3in here thinking it included the header height,
-            # but visual evidence shows the two stack. Reduce margin.top to
-            # a small spacer for breathing room only. The header itself is
-            # already accounted for by header.height in the payload below.
-            "top": "0.1in" if header_html else "0",
+            # PDFShift treats margin.top and header.height as ADDITIVE: the
+            # header is rendered inside its height slot, then margin.top is
+            # applied below it.
+            #
+            # BOTH SPACERS ARE NOW 0 (§7.1 variant A). The breathing room under
+            # the running head is part of the running head's own document — a
+            # white strip inside page_header.jinja2, inside its reserved height.
+            # It has to be there rather than here or in CSS: a `padding-top` on
+            # the body applies once at the start of the flow, not after each
+            # page break, so continuation pages would sit flush against the
+            # band. Putting it in the header document makes it uniform on every
+            # page, and keeps the reservation equal to what is painted, which
+            # the 1.3in-for-1.165in version did not (D-103).
+            "top": "0",
             "right": "0",
-            # Same additive behavior likely applies to footer. Reduce bottom
-            # to a small spacer; footer.height in the payload reserves footer
-            # space separately.
-            "bottom": "0.1in" if footer_html else "0",
+            # Same additive behaviour for the footer, and the same fix: the
+            # footer document carries its own top spacing.
+            "bottom": "0",
             "left": "0",
         }
     else:
@@ -203,21 +240,26 @@ def render_pdf_pdfshift(
     if header_html:
         base_payload["header"] = {
             "source": header_html,
-            # HERO-MARGIN-STACK-FIX — header.height reserves space for the
-            # rendered hero (~1.2in actual content). PDFShift then applies
-            # margin.top (currently 0.1in) BELOW this. Total top reservation:
-            # 1.4in. To grow/shrink the hero, change height here; to add
-            # breathing room below hero, change margin.top above.
-            "height": "1.3in",
+            # §7.1 variant A — the slim running head, MEASURED at 0.417in
+            # (a 30px band plus its own 10px white strip) at Letter width.
+            # 0.44in reserves that plus ~0.02in for font-metric differences
+            # between the measuring browser and PDFShift's; PDFShift clips at
+            # the reserved height rather than growing, so the margin is one-way.
+            #
+            # This replaced 1.3in reserved for a 1.165in masthead. The masthead
+            # is body content now (macros.report_masthead) and is as tall as it
+            # is; nothing here has to agree with it. D-103 was half about that
+            # disagreement and half about start_at — see the note by `margin`.
+            "height": "0.44in",
             "start_at": header_start_at,
         }
     if footer_html:
         base_payload["footer"] = {
             "source": footer_html,
-            # HERO-MARGIN-STACK-FIX — footer.height reserves space for the
-            # rendered footer (~0.7-0.8in actual content). PDFShift then
-            # applies margin.bottom (currently 0.1in) ABOVE this.
-            "height": "0.9in",
+            # MEASURED at 0.885in — the agent block at 0.781in plus the 10px
+            # strip that keeps body content off its hairline rule. 0.89in
+            # reserves it with the same one-way allowance as the header.
+            "height": "0.89in",
             "start_at": footer_start_at,
         }
     
@@ -302,7 +344,8 @@ def render_pdf_pdfshift(
         f.write(pdf_bytes)
     
     print(f"✅ PDF generated: {pdf_path} ({len(pdf_bytes)} bytes)")
-    return pdf_path, print_url
+    # SOURCE-URL-IS-NOT-A-VIEW-URL (D-101) — see render_pdf_playwright.
+    return pdf_path, (None if html_content else print_url)
 
 
 def render_pdf(
@@ -314,7 +357,7 @@ def render_pdf(
     footer_html: Optional[str] = None,
     header_start_at: int = 1,
     footer_start_at: int = 1,
-) -> Tuple[str, str]:
+) -> Tuple[str, Optional[str]]:
     """
     Render PDF using the configured engine.
 
@@ -329,7 +372,19 @@ def render_pdf(
         footer_start_at: First page index where the footer appears.
 
     Returns:
-        (pdf_path, print_url): Local path to generated PDF and source URL
+        (pdf_path, source_url): The local path to the PDF, and the URL the PDF
+            was rendered FROM — which is None whenever `html_content` was
+            passed, because then it was rendered from that string and no URL
+            produced it.
+
+            This is not a "view this report in a browser" link and must not be
+            stored as one. `{print_base}/print/{run_id}` renders the LEGACY
+            build (apps/web/app/print/[runId]/page.tsx + the trendy-*.html
+            templates), which is a different document from the one this
+            function just produced: different pagination, no themed header, no
+            AI narrative. Returning it for an html_content render is how
+            `report_generations.html_url` came to point at a document the
+            customer was never sent. See D-101.
 
     Raises:
         ValueError: If PDF_ENGINE is invalid

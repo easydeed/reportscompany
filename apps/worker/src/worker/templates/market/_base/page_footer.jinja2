@@ -9,6 +9,7 @@
 <meta charset="utf-8">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  .pf-gap { height: 10px; }
   body {
     margin: 0;
     padding: 0;
@@ -83,6 +84,11 @@
 </style>
 </head>
 <body>
+{# Breathing room above the rule, inside the footer's own reserved height —
+   the same reason as page_header.jinja2's .rh-gap: a CSS margin on the body
+   applies once at the start of the flow, not before each page break, so
+   content would crowd the hairline on every continuation page. #}
+<div class="pf-gap"></div>
 <div class="agent-footer">
   <div class="af-info">
     {% if agent.photo_url %}

@@ -5,11 +5,13 @@ Market Report Builder
 Renders brand-driven market reports (8 types) using a single Jinja2 template.
 Colors come from the agent's branding (primary_color, accent_color).
 
-Report types → layout mapping:
-  Gallery:         new_listings_gallery, featured_listings, open_houses
-  Market Narrative: market_snapshot
-  Closed/Inventory: closed, inventory
-  Analytics:        price_bands, new_listings
+Report types → layout mapping: see LAYOUT_MAP below, which is the only
+declaration of it. This docstring used to repeat the mapping and had drifted —
+it filed price_bands under "Analytics" when price_bands has had its own
+`pricebands` layout and its own macro for some time. A second copy of a mapping
+is a second thing to keep right, and this one was not kept right, so the copy
+is gone rather than corrected. `test_the_layout_map_matches_the_macro_that_runs`
+checks LAYOUT_MAP against an instrumented render.
 
 Usage:
     builder = MarketReportBuilder(report_data)
@@ -34,6 +36,12 @@ from worker.template_filters import (
     truncate,
 )
 from worker.ai_market_narrative import generate_market_pdf_narrative
+from worker.compute.monthly_trend import (
+    MIN_CLOSED_FOR_MEDIAN,
+    count_series,
+    median_series,
+)
+from worker.themes import derive_theme
 
 logger = logging.getLogger(__name__)
 
@@ -90,10 +98,26 @@ ALL_REPORT_TYPES = list(LAYOUT_MAP.keys())
 
 # CAPS-SPLIT-SNAPSHOT-CATALOG — Market reports now split into two modes:
 #
-#   SNAPSHOT (1-page, curated sample):
+#   SNAPSHOT (curated sample):
 #     market_snapshot, price_bands, featured_listings
-#   CATALOG (multi-page, ALL matching listings):
+#   CATALOG (ALL matching listings):
 #     closed, inventory, new_listings, new_listings_gallery, open_houses
+#
+# THE SNAPSHOT MODES SAID "1-page" AND RENDER TWO. Corrected 2026-09-28 with
+# measured numbers rather than aspirational ones (D-102): the caps are two to
+# three times what page 1 holds, and page 1's capacity is now a known constant
+# per type rather than a guess.
+#
+#   market_snapshot    cap 9   page 1 holds 3   -> 2 pages
+#                              (and 0 by design when the trend chart is on
+#                               page 1, with the listings starting on page 2)
+#   price_bands        cap 8   page 1 holds 3   -> 2 pages
+#   featured_listings  cap 12  page 1 holds 6   -> 2 pages
+#
+# The capacities are pinned in tests/test_narrative_box.py::PAGE_1_CAPACITY and
+# emitted by `scripts/measure_market_pagination.py --emit-capacity`. Cutting a
+# cap to its page-1 capacity would make that type genuinely one page with a
+# smaller sample; that is a product decision and has not been taken.
 #
 # CATALOG types have `more_template = None` and a high cap (100-200) so the
 # PDF renders every matching listing. The previous "+ N more — contact me for
@@ -191,6 +215,136 @@ class MarketReportBuilder:
         self.env.filters["format_number"] = format_number
         self.env.filters["truncate"] = truncate
 
+    # ── §7.1 masthead title fitting ────────────────────────────────────────
+
+    #: Characters that fit on one line of `.masthead-left` (474px, 65% of the
+    #: full-bleed row) at each step, MEASURED in this repo's fallback stack and
+    #: then cut by ~12%.
+    #:
+    #: WHY THE CUT. The template asks Google Fonts for Outfit, and the container
+    #: these were measured in has no network, so they are fallback-font widths.
+    #: Outfit's advance widths are not these. The margin makes the ladder
+    #: conservative rather than exact — and the HEIGHT does not depend on it
+    #: either way, which is the property page-1 capacity actually needs. A size
+    #: that turns out slightly too large in Outfit costs an ellipsis, not a
+    #: wrapped line and not a shifted page.
+    #:
+    #: measured: 24px/31 chars · 21px/38 · 18px/43 · 16px/49 · 14px/56
+    _TITLE_LADDER = ((27, 24), (33, 21), (38, 18), (43, 16))
+    _TITLE_MIN_PX = 14
+
+    def _masthead_title_px(self, text: str) -> int:
+        """Largest step whose measured capacity holds `text` on one line.
+
+        The masthead's title is "<report type> — <city>", and cities are
+        unbounded, so at 24px a long one wrapped to a second line and moved page
+        1 by 0.300in — which is how page-1 capacity came to depend on which city
+        an affiliate reports (D-102). It sets smaller instead now, inside a box
+        of fixed height, so the page below it does not move at all.
+        """
+        n = len(text or "")
+        for limit, px in self._TITLE_LADDER:
+            if n <= limit:
+                return px
+        return self._TITLE_MIN_PX
+
+    # ── §7.3 price-band distribution ───────────────────────────────────────
+
+    #: How many bands the stat-card row shows. The cards are capped at four in
+    #: pricebands_layout; the chart is not.
+    BAND_CARDS_SHOWN = 4
+
+    def _band_chart_note(self):
+        """The sample line under the band chart, or None.
+
+        Says what the bars are counting, and — when there are more bands than
+        the stat cards show — that the cards are the partial view rather than
+        the chart. Four cards beside six bars with nothing said about it reads
+        as a rendering fault.
+        """
+        bands = self.report_data.get("price_bands") or []
+        # Mirror the macro's filter exactly: a band with count 0 IS drawn — an
+        # empty price band is a fact about the market — so it counts here too.
+        # The first version used `if b.get("count")`, which said "4 bands"
+        # under a chart showing five. A caption that disagrees with the picture
+        # above it is worse than no caption.
+        counted = [b for b in bands if b.get("count") is not None]
+        if len(counted) < 2:
+            return None
+        total = sum(b["count"] for b in counted)
+        note = f"Active listings by price band · {total:,} listings across {len(counted)} bands"
+        if len(counted) > self.BAND_CARDS_SHOWN:
+            note += (f" · the cards above show the first {self.BAND_CARDS_SHOWN}; "
+                     f"the chart shows all {len(counted)}")
+        return note
+
+    # ── §7.3 median trend ──────────────────────────────────────────────────
+
+    #: Which monthly series each report type carries, and nothing for the rest.
+    #:
+    #: `market_snapshot` answers "how is this market doing", so it gets the
+    #: median price line. `inventory` answers "what is for sale and how fast is
+    #: it moving", so it gets the SALES PACE — closings per month.
+    #:
+    #: §7.3 asked for a months-of-supply trend on the inventory report and that
+    #: is not buildable; compute/monthly_trend.count_series explains why, and
+    #: the short version is that MOI's numerator is total CURRENT active
+    #: inventory and no past month's active count is recoverable from a feed
+    #: fetched as Active/Pending/Closed. The pace is MOI's denominator and is
+    #: knowable, so that is what ships, labelled as what it is.
+    TREND_SERIES = {
+        "market_snapshot": "median",
+        "inventory": "count",
+    }
+
+    def _build_monthly_trend(self):
+        """(series, note, fmt) for the trend chart, or (None, None, None).
+
+        Both series come from `closed_history` — closed rows carrying
+        `close_date` and `close_price`, which one `minclosedate = today - 365`
+        fetch already returns. Neither is the 13-request count series decision
+        01 priced; see compute/monthly_trend.py.
+
+        Everything here fails to None. A market report with no trend is a
+        complete report; a trend drawn from the wrong rows is not.
+        """
+        kind = self.TREND_SERIES.get(self.report_type)
+        if not kind:
+            return None, None, None
+
+        history = self.report_data.get("closed_history")
+        if not history:
+            return None, None, None
+
+        truncated = bool(self.report_data.get("closed_history_truncated"))
+        try:
+            if kind == "median":
+                series = median_series(history, truncated=truncated)
+            else:
+                series = count_series(history, truncated=truncated)
+        except Exception as e:  # pragma: no cover - defensive, as the narrative is
+            logger.warning("monthly trend failed (non-fatal): %s", e)
+            return None, None, None
+
+        if not series:
+            return None, None, None
+
+        total = sum(p["n"] for p in series)
+        if kind == "median":
+            drawn = [p for p in series if p["value"] is not None]
+            note = (
+                f"Median closed price by month · {len(drawn)} of {len(series)} months "
+                f"shown · {total:,} sales · months with fewer than "
+                f"{MIN_CLOSED_FOR_MEDIAN} closings are left blank"
+            )
+            return series, note, "currency"
+
+        note = (
+            f"Homes sold per month · {total:,} sales over {len(series)} months · "
+            f"sales pace, not months of supply — past inventory levels are not recoverable"
+        )
+        return series, note, "number"
+
     # ── colour resolution ──────────────────────────────────────────────────
 
     def _resolve_colors(self) -> tuple[str, str]:
@@ -220,12 +374,17 @@ class MarketReportBuilder:
         }
         counts = data.get("counts") or {}
         total = sum(counts.values()) if counts else data.get("total_listings", 0)
+        title = report_titles.get(self.report_type, "Market Report")
+        city = data.get("city", "")
         return {
-            "title": report_titles.get(self.report_type, "Market Report"),
+            "title": title,
             "subtitle": data.get("filters_label", ""),
-            "city": data.get("city", ""),
+            "city": city,
             "lookback_days": data.get("lookback_days", 30),
             "total_count": total,
+            # §7.1 — the masthead renders "<title> — <city>" on ONE line in a
+            # box of fixed height. This is the size that keeps it there.
+            "title_px": self._masthead_title_px(f"{title} — {city}" if city else title),
         }
 
     def _build_listings_context(self) -> Dict[str, Any]:
@@ -387,6 +546,7 @@ class MarketReportBuilder:
                 ai_insights = ""
 
         listings_ctx = self._build_listings_context()
+        monthly_trend, monthly_trend_note, monthly_trend_fmt = self._build_monthly_trend()
 
         context: Dict[str, Any] = {
             "layout": self.layout,
@@ -400,6 +560,16 @@ class MarketReportBuilder:
             # Text color guaranteed readable when overlaid on the accent
             # (used by .listing-status pill via --accent-text).
             "theme_color_text": color_roles["theme_color_text"],
+            # §7.3 — the chart's mark colour. primary_ink is the one brand value
+            # themes.py guarantees as ink on white, which is this page's surface.
+            "primary_ink": derive_theme(primary_color)["primary_ink"],
+            # §7.3 — the band chart's sample note. The stat cards show only
+            # price_bands[:4]; the chart shows every band, so when there are
+            # more than four the note is the only place that says so.
+            "band_chart_note": self._band_chart_note(),
+            "monthly_trend": monthly_trend,
+            "monthly_trend_note": monthly_trend_note,
+            "monthly_trend_fmt": monthly_trend_fmt or "currency",
             # Section contexts
             "header": self._build_header_context(),
             # PDF-COMPREHENSIVE — listings is still a flat array so the
@@ -467,6 +637,13 @@ class MarketReportBuilder:
             # it so the gradient flows from the agent's brand identity correctly.
             "header_bg": _darken(primary_color, 0.35),
             "report_title": header_ctx.get("title") or "Market Report",
+            # The running head carries the BRAND; the page-1 masthead carries
+            # the report title. They used to carry the same words 40px apart.
+            "brand_name": (
+                (self.report_data.get("branding") or {}).get("company_name")
+                or (self.report_data.get("branding") or {}).get("agent_name")
+                or ""
+            ),
             "city": header_ctx.get("city") or "",
             "lookback_days": header_ctx.get("lookback_days") or 30,
             "subtitle_text": subtitle_text,

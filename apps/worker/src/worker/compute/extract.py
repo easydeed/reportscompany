@@ -25,19 +25,52 @@ class PropertyDataExtractor:
                 list_date = _iso(p.get("listDate"))
                 close_date = _iso((sales or {}).get("closeDate"))
                 
-                # DOM: Use API value if available, otherwise calculate from dates
-                # SimplyRETS doesn't return daysOnMarket for Closed listings
-                dom = _int(p.get("daysOnMarket"))
-                if dom is None and list_date and close_date:
-                    # Calculate DOM from list to close date
-                    dom = (close_date - list_date).days
-                    if dom < 0:
-                        dom = 0  # Sanity check
-                elif dom is None and list_date:
-                    # For active/pending: calculate from list date to now
-                    dom = (datetime.now() - list_date).days
-                    if dom < 0:
-                        dom = 0
+                # DAYS ON MARKET — D-105.
+                #
+                # THE COMMENT THAT USED TO BE HERE SAID "SimplyRETS doesn't
+                # return daysOnMarket for Closed listings". That is not true and
+                # it is what made this defect durable: the feed does return it,
+                # at `mls.daysOnMarket`, and the read was at the top level. A
+                # true observation about this code's behaviour — the value was
+                # always None — was written down as a fact about the vendor and
+                # then relied on by everything downstream. What was actually
+                # observed is that the lookup returned None. It returned None
+                # because it was the wrong key.
+                #
+                # Same defect as `closeDate`, which lives at `sales.closeDate`.
+                # Third of its kind in this file's neighbourhood; the sweep that
+                # found it is described on D-105.
+                #
+                # WHAT THE NUMBER MEANS, WHICH IS THE OTHER HALF. The feed's
+                # daysOnMarket is list -> CONTRACT: the days a buyer could have
+                # bought it. `close - list` is list -> CLOSE, which adds the
+                # escrow period — 26 days on the repo's own fixture, taking 16
+                # to 42. They are different quantities and only the first is
+                # what "days on market" means to an agent.
+                #
+                # So: the feed's value when there is one; otherwise derive the
+                # SAME quantity from contractDate when the feed carries it; and
+                # for a closed sale with neither, None rather than a number that
+                # means something else. D-056's rule — no sentinel, and the
+                # caller says so in words. The table already renders None as "-".
+                dom = _int((mls or {}).get("daysOnMarket"))
+                if dom is None:
+                    # Some deployments do put it at the top level; harmless to try.
+                    dom = _int(p.get("daysOnMarket"))
+                if dom is None and list_date:
+                    contract_date = _iso((sales or {}).get("contractDate"))
+                    if contract_date:
+                        # list -> contract, the same quantity the feed reports.
+                        dom = max((contract_date - list_date).days, 0)
+                    elif close_date:
+                        # Closed, and nothing says when it went under contract.
+                        # `close - list` is NOT this quantity, so it is not
+                        # substituted. Renders as "-".
+                        dom = None
+                    else:
+                        # Active or pending: days on market so far, which is the
+                        # right notion for a listing that has not sold.
+                        dom = max((datetime.now() - list_date).days, 0)
                 
                 lp  = _int(p.get("listPrice"))
                 cp  = _int((sales or {}).get("closePrice"))

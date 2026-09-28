@@ -291,7 +291,7 @@ this workstream before any design work begins.
 | **B13** | WRONG | PDF ×8 | Filter line reads "under $1.5M (First-Time Buyer)" while listings show $1,762,500 · $1,837,500 · $1,912,500. Price Bands renders a **"$1.5M+" band** under an "under $1.5M" filter | Determine whether the filter is applied and the chip is wrong, or the reverse. Different severities |
 | **B14** | WRONG | PDF — market_snapshot | Hero reads `$907,500 MEDIAN SALE PRICE`; the insight two inches below reads "a median of $922K" | Same figure computed twice. §08 |
 | **B15** | WRONG | PDF — inventory | Displays `SALE RATIO 98.2%` and `AVG DOM 12` — closed-sale metrics on a report about listings that haven't sold | Per §09 report matrix: inventory shows months of supply, active DOM, price reductions |
-| **B16** | WRONG | PDF — closed | No **sale date** column — the primary field for a closed comp. DOM column runs 3, 6, 9 … 87 then restarts at `-`, 3, 6 | Add sale date; verify DOM source |
+| **B16** | WRONG | PDF — closed | No **sale date** column — the primary field for a closed comp (confirmed: the table is Address · Bd/Ba · Sq Ft · Price · DOM). ~~DOM column runs 3, 6, 9 … 87 then restarts at `-`, 3, 6~~ — **that cycle is `scripts/gen_market_reports.py:204`, `(i * 3) % 90`, the generator that produced the reviewed PDFs; 0 renders as `-`. Not a product defect.** Verifying the DOM source anyway found a real one: **D-105** — `extract.py` reads `daysOnMarket` at the top level where the feed puts it under `mls`, so every DOM is computed and closed comps carry list→close instead of list→contract, 162% high on the repo's own fixture | Add sale date; D-105 for DOM |
 | **B17** | ROUGH | PDF ×8 | No generation date anywhere. "Last 30 days" is relative with no anchor | Date on page 1 and in every page footer |
 | **B18** | ROUGH | PDF ×8 | Every card in Featured Listings tagged `FEATURED`; every card in Open Houses, `OPEN HOUSE`. The title already said it | Badges only where the value varies between cards. Market Snapshot does this correctly |
 
@@ -453,6 +453,121 @@ Unchanged from v1 §07.
 **7.1 Page architecture** — full masthead page 1 (~150pt); one-line running head after (~38pt).
 Footer pinned to page bottom on every page.
 
+> ### Correction: this is case C, and PDFShift will not do it
+>
+> *2026-09-24, from running the probe.* The spec above asks for three things at once: a full
+> masthead on page 1, a slim running head from page 2, and a footer on **every** page. In PDFShift's
+> terms that is `header.start_at = 2` with `footer.start_at = 1`.
+>
+> `scripts/probe_pdfshift_start_at.py` rendered one four-page document four ways. **PDFShift accepts
+> differing `start_at` values with a 200 and silently applies `max(header, footer)` to both.** Ask
+> for header@2 and footer@1 and both arrive at page 2 — no error, no warning, and page 1 loses its
+> footer. Full verdict table on **D-103**.
+>
+> The instrument mattered more than the answer here: the probe searched the rendered pages for
+> marker strings rather than checking the HTTP status, and the status was 200 in every case. A
+> docs-based answer, or a probe that stopped at "accepted", would have reported no constraint at
+> all.
+>
+> **The architecture that replaces it: the masthead moves out of PDFShift's header slot and into the
+> document body.**
+>
+> | | today | corrected |
+> |---|---|---|
+> | page 1 masthead | PDFShift `header`, repeated at full size on every page | ordinary body content, first thing on page 1 |
+> | pages 2+ head | the same full masthead again | PDFShift `header`, slim running head |
+> | footer | PDFShift `footer`, every page | unchanged, every page |
+> | reserved band | 1.4in top on every page | the running head only |
+>
+> This gets §7.1's intent within the constraint rather than around it, and it puts the masthead
+> under CSS control instead of a height negotiated with a vendor's reservation — which is also the
+> other half of D-103, where 2.4in of every page is reserved for 1.946in of paint.
+>
+> **ONE CORRECTION TO THE CORRECTION, AND IT IS THE SAME TRAP AGAIN.** Moving the masthead into the
+> body does not by itself let `header.start_at` and `footer.start_at` differ. The slim running head
+> still wants to start at page 2 and the footer still wants page 1, and PDFShift coerces that pair
+> exactly as it coerced case C — the page-1 footer disappears. What changes is the masthead's
+> location, not what the two `start_at` values are asking for.
+>
+> Two variants survive the verdict, and they differ in what page 1 shows:
+>
+> **A — both `start_at` at 1, running head on page 1 too.** Nothing differs, so nothing is coerced.
+> Page 1 carries the slim running head band *and* the body masthead below it; pages 2+ carry the
+> running head. Footer on every page, as specified. The cost is a thin band above page 1's
+> masthead, which is a design problem with a design answer (make the band read as the masthead's
+> top rule) rather than a missing footer.
+>
+> **B — both at 2, page-1 footer rendered in the body.** Matched, so nothing is coerced, and page 1
+> shows only the masthead. But pinning a footer to the bottom of page 1 inside a flowing document
+> needs page 1 to be a fixed-height section, which is brittle in exactly the way the rest of this
+> layout is not.
+>
+> **A is the one to build**, and B is recorded rather than dropped so the rejected option stays
+> legible: it delivers the same page 1, and it pays for it by making page 1 a fixed-height section
+> inside a document whose whole layout is flow — a structural constraint, against A's cosmetic one.
+> A delivers every clause of §7.1 except "no head on page 1", which the spec never said: it said a
+> full masthead on page 1, and A has one.
+>
+> ---
+>
+> **BUILT 2026-09-24. Variant A.**
+>
+> | piece | where it lives now | appears on |
+> |---|---|---|
+> | masthead | document body, first in the flow (`macros.report_masthead`) | page 1 |
+> | running head | PDFShift `header`, `start_at` 1 | every page |
+> | agent footer | PDFShift `footer`, `start_at` 1 | every page |
+>
+> Both `start_at` values are 1 and `test_page_architecture.py` fails if either moves — the change
+> that breaks this is silent everywhere else, because PDFShift returns 200 and takes the page-1
+> footer away without saying so.
+>
+> **The reservations now equal what their documents paint**, which is the other half of D-103:
+>
+> | | before | after |
+> |---|---|---|
+> | top | 1.3in reserved / 1.165in painted, + 0.1in margin | **0.44in / 0.417in**, no margin |
+> | bottom | 0.9in / 0.781in, + 0.1in margin | **0.89in / 0.885in**, no margin |
+> | total reserved | 2.4in of 11in (21.8%) | **1.33in (12.1%)** |
+>
+> Both PDFShift margins are 0 and the breathing room moved *inside* the header and footer
+> documents. It has to: a CSS `padding-top` applies once at the start of the flow, not after each
+> page break, so continuation pages would sit flush against the band.
+>
+> **Measured outcome. Continuation pages gain; page 1 pays for the masthead as content.**
+>
+> | report type | pages before → after | continuation rows | page 1 with narrative |
+> |---|---|---|---|
+> | `closed` · `inventory` | 6 → **5** | 25 → **29** | 12 → 11 |
+> | `new_listings` | 18 → **16** | 7 → **8** | 3 → 3 |
+> | gallery types | unchanged | 9 → 9 | 6 → 6 |
+> | `market_snapshot` | 2 → 2 | — | 3 → **0** |
+> | `price_bands` | 2 → 2 | — | 3 → 3 |
+>
+> `market_snapshot`'s 0 is quantisation rather than a bug: its cards are a row of three that moves
+> as a unit, and page 1 no longer fits the row once the masthead, hero stat and narrative box are
+> on it. The report is still two pages and every listing is on page 2. Whether that is the right
+> page 1 is a design question, and it belongs with D-102's rather than being settled here.
+>
+> **One piece of residue, stated rather than hidden.** On page 1 the running head says
+> "Closed Sales — Irvine · 117 CLOSED SALES" and the masthead immediately below says it again. The
+> band and the masthead share `header_bg` so they read as one block rather than two, and the
+> duplication is small — but it is duplication, and it is the price of A. Cheapest fix if it grates:
+> make the running head carry the brand rather than the report title. That is a content decision,
+> not a structural one.
+>
+> §7.2's pinned page-1 capacities were re-measured against this architecture and re-recorded in
+> `test_narrative_box.py::PAGE_1_CAPACITY`. The old numbers are not comparable to the new ones and
+> the entry says so.
+>
+> **And the masthead is now the page's only variable block.** Surveyed 2026-09-25 across all eight
+> report types by stretching every input one at a time: `city` grows it 0.300in and the filter label
+> 0.172in — 0.472in together — and **nothing else on page 1 moves at all.** The narrative is capped
+> (§7.2), the pace label is a code constant, prices and counts are numeric, and the agent's and
+> company's names are not in the body. So a `PAGE_1_CAPACITY` number is exact for a short city and
+> optimistic for a long one, until the masthead's two text lines are bounded — which is one change
+> to one block, not a sweep. Full table on **D-102**.
+
 **7.2 Pagination** — 26 table rows per page · 9 gallery cards in 3×3 · 70% minimum fill · never
 orphan fewer than four rows · truncation stated in a line beneath the list.
 
@@ -461,11 +576,330 @@ orphan fewer than four rows · truncation stated in a line beneath the list.
 > a different render, or two builds are in play — which is exactly the Group A / Group B problem
 > in §02. Confirm which build the pagination targets are set against.
 
+> ### Correction: a single rows-per-page number cannot be a target for page 1
+>
+> *2026-09-24, from measuring it.* The targets above read as constants — 26 rows, 9 cards, 70%
+> fill — applied uniformly to every page. **Page 1 cannot hold a constant**, and the reason is not
+> a layout detail that tuning fixes.
+>
+> Page 1 carries the hero stat, the section header and the **AI narrative**, and the narrative is
+> model-generated prose of no fixed length. Measured: shortening it by one sentence (~48
+> characters) moves `closed` from **13 rows on page 1 to 14**, and `new_listings` from 3 to 4.
+> Continuation pages do not move at all — a stable 25 and 7 respectively. Same build, same
+> listings, same everything else; one sentence of copy.
+>
+> So "26 table rows per page" is two different claims wearing one number, and only one of them can
+> be a guarantee:
+>
+> - **Continuation pages take a measured target.** They hold a fixed box with fixed-height rows,
+>   and 25 is what they hold today against a target of 26. That is a real number to tune toward.
+> - **Page 1 takes a computed budget, not a target.** What fits is the box minus whatever the
+>   narrative occupies, and that is knowable only at render time. Writing 26 against it does not
+>   make it true; it makes the spec unfalsifiable, because any render can be said to have missed.
+>
+> The same split applies to **70% minimum fill**: a floor is meetable on continuation pages and is
+> not a property page 1 controls, since the copy above the table is not the layout's to size.
+>
+> **Three ways out, and this is a design decision rather than a measurement.** Give the narrative a
+> fixed height and clip or scroll the overflow; move the narrative off page 1 so page 1 becomes a
+> continuation page like the others; or state the spec as it actually works — a measured
+> continuation target plus a page-1 budget computed from the copy. The third is the honest one and
+> costs the least, but it means the spec stops containing a single number, and whoever writes
+> §7.1's page architecture should know that before they start.
+>
+> **Why this is filed rather than edited into the sentence above.** The original wording is the
+> evidence for how the target was arrived at — from a render, without noticing that the render's
+> first page was a function of its copy. Whoever writes Workstream E's equivalent will be reading
+> a PDF too, and will get the same answer the same way.
+>
+> ---
+>
+> **RESOLVED 2026-09-24 — Jerry's call: cap the narrative's height.** Of the three, the only one
+> that keeps the page architecture predictable without losing anything. Moving the narrative off
+> page 1 costs the thing that makes these reports read as written rather than generated; speccing
+> page 1 as variable makes every later layout decision inherit an unknown.
+>
+> **The box is four lines, and four is measured rather than picked.**
+>
+> | narrative | renders as |
+> |---|---|
+> | two sentences | 3 lines |
+> | three sentences | 4 lines |
+> | 150 tokens — `max_tokens`, the hard API ceiling | 8 lines |
+>
+> Eight lines is the box nothing could ever overflow, and it was tried and rejected **on the
+> render**: `market_snapshot`'s page 1 held zero listings and the report went from two pages to
+> three, while `closed` fell from 13 rows to 9. A box sized for copy nobody writes costs every
+> report four blank lines. Four lines is the measured height of three sentences, which is what the
+> prompt asks for in those words.
+>
+> **What it costs, against the identical render with the height released:**
+>
+> | report type | 2 sentences | 3 sentences | 150 tokens | **fixed** |
+> |---|---|---|---|---|
+> | `closed` · `inventory` | 13 | 12 | 9 | **12** |
+> | `market_snapshot` | 3 | 3 | 0 *(3 pages)* | **3** |
+> | `price_bands` | 4 | 3 | 3 | **3** |
+> | `new_listings` | 3 | 3 | 2 | **3** |
+> | gallery types | 6 | 6 | 3 | **6** |
+>
+> A two-sentence narrative gives up one row; a three-sentence one gives up nothing; the worst case
+> that used to cost four rows and a whole extra page cannot happen. Page counts are unchanged from
+> the baseline for all eight types.
+>
+> **The box does not clip, so generation enforces the budget.** There is no `overflow: hidden`
+> anywhere near it. `NARRATIVE_MAX_CHARS = 380` (four lines at ~97 characters a line, measured by
+> bisecting rendered height against a long-word corpus so real prose has margin) drops an
+> over-budget narrative and logs it, as does a `finish_reason == "length"` response — see
+> **D-104**, which is a real defect this turned up: the worker read `finish_reason` nowhere, so a
+> sentence the API had cut off shipped in a customer's PDF.
+>
+> **Page-1 capacity is now pinned per report type**, the way continuation pages are, in
+> `test_narrative_box.py::PAGE_1_CAPACITY` — two deterministic states, with a narrative and
+> without, since a report with no narrative renders no box.
+>
+> **On the precedent.** The property report's Market Trends page was cited as the model to match —
+> a fixed-height narrative block that reads well. It does read well, but not for that reason:
+> `.mt-condition-desc` has **no height constraint at all** (`font-size:10px; line-height:1.6;
+> margin:0`), and no template in this repository fixes the height of any text block. What makes it
+> stable is that its copy is generated by `_classify_market_condition` — four template strings with
+> numbers interpolated, bounded by construction. Which is the same principle arrived at from the
+> other end: **bound the copy, not the container.** The box here is the belt; the budget is the
+> braces, and it is the braces doing the work.
+
 **7.3 Charts** — there is currently no chart in any of the 32 pages. Single-series only in v1.
 Marks in `primary_ink`, never raw primary. Direct-label the endpoint and the largest bar, never
 every point.
 
+> ### Built and measured, 2026-09-24 — the first chart, and what it costs
+>
+> `market_snapshot`'s twelve-month median closed price, as inline SVG in the document body (no
+> script, no external request, nothing for PDFShift to fetch). Built to §7.3's rules and to the
+> mark specs: 2px line with round joins, endpoint marker r=4.5 with a 2px surface ring, hairline
+> **solid** gridlines one step off the surface, labels on the endpoint and the extreme only, no
+> legend (one series — the heading names it), axis ticks and value labels in text grays rather than
+> the series colour. Mark colour is `primary_ink`, and this page's surface is white, so that
+> token's "clears 4.5:1 on white" guarantee holds here exactly rather than approximately.
+>
+> No hover layer, which is the one deliberate departure from how this chart would be built for a
+> screen: there is no pointer in a PDF. Nothing is gated behind one either — the axis carries the
+> scale, two direct labels carry the values that matter, and a note states the sample.
+>
+> **The data costs two requests, not thirteen, and decision 01 does not cover it.** Decision 01
+> priced a twelve-month **count** series at 13 requests by differencing cumulative `minclosedate`
+> counts. A **median** cannot be differenced out of counts at any price — it needs the prices. One
+> `minclosedate = today − 365` fetch returns closed rows carrying `close_date` and `close_price`
+> already, and twelve medians fall out of bucketing them client-side: **two requests at
+> `page_max = 500`**, cheaper than the count series rather than dearer. The ceiling is
+> `SIMPLYRETS_MAX_RESULTS` (1000): past that the fetch truncates, and a median over a truncated,
+> order-dependent subset is a wrong number that looks right, so the series is refused rather than
+> drawn (D-078's rule). Months with fewer than three closings are a **gap in the line, not a zero** —
+> a zero would draw a crash that did not happen.
+>
+> **What it costs in page space — measured twice, and the first answer is void.**
+>
+> Under the OLD architecture the chart took page 1's entire listing set and added a page (2 → 3,
+> `[3, 6]` → `[0, 6, 3]`). That was measured before §7.1 variant A moved the masthead into the
+> body, and it is recorded here only because the reversal is the point: **re-measured under variant
+> A, the chart is free.**
+>
+> | | pages | listings per page |
+> |---|---|---|
+> | `market_snapshot` without the chart | 2 | 0, 9 |
+> | `market_snapshot` with the chart | **2** | **0, 9** |
+>
+> Nothing moves, because page 1 already cannot fit a row of cards and the chart lands in space that
+> was going to waste. **This is what "do not settle placement on numbers measured under the old
+> architecture" meant in practice** — the same chart, the same fixture, opposite answers.
+>
+> **The page-1 budget, which is what makes the free lunch conditional:**
+>
+> | page 1 of `market_snapshot` | | |
+> |---|---|---|
+> | masthead | 1.39in | 14% |
+> | hero stat | 1.14in | 12% |
+> | narrative box | 1.42in | 15% |
+> | stats bar | 2.42in | 25% |
+> | section heading + note | 0.78in | 8% |
+> | **before a single listing** | **7.15in** | **74%** |
+> | free | 2.52in | |
+> | a row of three cards | 2.77in | **short by 0.25in** |
+>
+> So the chart is free *while* page 1 is 0.25in short of a card row. Recover that 0.25in — from
+> 3.56in of metric blocks carrying five numbers — and a row of three listings comes back, and the
+> chart stops being free. **Those are one decision, not two**, and it is the decision D-102 is
+> already waiting on.
+>
+> ---
+>
+> ### The inventory chart: §7.3 asked for months of supply, and that one cannot be built
+>
+> *2026-09-25.* Months of supply is `current active inventory / monthly sales rate`, and
+> `compute/moi.py` is explicit that the numerator is **total CURRENT active inventory, with no date
+> window** — getting that wrong is what D-056 was. A twelve-month MOI line needs the active count
+> *as it was* in each of those months, and nothing in this pipeline can supply it:
+> `query_builders.py` fetches three statuses and only three — Active, Pending, Closed — so a home
+> listed in March and withdrawn in May appears in none of them today. Reconstructing March's
+> inventory from current-status rows would silently omit every listing that left the market without
+> closing.
+>
+> **The version that would have shipped is worse than no chart.** Hold today's active count constant
+> and vary only the sales rate per month and you get a smooth, plausible line that moves when supply
+> did not — a number that looks like a measurement, which is D-056's family exactly.
+>
+> **What ships instead is the half that is knowable: the sales pace.** Closings per month is MOI's
+> denominator, it falls out of the same 365-day fetch the median series uses, and it costs nothing
+> extra. It is labelled as what it is — *"sales pace, not months of supply — past inventory levels
+> are not recoverable"* — and a test asserts that sentence is present, because a pace line on an
+> inventory report is precisely what a reader would otherwise take for supply.
+>
+> **Two series, two honest axes.** The count is anchored at zero; the median is not. Seven sales
+> against thirteen on a baseline of five reads as a collapse, and zero is both meaningful and
+> reachable for a count — but a median price is never near zero and anchoring it there flattens
+> every real movement. Both directions are asserted, so "anchor at zero" cannot be applied to the
+> price chart and quietly straighten it.
+>
+> **Page cost, measured under variant A: none.**
+>
+> | | pages | rows per page |
+> |---|---|---|
+> | `inventory` without the chart | 5 | 11, 29, 29, 29, 22 |
+> | `inventory` with the chart | **5** | 5, 29, 29, 29, 28 |
+>
+> Page 1 gives up six rows and the last page absorbs them. No extra page, and unlike
+> `market_snapshot` this is not conditional on a quarter inch — there is room either way.
+>
+> **THE REFUSAL IS A DATA SHAPE, NOT AN EFFORT ESTIMATE.** Worth stating plainly so nobody
+> re-opens this as a scoping question: no amount of work on this side makes the chart buildable. A
+> current-status feed cannot reconstruct historical inventory, because the rows that would carry it
+> — listings that left the market without closing — are not in any of the three statuses fetched,
+> and are not in the feed's responses at all. This is not "hard", it is absent.
+>
+> **The condition that would change it, named so it can be checked rather than argued:** SimplyRETS
+> exposing either a status-history endpoint (when each listing changed status) or an off-market
+> query (withdrawn / expired / cancelled, with their dates). Given either, a month's active count
+> is reconstructible and the chart becomes ordinary work. That is a question for the production
+> probe alongside decision 01's, not a question about charting, and until it is answered the pace
+> series is the honest maximum.
+
+> ### price_bands — the band distribution, built 2026-09-28
+>
+> Horizontal bars, one per band, counts. Bars and not a line because price bands are ordered
+> **categories** — the question is "which band is the market", not "which way is it going" — and
+> horizontal because the labels are `$900K – $1.1M` and a vertical axis would rotate or truncate
+> them.
+>
+> **Why a chart at all, next to stat cards that already carry the exact counts.** The cards give
+> four numbers and no shape: a reader can see 18, 31, 21, 11 and still not see that the middle band
+> *is* the market. The bars carry the comparison and the cards keep the values, which is also why
+> **only the largest bar is labelled** — §7.3's rule, and here it stops the chart duplicating the
+> cards.
+>
+> **A band with zero listings is drawn, and says "none".** The first version used
+> `selectattr('count')` and silently dropped it — the identical mistake the trend chart makes one
+> macro over, where a month with no closings is a gap and a month with no sales is a zero.
+> "Nothing is for sale above $1.6M" is a fact about the market and one of the more useful things on
+> the page. A band with no `count` key at all is different — no data rather than no listings — and
+> is dropped.
+>
+> **The caption counts what the chart draws.** Its first version counted only truthy bands and said
+> "4 bands" under a chart showing five. It also names the discrepancy the layout has always had:
+> the stat cards render `price_bands[:4]` while the chart renders all of them, so with six bands
+> the caption says the cards show the first four. Four cards beside six bars, with nothing said
+> about it, reads as a rendering fault.
+>
+> **Page cost, measured under variant A:**
+>
+> | | pages | listings per page |
+> |---|---|---|
+> | `price_bands` without the chart | 2 | 3, 5 |
+> | `price_bands` with the chart | **2** | 2, 6 |
+> | with six bands rather than four | **2** | 2, 6 |
+>
+> One listing off page 1, no extra page, and a taller chart costs nothing more because page 1 has
+> already given up the row. Cheapest of the three charts.
+>
+> **`closed`'s DOM distribution is NOT built**, and that is the §7.3 item that stays open. The
+> column it would plot was **D-105** — every DOM in the product read from the wrong path and, for
+> closed comps, computed as marketing-plus-escrow. The path is fixed; whether the numbers are right
+> in production is not confirmed until a live payload is fetched. A histogram makes a number
+> authoritative, so it waits for that rather than shipping beside it.
+
 **Effort: L.** Blocked by A and by open decision 01.
+
+---
+
+> ### Measured, 2026-09-24 — what this surface actually does before anything changes
+>
+> Everything below is produced by rendering, not by reading. The instrument is
+> `scripts/measure_market_pagination.py` (Chromium's own paginator, Letter, PDFShift's
+> reservations) and `apps/worker/tests/test_market_layout_map.py` (a hook on
+> `jinja2.runtime.Macro.__call__`). The Workstream C rule applies here and is why: the
+> equivalent map for the email surface was written from reading the builders and **seven of
+> its eight entries were wrong.**
+>
+> **There is one PDF path, and it is not the one §07's neighbours describe.** All three
+> `render_pdf` call sites in the worker pass `html_content`, so `MarketReportBuilder` renders
+> every market-report PDF and the `/print/{runId}` route is never reached by the renderer.
+> It is still reached by people — see **D-101**, which is this surface's own Group A / Group B.
+>
+> **Layouts, recorded from the render.** Five layouts, not the four the builder's docstring
+> claimed (it filed `price_bands` under "Analytics"; it has its own `pricebands_layout`). The
+> docstring is gone rather than corrected — a second copy of a mapping is a second thing to keep
+> right, and this one was not kept right.
+>
+> | layout | report types |
+> |---|---|
+> | `gallery_layout` | `new_listings_gallery` · `featured_listings` · `open_houses` |
+> | `market_narrative_layout` | `market_snapshot` |
+> | `closed_inventory_layout` | `closed` · `inventory` |
+> | `pricebands_layout` | `price_bands` |
+> | `analytics_layout` | `new_listings` |
+>
+> **Pagination, measured on 120 listings.** This settles **decision 11**.
+>
+> | report type | pages | listings per page |
+> |---|---|---|
+> | `closed` · `inventory` | 6 | 12, 25, 25, 25, 25, 8 |
+> | `new_listings` | 18 | 3, then 7 |
+> | `new_listings_gallery` | 14 | 6, then 9, last 6 |
+> | `open_houses` | 12 | 6, then 9, last 4 |
+> | `market_snapshot` | 2 | 3, 6 |
+> | `price_bands` | 2 | 3, 5 |
+> | `featured_listings` | 2 | 6, 6 |
+>
+> Page-1 figures are as of the fixed narrative box (§7.2's correction below, resolved
+> 2026-09-24). Before it, page 1 moved with the copy — `closed` read 13 here with a two-line
+> narrative and 9 with a full-length one. Page counts are the same either way.
+>
+> **Decision 11's answer: neither build produces five rows.** The reviewed `closed.pdf` carrying
+> 13 / 25 / 12 is the production build — this harness reproduces 13 then 25 from it, which is
+> also the evidence that the emulation is faithful. The legacy `/print` build hard-codes
+> **fifteen** (`ROWS_PER_PAGE = 15`, three call sites in `apps/web/lib/templates.ts`). v1's
+> "five rows" matches neither, and no source for it survives in the code.
+>
+> **§7.2's targets are set against a page-1 capacity that is not fixed.** Shortening the AI
+> narrative by one sentence (~48 characters) moves `closed` from 13 rows on page 1 to 14 and
+> `new_listings` from 3 to 4; continuation pages do not move. The narrative is model-generated
+> prose of no fixed length, so "26 rows per page" and "70% minimum fill" cannot both be
+> guarantees about page 1 unless the copy above the table is given a fixed height. Continuation
+> pages are stable and can carry a real target.
+>
+> **§7.1's page architecture is not what ships, and the obvious way to build it may be
+> unavailable.** The same masthead repeats at full size on every page — 1.165in measured,
+> against §7.1's ~150pt for page 1 and ~38pt after — and 2.4in of every 11in page is reserved
+> for 1.946in of paint. Moving the running head to `start_at: 2` also moves the **footer** off
+> page 1 if `tasks.py`'s recorded PDFShift constraint holds. That constraint is a code comment
+> and has not been verified; verify it before designing around it. **D-103.**
+>
+> **Three "1-page" report types render two pages.** `market_snapshot`, `price_bands` and
+> `featured_listings` are all documented as one-page snapshots in `PDF_CONFIG`'s own comment and
+> all spill. **D-102.**
+>
+> **What did not need filing.** `more_listings_callout` is invoked on every render and can never
+> emit, because every `PDF_CONFIG` entry has `more_template: None` — deliberately, since the
+> "+ N more, contact me" copy was removed as dishonest. A test records that the path is inert so
+> that restoring a template is a decision someone makes on purpose.
 
 ---
 
@@ -761,7 +1195,7 @@ same reason.
 | **08** | **Is the comp date window broken, or did it correctly find nothing recent?** Determines whether E2 is a query fix or a copy fix | **E2** | Eng |
 | **09** | **What is the registered business postal address?** Required for the email footer (B20) and the marketing site's legal pages (G3 in the marketing plan). **One answer closes both** | B20, G3 | Jerry |
 | **10** | **B10 attribution.** Putting a named agent's byline on LLM-generated commentary that feeds a pricing decision, with no disclosure, is a liability question rather than a design one — especially while the figures are still inconsistent. **Recommend:** attribute as a prepared summary, retain a "prepared with market data from SimplyRETS" line | B10 | Product / legal |
-| **11** | **Pagination baseline.** v1 says table pages carry five rows; the reviewed render carries 13/25/12. Reconcile before §7.2 targets are set — likely the same Group A/B split as decision 07 | Workstream D | Eng |
+| ~~**11**~~ | ~~**Pagination baseline.**~~ **ANSWERED 2026-09-24 by measurement — see the block under §07.** The reviewed 13/25/12 render is the production build (`MarketReportBuilder`), reproduced by `scripts/measure_market_pagination.py`. The legacy `/print` build is a fixed 15. **Five matches neither**, and nothing in the code produces it. The Group A/B split is real but sits elsewhere: the PDF and the customer-facing "view in browser" link render different builds of the same report — **D-101** | Workstream D | ~~Eng~~ |
 
 ---
 
@@ -798,6 +1232,44 @@ returns nothing there.
 > at the top level.** Reading it top-level returns `None` for every row and looks exactly like a
 > feed with no close dates — which is how the first run of this check nearly reported the wrong
 > answer. `extract.py:26` reads the correct path.
+
+---
+
+### Correction: 13 requests prices the COUNT series, and §7.3's first chart is not one
+
+*2026-09-24, from building it.* Everything above answers "what does a twelve-month trend cost" with
+**13 requests**, by differencing cumulative `minclosedate` counts. That is right, and it is the
+price of **one particular series**: how many homes sold each month. The correction is that it was
+then carried as the price of §7.3's trend line generally, and §7.3's first chart is a **median**.
+
+**A median cannot be differenced out of counts at any price.** `count=true` returns a total, and no
+arithmetic over totals recovers the middle of a distribution. The 13-request technique does not get
+cheaper or dearer for a median — it does not apply.
+
+**What a median costs instead: two requests, not thirteen.** One
+`minclosedate = today − 365` query returns the closed rows themselves, and `extract.py` already puts
+`close_date` and `close_price` on each one. Twelve medians then fall out of bucketing those rows
+client-side, at no further vendor cost. At `page_max = 500` that is two requests for up to 1000
+closings — **cheaper than the count series, not dearer** — and the same rows yield the monthly
+counts for free, so a volume series alongside it costs nothing extra either.
+
+| series | what it needs | requests |
+|---|---|---|
+| monthly **count** | a total per month | 13 (differenced), or 12 if `maxclosedate` ever filters |
+| monthly **median** | the prices | **2** — one 365-day fetch, bucketed client-side |
+| both together | the prices | **2** — the counts come out of the same rows |
+
+**Where it does get expensive is the row ceiling, and that is a different risk.**
+`SIMPLYRETS_MAX_RESULTS` is 1000. A market with more closings than that in twelve months returns a
+truncated set, and a median over a truncated, order-dependent subset is a wrong number that looks
+like a right one. `compute/median_trend.py` refuses the series rather than drawing it, which is
+D-078's rule. **The cost model for a median is therefore two requests with a correctness cliff,
+not thirteen requests with a smooth scale** — a different shape of risk from the one decision 01
+analysed, and it should be planned as one.
+
+**The original analysis is preserved above rather than edited** because it is correct about the
+series it priced, and because the mistake worth remembering is not the arithmetic — it is
+generalising a cost from one series to "the trend line".
 
 ## 14 · Out of scope
 
