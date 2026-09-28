@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 34 | Real, unfixed |
+| `open` | 36 | Real, unfixed |
 | `fixed` | 68 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **106** | D-001 … D-106, contiguous, no duplicates |
+| **Total** | **108** | D-001 … D-108, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 14. (Sums to 34, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 16. (Sums to 36, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -5619,6 +5619,95 @@ The rule to implement once confirmed: `bathsFull + (bathsHalf × 0.5)`, rendered
 
 **Awaiting Jerry's confirmation, not blocked on it for the diagnosis** — the read is wrong either
 way, and only the rendering rule is in question.
+
+
+---
+
+### D-107 — the price-band stat cards show the first four bands and never say so
+
+**Severity:** ROUGH · **Affects:** `price_bands` PDFs for any market with more than four bands
+**Status:** `open`
+
+`macros.jinja2`, `pricebands_layout`:
+
+```jinja
+{% for band in price_bands[:4] %}
+```
+
+A market with six price bands renders four cards. Nothing on the page says the other two exist,
+and nothing in the code says why four.
+
+**Surfaced by the §7.3 band chart**, which renders every band — so a six-band report now shows four
+cards above six bars. The chart's caption names the discrepancy as a stopgap ("the cards above show
+the first 4; the chart shows all 6"), which is a caption apologising for a layout rather than a fix.
+
+**IT IS NOT PROTECTING AGAINST ANYTHING, WHICH IS THE POINT.** The obvious defence of a cap is that
+more cards would break the row. Measured, with the cap lifted:
+
+| | cards | width each | label lines | row height |
+|---|---|---|---|---|
+| capped at four | 4 | 79px | 2 | 84.8px |
+| all six | 6 | 56px | 3 | 95.2px |
+
+Nothing overflows, nothing truncates, no label is clipped. `.stat-cards` is `display: flex` with
+`flex: 1` children — not a four-column grid — so the cards simply divide the row. Six costs
+**10.4px of height** and a tighter label. That is an aesthetic cost, not a constraint, and it is
+being paid in hidden information instead.
+
+**No recorded intent.** The `[:4]` dates to the repository's squashed base commit, so there is no
+commit message, no comment, and nobody to ask. It is as likely to be a slice someone wrote while
+the layout had four bands as a decision.
+
+**Two ways to close it, and the first is now the cheaper one:**
+
+1. **Show every band.** Costs 10.4px. The cards and the chart then agree, and the chart's caption
+   loses the clause explaining why they do not — which is the better outcome, since that clause
+   exists only to describe this defect.
+2. **Keep four and say so on the card row** — "4 of 6 bands" — rather than leaving the reader to
+   infer it from a chart further down.
+
+**Recommended: the first.** A report that hides two price bands from an agent who is showing it to
+a client is worse than a slightly tighter row of cards, and the 10.4px is available — page 1 of
+`price_bands` gives up one listing to the chart already and stays at two pages.
+
+Left open rather than taken, because it changes what a shipping report looks like and the
+measurement is what the decision needs, not more analysis.
+
+
+---
+
+### D-108 — numeric fields are shown with `{% if value %}`, so a legitimate zero renders as nothing
+
+**Severity:** ROUGH · **Affects:** studios (no bed count), and any metric that can honestly be zero
+**Status:** `open`
+
+Found by applying §0.6's *knowledge transfers by search* rule immediately after filing it: grepping
+the market macros for the shape behind the `selectattr` mistake, in its other syntax.
+
+Jinja's `{% if x %}` is falsy for `0`, so every one of these hides the row or chip when the value
+is a real zero rather than missing:
+
+| site | zero means | how likely |
+|---|---|---|
+| `{% if listing.beds %}` — the bd chip, twice | **a studio** | common in condo and urban markets |
+| `{% if stats.avg_dom %}` — Avg Days on Market | everything sold the day it listed | rare, and **newly reachable**: D-105 now reads the feed's DOM, and a same-day sale reports 0 |
+| `{% if stats.months_of_inventory %}` — Months of Inventory | nothing is for sale | rare, and it is **D-056's own metric** — that defect was a sentinel 0 rendering as a measurement, and `moi.py` returns `None` for "not enough data" precisely so 0 can mean zero |
+
+`price_per_sqft`, `list_to_sale_ratio`, `list_price` and `sqft` use the same shape and cannot
+honestly be zero, so they are correct by accident rather than by design.
+
+**The studio case is the one that will actually be seen.** A studio renders `2 ba · 620 sf` with no
+bed figure at all — not "0 bd", not "studio", just an absent chip, which reads as missing data on
+a listing where the data is present and interesting.
+
+**The fix is `is not none`, not a rewrite** — `{% if listing.beds is not none %}` — plus a decision
+on how a zero should read in each case. `0 bd` is technically right and unidiomatic; **"Studio" is
+what an agent would write**, and that is a copy choice rather than a template one, which is why
+this is filed rather than taken.
+
+**Not urgent, and recorded because the class is the point.** This is the same call as the trend
+chart's gap-versus-zero and the band chart's empty band, in a third syntax. The grep that found it
+took under a minute and is the practice the §0.6 entry argues for.
 
 
 ---

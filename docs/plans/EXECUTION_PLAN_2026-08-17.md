@@ -651,6 +651,47 @@ it.**
   container catches a missing part by itself, without depending on a second number happening to
   contradict it.
 
+- **A distinction you drew in one place does not propagate to the next place by having been
+  written down. When you make a semantic call, grep for the shape and check every other site.**
+
+  *Added 2026-09-28 from Workstream D.* The trend chart draws a careful line between two kinds of
+  absence: a month with no closings is a **gap** in a median series, because the median of nothing
+  is not a quantity, and a **real zero** in a count series, because "no homes sold" is a fact about
+  the month. That distinction was reasoned about, written into the module docstring, asserted in
+  two tests, and described in a commit message.
+
+  Days later the band chart was written with `bands | selectattr('count')`, which silently drops a
+  band with zero listings — the same mistake, one macro down the same file, by the same hand, with
+  the rule still on screen. "Nothing is for sale above $1.6M" is a fact about the market and one of
+  the more useful things on that page.
+
+  **This is the fifth or sixth instance of the pattern**, not the first: the caps read from the
+  config they were testing, `minimum - 1`, the substring matches, the hand-written element list,
+  the sweep that examined 10 of its 22 reads. Each time the general lesson had already been
+  written down, and each time it was rediscovered locally rather than applied.
+
+  **Why writing it down does not work, and what does.** A rule is recalled when something cues it,
+  and the cue for "is this absence a gap or a zero?" is *thinking about absence* — which is exactly
+  what you are not doing while writing a filter that reads as "the bands that have counts". The
+  knowledge is indexed under the concept and the mistake occurs under the syntax.
+
+  So index it under the syntax. **When a semantic call is made about absence, ordering, rounding,
+  or units, grep for the construct that encodes it** — `selectattr`, `if x:` on a numeric,
+  `or` as a default, `filter(None, …)` — across the module and its siblings, and check each hit
+  against the same question. Minutes, and it transfers the decision to every site at once instead
+  of waiting for each to be rediscovered.
+
+  The corollary for review: a commit that establishes a distinction should say where else the shape
+  appears and that those were checked, in the same way a commit that fixes a defect names the
+  regression. "Fixed here" invites the next instance; "checked the other four" closes them.
+
+  *Run against itself the same day.* Grepping the market macros for the shape took under a minute
+  and found the same call in a third syntax — Jinja's `{% if x %}` is falsy for `0`, so
+  `{% if listing.beds %}` hides the bed count on a **studio**, and `{% if stats.avg_dom %}` hides
+  Avg DOM at zero, which D-105 has just made reachable. Filed as **D-108**. Two `selectattr` sites
+  existed and both were already correct; the defect had moved syntax, which is exactly what
+  searching for the concept rather than the string is for.
+
 ---
 
 ## Phase 0 — Security & Tooling
