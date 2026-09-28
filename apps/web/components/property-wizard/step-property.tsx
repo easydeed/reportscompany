@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Loader2,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   AlertCircle,
 } from "lucide-react";
@@ -42,7 +43,14 @@ function parcelLabel(match: UnitMatch): string {
   const number = (match.unit_number || "").trim();
   if (!number) return match.apn || "Select";
   const kind = (match.unit_type || "Unit").trim();
+  if (kind === "#") return `#${number}`;
   return `${kind} ${number}`;
+}
+
+function prettyPlace(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/(^|[\s-])([a-z])/g, (_, lead, letter) => lead + letter.toUpperCase());
 }
 
 function withChosenUnit(property: PropertyData, match?: UnitMatch): PropertyData {
@@ -256,6 +264,16 @@ export function StepProperty({
     searchProperty();
   }
 
+  const unitRows = unitMatches || [];
+  const firstUnit = unitRows[0];
+  const unitPlace = [
+    firstUnit?.address ? prettyPlace(firstUnit.address) : "",
+    firstUnit?.city ? prettyPlace(firstUnit.city) : "",
+    [firstUnit?.state, firstUnit?.zip_code].filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Address Search Card */}
@@ -331,28 +349,43 @@ export function StepProperty({
             }}
           >
             <DialogContent
-              className="z-[2000] max-w-md"
-              overlayClassName="z-[2000]"
+              className="z-[2000] max-w-lg gap-0 overflow-hidden p-0"
+              overlayClassName="z-[2000] bg-black/60"
               onInteractOutside={(event) => event.preventDefault()}
             >
-              <DialogHeader>
-                <DialogTitle>Select the unit</DialogTitle>
-                <DialogDescription>
-                  This address has more than one parcel. Pick one. Nothing continues until you do.
-                </DialogDescription>
-              </DialogHeader>
-              <ul className="max-h-80 overflow-y-auto">
-                {(unitMatches || []).map((match) => (
+              <div className="border-b border-[#E0E7FF] bg-[#F5F3FF] px-6 pt-6 pb-5 pr-12">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#4F46E5]">
+                  {unitRows.length} units at this address
+                </p>
+                <DialogHeader className="mt-2 gap-2 text-left">
+                  <DialogTitle className="text-xl tracking-tight">
+                    Choose a unit
+                  </DialogTitle>
+                  <DialogDescription className="text-[15px] leading-relaxed text-foreground/80">
+                    {unitPlace || "This street has more than one parcel."} The report uses the unit you pick, and nothing continues until you do.
+                  </DialogDescription>
+                </DialogHeader>
+              </div>
+              <ul className="max-h-[min(24rem,60vh)] space-y-2 overflow-y-auto p-4">
+                {unitRows.map((match) => (
                   <li key={`${match.fips}-${match.apn}-${match.unit_number}`}>
                     <button
                       type="button"
-                      className="w-full rounded-lg px-4 py-3 text-left text-sm hover:bg-[#EEF2FF] disabled:opacity-50"
+                      className="group flex w-full items-center justify-between gap-4 rounded-xl border border-border bg-card px-4 py-3.5 text-left transition hover:border-[#6366F1] hover:bg-[#F8F7FF] disabled:opacity-50"
                       disabled={searchLoading}
                       onClick={() => selectUnit(match)}
                     >
-                      <span className="font-medium text-foreground">
-                        {parcelLabel(match)}
+                      <span className="min-w-0">
+                        <span className="block text-base font-semibold text-foreground">
+                          {parcelLabel(match)}
+                        </span>
+                        {match.apn ? (
+                          <span className="mt-0.5 block text-xs text-muted-foreground">
+                            APN {match.apn}
+                          </span>
+                        ) : null}
                       </span>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:text-[#4F46E5]" />
                     </button>
                   </li>
                 ))}
