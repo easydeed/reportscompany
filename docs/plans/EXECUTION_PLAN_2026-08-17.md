@@ -692,6 +692,34 @@ it.**
   existed and both were already correct; the defect had moved syntax, which is exactly what
   searching for the concept rather than the string is for.
 
+  *Run against itself again, 2026-09-28, and this time the rule was right and the search was not.*
+  The paragraph above names four constructs — `selectattr`, `if x:` on a numeric, `or` as a
+  default, `filter(None, …)`. The sweep that closed D-108 covered the **Jinja** ones and stopped
+  at the language boundary, and the write-up said "every conditional in every template" and meant
+  it. Finishing the fix found the other two waiting in Python: six `a.get(k) or b.get(k, 0)`
+  chains in the builder, which collapsed a real 0 and a missing value into the same 0 — so the
+  template fix, applied alone, would have rendered **"Studio" over missing data** — and nine
+  comprehension filters, `[l["days_on_market"] for l in closed if l.get("days_on_market")]`,
+  each excluding same-day sales from the average of how fast sales happen.
+
+  **So the addendum is about scope, not about the rule: a construct search is bounded by the
+  language you happen to be reading when the thought occurs.** The concept crosses languages in a
+  way that no single grep does, and the sweep that names its own completeness ("every conditional
+  in every template") is the one that has already fixed its boundary at the wrong place. State the
+  boundary out loud — *templates only, Python not yet searched* — because an unstated boundary
+  reads as none.
+
+  **And the second half, which nothing in §0.6 said yet: fixing a defect can turn one on
+  elsewhere.** The nine DOM filters had been harmless for as long as the extractor computed
+  `close − list`, which is 0 only for a same-day close. D-105 changed the read to the feed's own
+  `daysOnMarket`, which is 0 for anything that goes under contract on its listing day — and nine
+  correct-looking statistics started dropping their fastest observations, in a different file,
+  with nothing linking the two changes. **A fix's blast radius includes every place that was
+  correct only because the value it mishandles never occurred.** Grepping for the *value that
+  became reachable*, not only for the code that was edited, is what would have caught it — and is
+  now what the D-108 gate does automatically, in both languages, for every numeric the builders
+  emit.
+
 ---
 
 ## Phase 0 — Security & Tooling

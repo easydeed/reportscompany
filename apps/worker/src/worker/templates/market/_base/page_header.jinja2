@@ -89,7 +89,9 @@
     {{- brand_name or report_title -}}
     {% if city %} <span class="rh-city">— {{ city }}</span>{% endif %}
   </span>
-  {% if total_count %}
+  {# D-108: 0 is a result. A running head reading "0 New Listings" is the
+     honest continuation of a page-1 masthead that says the same. #}
+  {% if total_count is not none %}
   <span class="rh-meta">{{ total_count }} {{ report_title }}</span>
   {% endif %}
 </div>

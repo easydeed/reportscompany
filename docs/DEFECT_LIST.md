@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 36 | Real, unfixed |
-| `fixed` | 68 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 37 | Real, unfixed |
+| `fixed` | 70 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **108** | D-001 … D-108, contiguous, no duplicates |
+| **Total** | **111** | D-001 … D-111, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 16. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 10 · FRAGILE 10 · ROUGH 16. (Sums to 37, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -58,7 +58,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded.
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -5626,7 +5626,7 @@ way, and only the rendering rule is in question.
 ### D-107 — the price-band stat cards show the first four bands and never say so
 
 **Severity:** ROUGH · **Affects:** `price_bands` PDFs for any market with more than four bands
-**Status:** `open`
+**Status:** `fixed` — `feat/zero-rendering-and-band-cards`
 
 `macros.jinja2`, `pricebands_layout`:
 
@@ -5676,10 +5676,36 @@ measurement is what the decision needs, not more analysis.
 
 ---
 
+**FIXED 2026-09-28 — every band renders, and the measurement was wrong about which case matters.**
+
+`{% for band in price_bands %}`. The caption's apology clause is gone, `BAND_CARDS_SHOWN` with it,
+and `test_band_chart.py` now asserts the card labels and the bar labels are the **same list** —
+so the two cannot drift apart again without a test saying so.
+
+**A correction to the measurement above, found while re-pinning page-1 capacity.** The six-band
+row it measured is not a state production can currently produce. `build_price_bands_result` derives
+its bands from **quartiles of the result set** — three `band_defs` when there are four or more
+listings, one otherwise — and drops any band with no listings. So the live maximum is **three**,
+and `[:4]` was never truncating anything. The slice was dead code, not a live defect.
+
+That does not change the fix — a cap with no recorded intent, protecting nothing, sitting in front
+of a chart that shows everything, is worth removing whether or not it fires today, and the caption
+it forced was real. It does change the severity of what was fixed, and it is recorded here rather
+than left as an overstated win.
+
+It also cost something measurable. At six bands, `price_bands` and `new_listings` each lose one
+listing from page 1 (3 → 2 with a narrative), so page-1 capacity is no longer independent of
+content for those two layouts. At three bands — every report the product can currently emit —
+the re-measured capacity is **identical to the pinned table**, which is why `PAGE_1_CAPACITY` is
+unchanged. If the band definitions ever become fixed bands, that pin moves.
+
+**The quartile banding is its own problem** and is filed as **D-111**.
+
 ### D-108 — numeric fields are shown with `{% if value %}`, so a legitimate zero renders as nothing
 
-**Severity:** ROUGH · **Affects:** studios (no bed count), and any metric that can honestly be zero
-**Status:** `open`
+**Severity:** ROUGH · **Affects:** studios (no bed count), same-day sales, any metric that can
+honestly be zero, and — found while fixing it — **every DOM statistic the product computes**
+**Status:** `fixed` — `feat/zero-rendering-and-band-cards`
 
 Found by applying §0.6's *knowledge transfers by search* rule immediately after filing it: grepping
 the market macros for the shape behind the `selectattr` mistake, in its other syntax.
@@ -5748,6 +5774,244 @@ this stays open rather than being taken as a sweep-and-replace.
 
 `scripts/sweep_zero_conditionals.py` re-runs the enumeration, so the list above can be regenerated
 rather than re-derived by eye when a template changes.
+
+---
+
+**FIXED 2026-09-28 — and the sweep found a fifth case that is worse than the four it was filed for.**
+
+Jerry approved the four copy decisions (Studio, New, the pace label carrying a zero, and an empty
+state for `total_count` 0). Implementing them turned up two things the original write-up missed,
+both of which would have made the template fix actively wrong.
+
+**FIRST: THE BUILDER DESTROYED THE DISTINCTION BEFORE THE TEMPLATE COULD RENDER IT.**
+
+```python
+"beds": item.get("bedrooms") or item.get("beds", 0),
+```
+
+`or` is zero-is-falsy too. A studio (`bedrooms: 0`) and a listing with no bed count both arrived at
+the template as `0`. The old `{% if listing.beds %}` then hid both — **which is the only reason the
+old code read as correct.** Rendering that 0 as "Studio" without fixing this would have printed
+**"Studio" over missing data**: the defect inverted, and shipped as a fix.
+
+Six of these in `market_builder`, replaced with `_first_present(source, *keys)` — first value that
+is not None, which is what the `or` chain was trying to say. Two tests pin both directions: a
+studio must reach the template as `0`, a missing bed count must reach it as `None`.
+
+**SECOND: NINE STATISTICS WERE AVERAGING A LIST THEIR ZEROS HAD BEEN FILTERED OUT OF.**
+
+```python
+avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market")])
+```
+
+A same-day sale reports a DOM of 0, `0` is falsy, so **the fastest sales were excluded from the
+average of how fast sales happen.** Nine sites across `report_builders.py` and `compute/calc.py` —
+`avg_dom`, `median_dom`, and the per-band DOM — every one biased upward, on numbers the page
+presents as measurements.
+
+**This was dormant until D-105 fixed the DOM path last week.** The old code computed
+`close − list`, which is 0 only for a same-day close; the feed's `daysOnMarket` is 0 for any
+listing that went under contract the day it listed. A fix in one file turned on a defect in
+another, and nothing connected them. That is the argument for a walk rather than nine edits.
+
+**It is the worst of the four syntaxes because it is silent.** A template that hides a zero shows
+a visibly missing chip. An average that drops its zeros just reads a little high, and nothing on
+the page says so.
+
+**WHAT NOW RENDERS**
+
+| | before | after |
+|---|---|---|
+| a studio | nothing where the bed chip goes | **Studio** |
+| a listing under contract the day it listed | nothing where DOM goes | **New** |
+| 0 months of inventory | the whole row disappears | `0` with its pace label |
+| 0 avg DOM | the whole block disappears | `0` |
+| a search that matched nothing | "No listings found for this period." | **"No listings matched this search."** plus the city, window and filters, so an empty market and an over-tight filter can be told apart |
+| avg DOM over 40 sales, 3 of them same-day | mean of 37 | mean of 40 |
+
+**Whether a report that matched nothing should be SENT is not decided here** — it is a scheduling
+question and Claude Design's work does not touch it. Filed as **D-110**.
+
+**THE PROPERTY REPORT IS DELIBERATELY NOT FIXED.** `property_builder.py` collapses None to 0
+(`sitex_data.get("bedrooms") or 0`, and `_safe_num(..., 0)`) with the stated intent "numeric fields
+default to 0 for safe template arithmetic" — and six themes do arithmetic on them. On that surface
+a 0 does **not** mean a studio, so rendering "Studio" there would invent data. The template change
+was written, then reverted for exactly that reason. Filed as **D-109**, and the exemption in the
+gate carries the reason so the next person does not "fix" it into inventing data.
+
+---
+
+**THE GATE, AND WHY IT IS A WALK.**
+
+`apps/worker/tests/test_zero_conditionals.py`, with the checker in `_zero_conditionals.py`.
+
+The templates are being replaced. Forty corrected conditionals leave with the files that hold them,
+and a replacement set can reintroduce every one in silence — so **nothing in the gate names a file,
+a line, a CSS class, or a fragment of markup**:
+
+| | |
+|---|---|
+| which names hold numbers | **derived** — build real contexts from the market *and* property builders, keep every `int`/`float` leaf. 49 names. A field a builder adds is in scope with nobody remembering to add it. |
+| which templates | walked from the templates tree |
+| how each is read | **Jinja's own parser**, and `ast` for the Python half. §0.6 has four entries about substring false positives in this repo; a parser cannot produce one |
+| what counts as handled | **the conditional has an `{% else %}`** — a structural property, not the presence of the word "Studio". A replacement template may render a zero however it likes and the gate stays quiet |
+| the exemptions | keyed by **leaf name** (`sqft`), or by full path where the claim holds on one surface and not another (`property.bedrooms`). A new template inherits the exemptions it has earned and none that it has not |
+
+**Four syntaxes, because this defect has appeared in all four here:**
+
+```
+{% if x %}…{% endif %}              hides the field
+{{ x if x else '-' }}               same thing, as an expression
+{{ bands | selectattr('count') }}   drops the zero rows       (twice — §0.6)
+[r["dom"] for r in rows
+          if r.get("dom")]          drops them from the STATISTIC
+```
+
+**The exemption list cannot rot, and cannot be padded.** A second test fails on any `EXEMPT` entry
+no template or module relies on any more — so it cannot outlive what it excused, and cannot be
+pre-loaded with a name to clear a defect that has not been filed yet. Three entries written on the
+first pass were deleted by it.
+
+**Seen to fail.** Six regressions applied to real files, each observed red: the `beds` conditional
+reverted to bare, one `or` chain restored in the builder, the `avg_dom` fallback restored, the
+empty state reverted to the generic copy, one DOM filter reverted, and an `EXEMPT` entry padded
+with an unused name. Three more run inside the gate against scratch templates, one per syntax.
+Two negative tests pin the other direction — an else-covered conditional and an `{% elif %}`
+fallback chain must **not** be reported; the first version of the walk failed two correct chains
+because it judged the elif on its own empty `else_` rather than the chain's.
+
+`scripts/sweep_zero_conditionals.py` prints the same walk with its workings, sharing one
+implementation with the gate. Two front ends, one rule — a script and a gate with separate copies
+would disagree, and the one that disagreed quietly would be the gate.
+
+**Result: 44 sites, 0 unexempt, across templates and Python.** Suite 921 passed.
+
+---
+
+
+### D-109 — the property report collapses a missing number to 0, so the report cannot tell "no data" from "zero"
+
+**Severity:** ROUGH · **Affects:** every property report; bedrooms, bathrooms, sqft, lot size, year built
+**Status:** `open`
+
+Found 2026-09-28 while fixing D-108, by writing the same fix for the property report and then
+**reverting it**.
+
+`property_builder.py:659`:
+
+```python
+# Property details (numeric fields default to 0 for safe template arithmetic)
+"bedrooms": sitex_data.get("bedrooms") or 0,
+"bathrooms": sitex_data.get("bathrooms") or 0,
+"sqft": sitex_data.get("sqft") or 0,
+"lot_size": sitex_data.get("lot_size") or 0,
+"year_built": sitex_data.get("year_built") or 0,
+```
+
+and again at `:870` for comps, and again through `_safe_num(..., 0)` at `:1134` and `:1150`.
+
+**The comment states the intent and the intent is defensible** — six themes do arithmetic on these
+(`_macros.jinja2:467`: `property.bedrooms | default(0, true) | float`), and a None would raise
+mid-render. The cost is that every "no data" is indistinguishable from a real zero by the time a
+template sees it, in a report whose whole subject is one specific property.
+
+**Why this is filed rather than fixed.** D-108's market-side fix renders a 0 bed count as
+**"Studio"**. Applying the same copy here would print "Studio" on **every property the county has
+no bedroom count for**, which is the D-108 defect inverted and shipped as a fix. The template
+change was written, rendered, and reverted for that reason. The gate's exemption for
+`property.bedrooms` names this entry, so the next person to run the sweep is told why the bare
+conditional is allowed to stand rather than finding it unexplained and "fixing" it.
+
+**The fix is the builder, not the template, and it is not one line.** Preserving None means
+auditing every arithmetic site across six themes and giving each a None-safe form — which is a
+larger and more testable piece of work than it looks, and belongs with whatever replaces the
+property templates rather than in front of it.
+
+**Year built is the clearest symptom:** a property with no year on record renders as a `0` under
+the label "Year Built", or vanishes, depending on the theme.
+
+---
+
+
+### D-110 — a report that matched nothing is still sent, and nobody has decided whether it should be
+
+**Severity:** ROUGH · **Affects:** every scheduled market report whose search returns zero listings
+**Status:** `open` — a product decision, not a code fault
+
+Split out of D-108 on 2026-09-28. **D-108 fixed what such a report LOOKS like; it deliberately did
+not change whether it goes out.**
+
+The report now renders an explicit empty state — "No listings matched this search", with the city,
+the window and the filter label, so a genuinely empty market and an over-tight filter can be told
+apart. That is strictly better than the old "No listings found for this period.", and it is the
+right behaviour *given the report is being produced at all*.
+
+**What is undecided:** a weekly schedule on a filter that matches nothing sends an empty report
+every week, indefinitely. Three defensible answers:
+
+| | |
+|---|---|
+| **send it** | the agent learns their filter is too tight, and silence is indistinguishable from a broken schedule — this is what happens today |
+| **skip it, log it** | no empty mail; the agent finds out only if they look |
+| **send it once, then hold** | the first one informs, the rest are noise. Needs state per schedule |
+
+**Why it is not answered here.** It is a scheduling behaviour with an owner and a support cost,
+Claude Design's template work does not touch it, and getting it wrong in either direction is
+visible to customers. Recorded so the empty-state work does not read as having settled it.
+
+---
+
+
+### D-111 — "price bands" are quartiles of the current result set, so the bands move every run and cannot be compared
+
+**Severity:** WRONG · **Affects:** the `price_bands` report, and the band cards on `new_listings`
+**Status:** `open`
+
+Found 2026-09-28 while confirming D-107's measurement against what production can actually emit.
+
+`build_price_bands_result` (`report_builders.py:718`) does not use price bands. It uses quartiles:
+
+```python
+p50 = sorted_prices[n // 2]
+p75 = sorted_prices[(3 * n) // 4]
+band_defs = [
+    (f"Under {fmt(p50)}", 0, p50),
+    (f"{fmt(p50)} – {fmt(p75)}", p50, p75),
+    (f"{fmt(p75)}+", p75, max_price + 1),
+]
+```
+
+**Three consequences, in increasing order of how much they matter:**
+
+1. **There are at most three bands, ever** — three when there are four or more listings, one
+   otherwise. The `[:4]` slice D-107 removed had therefore never truncated anything. Recorded on
+   that entry as a correction rather than left as an overstated fix.
+
+2. **Empty bands are dropped** (`if band_listings:`), so a band with no listings never reaches the
+   template. The band chart's "none" row and the cards' zero handling are both correct and both
+   currently unreachable. They stay: the rendering should not depend on a filter three call frames
+   away, and this entry is what would make them reachable.
+
+3. **The bands are redefined on every run, from that run's own results — which is the defect.**
+   A report titled "Price Bands" whose bands are the current median and 75th percentile shows
+   roughly 50% / 25% / 25% *by construction*, whatever the market does. Two consecutive weeks are
+   not comparable: the label moves, the boundary moves, and the counts barely move at all because
+   they are quartiles. An agent reading "Under $920K: 31 listings" one week and "Under $955K: 29"
+   the next cannot tell whether inventory shifted or the divider did.
+
+**The distribution chart makes this worse, not better** (§7.3, shipped). Three bars at roughly
+2:1:1 look like a finding. They are an artefact of the banding.
+
+**The fix is fixed bands** — $200K or $250K steps across the market's range, or a per-market
+configured set — which is what "price bands" means to an agent and what makes two runs comparable.
+Needs a decision on the step and on how many bands is too many for the row, and the row measurement
+is already on D-107.
+
+**Also in this function, same family as D-108:**
+`hottest = min(bands, key=lambda b: b["avg_dom"] if b["avg_dom"] > 0 else 999)`. A band whose sales
+all went under contract the day they listed scores **999** and can never be the hottest band. The
+zero-is-falsy pattern in a ranking, using a sentinel rather than a filter — which is why the D-108
+gate does not catch it, and why it is written down here.
 
 
 ---
