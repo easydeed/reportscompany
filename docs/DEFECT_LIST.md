@@ -5709,6 +5709,46 @@ this is filed rather than taken.
 chart's gap-versus-zero and the band chart's empty band, in a third syntax. The grep that found it
 took under a minute and is the practice the §0.6 entry argues for.
 
+---
+
+**THE FULL SWEEP, 2026-09-28.** Every Jinja conditional in every template, matched against numeric
+leaf names **derived from real built contexts** rather than from a list of numeric-looking names —
+the builders' `stats`, `header` and `listings` contexts were walked and every `int`/`float` leaf
+collected, then matched against every bare `{% if ... %}`. Comparisons, `is not none` and boolean
+chains are excluded; they are already explicit about what they test.
+
+**40 conditionals, 17 distinct expressions, 3 files** — wider than the two found by hand, and
+including the property report, which the original entry did not mention.
+
+| expression | zero means | verdict |
+|---|---|---|
+| `listing.beds` · `property.bedrooms` | **a studio** | **fix** — common, and the chip vanishes entirely |
+| `listing.days_on_market` | **listed and sold the same day** | **fix** — newly reachable: D-105 now reads the feed's value, and the sweep's own baseline notes a DOM of 0 is real |
+| `stats.months_of_inventory` | **nothing is for sale** | **fix** — D-056's own metric; `moi.py` returns `None` for "not enough data" precisely so 0 can mean zero |
+| `stats.avg_dom` | every sale closed the day it listed | **fix** — rare but the same class, and free to do alongside |
+| `header.total_count` · `total_count` | **the query matched nothing** | **fix, differently** — an empty report is an empty-state question, not a hidden field |
+| `listing.sqft` · `l.sqft` · `property.sqft` | land, or bad data | **leave** — 0 sqft on a dwelling is wrong data, and land carries `None` rather than 0 |
+| `listing.baths` · `property.bathrooms` | no bathroom | **leave** — not a habitable dwelling, and D-106 means it is `None` today regardless |
+| `listing.list_price` · `stats.price_per_sqft` · `stats.list_to_sale_ratio` | — | **leave** — unreachable; correct by accident rather than by design |
+| `stats.median_close_price` | — | **leave** — this one is a deliberate fallback chain (`{% if close %}…{% elif list %}`), not an absence check |
+| `band.count` | an empty price band | **already fixed** — draws "none" |
+
+**Each case needs a rendering, and none of them is "hide the field":**
+
+| | renders as |
+|---|---|
+| 0 bedrooms | **"Studio"** — what an agent writes; `0 bd` is correct and reads as a data error |
+| 0 days on market | `0` — or "New", which is the MLS convention for a same-day listing |
+| 0 months of inventory | `0` **with the pace label**, since the label is what makes it a measurement |
+| 0 avg DOM | `0` |
+| 0 total count | not a field to render — the report should say it matched nothing, which is a separate piece of work |
+
+**The mechanical half is `is not none`;** the copy is the part that needs deciding, which is why
+this stays open rather than being taken as a sweep-and-replace.
+
+`scripts/sweep_zero_conditionals.py` re-runs the enumeration, so the list above can be regenerated
+rather than re-derived by eye when a template changes.
+
 
 ---
 
