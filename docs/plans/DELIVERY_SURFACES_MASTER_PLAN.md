@@ -782,6 +782,49 @@ every point.
 > probe alongside decision 01's, not a question about charting, and until it is answered the pace
 > series is the honest maximum.
 
+> ### price_bands — the band distribution, built 2026-09-28
+>
+> Horizontal bars, one per band, counts. Bars and not a line because price bands are ordered
+> **categories** — the question is "which band is the market", not "which way is it going" — and
+> horizontal because the labels are `$900K – $1.1M` and a vertical axis would rotate or truncate
+> them.
+>
+> **Why a chart at all, next to stat cards that already carry the exact counts.** The cards give
+> four numbers and no shape: a reader can see 18, 31, 21, 11 and still not see that the middle band
+> *is* the market. The bars carry the comparison and the cards keep the values, which is also why
+> **only the largest bar is labelled** — §7.3's rule, and here it stops the chart duplicating the
+> cards.
+>
+> **A band with zero listings is drawn, and says "none".** The first version used
+> `selectattr('count')` and silently dropped it — the identical mistake the trend chart makes one
+> macro over, where a month with no closings is a gap and a month with no sales is a zero.
+> "Nothing is for sale above $1.6M" is a fact about the market and one of the more useful things on
+> the page. A band with no `count` key at all is different — no data rather than no listings — and
+> is dropped.
+>
+> **The caption counts what the chart draws.** Its first version counted only truthy bands and said
+> "4 bands" under a chart showing five. It also names the discrepancy the layout has always had:
+> the stat cards render `price_bands[:4]` while the chart renders all of them, so with six bands
+> the caption says the cards show the first four. Four cards beside six bars, with nothing said
+> about it, reads as a rendering fault.
+>
+> **Page cost, measured under variant A:**
+>
+> | | pages | listings per page |
+> |---|---|---|
+> | `price_bands` without the chart | 2 | 3, 5 |
+> | `price_bands` with the chart | **2** | 2, 6 |
+> | with six bands rather than four | **2** | 2, 6 |
+>
+> One listing off page 1, no extra page, and a taller chart costs nothing more because page 1 has
+> already given up the row. Cheapest of the three charts.
+>
+> **`closed`'s DOM distribution is NOT built**, and that is the §7.3 item that stays open. The
+> column it would plot was **D-105** — every DOM in the product read from the wrong path and, for
+> closed comps, computed as marketing-plus-escrow. The path is fixed; whether the numbers are right
+> in production is not confirmed until a live payload is fetched. A histogram makes a number
+> authoritative, so it waits for that rather than shipping beside it.
+
 **Effort: L.** Blocked by A and by open decision 01.
 
 ---

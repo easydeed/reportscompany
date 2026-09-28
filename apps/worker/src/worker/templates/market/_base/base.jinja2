@@ -583,6 +583,18 @@
     }
     .masthead-logo { max-height: 40px; width: auto; object-fit: contain; }
 
+    /* ── Price-band distribution (§7.3) ─────────────────────────── */
+    .band-chart {
+      padding: 4px 0 10px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .band-chart-note {
+      font-size: 9px;
+      color: var(--gray-500);
+      margin: 4px 0 0;
+    }
+
     /* ── Median trend chart (§7.3) ──────────────────────────────── */
     .trend-chart {
       padding: 4px 0 10px;
@@ -1369,7 +1381,8 @@
                                             monthly_trend, monthly_trend_note, monthly_trend_fmt, primary_ink) }}
         {% elif layout == "pricebands" %}
           {{ macros.pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative,
-                                      listings_section_label, listings_truncation_note, listings_more_note) }}
+                                      listings_section_label, listings_truncation_note, listings_more_note,
+                                      band_chart_note, primary_ink) }}
         {% elif layout == "analytics" %}
           {{ macros.analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative,
                                      listings_section_label, listings_truncation_note, listings_more_note) }}

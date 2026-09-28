@@ -381,7 +381,7 @@
 {# ── Price Bands Layout: price_bands ──────────────────────────────────────── #}
 {% macro pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights=none, ai_narrative=none,
                            listings_section_label=none, listings_truncation_note=none,
-                           listings_more_note=none) %}
+                           listings_more_note=none, band_chart_note=none, primary_ink=none) %}
 <div class="top-row">
   <div class="hero-card">
     <div class="hero-card-value">{{ header.total_count | default(0) }}</div>
@@ -423,6 +423,10 @@
     {% endif %}
   </div>
 </div>
+
+{% if price_bands %}
+{{ band_distribution_chart(price_bands, primary_ink or '#1f2937', band_chart_note) }}
+{% endif %}
 
 {# HERO-RESTORE — Use the canonical .ai-narrative block (matching
    market_narrative_layout) for visual consistency. The old .pb-narrative
@@ -673,4 +677,85 @@
     {% endif %}
   </div>
 </div>
+{% endmacro %}
+
+
+{# ── Price-band distribution (§7.3) ────────────────────────────────────────
+   Horizontal bars, one per band, counts.
+
+   WHY BARS AND NOT A LINE. Price bands are ordered CATEGORIES, not a time
+   series — the question is "which band is the market" rather than "which way
+   is it going". And why a chart at all, next to stat cards that already carry
+   the exact counts: the cards give four numbers and no shape. A reader can
+   see 18, 31, 21, 11 and still not see that the middle band is the market.
+   The bars carry the comparison; the cards keep the values. They complement
+   rather than duplicate, which is also why there is no number on every bar.
+
+   HORIZONTAL, because the labels are "$900K – $1.3M" and a vertical chart
+   would rotate them or truncate them. Rotated axis labels are a readability
+   cost paid for nothing here.
+
+   §7.3's rule is "direct-label the endpoint and the largest bar, never every
+   point". A bar chart has no endpoint, so the largest bar carries the only
+   label — and it is the one the reader is looking for.
+
+   Bars are `primary_ink`, the one brand value guaranteed as ink on white
+   (themes.py), which this page's surface is. No axis line: with labels on the
+   left and a single labelled value, a rule would be one more piece of
+   furniture than the chart needs.
+#}
+{% macro band_distribution_chart(bands, ink, note=none, width=680) %}
+{# A BAND WITH ZERO LISTINGS IS A REAL ZERO, not a gap. `selectattr('count')`
+   was the first version and it silently dropped those bands — the identical
+   mistake the trend chart makes one macro over, where a month with no closings
+   is a gap and a month with no SALES is a zero. Here "nothing is for sale above
+   $1.6M" is a fact about the market and one of the more useful things on the
+   page; a band that simply vanishes tells the reader nothing and looks like a
+   shorter list. Bands with no `count` KEY at all are a different thing — no
+   data rather than no listings — and those are dropped. #}
+{%- set rows = bands | rejectattr('count', 'undefined') | rejectattr('count', 'none') | list -%}
+{%- if rows | length >= 2 -%}
+{%- set bar_h = 18 -%}
+{%- set gap = 10 -%}
+{%- set pad_t = 4 -%}
+{%- set label_w = 132 -%}
+{%- set value_w = 52 -%}
+{%- set plot_w = width - label_w - value_w -%}
+{%- set height = pad_t * 2 + (rows | length) * bar_h + ((rows | length) - 1) * gap -%}
+{%- set counts = rows | map(attribute='count') | list -%}
+{%- set vmax = counts | max -%}
+{%- set top = (rows | sort(attribute='count') | last) -%}
+<div class="band-chart avoid-break">
+  <svg viewBox="0 0 {{ width }} {{ height }}" width="100%" height="{{ height }}"
+       role="img" aria-label="Active listings by price band"
+       style="display:block; overflow:visible;">
+    {% for band in rows %}
+    {%- set y = pad_t + loop.index0 * (bar_h + gap) -%}
+    {%- set w = (plot_w * band.count / vmax) if vmax else 0 -%}
+    <text x="{{ label_w - 12 }}" y="{{ y + bar_h - 5 }}" text-anchor="end"
+          font-size="11" fill="#44403c">{{ band.label }}</text>
+    {# 4px rounded at the data end, square at the baseline: one rect plus a
+       rounded overlay is fragile at small widths, so the whole bar is rounded
+       and the baseline is covered by a square cap. #}
+    {% if band.count %}
+    <rect x="{{ label_w }}" y="{{ y }}" width="{{ '%.1f' % w }}" height="{{ bar_h }}"
+          rx="4" fill="{{ ink }}" />
+    <rect x="{{ label_w }}" y="{{ y }}" width="4" height="{{ bar_h }}" fill="{{ ink }}" />
+    {% else %}
+    {# Zero listings. A 0-width rect draws nothing and reads as a missing row,
+       so the band says so in words at the baseline. #}
+    <text x="{{ label_w + 4 }}" y="{{ y + bar_h - 5 }}" text-anchor="start"
+          font-size="10" fill="#78716c">none</text>
+    {% endif %}
+    {% if band is sameas top %}
+    <text x="{{ '%.1f' % (label_w + w + 8) }}" y="{{ y + bar_h - 5 }}" text-anchor="start"
+          font-size="11" font-weight="600" fill="#292524">{{ band.count | format_number }}</text>
+    {% endif %}
+    {% endfor %}
+  </svg>
+  {% if note %}
+  <p class="band-chart-note">{{ note }}</p>
+  {% endif %}
+</div>
+{%- endif -%}
 {% endmacro %}

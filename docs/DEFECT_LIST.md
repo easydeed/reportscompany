@@ -5601,6 +5601,25 @@ deliberately, then read both keys.
 **Do not close this by reading `bathsFull` alone.** A three-bed with two full baths and a powder
 room would render `2`, which is wrong in the direction that matters to a seller.
 
+**THE CONVENTION QUESTION, NAMED RATHER THAN LEFT OPEN — [JERRY].** There are two sensible rules
+and only two:
+
+| | a home with 2 full baths and a powder room reads | |
+|---|---|---|
+| **decimal — halves as `.5`** | **`2.5`** | MLS convention; what an agent expects to read, and what the extractor's own comment already assumed ("Keep as float (e.g., 2.5 baths)") |
+| explicit — full plus half | `2+1`, or `2F 1H` | unambiguous about which is which, and unfamiliar on a market report |
+
+**Recommended: the decimal.** It is the industry convention, every comparable portal shows it that
+way, and the report's Bd/Ba column has room for one number per side and not two. The explicit form
+buys precision a reader of a market comp does not need — they are scanning for "is this like my
+house", not auditing fixture counts.
+
+The rule to implement once confirmed: `bathsFull + (bathsHalf × 0.5)`, rendered without a trailing
+`.0`, and `None` when both keys are absent rather than `0`.
+
+**Awaiting Jerry's confirmation, not blocked on it for the diagnosis** — the read is wrong either
+way, and only the rendering rule is in question.
+
 
 ---
 
@@ -5634,6 +5653,17 @@ room would render `2`, which is wrong in the direction that matters to a seller.
   **Zero rows in sections 1 and 2** → close as unreachable, with the query as the evidence.
   **Any rows** → file it, and the fix is both sides: a guard in the ticker that marks the
   schedule failed rather than spinning, and cleanup of the rows.
+
+- **A live SimplyRETS payload, on the same trip as the production probe.** D-105 and D-106 were
+  both diagnosed against `tests/fixtures/listing_*.json` — captured responses, real in shape, and
+  two of them. `tools/dump_market_snapshot.py` fetches a live page with `SIMPLYRETS_USERNAME` /
+  `SIMPLYRETS_PASSWORD` and `scripts/sweep_extract_field_paths.py` re-runs the whole field sweep
+  against whatever it returns. **Same credentials as the probe, so it is one trip rather than
+  two.** This project has been caught three times by a fixture that did not match production
+  (D-084's filter behaviour, the `closeDate` path, and now these), and both fixes retain the old
+  read as a fallback precisely because the fixtures cannot rule out a deployment that populates
+  it. What the live payload settles: whether any other field is read at a path this particular
+  feed does not use.
 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
 - **Production env values** (T2.9/T2.10). Partially answered by the P2B trace above for the API service; the worker and Vercel sets are still outstanding — see "What I still need" above for exactly which variables settle which defect.

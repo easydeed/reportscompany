@@ -248,6 +248,36 @@ class MarketReportBuilder:
                 return px
         return self._TITLE_MIN_PX
 
+    # ── §7.3 price-band distribution ───────────────────────────────────────
+
+    #: How many bands the stat-card row shows. The cards are capped at four in
+    #: pricebands_layout; the chart is not.
+    BAND_CARDS_SHOWN = 4
+
+    def _band_chart_note(self):
+        """The sample line under the band chart, or None.
+
+        Says what the bars are counting, and — when there are more bands than
+        the stat cards show — that the cards are the partial view rather than
+        the chart. Four cards beside six bars with nothing said about it reads
+        as a rendering fault.
+        """
+        bands = self.report_data.get("price_bands") or []
+        # Mirror the macro's filter exactly: a band with count 0 IS drawn — an
+        # empty price band is a fact about the market — so it counts here too.
+        # The first version used `if b.get("count")`, which said "4 bands"
+        # under a chart showing five. A caption that disagrees with the picture
+        # above it is worse than no caption.
+        counted = [b for b in bands if b.get("count") is not None]
+        if len(counted) < 2:
+            return None
+        total = sum(b["count"] for b in counted)
+        note = f"Active listings by price band · {total:,} listings across {len(counted)} bands"
+        if len(counted) > self.BAND_CARDS_SHOWN:
+            note += (f" · the cards above show the first {self.BAND_CARDS_SHOWN}; "
+                     f"the chart shows all {len(counted)}")
+        return note
+
     # ── §7.3 median trend ──────────────────────────────────────────────────
 
     #: Which monthly series each report type carries, and nothing for the rest.
@@ -533,6 +563,10 @@ class MarketReportBuilder:
             # §7.3 — the chart's mark colour. primary_ink is the one brand value
             # themes.py guarantees as ink on white, which is this page's surface.
             "primary_ink": derive_theme(primary_color)["primary_ink"],
+            # §7.3 — the band chart's sample note. The stat cards show only
+            # price_bands[:4]; the chart shows every band, so when there are
+            # more than four the note is the only place that says so.
+            "band_chart_note": self._band_chart_note(),
             "monthly_trend": monthly_trend,
             "monthly_trend_note": monthly_trend_note,
             "monthly_trend_fmt": monthly_trend_fmt or "currency",
