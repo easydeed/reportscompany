@@ -98,15 +98,6 @@
                                  listings_section_label=none, listings_truncation_note=none,
                                  listings_more_note=none, monthly_trend=none, monthly_trend_note=none,
                                  monthly_trend_fmt='currency', primary_ink=none) %}
-{% if monthly_trend %}
-{# §7.3 — marks in primary_ink, never raw primary. primary_ink is the only brand
-   value guaranteed as ink on a light surface (themes.py: darkened in 6% steps
-   until it clears 4.5:1 on white), and this page's surface IS white
-   (base.jinja2: `.report-page { background: var(--white) }`), so the guarantee
-   holds here exactly rather than approximately. That is not true of every
-   surface in this product — see D-100. #}
-{{ monthly_trend_chart(monthly_trend, primary_ink or '#1f2937', monthly_trend_note, monthly_trend_fmt) }}
-{% endif %}
 <div class="hero-stat avoid-break">
   <div class="hero-stat-value">{% if stats.median_close_price %}{{ stats.median_close_price | format_currency }}{% elif stats.median_list_price %}{{ stats.median_list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
   <div class="hero-stat-label">Median Sale Price</div>
@@ -146,8 +137,39 @@
   {% endif %}
 </div>
 
+{% if monthly_trend %}
+{# §7.3 / D-102 — the trend chart CLOSES page 1, and the listings start on page
+   2 below it.
+
+   Jerry's call, 2026-09-28, and the measurement that framed it: page 1 holds
+   either a row of three listings or this chart, never both. Both give a
+   two-page report carrying the same nine listings, so the choice is what page 1
+   LEADS WITH rather than what the report contains. The chart won because it is
+   the only thing on that page a reader cannot get from Zillow or their own
+   saved search — a twelve-month median for their market, from MLS closings —
+   and because these reports go on a schedule to an agent's past clients, who
+   want to know what their own house is doing rather than what is for sale.
+
+   RECORDED AGAINST IT: listings are photographs and photographs draw the eye
+   where a line chart does not. If the primary reader ever becomes an active
+   buyer, revisit this rather than inherit it.
+
+   Marks in primary_ink, never raw primary — primary_ink is the only brand value
+   themes.py guarantees as ink on a light surface, and this page's surface is
+   white, so the guarantee holds here exactly rather than approximately. Not
+   true of every surface in this product; see D-100. #}
+{{ monthly_trend_chart(monthly_trend, primary_ink or '#1f2937', monthly_trend_note, monthly_trend_fmt) }}
+{% endif %}
+
 {% if listings %}
-<div class="gallery-section">
+{# `force-new-page` ONLY when the chart is on page 1. Without the chart there is
+   nothing to give the page up for, and an unconditional break would leave 2.8in
+   of white space above a page break. Two deterministic states, both pinned in
+   PAGE_1_CAPACITY — not a third variable.
+
+   The heading and the truncation note are INSIDE this div, so they travel with
+   the listings rather than stranding at the foot of page 1 above nothing. #}
+<div class="gallery-section{% if monthly_trend %} force-new-page{% endif %}">
   {{ listings_section_header(listings_section_label, listings_truncation_note) }}
   <div class="gallery-grid">
     {% for listing in listings %}

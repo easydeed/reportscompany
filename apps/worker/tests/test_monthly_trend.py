@@ -328,3 +328,87 @@ def test_the_price_axis_is_not_anchored_at_zero():
     assert ticks[-1] not in ("0", "$0"), (
         f"the median price axis is anchored at {ticks[-1]!r}, which flattens it"
     )
+
+
+# ── the page-1 composition decision (D-102, Jerry 2026-09-28) ────────────────
+
+def report_with_listings(report_type="market_snapshot", history=None):
+    """`report()` above renders with no listings, which is right for the series
+    tests and useless here — the composition being asserted is about where the
+    listings go, so they have to exist."""
+    from worker.market_builder import MarketReportBuilder
+    data = {
+        "report_type": report_type, "city": "Irvine", "lookback_days": 30,
+        "filters_label": "2+ beds, SFR", "listings": _listing_rows(12),
+        "metrics": {"median_close_price": 907500, "avg_dom": 12,
+                    "months_of_inventory": 2.1, "price_per_sqft": 520,
+                    "list_to_sale_ratio": 0.982},
+        "counts": {"Active": 67, "Pending": 12, "Closed": 38},
+        "branding": {"agent_name": "A", "primary_color": "#1B365D"},
+        "ai_insights": "Balanced.",
+    }
+    if history is not None:
+        data["closed_history"] = history
+    return MarketReportBuilder(data).render_html()
+
+
+_STREETS = ("Main St", "Oak Ave", "Elm Dr", "Birch Ln", "Cedar Ct", "Maple Way")
+
+
+def _listing_rows(n):
+    return [
+        {"street_address": f"{100 + i * 7} {_STREETS[i % len(_STREETS)]}", "city": "Irvine",
+         "list_price": 650000 + i * 13500, "close_price": 640000 + i * 12900,
+         "bedrooms": 3, "bathrooms": 2, "sqft": 1500, "status": "Active",
+         "days_on_market": 10, "photo_url": None}
+        for i in range(n)
+    ]
+
+
+def section_markup(html):
+    """The section's opening tag, matched as MARKUP. `force-new-page` also
+    appears in the stylesheet, and the first version of these tests matched it
+    there — the substring-is-not-a-construct rule, caught by its own regression
+    (§0.6)."""
+    return re.search(r'<div class="gallery-section[^"]*"', html).group(0)
+
+
+def test_market_snapshot_page_1_carries_the_chart_and_the_listings_start_after_it():
+    """The decision, asserted structurally — because losing it looks like a
+    layout choice rather than a fault.
+
+    Page 1 is masthead, hero stat, narrative, stats bar, chart. The listings
+    section follows with an explicit page break. If the chart silently stopped
+    rendering, the break would go with it and the report would quietly revert to
+    three listings on page 1: no error, no visual damage, just a different
+    document than the one that was chosen.
+    """
+    html = report_with_listings("market_snapshot", full_year())
+    assert svg_of(html) is not None, "the chart is gone from page 1"
+    assert "force-new-page" in section_markup(html), (
+        "the listings no longer break to page 2, so the chart and the cards are "
+        "competing for page 1 again"
+    )
+    assert html.index("trend-chart") < html.index('class="gallery-section'), (
+        "the chart must close page 1, so it precedes the listings section"
+    )
+
+
+def test_without_a_chart_the_listings_do_not_break_to_page_2():
+    """The other state, and the reason the break is conditional.
+
+    With no trend data there is nothing to give page 1 up for, and an
+    unconditional break would leave 2.8in of white above it.
+    """
+    html = report_with_listings("market_snapshot", None)
+    assert svg_of(html) is None
+    assert "force-new-page" not in section_markup(html)
+
+
+def test_the_section_heading_travels_with_the_listings():
+    """Heading and truncation note are inside the section that breaks, so they
+    cannot strand at the foot of page 1 above nothing."""
+    html = report_with_listings("market_snapshot", full_year())
+    at = html.index('class="gallery-section')
+    assert "Recent Activity" in html[at:]
+    assert "Recent Activity" not in html[:at]

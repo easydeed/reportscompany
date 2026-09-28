@@ -169,5 +169,102 @@ def main(n=120):
     return out
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# --emit-capacity
+# ─────────────────────────────────────────────────────────────────────────────
+# WHY THIS EXISTS. PAGE_1_CAPACITY in test_narrative_box.py has been re-pinned
+# three times — after §7.2's narrative cap, after §7.1's masthead move, and
+# after D-102's masthead bound — and each time the numbers were read off a
+# terminal and retyped. That is exactly how the defect board's summary header
+# went stale: the derivation was right every time and the transcription was the
+# weak step.
+#
+# So the script emits the dict literal and re-pinning becomes a paste. The
+# regeneration stays a deliberate, reviewed act — the diff is what a reviewer
+# reads — which is the same contract as golden/themes.json and regen_theme_golden.py.
+# It removes the typing, not the decision.
+#
+#     python3 scripts/measure_market_pagination.py --emit-capacity
+
+CAPACITY_STATES = ("no_narrative", "with_narrative", "with_trend")
+
+_NARRATIVE = ("The Irvine market showed balanced activity this period, "
+              "with inventory holding near two months of supply.")
+
+
+def _history(months=12, per=8):
+    """Twelve months of closings, so the trend series has something to draw."""
+    from datetime import date
+    rows, today = [], date.today()
+    for k in range(months):
+        year, month = today.year, today.month - k
+        while month <= 0:
+            year, month = year - 1, month + 12
+        for i in range(per):
+            rows.append({"close_date": f"{year}-{month:02d}-15",
+                         "close_price": 845000 + (months - 1 - k) * 7000 + i * 2500})
+    return rows
+
+
+def emit_capacity(n=120):
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        sys.exit("pypdf is required: pip install pypdf")
+
+    from worker.market_builder import ALL_REPORT_TYPES, MarketReportBuilder
+
+    work = Path(tempfile.mkdtemp(prefix="market-capacity-"))
+    jobs = []
+    for report_type in ALL_REPORT_TYPES:
+        for state in CAPACITY_STATES:
+            data = report_data(report_type, n)
+            if state == "no_narrative":
+                data["ai_insights"] = None
+            else:
+                data["ai_insights"] = _NARRATIVE
+            if state == "with_trend":
+                data["closed_history"] = _history()
+            builder = MarketReportBuilder(data)
+            # A type with no trend series renders identically to with_narrative;
+            # emitting it anyway would imply a state that does not exist.
+            if state == "with_trend" and not builder.TREND_SERIES.get(report_type):
+                continue
+            name = f"{report_type}__{state}"
+            (work / f"{name}.html").write_text(builder.render_html())
+            jobs.append(name)
+    (work / "types.json").write_text(json.dumps(jobs))
+
+    js = REPO / "_emit_capacity.js"
+    js.write_text(PDF_JS)
+    try:
+        subprocess.run(
+            ["node", str(js), str(work), find_chromium(), MARGIN_TOP, MARGIN_BOTTOM],
+            cwd=str(REPO), check=True,
+        )
+    finally:
+        js.unlink(missing_ok=True)
+
+    print("#: EMITTED by `python3 scripts/measure_market_pagination.py "
+          "--emit-capacity`.")
+    print("#: Paste over PAGE_1_CAPACITY rather than retyping it — the numbers have")
+    print("#: been re-pinned three times and transcription is the step that fails.")
+    print("PAGE_1_CAPACITY = {")
+    for report_type in ALL_REPORT_TYPES:
+        cells = []
+        for state in CAPACITY_STATES:
+            name = f"{report_type}__{state}"
+            if name not in jobs:
+                continue
+            reader = PdfReader(str(work / f"{name}.pdf"))
+            page1 = len(set(ADDR.findall(reader.pages[0].extract_text() or "")))
+            cells.append(f'"{state}": {page1}')
+        print(f'    "{report_type}": {{{", ".join(cells)}}},')
+    print("}")
+
+
 if __name__ == "__main__":
-    main(int(sys.argv[1]) if len(sys.argv) > 1 else 120)
+    if "--emit-capacity" in sys.argv:
+        emit_capacity()
+    else:
+        main(int(sys.argv[1]) if len(sys.argv) > 1 else 120)

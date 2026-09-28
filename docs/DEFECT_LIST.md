@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 34 | Real, unfixed |
-| `fixed` | 66 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 33 | Real, unfixed |
+| `fixed` | 67 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **104** | D-001 … D-104, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 15. (Sums to 34, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 14. (Sums to 33, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4942,7 +4942,7 @@ a way neither considered — reachable by a person, not by the renderer.
 ### D-102 — the three report types documented as one page all render two
 
 **Severity:** ROUGH · **Affects:** `market_snapshot`, `price_bands`, `featured_listings` PDFs
-**Status:** `open`
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`; page-1 composition decided and built
 
 `market_builder.PDF_CONFIG` splits the eight types into two modes in its own comment:
 
@@ -5209,6 +5209,82 @@ nothing at all right now — 2 pages either way — because it lands in the 2.52
 waste. Recover the 0.25in and the chart stops being free. **One decision, not three.**
 
 ---
+
+---
+
+## CLOSED 2026-09-28 — page 1 carries the trend, listings begin on page 2
+
+**Jerry's decision, with the reasoning recorded so it survives the people who made it.**
+
+The measurement that framed it: page 1 holds **either** a row of three listings **or** the
+twelve-month price trend, never both. Both give a two-page report carrying the same nine listings,
+so this decides what page 1 **leads with**, not what the report contains.
+
+**Why the chart won.**
+
+- **Nothing is lost.** Same two pages, same nine listings, different first page.
+- **It is the only element on that page a client cannot get elsewhere.** Listings are on Zillow,
+  Redfin and their own saved search. A twelve-month median for their specific market, computed from
+  MLS closings, requires us.
+- **It matches the reader.** These reports go on a schedule to an agent's sphere — past clients,
+  not active buyers. Those readers want to know what their house is doing, not what is for sale.
+- **Page 1 becomes a coherent market summary** — hero stat, narrative, metrics, trend — rather than
+  half a summary and half a truncated feed.
+
+**RECORDED AGAINST IT.** Listings are photographs, and photographs draw the eye where a line chart
+does not. If the audience were active buyers the listings would be the hook. **If the product's
+primary reader ever changes, revisit this rather than inherit it.**
+
+**The final page-1 composition, measured:**
+
+| page 1 | |
+|---|---|
+| masthead | 1.21in |
+| hero stat | 1.14in |
+| AI narrative | 1.42in |
+| stats bar | 2.17in |
+| **trend chart** | **1.87in** |
+| listings | none — the section breaks to page 2 |
+
+**Confirmed across the whole title ladder, not just the fixture's city:**
+
+| city | title | pages | page-1 listings |
+|---|---|---|---|
+| Irvine | 24px | 2 | 0 |
+| Tustin | 24px | 2 | 0 |
+| San Juan Capistrano | 18px | 2 | 0 |
+| Rancho Santa Margarita | 16px | 2 | 0 |
+| Rancho Santa Margarita and San Juan Capistrano | 14px | 2 | 0 |
+| four cities, 79 characters | 14px | 2 | 0 |
+
+One answer at every step, which is what the masthead bound bought.
+
+**The break is conditional and that is deliberate.** `force-new-page` is applied only when the
+chart renders. With no trend data there is nothing to give the page up for, and an unconditional
+break would leave 2.8in of white above it. Two deterministic states, both pinned — not a third
+variable. The section heading and truncation note sit inside the section that breaks, so they
+travel with the listings rather than stranding at the foot of page 1 above nothing.
+
+**Asserted structurally**, because this failure is invisible: if the chart stopped rendering, the
+break would go with it and the report would quietly revert to three listings on page 1 — no error,
+no visual damage, a different document than the one chosen. Four regressions applied and seen to
+fail: the chart silently not rendering, the break removed, the break made unconditional, and
+`market_snapshot` losing its series.
+
+**PAGE_1_CAPACITY IS NOW EMITTED RATHER THAN TYPED.** These numbers have been re-pinned three
+times, and each time they were read off a terminal and retyped — which is exactly how the defect
+board's own summary header went stale: the derivation was right every time and the transcription
+was the weak step. `python3 scripts/measure_market_pagination.py --emit-capacity` prints the dict
+literal, so re-pinning is a paste. The regeneration stays a deliberate, reviewed act — the diff is
+what a reviewer reads — which is the same contract as `golden/themes.json` and
+`regen_theme_golden.py`.
+
+**What this entry no longer claims.** It opened as "three report types documented as 1-page render
+two". `market_snapshot` is settled above. `price_bands` `[3, 5]` and `featured_listings` `[6, 6]`
+are still two pages against a `PDF_CONFIG` comment that says one — a stale comment now rather than
+an open question, since the capacities are known and the trade is stated. Correcting that comment
+is the remaining work and it is not a decision.
+
 
 ### D-103 — every continuation page pays for a full masthead, and the space reserved for it is larger than the masthead
 

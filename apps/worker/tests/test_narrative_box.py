@@ -29,40 +29,36 @@ MARKET_CSS = ROOT / "apps/worker/src/worker/templates/market/_base/base.jinja2"
 #: height at 14px/20.3px in the real column, with a long-word corpus.
 CHARS_PER_LINE = 97
 
-#: Page-1 listing capacity with the box fixed, measured at four narrative
-#: lengths (none / 36 / 55 / 150 tokens) and identical across all four — which
-#: is the property the fixed box exists to create.
+#: Page-1 listing capacity, per report type and per deterministic state.
 #:
-#: RE-MEASURED 2026-09-24 after §7.1 variant A moved the masthead out of
-#: PDFShift's header slot and into the document body. Page 1 now pays for the
-#: masthead as content where every page used to pay for it as a reservation, so
-#: page 1 holds slightly less and continuation pages hold considerably more
-#: (`closed` 25 -> 29 a page, 6 pages -> 5). The previous values were
-#: closed/inventory 12, price_bands 3/5, market_snapshot 3 — they are not
-#: comparable to these and should not be read as a regression on their own.
+#: EMITTED, NOT TYPED. `python3 scripts/measure_market_pagination.py
+#: --emit-capacity` prints this dict; re-pinning is a paste. These numbers have
+#: been re-derived three times — after §7.2's narrative cap, after §7.1's
+#: masthead move, after D-102's masthead bound — and the derivation was right
+#: every time. Reading them off a terminal and retyping them was the weak step,
+#: which is how the defect board's own summary header went stale. The
+#: regeneration stays deliberate and its diff is what a reviewer reads; the same
+#: contract as golden/themes.json.
 #:
-#: `none` differs on purpose: no narrative means no box, so those reports hold
-#: more. Two deterministic states, not a variable one.
+#: The states are deterministic, not variable. `no_narrative` differs because a
+#: report with no narrative renders no box. `with_trend` exists only for the two
+#: types that carry a monthly series, and on market_snapshot it is 0 by DESIGN:
+#: page 1 holds the twelve-month price trend and the listings begin on page 2
+#: (Jerry, 2026-09-28 — D-102). Both remain two-page reports with all nine
+#: listings; the choice was what page 1 leads with.
 #:
-#: RE-MEASURED AGAIN 2026-09-25, after the masthead's title and subtitle were
-#: bounded (D-102). market_snapshot is back to 3 — page 1's chrome is now a
-#: constant 6.846in against a 2.772in card row, fitting by 0.052in, and that is
-#: true for EVERY city and filter label rather than only for short ones. Before
-#: the bound it read 0 for Irvine and 0 for Rancho Santa Margarita alike, but
-#: for different reasons: 0.003in short and 0.303in short. Now there is one
-#: reason and one answer.
-#:
-#: These numbers are therefore the first ones on this page that are properties
-#: of the LAYOUT rather than of a fixture.
+#: Within a state the number does not move with content: the narrative box is
+#: fixed (§7.2) and the masthead's title and subtitle are bounded (D-102), so
+#: these are properties of the layout rather than of a fixture.
 PAGE_1_CAPACITY = {
-    "new_listings_gallery": {"with_narrative": 6, "no_narrative": 6},
-    "featured_listings": {"with_narrative": 6, "no_narrative": 6},
-    "open_houses": {"with_narrative": 6, "no_narrative": 6},
-    "market_snapshot": {"with_narrative": 3, "no_narrative": 3},
-    "closed": {"with_narrative": 11, "no_narrative": 15},
-    "inventory": {"with_narrative": 11, "no_narrative": 15},
-    "price_bands": {"with_narrative": 3, "no_narrative": 4},
-    "new_listings": {"with_narrative": 3, "no_narrative": 4},
+    "new_listings_gallery": {"no_narrative": 6, "with_narrative": 6},
+    "featured_listings": {"no_narrative": 6, "with_narrative": 6},
+    "open_houses": {"no_narrative": 6, "with_narrative": 6},
+    "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
+    "closed": {"no_narrative": 15, "with_narrative": 11},
+    "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
+    "price_bands": {"no_narrative": 4, "with_narrative": 3},
+    "new_listings": {"no_narrative": 4, "with_narrative": 3},
 }
 
 
@@ -132,13 +128,18 @@ def test_the_prompt_still_asks_for_the_length_the_box_is_sized_for():
 def test_every_report_type_has_a_recorded_page_1_capacity(report_type):
     """Pinned, the same way continuation pages are — these are the numbers
     §7.2's targets have to be written against, and they only mean anything
-    while the box stays fixed."""
+    while the narrative box and the masthead stay bounded."""
     entry = PAGE_1_CAPACITY[report_type]
     assert entry["with_narrative"] >= 0
     assert entry["no_narrative"] >= entry["with_narrative"], (
         f"{report_type}: a report WITHOUT a narrative cannot hold fewer "
         f"listings on page 1 than one with"
     )
+    if "with_trend" in entry:
+        assert entry["with_trend"] <= entry["with_narrative"], (
+            f"{report_type}: adding a chart to page 1 cannot make room for MORE "
+            f"listings on it"
+        )
 
 
 def test_the_recorded_capacities_cover_every_report_type():
