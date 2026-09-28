@@ -512,12 +512,10 @@ class SiteXClient:
         - Owner: Feed.PropertyProfile.OwnerInformation.OwnerFullName
         - APN: Feed.PropertyProfile.APN OR PropertyAddress.APNFormatted
         """
-        # Check for locations (multi-match scenario)
+        # Check for locations (multi-match scenario). Do this before Feed.
+        # A multi response sends Feed: null, and reading it first throws away
+        # the parcel list the person has to pick from.
         locations = response.get("Locations", []) or []
-        
-        # Check for feed data
-        feed = response.get("Feed", {})
-        profile = feed.get("PropertyProfile", {})
 
         # Several parcels on one street. Do not take the profile — that is the
         # building, and it looks like a successful lookup of the wrong property.
@@ -539,6 +537,11 @@ class SiteXClient:
                 f"Multiple properties found ({len(locations)} matches). Use APN search for precision.",
                 locations=parsed_locations
             )
+
+        feed = response.get("Feed") or {}
+        if not isinstance(feed, dict):
+            feed = {}
+        profile = feed.get("PropertyProfile") or {}
         
         if not profile:
             if len(locations) == 1:

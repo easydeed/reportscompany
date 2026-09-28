@@ -330,7 +330,11 @@ export function StepProperty({
               if (!open && !searchLoading) setUnitMatches(null);
             }}
           >
-            <DialogContent className="max-w-md">
+            <DialogContent
+              className="z-[2000] max-w-md"
+              overlayClassName="z-[2000]"
+              onInteractOutside={(event) => event.preventDefault()}
+            >
               <DialogHeader>
                 <DialogTitle>Select the unit</DialogTitle>
                 <DialogDescription>
