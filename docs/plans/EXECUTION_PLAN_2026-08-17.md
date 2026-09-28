@@ -214,6 +214,24 @@ it.**
   all. When a real parser is available — an AST, a CSS parser, an HTML parser, the config
   loader — use it; text search is the fallback, and its needle has to carry its own boundaries.
 
+  **AND THE HONEST PART: THIS RULE HAS NOW BEEN BROKEN FOUR TIMES BY THE PERSON WHO FILED IT, AND
+  CAUGHT FOUR TIMES BY A REGRESSION RATHER THAN BY RECALL.** A fourth instance landed three days
+  after the rule was written — `force-new-page`, matched in the stylesheet instead of the markup —
+  in a test written by someone who had the rule in mind that week.
+
+  Read as a scorecard that looks like a dead rule. It is not, and the distinction matters for
+  anyone deciding whether to keep it: **this class is not preventable prospectively.** At the
+  moment of writing `"height:" in rule` or `"force-new-page" not in html`, the needle IS the
+  intent — the mistake is invisible from inside the sentence that expresses it, in the same way
+  `minimum - 1` is the natural way to say "below the minimum". Every one of the four was obvious
+  within seconds of seeing it fail and invisible while being written.
+
+  So the rule's job is not to stop the hand. It is to make the failure legible when the regression
+  produces it — to turn "why is this test red" into "ah, the substring" in one step instead of ten
+  — and the thing that actually catches it is **running the check against input you know is bad**.
+  A rule that can only be applied in hindsight is an argument for the regression discipline, not
+  evidence against itself. Keep both; expect the fifth.
+
 - **A check that reports damage after committing it is decoration. A guard refuses to
   commit.** `deactivate_live_schedules.sql` ended with `SELECT COUNT(*) AS
   schedule_runs_retained` — a number printed after the transaction's work was done, with

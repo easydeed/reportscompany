@@ -98,10 +98,26 @@ ALL_REPORT_TYPES = list(LAYOUT_MAP.keys())
 
 # CAPS-SPLIT-SNAPSHOT-CATALOG — Market reports now split into two modes:
 #
-#   SNAPSHOT (1-page, curated sample):
+#   SNAPSHOT (curated sample):
 #     market_snapshot, price_bands, featured_listings
-#   CATALOG (multi-page, ALL matching listings):
+#   CATALOG (ALL matching listings):
 #     closed, inventory, new_listings, new_listings_gallery, open_houses
+#
+# THE SNAPSHOT MODES SAID "1-page" AND RENDER TWO. Corrected 2026-09-28 with
+# measured numbers rather than aspirational ones (D-102): the caps are two to
+# three times what page 1 holds, and page 1's capacity is now a known constant
+# per type rather than a guess.
+#
+#   market_snapshot    cap 9   page 1 holds 3   -> 2 pages
+#                              (and 0 by design when the trend chart is on
+#                               page 1, with the listings starting on page 2)
+#   price_bands        cap 8   page 1 holds 3   -> 2 pages
+#   featured_listings  cap 12  page 1 holds 6   -> 2 pages
+#
+# The capacities are pinned in tests/test_narrative_box.py::PAGE_1_CAPACITY and
+# emitted by `scripts/measure_market_pagination.py --emit-capacity`. Cutting a
+# cap to its page-1 capacity would make that type genuinely one page with a
+# smaller sample; that is a product decision and has not been taken.
 #
 # CATALOG types have `more_template = None` and a high cap (100-200) so the
 # PDF renders every matching listing. The previous "+ N more — contact me for

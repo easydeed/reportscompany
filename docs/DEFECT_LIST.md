@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 33 | Real, unfixed |
+| `open` | 34 | Real, unfixed |
 | `fixed` | 67 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **104** | D-001 … D-104, contiguous, no duplicates |
+| **Total** | **105** | D-001 … D-105, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 8 · FRAGILE 10 · ROUGH 14. (Sums to 33, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 14. (Sums to 34, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -5424,6 +5424,71 @@ boundary case.
 
 Six regressions applied and seen to fail, covering both guards, the box height and the budget in
 both directions.
+
+
+---
+
+### D-105 — days on market is read from a path the feed does not use, so every DOM is computed and closed comps are overstated by the escrow period
+
+**Severity:** WRONG · **Affects:** the DOM column and Avg DOM on every market report, and anywhere else `extract.py`'s `days_on_market` reaches
+**Status:** `open`
+
+Found 2026-09-28 while checking whether `closed`'s DOM column was sound enough to build a
+distribution chart on. It is not, and the reason is not the one the register recorded.
+
+**THE PATH IS WRONG.** `compute/extract.py:30` reads
+
+```python
+dom = _int(p.get("daysOnMarket"))
+```
+
+SimplyRETS puts it at **`p["mls"]["daysOnMarket"]`**. Confirmed against this repo's own fixture:
+`tests/fixtures/listing_closed_minimal.json` has no top-level `daysOnMarket` and carries `16` at
+`mls.daysOnMarket`, and `tests/test_new_metrics.py:334` reads it from that path and asserts on it.
+
+So the lookup returns `None` for every listing, always, and every DOM in the product comes from
+the fallback branch. **This is the same defect as `closeDate`**, which lives at
+`row["sales"]["closeDate"]` and whose top-level read returned `None` for every row — recorded in
+the master plan's decision-01 note, and evidently not swept for.
+
+**THE COMMENT ABOVE IT DOCUMENTS THE SYMPTOM AS A PROPERTY OF THE FEED.**
+
+```python
+# DOM: Use API value if available, otherwise calculate from dates
+# SimplyRETS doesn't return daysOnMarket for Closed listings
+```
+
+The feed does return it. It does not return it *at the path being read*. A true observation about
+the code's behaviour was written down as a fact about the vendor, and then relied on — the
+documentation-as-evidence trap, one layer further in than usual, because the documentation is a
+code comment written by someone watching the right symptom.
+
+**WHAT THE NUMBER MEANS NOW, AND WHAT IT SHOULD MEAN.** Measured on the fixture above:
+
+| | days |
+|---|---|
+| feed `daysOnMarket` — list → contract, the industry's DOM | **16** |
+| computed `close_date − list_date`, what ships | **42** |
+| escrow, contract → close | 26 |
+| **overstatement** | **26 days, 162% high** |
+
+`test_new_metrics.py:331` already states the distinction in as many words: *"SimplyRETS
+daysOnMarket = days from listing to contract only. It does NOT equal escrow_days +
+marketing_days (which spans list→close)."* The test knew; the extractor did not.
+
+**Scope.** Closed rows are wrong as described. Active and pending rows fall back to
+`now − list_date`, which is the right notion for a listing that has not sold, so those are
+defensible — but they are computed rather than read, so they will also disagree with the feed's
+own figure wherever it differs.
+
+**Why this blocks §7.3's DOM distribution chart, which is how it was found.** A histogram over
+this column would be a distribution of marketing-plus-escrow presented under a label every agent
+reads as marketing. Charting it would make a wrong number look authoritative, which is worse than
+not charting it — so the chart waits for the fix rather than shipping alongside it.
+
+**The fix is one line plus a decision.** Read `mls.daysOnMarket` first. Then decide what the
+column should show when the feed has no value: list→close is available and honest if labelled as
+such, but it is not DOM. Both halves need doing; the read alone changes numbers on live reports.
 
 
 ---
