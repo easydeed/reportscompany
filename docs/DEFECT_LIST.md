@@ -37,9 +37,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 34 | Real, unfixed |
-| `fixed` | 67 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 68 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **105** | D-001 … D-105, contiguous, no duplicates |
+| **Total** | **106** | D-001 … D-106, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 14. (Sums to 34, the open total.)
 
@@ -5431,7 +5431,7 @@ both directions.
 ### D-105 — days on market is read from a path the feed does not use, so every DOM is computed and closed comps are overstated by the escrow period
 
 **Severity:** WRONG · **Affects:** the DOM column and Avg DOM on every market report, and anywhere else `extract.py`'s `days_on_market` reaches
-**Status:** `open`
+**Status:** `fixed` — `feat/workstream-d-market-pdfs`
 
 Found 2026-09-28 while checking whether `closed`'s DOM column was sound enough to build a
 distribution chart on. It is not, and the reason is not the one the register recorded.
@@ -5489,6 +5489,117 @@ not charting it — so the chart waits for the fix rather than shipping alongsid
 **The fix is one line plus a decision.** Read `mls.daysOnMarket` first. Then decide what the
 column should show when the feed has no value: list→close is available and honest if labelled as
 such, but it is not DOM. Both halves need doing; the read alone changes numbers on live reports.
+
+---
+
+**FIXED 2026-09-28 — path corrected, comment corrected, and the sweep run.**
+
+`extract.py` now reads `mls.daysOnMarket` first, falls back to the top level for deployments that
+put it there, and when the feed carries nothing derives **the same quantity** from
+`sales.contractDate` rather than a different one. A closed sale with neither reports `None`, which
+the table already renders as `-` — D-056's rule: no sentinel, and the caller says so in words.
+Active and pending rows keep `now − list_date`, which is the right notion for a listing that has
+not sold; only closed rows changed.
+
+On the fixture: **42 → 16**, the feed's own number.
+
+The comment is replaced with what was actually observed. The old one said the vendor does not
+return the field; what was observed is that *the lookup returned None*, and it returned None
+because it was the wrong key.
+
+**THE SWEEP, ENUMERATED WITH `ast` RATHER THAN BY READING.** Every `<expr>.get("key")` in
+`extract.py` — 22 of them — resolved to the path it reads and checked against both captured
+fixtures' actual shape:
+
+| | |
+|---|---|
+| reads checked | 22 |
+| **`daysOnMarket` — read top-level, feed has `mls.daysOnMarket`** | **D-105, fixed here** |
+| **`bathrooms` — read as `property.bathrooms`, feed has `bathsFull`/`bathsHalf`** | **D-106, filed** |
+| `status` — flagged, then verified fine: the expression reads `mls.status` first and the top-level `p.get("status")` is an unreachable fallback | dead code, not a defect |
+| the other 19 | read where the feed puts them |
+
+**The sweep's first run examined 10 of its own 22 reads and reported completeness**, because
+`(addr or {}).get("city")` unparses as `(addr or {})` and did not match the list of row variables.
+Fixed to unwrap the guard, and to print what it skips instead of dropping it. An incomplete sweep
+that looks complete is worse than no sweep — §0.6, *enumerate the parts that are there*.
+
+**NOT CONFIRMED AGAINST A LIVE PAYLOAD, AND THAT IS NAMED RATHER THAN GLOSSED.** This container has
+no SimplyRETS credentials, so the sweep ran against `tests/fixtures/listing_{closed,active}_minimal.json`
+— captured responses, real in shape, but two of them. `tools/dump_market_snapshot.py` needs
+`SIMPLYRETS_USERNAME`/`PASSWORD` and would settle it in one call. What the fixtures cannot rule out
+is a deployment that DOES populate `property.bathrooms` or a top-level `daysOnMarket`; both reads
+are kept as fallbacks for exactly that reason, so the fix is correct either way.
+
+**THE REPO HELD BOTH ANSWERS.** `tests/test_new_metrics.py:334` reads
+`closed_listing["mls"]["daysOnMarket"]` and asserts on it — the correct path, in a passing test,
+in the same repository as the wrong one. Nothing compared the two files.
+`apps/worker/tests/test_extract_field_paths.py` now runs the extractor over the same fixtures those
+tests use, so they cannot disagree in silence again.
+
+**Three regressions applied and seen to fail** — the original top-level-only read, `close − list`
+substituted again, and the contract-derived branch removed.
+
+**The first attempt at the first one MISSED.** Reverting to the old read left the contract-derived
+branch computing 16 on this fixture, the same answer by a different route, so the assertion could
+not tell "read it" from "worked it out". A second test now sets the feed's value to a number
+neither derivation can produce, which makes the read the only way to obtain it. Two independent
+paths agreeing on one input is the same shape as a test reading its expectation from the code
+under test: the assertion is true and it is not evidence.
+
+**BLAST RADIUS.** DOM reaches, by grep rather than recollection: `report_builders.py` (24 sites),
+`email/template.py` (18), the market macros (10), `compute/market_trends.py` (9),
+`property_builder.py` (6), `tasks.py` (5), `market_builder.py` (3), `ai_overview.py` (3),
+`ai_market_narrative.py` (3), `ai_insights.py` (2), and five property-report templates. Concretely
+the figures that move are the market report's **DOM column** and **Avg DOM**, the stats bar's
+**Avg Days on Market**, the property report's **Market Trends** average, and any **AI narrative**
+that quotes them — the narrative is generated from these numbers, so past commentary described a
+market that was slower than it was.
+
+**Every closed comp's DOM falls by that listing's escrow period** — contract to close, 26 days on
+the only real sample available. Reports already sent are not corrected by this; the entry records
+that plainly rather than implying a retroactive fix.
+
+
+---
+
+### D-106 — bathroom counts are read from a key the feed does not have, so every listing ships without one
+
+**Severity:** WRONG · **Affects:** the Bd/Ba column, every listing card's bath chip, the AI overview's property line
+**Status:** `open`
+
+Found by the D-105 sweep, not looked for. Same shape, same file, one line apart.
+
+`compute/extract.py:54` reads
+
+```python
+baths = _float((pr or {}).get("bathrooms"))
+```
+
+SimplyRETS' `property` object carries **`bathsFull`** and **`bathsHalf`**. There is no
+`bathrooms` key. Confirmed against both captured fixtures, whose `property` objects hold
+`acres, area, bathsFull, bathsHalf, bedrooms, cooling, garageSpaces, heating, lotSizeArea,
+lotSizeAreaUnits, pool, stories, subType, subTypeText, type, view, yearBuilt` — and running the
+extractor over them returns `bathrooms: None` for both.
+
+**It fails invisibly, which is why it has lasted.** Every consumer guards:
+
+- `macros.jinja2:271` renders the closed table's Bd/Ba as `{{ l.beds }}/{{ l.baths | default('-') }}`, so it prints **`3/-`**
+- the listing cards emit the bath chip under `{% if listing.baths %}`, so it simply is not there
+- `email/template.py:704` and `ai_overview.py:159` are both `if`-guarded the same way
+
+No error, no blank where a number should be, no log line. A bathroom count is one of the three
+figures a reader looks for on a comp, and the reports have never carried it.
+
+**The fix needs a decision, which is why it is filed rather than done in the same commit as
+D-105.** `bathsFull` and `bathsHalf` are two integers and the product wants one number. The
+convention agents use is `full + half/2` rendered as `2.5`, but "2 full and 1 half" is also
+written `2.1` in some MLS markets, and the extractor's own comment says *"Keep as float (e.g., 2.5
+baths)"* — which says what it expected and not what the feed provides. Pick the convention
+deliberately, then read both keys.
+
+**Do not close this by reading `bathsFull` alone.** A three-bed with two full baths and a powder
+room would render `2`, which is wrong in the direction that matters to a seller.
 
 
 ---
