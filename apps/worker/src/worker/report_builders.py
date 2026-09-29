@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, date
 # Gallery/featured listing photos are proxied to R2 at runtime in `tasks.generate_report`
 # so cloud renderers (PDFShift) load images from our domain rather than MLS/CDN URLs.
 
+from worker.compute.price_bands import build_bands, hottest_and_slowest
 from worker.compute.moi import (
     months_of_supply,
     describe as describe_moi,
@@ -760,60 +761,18 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
     median_price = _median(prices)
     avg_dom = _average([l["days_on_market"] for l in listings if l.get("days_on_market") is not None])
     
-    # Define bands (use quartiles for dynamic banding)
-    sorted_prices = sorted(prices)
-    n = len(sorted_prices)
-    
-    def _format_band_price(val: float) -> str:
-        """Format price for band labels: $500K, $1.2M, etc."""
-        if val >= 1_000_000:
-            return f"${val/1_000_000:.1f}M".replace('.0M', 'M')
-        else:
-            return f"${int(val/1000):,}K"
-    
-    if n >= 4:
-        p25 = sorted_prices[n // 4]
-        p50 = sorted_prices[n // 2]
-        p75 = sorted_prices[(3 * n) // 4]
-        
-        band_defs = [
-            (f"Under {_format_band_price(p50)}", 0, p50),
-            (f"{_format_band_price(p50)} – {_format_band_price(p75)}", p50, p75),
-            (f"{_format_band_price(p75)}+", p75, max_price + 1),
-        ]
-    else:
-        # Fallback for small datasets
-        band_defs = [
-            (f"All ({_format_band_price(max_price)})", 0, max_price + 1)
-        ]
-    
-    # Build bands
-    bands = []
-    for label, min_p, max_p in band_defs:
-        band_listings = [
-            l for l in listings 
-            if min_p <= (l.get("list_price") or l.get("close_price") or 0) < max_p
-        ]
-        
-        if band_listings:
-            band_prices = [l.get("list_price") or l.get("close_price") for l in band_listings if l.get("list_price") or l.get("close_price")]
-            band_dom = [l["days_on_market"] for l in band_listings if l.get("days_on_market") is not None]
-            band_ppsf = [l["price_per_sqft"] for l in band_listings if l.get("price_per_sqft")]
-            
-            bands.append({
-                "label": label,
-                "count": len(band_listings),
-                "median_price": _median(band_prices) if band_prices else 0,
-                "avg_dom": round(_average(band_dom), 1) if band_dom else 0,
-                "avg_ppsf": round(_average(band_ppsf), 0) if band_ppsf else 0,
-            })
-    
-    # Find hottest and slowest bands
-    if bands:
-        hottest = min(bands, key=lambda b: b["avg_dom"] if b["avg_dom"] > 0 else 999)
-        slowest = max(bands, key=lambda b: b["avg_dom"])
-    else:
-        hottest = slowest = {"label": "—", "count": 0, "avg_dom": 0}
+    # ROUND BANDS ON A 1-2-5 LADDER, SIZED FROM TWELVE MONTHS (D-111).
+    #
+    # This used quartiles of the current result set, which meant a report
+    # titled "Price Bands" showed roughly 50/25/25 BY CONSTRUCTION and its
+    # boundaries moved a median of $105,500 between consecutive runs of an
+    # unchanging market, while the counts stayed [30, 15, 15] every time. The
+    # part carrying information was constant and the part that was constant in
+    # reality moved on the page. See compute/price_bands.py for the bootstrap.
+    banding = build_bands(listings, context.get("closed_history") or [])
+    bands = banding["bands"]
+    hottest, slowest = hottest_and_slowest(bands)
+
     
     return {
         "report_type": "price_bands",
@@ -841,6 +800,12 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
         "price_bands": bands,
         "hottest_band": hottest,
         "slowest_band": slowest,
+        # Where the boundaries came from. "results" means there were too few
+        # closings in the last twelve months to size them from history, and
+        # `price_bands_note` says so ON THE PAGE rather than letting the
+        # reader assume a stability the bands do not have.
+        "price_bands_extent": banding["extent_source"],
+        "price_bands_note": banding["note"],
         
         # Sample listings.
         # EMAIL-DEPTH-PASS1: bumped from 20 → 24 so emails can show

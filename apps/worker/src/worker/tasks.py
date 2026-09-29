@@ -13,7 +13,7 @@ from .query_builders import (
     build_params, build_market_snapshot, build_market_snapshot_closed,
     build_market_snapshot_pending, build_closed_history,
 )
-from .market_builder import TREND_REPORT_TYPES
+from .market_builder import HISTORY_REPORT_TYPES
 
 #: The row ceiling for the twelve-month history fetch, and the value the
 #: truncation flag is measured against. `SIMPLYRETS_MAX_RESULTS` (1000 by
@@ -1490,12 +1490,13 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             # market_snapshot's page 1 carries the trend described a state
             # production could not reach.
             #
-            # Only for the report types that draw one. The other six pay
-            # nothing: this is a second query, and a report that will not use
-            # the answer should not buy it.
+            # Only for the report types that USE it — the trend charts draw
+            # it, price_bands sizes its boundaries from it (D-111). The other
+            # five pay nothing: this is a second query, and a report that
+            # will not use the answer should not buy it.
             closed_history: list = []
             closed_history_truncated = False
-            if report_type in TREND_REPORT_TYPES:
+            if report_type in HISTORY_REPORT_TYPES:
                 try:
                     hq = build_closed_history(_params)
                     print(f"🔍 REPORT RUN {run_id}: closed_history_query={hq}")
@@ -1578,6 +1579,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 # Set by the inventory branch above. A truncated fetch is a
                 # floor, not a count, and months of supply must not be built
                 # on one — the builder passes these straight to compute.moi.
+                # D-111: price_bands sizes its boundaries from these. The
+                # builders take `context`, not builder_data, so it has to
+                # travel here as well as onto builder_data for the trend.
+                "closed_history": closed_history,
+                "closed_history_truncated": closed_history_truncated,
                 "active_was_truncated": _params.get("active_was_truncated", False),
                 "closed_was_truncated": _params.get("closed_was_truncated", False),
                 # The authoritative active count (D-081), or None when the feed
