@@ -7,7 +7,31 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-24, against `feat/workstream-d-market-pdfs`, cut from `main` at `850e2dd`. **Every open entry was re-checked against current code in that sweep** — see §0.6, *a defect list needs a read path*.
+**Last reconciled:** 2026-09-29, against `main` at `b0c52f9`, at the close of Workstream D.
+
+**HOW DEEP THIS SWEEP WENT, PER ENTRY RATHER THAN PER SWEEP** — §0.6's rule, because "swept, all
+36 checked" flattens three different claims into one:
+
+| depth | entries | what was done |
+|---|---|---|
+| **mechanism reproduced** | 6 | D-086, D-097, D-098, D-027, D-106, D-109 — the named construct executed or read in current code, and the numbers in the entry recomputed |
+| **construct located** | 5 | D-050, D-052, D-096, D-075, D-100 — the code the entry describes found and confirmed unchanged, without re-running the original measurement |
+| **file references resolved** | all 36 | every `path/to/file.py` an open entry names was checked to still exist. 33 references; **one is stale** (D-011 names `apps/api/migrations/phase4_indexes.sql`, which the 2026-08-18 reconciliation already established was never applied and has since been removed) |
+| **not re-verified** | 24 | unchanged since 2026-09-24 and nothing in Workstreams C or D touched them. **"Not re-verified" is not "probably fine"** |
+
+**Two drifts found, both small and both in the same direction — the entry overstating:**
+
+* **D-052** says `_intake/` is 183 files. It is **180**. The claim that nothing references it
+  stands; the count does not.
+* **D-086** is now *partially* superseded and the entry did not say so. `compute/price_bands.py`
+  (D-111) has its own `_median` that returns `None` for an empty list, which is the fix this
+  entry asks for — but `report_builders._median` still returns `0.0` and still reaches
+  `median_close_price`, `median_list_price` and four other price fields. The defect is live on
+  the paths it was filed against and fixed on one new one.
+
+**Nothing was found fixed-but-still-open, and nothing open-but-actually-fixed** — the two
+directions the 2026-09-22 sweep caught. The board and the code agree on all 36.
+
 
 > ## PRODUCTION IS TEST DATA (confirmed by Jerry, 2026-09-17)
 >
@@ -526,6 +550,12 @@ Related and worth checking in the same pass: `db/migrations/0050_pct_to_title_co
 ### D-011 — `/v1/company/metrics` is fully wired but unreachable from the product
 **Severity:** ROUGH · **Affects:** TITLE_COMPANY
 **Status:** `open`
+
+> **STALE FILE REFERENCE, corrected 2026-09-29.** This entry names
+> `apps/api/migrations/phase4_indexes.sql`, which no longer exists. That is consistent rather
+> than contradictory: the 2026-08-18 production reconciliation established the file never ran and
+> it has since been deleted. The entry's own claim — `/v1/company/metrics` is wired and
+> unreachable from the product — is unaffected.
 
 The endpoint exists (`company.py:913`), its Next.js proxy exists (`apps/web/app/api/proxy/v1/company/metrics/route.ts`), and no page or hook calls it (no `useCompanyMetrics` in `apps/web/hooks/use-api.ts`). Either dead code (Phase 5 candidate) or an unfinished feature.
 
@@ -1598,7 +1628,7 @@ The two columns are **not derived from one another**. In `apps/api/src/api/servi
 
 The fix is one statement extending 0054's shape to the other rows, deliberately not included: the instruction scoped that migration to `starter`, and silently rewriting limits on four more plans inside a ticket about the Growth tier is the kind of unrequested data change that should be its own reviewed decision.
 
-### D-052 — `_intake/` is 183 files referenced by nothing
+### D-052 — `_intake/` is 180 files referenced by nothing
 **Severity:** ROUGH · **Affects:** nobody at runtime — dead weight and a re-litigation risk
 **Status:** `open`
 
@@ -3723,6 +3753,13 @@ fails with the reason if anyone adds it.
 
 **Severity:** ROUGH · **Affects:** market snapshot, price bands, property reports, and anything reading a metric rather than testing it
 **Status:** `open`
+
+> **PARTIALLY SUPERSEDED, 2026-09-29 (D-111).** `compute/price_bands.py` has its own `_median`
+> that returns `None` for an empty list — the fix this entry asks for, on the one path that is
+> new. `report_builders._median` and `_average` still return `0.0` and still reach
+> `median_close_price`, `median_list_price`, the tier medians and `avg_ppsf`. **The defect is
+> live everywhere it was filed against.** Recorded because a reader finding the correct
+> behaviour in the newer module could reasonably conclude the entry was stale.
 
 ```python
 def _median(vals): return statistics.median(vals) if vals else 0.0
