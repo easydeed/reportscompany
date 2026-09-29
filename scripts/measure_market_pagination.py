@@ -103,7 +103,13 @@ def listings(n):
     ]
 
 
+#: A price spread wide enough to produce the six-to-eight bands production
+#: emits, so the card row this measures is the one that ships.
+_BAND_PRICES = [600_000 + i * 60_000 for i in range(32)]
+
+
 def report_data(report_type, n):
+    from worker.compute.price_bands import build_bands
     return {
         "report_type": report_type, "city": "Irvine", "lookback_days": 30,
         "filters_label": "2+ beds, SFR, under $1.5M",
@@ -120,8 +126,21 @@ def report_data(report_type, n):
         # two measured narratives, and the one that reproduces production's 13.
         "ai_insights": ("The Irvine market showed balanced activity this period, "
                         "with inventory holding near two months of supply."),
-        "price_bands": [{"label": "$600-800K", "count": 18, "pct": 22},
-                        {"label": "$800K-1M", "count": 31, "pct": 38}],
+        # BUILT BY THE REAL BANDING, not a two-entry literal (D-111).
+        #
+        # This was `[{"label": "$600-800K", …}, {"label": "$800K-1M", …}]` —
+        # two bands, when production emits six to eight. Page-1 capacity for
+        # `price_bands` and `new_listings` depends on how tall that card row
+        # is, so measuring with two was measuring a layout the product does
+        # not produce.
+        #
+        # That is D-113's lesson arriving one file later: a measuring script
+        # that supplies its own input measures whatever it supplied. Caught
+        # here only because D-113 had just been written up.
+        "price_bands": build_bands(
+            [{"list_price": p} for p in _BAND_PRICES],
+            [{"close_price": p} for p in _BAND_PRICES],
+        )["bands"],
     }
 
 

@@ -303,7 +303,15 @@ class MarketReportBuilder:
         # the chart shows all 6" — existed only to describe D-107, and D-107 is
         # fixed: the cards render every band now, so the caption has nothing to
         # apologise for.
-        return f"Active listings by price band · {total:,} listings across {len(counted)} bands"
+        note = f"Active listings by price band · {total:,} listings across {len(counted)} bands"
+        # D-111: when the boundaries came from this period's results rather
+        # than from twelve months of closings, the page says so. Bands that
+        # may move between reports look identical to bands that will not, and
+        # the whole point of the change is that a reader can compare two runs.
+        caveat = self.report_data.get("price_bands_note")
+        if caveat:
+            note = f"{note} · {caveat}"
+        return note
 
     # ── §7.3 median trend ──────────────────────────────────────────────────
 
@@ -793,3 +801,14 @@ class MarketReportBuilder:
 #: a fetch whose answer is never used, or a chart whose data was never bought.
 #: The first draft of this line WAS a second literal.
 TREND_REPORT_TYPES = frozenset(MarketReportBuilder.TREND_SERIES)
+
+
+#: Which report types need the twelve months FETCHED. A superset of
+#: `TREND_REPORT_TYPES`, because `price_bands` wants the same rows for a
+#: different reason: not to draw a line, but to size its band boundaries from
+#: a year of closings rather than from this week's results (D-111).
+#:
+#: Deliberately a separate name. Folding price_bands into TREND_REPORT_TYPES
+#: would make it fetch a trend it does not draw, and the next person to read
+#: `TREND_SERIES` would find a type missing from it.
+HISTORY_REPORT_TYPES = TREND_REPORT_TYPES | frozenset({"price_bands"})

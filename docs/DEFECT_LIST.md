@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 37 | Real, unfixed |
-| `fixed` | 72 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 36 | Real, unfixed |
+| `fixed` | 73 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **113** | D-001 … D-113, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 10 · FRAGILE 10 · ROUGH 16. (Sums to 37, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 16. (Sums to 36, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -58,7 +58,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -5965,7 +5965,7 @@ visible to customers. Recorded so the empty-state work does not read as having s
 ### D-111 — "price bands" are quartiles of the current result set, so the bands move every run and cannot be compared
 
 **Severity:** WRONG · **Affects:** the `price_bands` report, and the band cards on `new_listings`
-**Status:** `open`
+**Status:** `fixed` — `chore/probe-365-window`
 
 Found 2026-09-28 while confirming D-107's measurement against what production can actually emit.
 
@@ -6077,6 +6077,64 @@ versus 33 / 219 / 363 distinct labels for quartiles. And the counts now vary —
 **Also still open in this function** (unchanged by the above):
 `hottest = min(bands, key=lambda b: b["avg_dom"] if b["avg_dom"] > 0 else 999)` — a band whose
 sales all went under contract the day they listed scores 999 and can never be the hottest band.
+
+---
+
+**FIXED 2026-09-29 — round bands on a 1-2-5 ladder, sized from twelve months.**
+
+`compute/price_bands.py`. The extent comes from `closed_history`, which D-113 made real earlier
+the same day; `price_bands` joins `HISTORY_REPORT_TYPES` to pay for the same fetch, deliberately
+NOT `TREND_REPORT_TYPES` — it wants the rows to size boundaries, not to draw a line.
+
+**Re-bootstrapped against the shipped implementation, not the prototype:**
+
+| market | distinct edge sets / 120 runs of an unchanging market | distinct count vectors |
+|---|---|---|
+| Irvine-like, 60/wk | **1** (was 33 labels) | 120 of 120 |
+| smaller, 25/wk | **1** (was 219) | ~118 |
+| thin, 10/wk | **1** (was 363) | ~115 |
+
+Better than the 1/2/1 the recommendation predicted, and the counts now vary on essentially every
+run — the boundaries stopped absorbing the variation.
+
+**The three questions that went with the build:**
+
+| | |
+|---|---|
+| how many bands | target 6, hard maximum 8, and `band_edges` stops emitting past it regardless — the open-ended top band absorbs the rest. **Measured at eight: 53px per card, row 95px, zero labels clipped**, the same row height D-107 measured at six. The first draft cited D-107's six-card measurement for a limit of eight, which it does not support |
+| under twelve months of history | falls back to this period's results **and says so on the page** — the caption carries "may shift between reports". Bands that will move look identical to bands that will not, and the whole point is that two runs can be compared |
+| empty bands become routine | kept, not dropped. The chart's "none" row and the cards' zero rendering were both written while unreachable and are now exercised by a test that renders one |
+
+**And the `999` sentinel is gone.** Bands with no sales have `avg_dom: None` and are excluded from
+the ranking because they have no speed — not because their speed is zero. A band whose sales all
+went under contract the day they listed can now be the hottest.
+
+**TWO BUGS THE TESTS FOUND IN MY OWN CODE BEFORE IT SHIPPED.**
+
+`format_price` used one decimal place, so a **$1,250,000 boundary rendered as "$1.2M"** — and
+$250K is one of the commonest rungs, so above a million the label routinely named a boundary the
+band did not have. A reader placing a $1,240,000 listing into "$1.2M – $1.5M" would put it in the
+wrong band. Now two decimals with trailing zeros stripped, plus a property test that round-trips
+every multiple of every rung through its own label.
+
+And `MAX_BANDS` was enforced only by walking up the ladder, which stops at $2M — so a
+$50K–$90M range fell through to the top rung and produced **46 bands**. The count is bounded by
+construction now.
+
+**PAGE_1_CAPACITY MOVED, AND THE REASON IS D-113'S LESSON ONE FILE LATER.**
+`price_bands` 4/3 → **2/1**, `new_listings` 4/3 → **3/2**. Not because the layout changed: the
+measuring script set `price_bands` to a **two-entry literal it supplied to itself**, while
+production emits six to eight, so the pinned numbers described a card row the product does not
+render. The fixture builds its bands with the real `build_bands` now. Caught only because D-113
+had just been written up.
+
+**`price_bands` with a narrative now fits ONE listing on page 1**, which reads as an accident
+rather than a choice. Same shape as D-102 and it wants the same kind of decision — **flagged, not
+taken.**
+
+**Four regressions seen to fail:** the extent taken from this period's results instead of the
+history · empty bands dropped again · the `999` sentinel restored · quartile boundaries restored,
+which is the defect itself.
 
 
 ---

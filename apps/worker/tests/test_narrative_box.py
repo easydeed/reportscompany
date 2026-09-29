@@ -55,6 +55,20 @@ CHARS_PER_LINE = 97
 #: **identical**, which is the good outcome and does not retroactively make the
 #: earlier run evidence. It was a correct prediction, confirmed late.
 #:
+#: THE BAND-BEARING ROWS MOVED, 2026-09-29 (D-111), AND FOR THE SAME REASON
+#: ONE LEVEL DOWN. `price_bands` 4/3 -> 2/1 and `new_listings` 4/3 -> 3/2.
+#: Not because the layout changed but because the MEASUREMENT was taken
+#: against a two-band fixture the script supplied to itself, while production
+#: now emits six to eight. The old numbers described a card row the product
+#: does not render. The fixture builds its bands with the real `build_bands`
+#: now, so the next re-pin measures what ships.
+#:
+#: `price_bands` at `with_narrative: 1` is a DESIGN QUESTION, not a bug: the
+#: band cards and the distribution chart fill page 1 and leave room for one
+#: listing, which reads as an accident rather than a choice. Same shape as
+#: D-102 (market_snapshot's page 1 carries the trend, listings start on page
+#: 2) and it wants the same kind of decision. Flagged, not taken.
+#:
 #: Within a state the number does not move with content: the narrative box is
 #: fixed (§7.2) and the masthead's title and subtitle are bounded (D-102), so
 #: these are properties of the layout rather than of a fixture.
@@ -65,8 +79,8 @@ PAGE_1_CAPACITY = {
     "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
     "closed": {"no_narrative": 15, "with_narrative": 11},
     "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
-    "price_bands": {"no_narrative": 4, "with_narrative": 3},
-    "new_listings": {"no_narrative": 4, "with_narrative": 3},
+    "price_bands": {"no_narrative": 2, "with_narrative": 1},
+    "new_listings": {"no_narrative": 3, "with_narrative": 2},
 }
 
 
