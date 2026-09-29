@@ -65,14 +65,43 @@ def _measurer():
 
 
 def _browser_available(measure):
+    """None when the measurement can run, else why not.
+
+    PROBED BY LAUNCHING, NOT BY LOOKING FOR A FILE. The first version checked
+    for a chromium under PLAYWRIGHT_BROWSERS_PATH, which is one machine's
+    convention: CI installs to ~/.cache/ms-playwright and Playwright resolves
+    it unaided, so the gate failed on a runner that had a working browser.
+    Asking a heuristic where the browser is, instead of asking whether it
+    starts, is the same mistake the walker itself made three times.
+
+    The probe runs the exact launch the measurement will run, with the exact
+    path it will pass, so a pass here means the real thing works.
+    """
     if shutil.which("node") is None:
         return "node is not installed"
-    if not measure.find_chromium():
-        return "no Playwright chromium under PLAYWRIGHT_BROWSERS_PATH"
-    probe = subprocess.run(["node", "-e", "require.resolve('playwright')"],
-                           cwd=str(ROOT), capture_output=True)
+    exe = measure.find_chromium()
+    # No backslash escapes in this string. The first version trimmed the
+    # error with `String(e).split('\\n')[0]`, and Python turned that into a
+    # real newline inside a single-quoted JS string — a SyntaxError, so node
+    # exited 1 and the probe reported "the browser will not launch" on a
+    # machine whose browser launches fine. The trimming happens in Python
+    # below, where there is no second layer of quoting to get wrong.
+    script = (
+        "const {chromium} = require('playwright');"
+        "const exe = process.argv[1] || null;"
+        "chromium.launch(exe ? {executablePath: exe} : {})"
+        "  .then(b => b.close()).then(() => process.exit(0))"
+        "  .catch(e => { console.error(e.message || String(e)); process.exit(1); });"
+    )
+    probe = subprocess.run(["node", "-e", script, exe], cwd=str(ROOT),
+                           capture_output=True, text=True, timeout=180)
     if probe.returncode != 0:
-        return "the `playwright` node package does not resolve from the repo root"
+        # The FIRST meaningful line. Taking the last one reported node's own
+        # version banner ("Node.js v22.22.2") as the reason the browser would
+        # not start, which is a diagnosis that sends the reader nowhere.
+        lines = [ln.strip() for ln in (probe.stderr or probe.stdout or "").splitlines()
+                 if ln.strip() and not ln.startswith("Node.js v")]
+        return f"chromium will not launch: {lines[0] if lines else 'no output'}"
     return None
 
 

@@ -260,9 +260,25 @@ const WALK = () => {
 
 
 def find_chromium():
-    root = Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers"))
-    for candidate in sorted(root.glob("chromium-*/chrome-linux/chrome"), reverse=True):
-        return str(candidate)
+    """An explicit chromium path, or "" to let Playwright resolve its own.
+
+    TWO LOCATIONS, because they are different machines. A Claude Code cloud
+    container preinstalls browsers under PLAYWRIGHT_BROWSERS_PATH and pins a
+    build that is not the one the `playwright` package wants, so an unaided
+    launch there fails and the explicit path is required. A CI runner that has
+    just run `playwright install` has them in ~/.cache/ms-playwright under the
+    exact pinned name, where Playwright finds them itself.
+
+    Returning "" is a valid answer, not a failure: the caller then launches
+    without `executablePath`. Treating "" as "no browser" is what made the
+    first CI run of the contrast gate fail on a runner that had one.
+    """
+    roots = [Path(os.environ["PLAYWRIGHT_BROWSERS_PATH"])] if os.environ.get(
+        "PLAYWRIGHT_BROWSERS_PATH") else [Path("/opt/pw-browsers")]
+    roots.append(Path.home() / ".cache/ms-playwright")
+    for root in roots:
+        for candidate in sorted(root.glob("chromium-*/chrome-linux/chrome"), reverse=True):
+            return str(candidate)
     return ""
 
 
