@@ -6368,6 +6368,30 @@ fixture-fed measurement will look exactly as sound as this one did.
   **Any rows** → file it, and the fix is both sides: a guard in the ticker that marks the
   schedule failed rather than spinning, and cleanup of the rows.
 
+## ONE CREDENTIAL TRIP SETTLES THREE THINGS
+
+All read-only, all needing the same `SIMPLYRETS_USERNAME` / `SIMPLYRETS_PASSWORD`, and they are
+listed together because running them separately costs three handovers for one set of credentials.
+**`git pull` first** — two of the three only exist as of 2026-09-29.
+
+| # | what | how |
+|---|---|---|
+| 1 | the behaviour probe — parameter canaries, `count=true`, and the D-074/075/076/081/084 verdicts | `python3 scripts/probe_simplyrets_behaviour.py` |
+| 2 | a live payload, to confirm D-105's DOM path and D-106's bathrooms against real data rather than two captured fixtures | `python3 tools/dump_market_snapshot.py`, then `python3 scripts/sweep_extract_field_paths.py` against it |
+| 3 | **`minclosedate` at 365 days**, which the twelve-month trend chart now depends on | section **2c** of the same probe — no extra run |
+
+**Item 3 is new and is the one with a shipping consequence.** D-074 confirmed the parameter
+*filters*; section 2b confirmed it filters *at a real date*, 90 days out. The trend chart
+(D-113) asks for **365**, and a feed that retains or honours the cutoff only so far back would
+answer 2b correctly and still hand the chart an arbitrary span. It matters more here than for
+months of supply, because `moi.py` re-filters on `close_date` client-side and its number is right
+under either answer, while the trend buckets the rows it is handed. Section 2c asks for one extra
+count and settles it in the same pass.
+
+**Paste the whole probe output back.** The wording of each verdict is what distinguishes
+"confirmed" from "confirmed the wrong thing", and section 2b exists because the first run came
+back ambiguous in a way a summary would have hidden.
+
 - **A live SimplyRETS payload, on the same trip as the production probe.** D-105 and D-106 were
   both diagnosed against `tests/fixtures/listing_*.json` — captured responses, real in shape, and
   two of them. `tools/dump_market_snapshot.py` fetches a live page with `SIMPLYRETS_USERNAME` /

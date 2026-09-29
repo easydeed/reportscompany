@@ -456,6 +456,58 @@ def main():
             )
     print()
 
+    # ── 2c. the window the TREND CHART asks for, which is not 90 days ───────
+    #
+    # D-113. Section 2b settles the PARAMETER; this settles the VALUE the
+    # product passes. `build_closed_history` asks for `minclosedate = today -
+    # 365`, and a parameter confirmed at 90 days is confirmed at 90 days — a
+    # feed that retains or filters closed sales only so far back would answer
+    # 2b correctly and still hand the trend chart an arbitrary span.
+    #
+    # It matters more here than it does for months of supply. `moi.py` re-filters
+    # on `close_date` client-side, so its number is right under either answer;
+    # the trend buckets the rows it is handed and would draw a twelve-month
+    # line from whatever came back. One extra count request settles it.
+    print("2c. …and at 365 days, which is what the trend chart asks for?")
+    year = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
+    count_365 = _get(auth, f"status=Closed&minclosedate={year}&limit=1&count=true",
+                     f"  count: + minclosedate={year} (365d)")
+    total_365 = _total(count_365)
+
+    if total_365 is None or total_all is None:
+        verdicts["D-113"] = (
+            "NOT SETTLED — no X-Total-Count on the 365-day query, so the "
+            "window the trend chart uses is unconfirmed. Keep the client-side "
+            "close_date filter (or add it) before trusting the chart."
+        )
+    elif total_90 is not None and total_365 < total_90:
+        verdicts["D-113"] = (
+            f"UNEXPECTED — 365 days returned FEWER closings ({total_365}) than "
+            f"90 ({total_90}). That should not be possible; paste the output "
+            f"rather than acting on it."
+        )
+    elif total_365 == total_all and total_90 is not None and total_90 < total_all:
+        verdicts["D-113"] = (
+            f"AMBIGUOUS AT A YEAR — 90 days filtered ({total_90} of "
+            f"{total_all}) but 365 days did not ({total_365} of {total_all}). "
+            f"Either this feed holds under a year of closed sales, or the "
+            f"cutoff stops being honoured that far back. The trend chart would "
+            f"draw a twelve-month line from an unbounded span; do not ship it "
+            f"without the client-side close_date filter."
+        )
+    elif total_90 is not None and total_90 <= total_365 <= total_all:
+        verdicts["D-113"] = (
+            f"CONFIRMED at the window the chart uses — {total_90} closings in "
+            f"90 days, {total_365} in 365, {total_all} with no cutoff. Ordered "
+            f"as a real nested window, on the feed's own totals."
+        )
+    else:
+        verdicts["D-113"] = (
+            f"INCONCLUSIVE — 90d={total_90}, 365d={total_365}, all={total_all}. "
+            f"Paste the output."
+        )
+    print()
+
     # ── 4. the exact total, without paging (D-081) ──────────────────────────
     print("4. Does count=true return X-Total-Count? (D-081 — the months-of-supply numerator)")
     _get(auth, "status=Active&limit=1", "  status=Active&limit=1           ")
@@ -744,8 +796,22 @@ def main():
 
     # ── verdicts ────────────────────────────────────────────────────────────
     print("=" * 72)
-    for defect in ("D-074", "D-075", "D-076", "D-081", "D-084", "DECISION-01"):
+    #: The reading order. D-113 was computed and very nearly not printed,
+    #: because this was a hardcoded tuple and the new section did not think to
+    #: add itself to it — a verdict reached and thrown away, on a trip that
+    #: costs someone a credential handover to repeat. The assertion below makes
+    #: that impossible rather than relying on the next person remembering.
+    ORDER = ("D-074", "D-075", "D-076", "D-081", "D-084", "D-113", "DECISION-01")
+    for defect in ORDER:
         print(f"\n{defect}: {verdicts.get(defect, 'INCONCLUSIVE — a request failed above')}")
+    unprinted = sorted(set(verdicts) - set(ORDER))
+    if unprinted:
+        print("\n" + "!" * 72)
+        print("THESE VERDICTS WERE COMPUTED AND NOT LISTED ABOVE — add them to "
+              "ORDER:")
+        for defect in unprinted:
+            print(f"\n{defect}: {verdicts[defect]}")
+        print("!" * 72)
     print("\n" + "=" * 72)
     print(f"{REQUESTS['sent']} GET request(s) sent"
           + (f", {REQUESTS['failed']} failed" if REQUESTS["failed"] else ", none failed")
