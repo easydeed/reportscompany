@@ -103,11 +103,22 @@ jobs:
       #
       # ~90 documents in 38 seconds locally. The install is the slow part, not
       # the measurement.
+      # 20.x, because that is what package.json's `engines` declares. 22 works
+      # and warns EBADENGINE on every install; CI should run the version the
+      # repository says it supports.
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "20"
           cache: npm
 
+      # `npm ci`, not `npm install`: it fails on a lock file that disagrees
+      # with package.json instead of silently rewriting it. The first run of
+      # this step did exactly that — ts-node was in package.json and eleven of
+      # its transitive dependencies were missing from package-lock.json, so
+      # `npm ci` had been broken here for anyone who tried it. Fixed in this
+      # PR with `npm install --package-lock-only` (additions only, no version
+      # changes), because working around it with `npm install` would have left
+      # the same trap for the next person.
       - name: Install node dependencies
         run: npm ci
 
