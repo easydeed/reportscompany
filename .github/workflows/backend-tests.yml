@@ -94,12 +94,50 @@ jobs:
           VIRTUAL_ENV: ${{ github.workspace }}/.venv
           POETRY_VIRTUALENVS_CREATE: "false"
 
+      # CHROMIUM, BECAUSE ONE TEST MEASURES WHAT A BROWSER PAINTS.
+      # test_pdf_contrast.py walks every market and property render for
+      # unreadable text. PDFShift produces these PDFs with Chromium, so
+      # getComputedStyle is the ground truth; a CSS cascade written in Python
+      # would be a model of it that can disagree in silence, which is the
+      # failure that test exists to catch (docs/TEST_DURABILITY.md).
+      #
+      # ~90 documents in 38 seconds locally. The install is the slow part, not
+      # the measurement.
+      # 20.x, because that is what package.json's `engines` declares. 22 works
+      # and warns EBADENGINE on every install; CI should run the version the
+      # repository says it supports.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      # `npm ci`, not `npm install`: it fails on a lock file that disagrees
+      # with package.json instead of silently rewriting it. The first run of
+      # this step did exactly that — ts-node was in package.json and eleven of
+      # its transitive dependencies were missing from package-lock.json, so
+      # `npm ci` had been broken here for anyone who tried it. Fixed in this
+      # PR with `npm install --package-lock-only` (additions only, no version
+      # changes), because working around it with `npm install` would have left
+      # the same trap for the next person.
+      - name: Install node dependencies
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
       # One invocation from the repo root. pytest.ini's testpaths already covers
       # apps/api/tests and apps/worker/tests; running them as separate steps
       # would put the cross-package test in an environment missing half of what
       # it imports.
+      #
+      # PDF_CONTRAST_REQUIRE_BROWSER=1 turns "no browser" into a FAILURE rather
+      # than a skip. Locally the contrast gate skips when Chromium is absent;
+      # in CI a skip would mean the suite reports green on documents nothing
+      # looked at, which is precisely the state this gate was added to end.
       - name: Run tests
         run: .venv/bin/pytest
+        env:
+          PDF_CONTRAST_REQUIRE_BROWSER: "1"
 
       # Workstream A's acceptance criterion: no brand hex literal in a template.
       # A ratchet, not a gate — there are 111 today and removing them changes

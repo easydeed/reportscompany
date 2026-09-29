@@ -6013,6 +6013,71 @@ all went under contract the day they listed scores **999** and can never be the 
 zero-is-falsy pattern in a ranking, using a sentinel rather than a filter — which is why the D-108
 gate does not catch it, and why it is written down here.
 
+---
+
+**MEASURED 2026-09-29, and it is worse than "the bands move".**
+
+Bootstrap: draw two independent weekly samples from one **unchanging** market and compare the
+bands each run would produce. 400 pairs per market shape.
+
+| market | p50 boundary moves between consecutive runs | p75 moves | distinct first-band labels over 800 runs |
+|---|---|---|---|
+| Irvine-like, 60 sales/wk | median **$105,500** (p90 $269,000) | median $141,000 | **33** |
+| smaller, 25 sales/wk | median $55,000 | median $61,000 | 219 |
+| thin, 10 sales/wk | median $130,000 | median $121,000 | 363 |
+
+**And the counts, over those same runs, are `[30, 15, 15]` every single time.** They have to be:
+they are 50% / 25% / 25% of 60 by construction.
+
+So the report has it exactly inverted. **The part that carries information is constant by
+construction; the part that is constant in reality is what moves on the page.** An agent reading
+"Under $1.2M: 30" one week and "Under $984K: 30" the next is being shown a $216,000 swing in a
+market where nothing happened, next to three counts that cannot change.
+
+**THE RECOMMENDATION: ROUND BOUNDARIES ON A 1-2-5 LADDER, WITH THE EXTENT TAKEN FROM THE
+TWELVE-MONTH HISTORY RATHER THAN FROM THIS WEEK'S RESULTS.**
+
+Pick the step from `[25K, 50K, 100K, 200K, 250K, 500K, 1M, 2M]` nearest `range / 6`, lay the
+boundaries on multiples of it from zero, and take the range from the same twelve months of
+closings `compute/monthly_trend.py` already fetches for the trend chart.
+
+Measured on the same bootstrap:
+
+| market | distinct edge sets over 400 runs of an unchanging market | consecutive runs identical |
+|---|---|---|
+| Irvine-like | **1** | 399/399 |
+| smaller | 2 | 329/399 |
+| thin | **1** | 399/399 |
+
+versus 33 / 219 / 363 distinct labels for quartiles. And the counts now vary —
+`(15, 10, 5, 9, 8, 5, 6, 2)` — because the boundaries stopped absorbing the variation.
+
+**Why this rather than the two obvious alternatives.**
+
+| | |
+|---|---|
+| **fixed global bands** (say $250K everywhere) | comparable across markets as well as across runs, which sounds strictly better and is not: a $250K step gives one band in a $350K market and twelve in a $3M one. The report would be unusable at both ends to buy a comparison the product never makes — it shows one market over time, not two markets side by side |
+| **per-market bands persisted in the database** | the textbook answer, and it needs a schema change, a decision about when to recompute, and a migration. It buys stability this already has: **1 distinct edge set in 400 runs** is not meaningfully less stable than a stored constant, and it fails safe — a market that genuinely moves a step gets new bands rather than stale ones |
+| **snapping, extent from this week's sample** | the intermediate version, measured because it is the cheaper thing to build: 2 / 5 / **18** distinct edge sets. The step is stable (chosen identically in 382 of 400 runs) but a ten-sale week's min and max swing enough to add or drop a band at the ends. Anchoring the extent to the history is what fixes it, and the history is already being fetched |
+
+**Three things this does not settle**, to be decided when it is built rather than assumed now:
+
+1. **Six bands is a guess.** The row measurement on D-107 says six cards fit at 56px. The chart
+   has more room than the cards do, so the number may want to differ between them — and if it
+   does, the cards and the chart disagree again, which is what D-107 just closed.
+2. **What happens with no history.** A market with under twelve months of closings has no extent
+   to anchor to. Falling back to this week's sample reintroduces the drift, silently; saying so
+   on the page is the alternative, and it is the same gap-versus-zero call as the trend chart's.
+3. **Empty bands become reachable for the first time.** `if band_listings:` currently drops them,
+   which is why the chart's "none" row and D-107's all-cards change have never been exercised.
+   Fixed bands produce empty bands routinely. That is the intended behaviour and it means the
+   two unreachable code paths become live in the same change — they need a test that renders
+   them, not just a sweep that finds them.
+
+**Also still open in this function** (unchanged by the above):
+`hottest = min(bands, key=lambda b: b["avg_dom"] if b["avg_dom"] > 0 else 999)` — a band whose
+sales all went under contract the day they listed scores 999 and can never be the hottest band.
+
 
 ---
 
