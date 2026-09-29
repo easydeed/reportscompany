@@ -25,6 +25,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from worker.property_builder import (
     compute_color_roles,
+    darken_until_readable,
+    ink_on,
     _darken,
     safe_url,
     sanitize_context_urls,
@@ -78,7 +80,19 @@ def _pct(val) -> str | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 DEFAULT_PRIMARY = "#18235c"
-DEFAULT_ACCENT = "#0d9488"
+#: #4F46E5, not #0d9488. The old default was Luxury Estates' teal — an
+#: affiliate's brand shipping as the platform default, so every account that
+#: had not picked an accent rendered someone else's identity. The 2026-09-29
+#: contrast audit measured the consequence: a third of the masthead's failures
+#: were brand-INDEPENDENT, because the band always ended in that teal.
+#:
+#: #4F46E5 is not a new colour. It is DEFAULT_PRIMARY_COLOR in
+#: apps/web/lib/templates.ts and social-templates.ts, and the email moved to it
+#: for the same reason in D-098: a default is not the affiliate's colour —
+#: nobody chose it, and it is ours to set. The market PDF was the last surface
+#: still defaulting to something else, so an unbranded account's PDF and its
+#: email did not match. Now they do.
+DEFAULT_ACCENT = "#4F46E5"
 
 TEMPLATES_DIR = Path(__file__).parent / "templates" / "market"
 TEMPLATE_PATH = "market.jinja2"
@@ -371,6 +385,42 @@ class MarketReportBuilder:
         )
         return primary, accent
 
+    #: The subtitle's opacity in `.masthead-subtitle`. The band is guaranteed
+    #: readable for text at THIS alpha, not for opaque white, because the
+    #: translucent value is the one that was failing — 2.60:1 on the old
+    #: default accent, for every brand. Guaranteeing the harder case makes the
+    #: opaque title safe by construction and keeps the muted subtitle a design
+    #: element rather than something the fix has to flatten away.
+    #:
+    #: It is pinned here and asserted against the stylesheet by
+    #: test_masthead_contrast.py, so the two halves of one decision cannot
+    #: drift — the same contract as §7.2's narrative box.
+    MASTHEAD_SUBTITLE_ALPHA = 0.7
+
+    def _masthead_band(self, primary: str, accent: str) -> tuple[str, str]:
+        """The masthead gradient's two stops, each dark enough to carry its text.
+
+        WHY THE BAND AND NOT THE TEXT (D-112). The gradient ran from the raw
+        brand to the raw accent with every label hardcoded `#ffffff`. Measured
+        across the audit's six brands, **no single text colour clears 4.5:1 on
+        both ends for three of them** — white fails on amber and lime,
+        near-black fails on coastal and violet. Choosing a better text colour
+        cannot fix a band whose ends are that far apart in luminance; the band
+        is the defect.
+
+        So each stop is darkened until the text on it is readable, and stops
+        at the first step that works — a brand already dark enough is returned
+        untouched rather than dulled to a safe constant.
+
+        Result across those six brands: title 7.41–7.57:1, subtitle 4.53:1,
+        and `theme_color_on_dark` 4.53–4.63:1 where it previously reported
+        3.74:1 and logged that it could not do better.
+        """
+        return (
+            darken_until_readable(primary, "#ffffff", self.MASTHEAD_SUBTITLE_ALPHA),
+            darken_until_readable(accent, "#ffffff", self.MASTHEAD_SUBTITLE_ALPHA),
+        )
+
     # ── context builders ──────────────────────────────────────────────────
 
     def _build_header_context(self) -> Dict[str, Any]:
@@ -552,11 +602,16 @@ class MarketReportBuilder:
     def render_html(self) -> str:
         """Render the complete HTML report."""
         primary_color, accent_color = self._resolve_colors()
-         # BOTH ends of the header band, not just the navy one. The masthead is
-         # `linear-gradient(135deg, header-bg 0%, header-bg 50%, primary-color 100%)`
-         # — navy to accent — so a label derived against the navy alone measured
-         # 9.90:1 where it starts and 2.53:1 where the accent takes over (D-097).
-        color_roles = compute_color_roles(accent_color, (primary_color, accent_color))
+        # BOTH ends of the header band, not just the first. A label derived against
+        # one stop alone measured 9.90:1 where it starts and 2.53:1 where the
+        # other takes over (D-097).
+        #
+        # Derived against the GUARANTEED stops, not the raw brand colours. On
+        # the raw pair this returned 3.74:1 for two of the six audited brands
+        # and logged that it could not do better on every single render;
+        # against the band it clears 4.5:1 for all six (D-112).
+        band_start, band_end = self._masthead_band(primary_color, accent_color)
+        color_roles = compute_color_roles(accent_color, (band_start, band_end))
 
         # Resolve AI narrative: use pre-supplied value, otherwise generate
         ai_insights = self.report_data.get("ai_insights") or ""
@@ -580,9 +635,22 @@ class MarketReportBuilder:
             # Brand colours
             "primary_color": primary_color,
             "accent_color": accent_color,
+            # The masthead band's two stops, dark enough to carry their own
+            # text. NOT the raw brand colours — see `_masthead_band`.
+            "band_start": band_start,
+            "band_end": band_end,
             "accent_on_dark": color_roles["theme_color_on_dark"],
             "accent_on_light": color_roles["theme_color_on_light"],
             "accent_light": color_roles["theme_color_light"],
+            # On the accent TINT, not on white. `.stat-block-accent` and the
+            # footer's initials circle paint accent-coloured text on a 35%
+            # tint of that same accent — two shades of one colour — and
+            # `theme_color_on_light` is computed against #ffffff, which is a
+            # different and easier background. Measured at 1.62:1 (D-112).
+            "accent_on_tint": ink_on(accent_color, color_roles["theme_color_light"]),
+            # The muted label in the same block. `--gray-500` is chosen for a
+            # white card and sat at 1.54:1 on the tint.
+            "muted_on_tint": ink_on("#78716c", color_roles["theme_color_light"]),
             # Text color guaranteed readable when overlaid on the accent
             # (used by .listing-status pill via --accent-text).
             "theme_color_text": color_roles["theme_color_text"],
@@ -651,17 +719,26 @@ class MarketReportBuilder:
         """Render the big gradient hero header as a standalone HTML doc,
         repeated on every page via PDFShift's `header` parameter."""
         primary_color, accent_color = self._resolve_colors()
-        color_roles = compute_color_roles(accent_color, (primary_color, accent_color))
+        # The same guaranteed band as the body (D-112), so the running head
+        # and footer cannot derive their text against a different surface
+        # from the one they are painted on.
+        color_roles = compute_color_roles(accent_color, self._masthead_band(primary_color, accent_color))
         header_ctx = self._build_header_context()
         subtitle_text = header_ctx.get("subtitle") or "All Properties"
         context = {
             "primary_color": primary_color,
             "accent_color": accent_color,
             "accent_on_dark": color_roles["theme_color_on_dark"],
-            # Gradient dark stop: darkened version of the agent's primary color.
-            # Was hardcoded to "#18235c" navy in HERO-EVERY-PAGE; this brand-derives
-            # it so the gradient flows from the agent's brand identity correctly.
-            "header_bg": _darken(primary_color, 0.35),
+            # Gradient dark stop, brand-derived rather than the hardcoded
+            # "#18235c" navy of HERO-EVERY-PAGE.
+            #
+            # `_masthead_band`, not `_darken(primary_color, 0.35)`. A fixed
+            # factor is a guess that happens to work for the colours someone
+            # tried: measured across the audit's six brands, 0.35 leaves white
+            # at 4.47:1 on lime — under the bar, by a hair, silently. The
+            # derivation darkens until it is actually readable and stops
+            # there, so a brand already dark enough is not dulled (D-112).
+            "header_bg": self._masthead_band(primary_color, accent_color)[0],
             "report_title": header_ctx.get("title") or "Market Report",
             # The running head carries the BRAND; the page-1 masthead carries
             # the report title. They used to carry the same words 40px apart.
@@ -682,12 +759,24 @@ class MarketReportBuilder:
     def render_page_footer_html(self) -> str:
         """Render the agent footer as a standalone HTML doc, repeated on every page."""
         primary_color, accent_color = self._resolve_colors()
-        color_roles = compute_color_roles(accent_color, (primary_color, accent_color))
+        # The same guaranteed band as the body (D-112), so the running head
+        # and footer cannot derive their text against a different surface
+        # from the one they are painted on.
+        color_roles = compute_color_roles(accent_color, self._masthead_band(primary_color, accent_color))
 
         context = {
             "primary_color": primary_color,
             "accent_color": accent_color,
             "accent_light": color_roles["theme_color_light"],
+            # On the accent TINT, not on white. `.stat-block-accent` and the
+            # footer's initials circle paint accent-coloured text on a 35%
+            # tint of that same accent — two shades of one colour — and
+            # `theme_color_on_light` is computed against #ffffff, which is a
+            # different and easier background. Measured at 1.62:1 (D-112).
+            "accent_on_tint": ink_on(accent_color, color_roles["theme_color_light"]),
+            # The muted label in the same block. `--gray-500` is chosen for a
+            # white card and sat at 1.54:1 on the tint.
+            "muted_on_tint": ink_on("#78716c", color_roles["theme_color_light"]),
             "accent_on_light": color_roles["theme_color_on_light"],
             "agent": self._build_agent_context(),
         }

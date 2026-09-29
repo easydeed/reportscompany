@@ -384,6 +384,123 @@ def _ensure_readable_on_light(hex_color: str, light_bg: str = "#ffffff") -> str:
     return fallback
 
 
+def flatten_over(text: str, surface: str, alpha: float) -> str:
+    """`text` at `alpha` over `surface` — the colour a reader actually sees."""
+    tr, tg, tb = _hex_to_rgb(normalize_hex_color(text))
+    sr, sg, sb = _hex_to_rgb(normalize_hex_color(surface))
+    a = max(0.0, min(1.0, alpha))
+    return _rgb_to_hex(tr * a + sr * (1 - a),
+                       tg * a + sg * (1 - a),
+                       tb * a + sb * (1 - a))
+
+
+def darken_until_readable(surface: str, text: str = "#ffffff",
+                          alpha: float = 1.0) -> str:
+    """A version of `surface` dark enough that `text` clears AA on it.
+
+    THE MIRROR OF `_ensure_readable_on_dark`, AND THE ONE THAT WAS MISSING.
+    That function adjusts the TEXT to suit a surface. This adjusts the SURFACE
+    to suit the text, which is the only thing that works for a band whose two
+    ends are far apart in luminance.
+
+    Measured on the market masthead (D-112): its gradient runs from the
+    affiliate's brand to the platform accent, and for three of the six brands
+    in the audit corpus **no single text colour clears 4.5:1 on both ends** —
+    white fails on amber and lime, near-black fails on coastal and violet. The
+    band itself is the defect, so the band is what this fixes. Once both stops
+    are guaranteed, white is a measured consequence rather than a hardcode.
+
+    Returns the colour unchanged when it already clears the bar, so a brand
+    dark enough to carry white is never dulled, and it stops at the first step
+    that works rather than darkening to a safe constant.
+    """
+    current = normalize_hex_color(surface)
+    text = normalize_hex_color(text)
+    # `alpha` because the thing that has to be readable is what the reader
+    # SEES, and the masthead's subtitle is `rgba(255,255,255,0.7)`. A band
+    # guaranteed for opaque white leaves the subtitle at 2.60:1 on the old
+    # default accent; guaranteeing it for the translucent value instead makes
+    # the opaque title safe by construction, and keeps the design's muted
+    # subtitle rather than flattening it to the same white as the title.
+    # The flatten is recomputed each step, because the backdrop is moving.
+    seen = lambda c: flatten_over(text, c, alpha)  # noqa: E731
+    for _ in range(_READABILITY_MAX_STEPS):
+        if _contrast(seen(current), current) >= AA_NORMAL:
+            return current
+        stepped = _darken(current, _READABILITY_STEP)
+        if stepped == current:
+            break
+        current = stepped
+    achieved = _contrast(seen(current), current)
+    if achieved < AA_NORMAL:
+        _report_unreachable("surface", surface, text, achieved)
+    return current
+
+
+def mute_toward(text: str, surfaces, floor: float = AA_NORMAL) -> str:
+    """`text` moved toward `surfaces` as far as AA allows, and no further.
+
+    A muted subtitle is a real design intention and
+    `rgba(255,255,255,0.7)` is the wrong way to express it: the alpha is
+    chosen once and the surface varies per affiliate, so the flattened result
+    measured 1.61:1 on lime and 2.60:1 on the default accent (D-112). This
+    walks toward the surface while the worst stop still clears `floor` and
+    returns the last value that did, so the muting is as much as is available
+    and never more.
+
+    Returns `text` itself when even one step would fail — muted and unreadable
+    is not a trade this gets to make.
+    """
+    stops = _surfaces(surfaces)
+    worst = lambda c: min(_contrast(c, b) for b in stops)  # noqa: E731
+    best = normalize_hex_color(text)
+    # Toward the surfaces means toward their luminance: darken a light text,
+    # lighten a dark one. Comparing against the LIGHTEST stop, because that is
+    # the end the text has least room on and therefore the one that decides
+    # which direction is "toward".
+    lum = lambda c: _relative_luminance(*_hex_to_rgb(c))  # noqa: E731
+    lightest = max(stops, key=lum)
+    step = _darken if lum(best) > lum(lightest) else _lighten
+    current = best
+    for _ in range(_READABILITY_MAX_STEPS):
+        stepped = step(current, _READABILITY_STEP)
+        if stepped == current or worst(stepped) < floor:
+            break
+        current = stepped
+        best = current
+    return best
+
+
+def text_on_surfaces(surfaces) -> str:
+    """Whichever of white or near-black is readable across EVERY stop.
+
+    `_text_on_accent` for a band rather than a fill. The masthead's text sits
+    on a gradient, and a colour chosen against one end is not chosen against
+    the other — the mistake D-097 recorded for the email header and that the
+    market PDF carried unfixed until D-112.
+    """
+    stops = _surfaces(surfaces)
+    worst = lambda c: min(_contrast(c, b) for b in stops)  # noqa: E731
+    best = max(("#ffffff", "#14151a"), key=worst)
+    achieved = worst(best)
+    if achieved < AA_NORMAL:
+        _report_unreachable("on_band", best, "/".join(stops), achieved)
+    return best
+
+
+def ink_on(colour: str, background: str) -> str:
+    """`colour` darkened until it clears AA on `background`.
+
+    The public face of `_ensure_readable_on_light` with an arbitrary
+    background. `theme_color_on_light` computes the same thing against
+    `#ffffff` specifically, which is not the same answer on a tinted panel:
+    the market report's accent stat block paints its value in the raw accent
+    on a 35% tint of that same accent, which is two shades of one colour and
+    measured 1.62:1 before this and 2.02:1 after the default changed (D-112).
+    """
+    return _ensure_readable_on_light(colour, background)
+
+
 def _text_on_accent(hex_color: str) -> str:
     """
     What to put ON a fill of `hex_color`: whichever of white or near-black

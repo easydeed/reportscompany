@@ -48,7 +48,9 @@
     justify-content: center;
     font-size: 18px;
     font-weight: 700;
-    color: {{ primary_color }};
+    /* The initials sit on a tint of the ACCENT; painting them in the raw
+       primary put two unrelated colours together at 1.08:1 (D-112). */
+    color: {{ accent_on_tint }};
     flex-shrink: 0;
   }
   .af-name {

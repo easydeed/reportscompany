@@ -234,8 +234,29 @@ passed, correctly, on a template that had not changed. Worth recording: a contra
 written by hand into a CSS block is easy to write in a way that does nothing, and a gate that
 "passes the regression test" then proves nothing at all.
 
-## What has not been done
+## What has since been done
 
-**No fixes.** The 1,387 are on the board, unchanged. The masthead is the one to take first: it is
-560 of them, it is a single construct, `worker.themes` already computes the values it needs, and
-the element that already uses them is the only one that nearly passes.
+**2026-09-29, same day: group 1 is fixed** — `fix/masthead-contrast-and-neutral-default`, filed as
+**D-112**.
+
+| | before | after |
+|---|---|---|
+| market runs below threshold | **734** | **66** |
+| worst ratio on the market surface | 1.08:1 | 2.66:1 |
+| corpus total | 1,387 | **719** |
+| board combinations | 410 | **220** |
+| `[CONTRAST] cannot reach 4.5:1` log lines per 90 renders | one per render | **0** |
+
+**The band was fixed, not the text**, because measurement said the text could not be: for three of
+the six brands no single colour clears 4.5:1 on both ends. Each stop is now darkened until the
+**translucent** subtitle is readable on it, which makes the opaque title safe by construction and
+keeps the muted subtitle rather than flattening it.
+
+`DEFAULT_ACCENT` moved off Luxury Estates' teal to the platform `#4F46E5`, along with thirteen
+template-level fallbacks that were shades of the same teal — the same defect one layer down,
+reachable through any render path that omits the context value.
+
+The 66 that remain on the market surface are group 4, the six semantic badge colours: one
+decision, brand-independent, not taken here. **Groups 2, 3 and 5 are property-report work and are
+untouched** — 653 runs, and the 1.00:1 invisible footer in `classic_report.jinja2:643` is still
+there.

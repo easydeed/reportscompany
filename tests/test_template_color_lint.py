@@ -224,14 +224,20 @@ def test_the_baseline_matches_the_repository_exactly_today():
 def test_the_baseline_is_not_empty():
     """
     An empty baseline plus a working ratchet looks identical to a broken rule
-    plus a working ratchet. There are 111 today; this fails when the migration
+    plus a working ratchet. There are 98 today; this fails when the migration
     is finished, and deleting it then is the right response.
+
+    111 -> 98 on 2026-09-29 (D-112). The market templates' fallback palette was
+    a shade of one affiliate's teal in thirteen places; replacing it with the
+    platform default retired all thirteen. The replacements are annotated
+    `lint-allow-hex` rather than baselined, because a platform default IS a
+    brand literal and pretending otherwise is what the annotation is for.
     """
     n = sum(lint.read_baseline().values())
     assert n > 0, "nothing baselined — has the rule stopped matching?"
-    assert n == 111, (
-        f"the baseline holds {n} entries, not the 111 measured against main on "
-        f"2026-09-23. Fewer is progress: update this number. More is a new "
+    assert n == 98, (
+        f"the baseline holds {n} entries, not the 98 measured against main on "
+        f"2026-09-29. Fewer is progress: update this number. More is a new "
         f"violation that was baselined instead of fixed."
     )
 

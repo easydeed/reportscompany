@@ -5,14 +5,37 @@
 {% endblock %}
 
 {% block theme_styles %}
+{# THE FALLBACKS ARE THE PLATFORM'S PALETTE, NOT AN AFFILIATE'S.
+
+   Every default below was a shade of one customer's teal — Luxury Estates'
+   brand and its derived roles — so any render that did not pass a colour fell
+   back to that customer's identity. DEFAULT_ACCENT in market_builder.py was
+   changed for the same reason; these are the same decision one layer down,
+   and changing only the Python would have left the defect reachable through
+   any path that omits the context value (D-112).
+
+   The band's two stops are NOT the raw brand and accent. `--header-bg` used
+   to be the affiliate's colour verbatim, which painted the masthead's first
+   half and every table header under text hardcoded to white — 1.98:1 on lime,
+   2.15:1 on amber. Both stops are now darkened until the text on them is
+   readable; see MarketReportBuilder._masthead_band for why the band is fixed
+   rather than the text. #}
 :root {
-  --primary-color: {{ accent_color | default('#0d9488', true) }};
-  --accent-color: {{ accent_color | default('#0d9488', true) }};
-  --accent-on-dark: {{ accent_on_dark | default('#5eead4', true) }};
-  --accent-on-light: {{ accent_on_light | default('#0f766e', true) }};
-  --accent-light: {{ accent_light | default('#a6e4de', true) }};
+  --primary-color: {{ accent_color | default('#4F46E5', true) }};      /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+  --accent-color: {{ accent_color | default('#4F46E5', true) }};       /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+  --accent-on-dark: {{ accent_on_dark | default('#c6c5ff', true) }};   /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+  --accent-on-light: {{ accent_on_light | default('#4F46E5', true) }}; /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+  --accent-light: {{ accent_light | default('#8c86ee', true) }};       /* lint-allow-hex: platform default, not an affiliate's (D-112) */
   --accent-text: {{ theme_color_text | default('#ffffff', true) }};
-  --header-bg: {{ primary_color | default('#18235c', true) }};
+
+  /* The band's two stops, each dark enough to carry its own text. */
+  --header-bg: {{ band_start | default('#18235c', true) }};            /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+  --band-end: {{ band_end | default('#453dca', true) }};               /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+
+  /* Text on the accent TINT, which is a different background from white. */
+  --accent-on-tint: {{ accent_on_tint | default('#211d69', true) }};   /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+  --muted-on-tint: {{ muted_on_tint | default('#2e2b28', true) }};     /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+
   --font-display: 'Outfit', 'Inter', sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
 }
