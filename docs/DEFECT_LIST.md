@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 37 | Real, unfixed |
+| `open` | 38 | Real, unfixed |
 | `fixed` | 71 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **112** | D-001 … D-112, contiguous, no duplicates |
+| **Total** | **113** | D-001 … D-113, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 10 · FRAGILE 10 · ROUGH 16. (Sums to 37, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 11 · FRAGILE 10 · ROUGH 16. (Sums to 38, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -6210,6 +6210,79 @@ staleness test was satisfied: **190 entries no longer fail**, 0 added, 410 → 2
 
 
 ---
+
+
+---
+
+
+### D-113 — the twelve-month trend chart never renders, because nothing fetches the history it reads
+
+**Severity:** WRONG · **Affects:** §7.3's trend chart on `market_snapshot` and `inventory`, and
+D-102's page-1 decision for `market_snapshot`
+**Status:** `open`
+
+Found 2026-09-29 while starting D-111, whose recommended fix was to take its price-band extent
+from "the twelve-month history `monthly_trend.py` already fetches". **It does not. Nothing does.**
+
+`MarketReportBuilder._build_monthly_trend` reads one key:
+
+```python
+history = self.report_data.get("closed_history")
+if not history:
+    return None, None, None
+```
+
+`closed_history` appears in exactly three places in the repository:
+
+| | |
+|---|---|
+| `market_builder.py:342` | reads it |
+| `apps/worker/tests/test_monthly_trend.py:132, 351` | a test sets it |
+| `scripts/measure_market_pagination.py:227` | my own measurement script sets it |
+
+**No builder returns it and `tasks.py` never adds it.** `builder_data` is the report-type
+builder's `result` plus `report_type`, `theme_id`, `accent_color`, `branding` and `ai_insights`
+— and none of the eight builders emits a year of closed rows. So the guard returns
+`(None, None, None)` on **every production render**, and the chart has never appeared in a
+customer's report.
+
+**WHAT IS UNREACHABLE.** `TREND_SERIES`, `median_series`, `count_series`, `_build_monthly_trend`'s
+whole body past the guard, the `monthly_trend_chart` macro, `monthly_trend_note`, and
+`MIN_CLOSED_FOR_MEDIAN`. All tested, all correct, none of it reached.
+
+**And D-102 with it.** The decision that `market_snapshot`'s page 1 carries the twelve-month price
+trend rather than a row of three listings is unrealised: with no trend, the layout falls back and
+page 1 shows the three listings. `PAGE_1_CAPACITY`'s `with_trend` rows describe a state production
+never enters. **The behaviour was decided, built, measured, pinned, and is not running.**
+
+**Why nothing caught it.** Every test of the trend supplies `closed_history` itself, which is the
+right thing for a unit test and means the suite proves the chart draws correctly from data it is
+handed and says nothing about whether it is ever handed any. `measure_market_pagination.py` sets
+it too, so the pagination measurements — including the `with_trend` capacities — were taken in a
+state production does not reach. §0.6's *a test that supplies its own input cannot tell you the
+input arrives*, which this list did not have and now does.
+
+**THE FIX IS A FETCH, AND IT HAS A PRICE THIS PROJECT HAS ALREADY REASONED ABOUT.**
+`compute/monthly_trend.py`'s own header says the series needs "one `minclosedate = today - 365`
+query", and `closed_history_truncated` exists because that query can return more rows than a page.
+So the work is: issue that fetch in the market path, pass the rows through as `closed_history`,
+set the truncation flag honestly, and decide what a truncated year does — which the compute layer
+already refuses to average, correctly.
+
+**It is filed rather than taken because it changes the fetch path**, which has a vendor cost and a
+pagination decision attached, and because it should be measured against a live feed rather than a
+fixture — the same trip as D-105/D-106's confirmation.
+
+**WHAT IT DOES TO D-111.** The recommendation recorded there rests on this history existing. It
+does not, so the choice is now:
+
+| | |
+|---|---|
+| **fix D-113 first, then D-111 as recommended** | 1 / 2 / 1 distinct edge sets. Needs the fetch change |
+| **D-111 with the extent from the current result set** | 2 / 5 / **18** — still far better than quartiles' 33 / 219 / 363, and it needs nothing new. The thin-market case is the one that regresses |
+
+Both beat what ships. Recorded here rather than chosen, because the first is a fetch-path change
+and that is not a decision to make inside a banding fix.
 
 
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)
