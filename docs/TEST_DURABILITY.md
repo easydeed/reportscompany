@@ -144,18 +144,33 @@ preserved.
 
 ---
 
-## The one thing to do first
+## The one thing to do first — DONE, and the gap was larger than this predicted
 
-**Point the contrast auditor at the PDF surfaces before the new templates land, not after.**
+**2026-09-29.** The contrast auditor was named here as the only gate that would keep passing while
+covering nothing. It was measured, and the prediction was right about the mechanism and wrong
+about the scale: the PDFs were not *thinly* covered, they were **never audited at all**, and the
+first measurement found **1,387 text runs below their WCAG threshold, 94 of them effectively
+invisible, across every brand colour in the set**.
 
-Every other item here fails loudly when its markup moves — a missing file, a regex that matches
-nothing, a count that disagrees. The contrast auditor is the only one that will keep passing while
-covering nothing, because it already covers nothing on those surfaces. `test_email_contrast.py` is
-green today and walks only the email documents. **No document-wide contrast walk has ever been run
-over a market or property PDF.** What exists there is two narrow assertions in
-`test_monthly_trend.py` — the trend line wears `primary_ink`, and axis text wears neither the ink
-nor the raw brand colour — each found by regex over the chart's own SVG, covering one element in
-one chart.
+Full findings: `docs/CONTRAST_AUDIT_PDF_2026-09-29.md`. Measurement:
+`scripts/measure_pdf_contrast.py`.
 
-A new template set arriving into that gap looks exactly like a new template set arriving into a
-working gate: `test_email_contrast.py` stays green, because it was never looking.
+**Generalising it did not mean teaching the existing walker about stylesheets.** It meant not
+writing a CSS engine at all. These documents are rendered by Chromium, so `getComputedStyle` is
+the ground truth and a Python cascade would have been a model of it that could disagree silently
+— the failure mode this whole document is about. Three separate resolution bugs were caught only
+by disagreeing with the CSS when it was read afterwards, and every one of them produced a
+confident, loud, wrong report:
+
+| the walker did | it reported |
+|---|---|
+| climbed `parentElement`, as the email walker does | white-on-white for every property cover, because those covers paint with absolutely-positioned **siblings** |
+| hit-tested from *below* the text's own element | white-on-white for every coloured table header |
+| trusted `elementsFromPoint` to be complete | white-on-white again — **it skips `thead`, `tbody` and `tr`** |
+
+**What this means for the other five items in the list above.** Each was assessed by reading it.
+The contrast auditor was assessed the same way, and reading it got the mechanism right and the
+magnitude wrong by an order of magnitude. Treat the verdicts above as hypotheses with the same
+standing — §0.6, *a description of what code does is a hypothesis*. The way to settle one is to
+run it against something it has never seen, not to read it more carefully.
+
