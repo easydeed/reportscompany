@@ -9,7 +9,18 @@ from .compute.extract import PropertyDataExtractor
 from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
-from .query_builders import build_params, build_market_snapshot, build_market_snapshot_closed, build_market_snapshot_pending
+from .query_builders import (
+    build_params, build_market_snapshot, build_market_snapshot_closed,
+    build_market_snapshot_pending, build_closed_history,
+)
+from .market_builder import TREND_REPORT_TYPES
+
+#: The row ceiling for the twelve-month history fetch, and the value the
+#: truncation flag is measured against. `SIMPLYRETS_MAX_RESULTS` (1000 by
+#: default) is what `fetch_properties` would use anyway; naming it here means
+#: the flag is compared with the number actually passed, rather than with a
+#: default that could change underneath it.
+TREND_HISTORY_FETCH_LIMIT = 1000
 from .redis_utils import create_redis_connection
 from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
@@ -1470,6 +1481,47 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             extracted = PropertyDataExtractor(raw).run()
             clean = filter_valid(extracted)
             print(f"🔍 REPORT RUN {run_id}: cleaned to {len(clean)} valid properties")
+
+            # ===== TWELVE MONTHS OF CLOSINGS, for the trend chart (D-113) =====
+            # This fetch did not exist. `MarketReportBuilder._build_monthly_trend`
+            # has always read `closed_history`, nothing has ever written it, and
+            # the guard returned None on every render — so §7.3's chart has
+            # never appeared in a customer's report, and D-102's decision that
+            # market_snapshot's page 1 carries the trend described a state
+            # production could not reach.
+            #
+            # Only for the report types that draw one. The other six pay
+            # nothing: this is a second query, and a report that will not use
+            # the answer should not buy it.
+            closed_history: list = []
+            closed_history_truncated = False
+            if report_type in TREND_REPORT_TYPES:
+                try:
+                    hq = build_closed_history(_params)
+                    print(f"🔍 REPORT RUN {run_id}: closed_history_query={hq}")
+                    history_raw = fetch_properties(hq, limit=TREND_HISTORY_FETCH_LIMIT)
+                    # A fetch that hit its ceiling is a FLOOR, not a year, and a
+                    # median over an order-dependent subset of one is a wrong
+                    # number that looks right. The flag travels with the data
+                    # and compute/monthly_trend.py refuses — D-078's rule, the
+                    # same contract `closed_was_truncated` already carries for
+                    # months of supply.
+                    closed_history_truncated = len(history_raw) >= TREND_HISTORY_FETCH_LIMIT
+                    closed_history = PropertyDataExtractor(history_raw).run()
+                    print(
+                        f"🔍 REPORT RUN {run_id}: closed_history {len(closed_history)} rows "
+                        f"(truncated={closed_history_truncated})"
+                    )
+                except Exception as hist_err:
+                    # Non-fatal, and it degrades to exactly what shipped before
+                    # this existed: no chart. A market report without a trend is
+                    # a complete report; a report that failed to send because
+                    # its chart could not be drawn is not.
+                    print(
+                        f"⚠️  REPORT RUN {run_id}: closed_history fetch failed "
+                        f"(non-fatal, no trend chart): {hist_err}"
+                    )
+                    closed_history, closed_history_truncated = [], False
             
             # ===== ELASTIC WIDENING (auto-expand filters if too few results) =====
             # This ensures users almost never see empty reports
@@ -1654,6 +1706,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         if isinstance(result, dict):
             builder_data.update(result)
         builder_data["report_type"] = report_type
+        # D-113. Set here rather than in a report builder because it is the
+        # same twelve months whatever the report is about, and because the
+        # builders take `listings` — not a second result set.
+        builder_data["closed_history"] = closed_history
+        builder_data["closed_history_truncated"] = closed_history_truncated
         builder_data["theme_id"] = effective_theme_id
         builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
         builder_data["branding"] = branding_ctx

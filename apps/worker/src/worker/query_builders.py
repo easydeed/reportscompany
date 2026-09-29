@@ -480,6 +480,45 @@ def build_price_bands(params: dict) -> Dict:
 
 # Dispatcher
 
+#: Twelve months, because that is the window the trend chart draws. Named
+#: rather than inlined so the query and `compute/monthly_trend.py`'s twelve
+#: buckets cannot drift apart.
+TREND_HISTORY_DAYS = 365
+
+
+def build_closed_history(params: dict) -> Dict:
+    """A year of closed sales, for the twelve-month trend chart (D-113).
+
+    `minclosedate`, NOT `mindate`. `mindate` was measured doing nothing at all,
+    silently (D-074/D-075), and the bucketing here is by `close_date`, so the
+    filter has to be the one the feed applies to that field. The rows are
+    re-filtered client-side by close date regardless, which is correct under
+    either answer about how well the vendor honours it.
+
+    Cost, from `compute/monthly_trend.py`'s header: one query, two requests at
+    `page_max = 500`, for up to 1000 closings — cheaper than the 13-request
+    count series decision 01 priced. The ceiling is the catch, and the caller
+    passes truncation on so the series refuses rather than drawing a partial
+    year.
+
+    No `filters`. The trend is the MARKET's twelve months, not the twelve
+    months of whatever slice this report is about: a chart captioned "median
+    sale price" that silently showed only 3-bed homes under $1.5M would be a
+    different statistic wearing the same label.
+    """
+    end = datetime.utcnow().date()
+    start = end - timedelta(days=TREND_HISTORY_DAYS)
+    q = {
+        **_common_params(),
+        "status": "Closed",
+        "minclosedate": start.isoformat(),
+        "limit": 1000,
+        "offset": 0,
+    }
+    q |= _location(params)
+    return q
+
+
 def build_params(report_type: str, params: dict) -> Dict:
     """
     Route report type to appropriate query builder.

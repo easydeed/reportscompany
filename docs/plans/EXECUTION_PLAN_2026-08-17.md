@@ -720,6 +720,49 @@ it.**
   now what the D-108 gate does automatically, in both languages, for every numeric the builders
   emit.
 
+- **A TEST THAT SUPPLIES ITS OWN INPUT PROVES THE CONSUMER AND SAYS NOTHING ABOUT THE PRODUCER.** A category, not an instance — every fixture-fed test in this repository has this shape, and each one is silent about the same half. Found 2026-09-29:
+  §7.3's twelve-month trend chart has never rendered in a customer's report. It reads
+  `report_data["closed_history"]`, and **nothing on the production path writes that key** — no
+  builder emits it and `tasks.py` never adds it, so the guard returns None on every render
+  (D-113). The feature was designed, built, tested, measured, pinned into `PAGE_1_CAPACITY`, and
+  argued over in D-102's page-1 decision, and it does not run.
+
+  **Every test of it supplies `closed_history` itself**, which is correct for a unit test: it
+  proves the chart draws properly from data it is handed. It says nothing about whether it is
+  ever handed any, and neither did anything else. Even the pagination measurements were taken in
+  a state production does not reach, because the measuring script sets the key too.
+
+  The shape is invisible from both ends. **A reader with a graceful fallback looks careful; a
+  missing producer looks like nothing at all.** Neither side announces itself, and no
+  value-level test can see the gap because the gap is that no value ever arrives.
+
+  So the check is structural and compares the two sets rather than testing either:
+  `test_render_context_contract.py` parses every `report_data.get("k")` the builder makes and
+  every key the producing modules write, and fails on a read with no writer. It rediscovered
+  D-113's two keys on its first run and found no others. **Marked `xfail(strict=True)` rather
+  than deleted**, so the known failure cannot become a permanent one: fixing D-113 turns it XPASS
+  and fails until the marker goes.
+
+  **The category, stated so it applies past this key.** Unit tests are supposed to supply their
+  inputs; that is what makes them unit tests, and none of them is wrong. What is missing is that
+  *nothing else* was checking the other side, so the suite's coverage of the feature and the
+  suite's coverage of the pipeline looked like the same thing. **Wherever a consumer degrades
+  quietly on a missing input, the assertion that the input arrives has to live outside the tests
+  of that consumer** — they are precisely the ones that cannot make it.
+
+  Three symptoms to search for, because the shape is recognisable before it bites:
+
+  - a reader with a `if not x: return <empty>` guard and no caller-side test;
+  - a fixture or measuring script that sets a key the production path does not;
+  - a decision taken on a measurement whose inputs the measurer provided. **D-102 was one.**
+    Its numbers were real and its conclusion holds, and it was still reached on evidence that
+    was not describing the product. "The measurement was right" and "the measurement was of the
+    thing being decided" are different claims, and only the second was ever in doubt.
+
+  The remedy is the contract gate: assert that something *writes* what something else *reads*,
+  by parsing both sides. It generalises past this one key and past this one pair of modules, and
+  it is cheap — the whole check is one AST walk over each side.
+
 ---
 
 ## Phase 0 — Security & Tooling

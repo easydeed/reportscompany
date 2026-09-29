@@ -782,3 +782,14 @@ class MarketReportBuilder:
         }
         template = self.env.get_template("_base/page_footer.jinja2")
         return template.render(**sanitize_context_urls(context))
+
+
+#: Which report types draw a twelve-month trend, and therefore which ones the
+#: fetch in tasks.py pays for (D-113).
+#:
+#: DERIVED from `TREND_SERIES`, not a second literal. The caller deciding
+#: whether to buy the data and the builder deciding whether to draw it have to
+#: read the same list, and two copies fail the quiet way in both directions:
+#: a fetch whose answer is never used, or a chart whose data was never bought.
+#: The first draft of this line WAS a second literal.
+TREND_REPORT_TYPES = frozenset(MarketReportBuilder.TREND_SERIES)
