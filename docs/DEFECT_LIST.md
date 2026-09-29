@@ -6322,6 +6322,27 @@ fail on the real defect rather than a planted one.
 **PAGE_1_CAPACITY re-measured: identical.** That is the good outcome and it does not make the
 earlier run evidence. It was a correct prediction, confirmed late.
 
+**A CORRECTION TO THIS ENTRY'S OWN RISK STATEMENT, 2026-09-29.** PR #105 listed as its first
+uncertainty that if `minclosedate` were ignored "the chart draws from an unfiltered year and
+nothing here would notice". **That is wrong, and measuring it was a five-line check that should
+have preceded writing it down.** `median_series` and `count_series` both iterate
+`_window(today, 12)` and look up each month, so rows outside the window are never read — fed five
+years of closings they return a series identical to the one from twelve months.
+
+The exposure is the row cap instead: an ignored cutoff makes the fetch ask for the whole closed
+history, hit `TREND_HISTORY_FETCH_LIMIT`, set the truncation flag and refuse. **"No chart on the
+biggest markets", not "a wrong chart."** Still worth confirming — a chart that silently never
+appears is precisely how this defect survived three weeks — but it is fail-safe, and the
+overstatement travelled into the probe's comments and a message to the vendor trip before it was
+caught.
+
+**And the client-side re-filter that would have followed from it is NOT worth adding.** The
+symmetry with `moi.py` is superficial: `moi` *counts* rows to derive a rate, so one extra row is
+one extra sale and the re-filter is load-bearing; the trend *looks up* months, so an extra row
+outside the window is never read. Filtering client-side cannot help with the one real failure
+either, because truncation happens at fetch time — filtering rows that already came back does not
+restore the ones that did not.
+
 ---
 
 **AND A CORRECTION TO D-102, WHICH IS THE PART WORTH CARRYING.**
@@ -6380,13 +6401,23 @@ listed together because running them separately costs three handovers for one se
 | 2 | a live payload, to confirm D-105's DOM path and D-106's bathrooms against real data rather than two captured fixtures | `python3 tools/dump_market_snapshot.py`, then `python3 scripts/sweep_extract_field_paths.py` against it |
 | 3 | **`minclosedate` at 365 days**, which the twelve-month trend chart now depends on | section **2c** of the same probe — no extra run |
 
-**Item 3 is new and is the one with a shipping consequence.** D-074 confirmed the parameter
-*filters*; section 2b confirmed it filters *at a real date*, 90 days out. The trend chart
-(D-113) asks for **365**, and a feed that retains or honours the cutoff only so far back would
-answer 2b correctly and still hand the chart an arbitrary span. It matters more here than for
-months of supply, because `moi.py` re-filters on `close_date` client-side and its number is right
-under either answer, while the trend buckets the rows it is handed. Section 2c asks for one extra
-count and settles it in the same pass.
+**Item 3 is new.** D-074 confirmed the parameter *filters*; section 2b confirmed it filters *at a
+real date*, 90 days out. The trend chart (D-113) asks for **365**, and a feed that honours the
+cutoff only so far back would answer 2b correctly and still over-read. Section 2c asks for one
+extra count and settles it in the same pass.
+
+**What an ignored cutoff would actually cost — measured, after a first version of this paragraph
+said something stronger and wrong.** It claimed the chart would "draw a twelve-month line from an
+arbitrary span". It would not. `median_series` iterates `_window(today, 12)` and *looks up* each
+month, so rows outside the last twelve calendar months land in buckets nobody reads: fed five
+years of closings it returns a series **identical** to the one from twelve months, for both the
+median and the count variants. Measured, not reasoned.
+
+The real exposure is the row cap. An ignored cutoff makes the fetch ask for the feed's entire
+closed history, which hits `TREND_HISTORY_FETCH_LIMIT` in any busy market, sets the truncation
+flag, and makes the series refuse (D-078). **The failure is "no chart in exactly the largest
+markets", not "a misleading line"** — fail-safe, and still worth settling, because a chart that
+quietly never appears is how D-113 went unnoticed for three weeks in the first place.
 
 **Paste the whole probe output back.** The wording of each verdict is what distinguishes
 "confirmed" from "confirmed the wrong thing", and section 2b exists because the first run came

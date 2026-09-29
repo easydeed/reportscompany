@@ -150,3 +150,71 @@ def test_an_absent_history_is_a_report_without_a_chart_not_a_failure():
     }
     assert MarketReportBuilder(data)._build_monthly_trend() == (None, None, None)
     assert MarketReportBuilder(data).render_html()          # renders anyway
+
+
+# ── what an ignored cutoff would actually cost ──────────────────────────────
+
+def _spanning(years, start_year, per_month=5):
+    rows = []
+    for year in range(start_year, start_year + years):
+        for month in range(1, 13):
+            for i in range(per_month):
+                rows.append({"close_date": f"{year}-{month:02d}-15",
+                             "close_price": 900000 + i * 1000})
+    return rows
+
+
+@pytest.mark.parametrize("series", [median_series, count_series])
+def test_a_longer_span_than_asked_for_draws_the_same_twelve_months(series):
+    """
+    THE CLAIM THIS REPLACES WAS WRONG, WHICH IS WHY IT IS A TEST NOW.
+
+    PR #105 said that if `minclosedate` were ignored "the chart draws from an
+    unfiltered year and nothing would notice", and that travelled into the
+    probe's comments and a message to the vendor trip before anyone checked
+    it. It is false: both series iterate `_window(today, 12)` and LOOK UP each
+    month, so rows outside the last twelve calendar months land in buckets
+    nobody reads.
+
+    The consequence matters — it is why the client-side re-filter `moi.py`
+    uses is not worth copying here. `moi` COUNTS rows to derive a rate, so one
+    extra row is one extra sale; the trend LOOKS UP months, so an extra row is
+    never read.
+    """
+    today = date(2026, 9, 29)
+    five_years = _spanning(5, 2022)
+    one_year = [r for r in five_years
+                if "2025-10-01" <= r["close_date"] <= "2026-09-30"]
+    # The guard on the fixture, not on the code: most of the wide set has to
+    # fall OUTSIDE the drawn window, or the test proves nothing. (The first
+    # version asserted `len(five) > len(one) * 4` and failed on its own
+    # arithmetic — the slice ran to the end of 2026, fifteen months, not
+    # twelve.)
+    outside = [r for r in five_years if r not in one_year]
+    assert len(outside) > len(one_year) * 3, (
+        f"only {len(outside)} of {len(five_years)} rows are outside the "
+        f"window; the fixture is not testing a wider span"
+    )
+
+    wide = series(five_years, today=today)
+    narrow = series(one_year, today=today)
+    assert wide == narrow, "a wider span changed the series"
+    assert len(wide) == 12
+    assert (wide[0]["label"], wide[0]["year"]) == ("Oct", 2025)
+    assert (wide[-1]["label"], wide[-1]["year"]) == ("Sep", 2026)
+
+
+def test_the_real_exposure_is_the_row_cap_and_it_fails_safe():
+    """
+    An ignored cutoff makes the fetch ask for the whole closed history, which
+    hits the row cap in a busy market and sets the truncation flag — and the
+    series refuses. "No chart on the biggest markets", not "a wrong chart".
+
+    Filtering client-side could not help: truncation happens at fetch time,
+    and filtering the rows that came back does not restore the ones that
+    did not.
+    """
+    today = date(2026, 9, 29)
+    history = _spanning(5, 2022)
+    assert median_series(history, today=today, truncated=True) is None
+    assert count_series(history, today=today, truncated=True) is None

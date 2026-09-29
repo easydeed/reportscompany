@@ -464,10 +464,22 @@ def main():
     # feed that retains or filters closed sales only so far back would answer
     # 2b correctly and still hand the trend chart an arbitrary span.
     #
-    # It matters more here than it does for months of supply. `moi.py` re-filters
-    # on `close_date` client-side, so its number is right under either answer;
-    # the trend buckets the rows it is handed and would draw a twelve-month
-    # line from whatever came back. One extra count request settles it.
+    # WHAT AN IGNORED CUTOFF ACTUALLY COSTS — corrected after measuring it,
+    # because the first version of this comment was wrong in the reassuring
+    # direction's opposite. It claimed the chart "would draw a twelve-month
+    # line from whatever came back". It would not: `median_series` iterates
+    # `_window(today, 12)` and LOOKS UP each month, so rows outside the last
+    # twelve calendar months land in buckets nobody reads. Fed five years of
+    # closings it returns a series identical to the one from twelve months.
+    #
+    # The real exposure is the row cap. If the cutoff is ignored, the fetch
+    # asks for the feed's entire closed history, hits
+    # TREND_HISTORY_FETCH_LIMIT in any busy market, sets the truncation flag,
+    # and the series REFUSES (D-078). So the failure is "no chart in exactly
+    # the largest markets", not "a misleading line" — fail-safe, and still
+    # worth settling, because a chart that quietly never appears for big
+    # cities is how this defect (D-113) went unnoticed for three weeks in the
+    # first place.
     print("2c. …and at 365 days, which is what the trend chart asks for?")
     year = (datetime.now() - timedelta(days=365)).strftime("%Y-%m-%d")
     count_365 = _get(auth, f"status=Closed&minclosedate={year}&limit=1&count=true",
@@ -477,8 +489,10 @@ def main():
     if total_365 is None or total_all is None:
         verdicts["D-113"] = (
             "NOT SETTLED — no X-Total-Count on the 365-day query, so the "
-            "window the trend chart uses is unconfirmed. Keep the client-side "
-            "close_date filter (or add it) before trusting the chart."
+            "window the trend chart uses is unconfirmed. Not a correctness "
+            "risk (the series anchors its own twelve months); the risk is the "
+            "fetch over-reading, hitting the row cap and refusing, so the "
+            "chart goes missing on the biggest markets."
         )
     elif total_90 is not None and total_365 < total_90:
         verdicts["D-113"] = (
@@ -491,9 +505,11 @@ def main():
             f"AMBIGUOUS AT A YEAR — 90 days filtered ({total_90} of "
             f"{total_all}) but 365 days did not ({total_365} of {total_all}). "
             f"Either this feed holds under a year of closed sales, or the "
-            f"cutoff stops being honoured that far back. The trend chart would "
-            f"draw a twelve-month line from an unbounded span; do not ship it "
-            f"without the client-side close_date filter."
+            f"cutoff stops being honoured that far back. The chart still "
+            f"draws the right twelve months — the series anchors its own "
+            f"window — but the fetch would pull the whole closed history, hit "
+            f"the row cap in any busy market, and refuse. Expect the trend to "
+            f"be missing on large cities."
         )
     elif total_90 is not None and total_90 <= total_365 <= total_all:
         verdicts["D-113"] = (
