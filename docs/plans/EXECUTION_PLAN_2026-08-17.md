@@ -792,6 +792,38 @@ it.**
   a divisor are different decisions; and a fixed accent readable on a theme's navy is not
   readable on an affiliate's brand. **Same value, different consumer, different obligation.**
 
+- **A document rendered by something other than the production path is evidence about that
+  something.** *Added 2026-09-29, from the Workstream E measurement.* The E register's 22
+  tickets were written from a careful review of six property PDFs. The PDFs came from
+  `scripts/generate_all_property_pdfs.py`, a QA script that does not call
+  `PropertyReportBuilder` at all — it carries its own copy of the Jinja filters and a 200-line
+  `SAMPLE_CONTEXT` literal. Re-rendering the same five templates through the production path
+  found **seven of the twenty-two do not reproduce**: the stock aerial photograph of another
+  country, the placeholder street address, the six-month-stale trend date, the "Medium" column
+  that is a computed median, the independently sorted rows, the phantom date row, and the
+  skewed contents card were all properties of that literal or of an older artefact. An eighth
+  reproduced inverted — the unreadable summary row is in two *other* themes than the one filed.
+
+  This is not a criticism of the review, which described what it was shown accurately. It is
+  about what a render licenses you to conclude. **The question to ask of any artefact before
+  reasoning from it is: what code produced this, and is it the code that runs?** A screenshot,
+  a sample PDF, a preview page and a fixture-driven QA render all look like the product and
+  each one differs from it somewhere.
+
+  It also cuts the other way, and that half is the more useful. Three E tickets that *were*
+  real could not have been confirmed from any render: **the comp query applies no date filter**
+  (D-117) is invisible in a document whose comp dates were hardcoded, and was settled by reading
+  `_build_params`; **`estimated_value` is never populated anywhere** (D-118) turns a fallback
+  into the only path; **the contents page is a literal block with no `page_set` guard** (D-121)
+  is a property of the template, not of one output. Pair this with D-113's rule — *a test that
+  supplies its own input proves the consumer and says nothing about the producer.* **Renders
+  prove consumers. Producers are proved by reading the code that builds the input.**
+
+  The corollary is a cheap habit: when a review produces a ticket list from artefacts, the first
+  ticket is to reproduce the artefacts, and the tool that does it is worth committing —
+  `scripts/render_property_production.py` exists so the next person re-checks in one command
+  instead of trusting this one.
+
 ---
 
 ## Phase 0 — Security & Tooling
