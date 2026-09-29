@@ -763,6 +763,35 @@ it.**
   by parsing both sides. It generalises past this one key and past this one pair of modules, and
   it is cheap — the whole check is one AST walk over each side.
 
+- **SUPERFICIAL SYMMETRY: two call sites that read the same data, with what looks like the same
+  guard need, until you check what each DOES with a row.** Named 2026-09-29 after nearly adding
+  a defensive filter that could not have helped.
+
+  `compute/moi.py` re-filters its closed rows on `close_date` client-side even though the query
+  already asked the vendor to, and says so in its docstring: the parameter's behaviour is not
+  fully confirmed, so the number is right under either answer. When the trend chart started
+  reading the same rows from the same fetch, copying that filter looked obviously correct — same
+  data, same vendor uncertainty, same defensive posture, and the argument for it was made twice
+  before anyone checked.
+
+  **It would have done nothing.** `moi` **counts** rows to derive a sales rate, so one extra row
+  is one extra sale and the filter is load-bearing. The trend **looks up** twelve month-buckets
+  by key, so a row outside the window is never read — measured: five years of closings produce a
+  series identical to one year's. And it could not have helped with the real failure either,
+  because that is truncation at fetch time: filtering the rows that came back does not restore
+  the ones that did not.
+
+  The tell is that the shared thing was the INPUT and the differing thing was the OPERATION. Two
+  consumers of one dataset inherit each other's guards only where they consume it the same way,
+  and "reads the same rows" is not that. **Ask what a wrong extra row would do to each caller's
+  output** — if the answers differ, the guards are not transferable, however alike the callers
+  look.
+
+  The same shape sits behind three entries above: the `selectattr` that dropped zeros mattered
+  where the zeros were counted and not where they were looked up; `is not none` on a chip and on
+  a divisor are different decisions; and a fixed accent readable on a theme's navy is not
+  readable on an affiliate's brand. **Same value, different consumer, different obligation.**
+
 ---
 
 ## Phase 0 — Security & Tooling

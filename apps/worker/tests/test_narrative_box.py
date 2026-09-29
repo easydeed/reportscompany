@@ -63,11 +63,15 @@ CHARS_PER_LINE = 97
 #: does not render. The fixture builds its bands with the real `build_bands`
 #: now, so the next re-pin measures what ships.
 #:
-#: `price_bands` at `with_narrative: 1` is a DESIGN QUESTION, not a bug: the
-#: band cards and the distribution chart fill page 1 and leave room for one
-#: listing, which reads as an accident rather than a choice. Same shape as
-#: D-102 (market_snapshot's page 1 carries the trend, listings start on page
-#: 2) and it wants the same kind of decision. Flagged, not taken.
+#: AND AGAIN when MAX_BANDS came down from 8 to 6 after the eight-band render
+#: was looked at: `price_bands` 2/1 -> 3/2, `new_listings` unchanged at 3/2.
+#: A shorter card row gives a listing back. Third re-pin in one day, each one
+#: from a real change to what the page renders — which is the pin working.
+#:
+#: `price_bands` at `with_narrative: 2` is DECIDED, not open (Jerry,
+#: 2026-09-29): it is a distribution report, the cards and the chart ARE the
+#: content, and the listings are supporting detail. Unlike market_snapshot
+#: (D-102) nothing is competing for that space, so there is no trade to make.
 #:
 #: Within a state the number does not move with content: the narrative box is
 #: fixed (§7.2) and the masthead's title and subtitle are bounded (D-102), so
@@ -79,7 +83,7 @@ PAGE_1_CAPACITY = {
     "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
     "closed": {"no_narrative": 15, "with_narrative": 11},
     "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
-    "price_bands": {"no_narrative": 2, "with_narrative": 1},
+    "price_bands": {"no_narrative": 3, "with_narrative": 2},
     "new_listings": {"no_narrative": 3, "with_narrative": 2},
 }
 

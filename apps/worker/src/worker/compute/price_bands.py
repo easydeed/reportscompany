@@ -73,17 +73,31 @@ LADDER = (25_000, 50_000, 100_000, 200_000, 250_000, 500_000, 1_000_000, 2_000_0
 #: the market's range decides how many of them fit.
 TARGET_BANDS = 6
 
-#: And a promise, MEASURED rather than asserted. D-107 measured SIX cards
-#: (56px each, row 95.2px, nothing clipped) and the first draft of this line
-#: cited that measurement for a limit of eight, which it does not support.
-#: Measured at eight: **53px per card, row 95px, zero labels clipped** — the
-#: same row height, and the longest label the ladder can produce
-#: ("$1.25M – $1.5M") wraps without truncating.
+#: SIX, AND IT TOOK THREE GOES TO GET THIS RIGHT.
 #:
-#: A step that would exceed this is rejected in favour of the next rung, and
-#: `band_edges` stops emitting past it regardless, so the row can never have
-#: to truncate — the defect D-107 closed, arriving from the other end.
-MAX_BANDS = 8
+#:   1. The first draft said eight, citing D-107's measurement — which was of
+#:      SIX cards (56px each, row 95.2px, nothing clipped) and does not
+#:      support eight.
+#:   2. So eight was measured: 53px per card, row 95px, ZERO LABELS CLIPPED.
+#:      That reads like a pass, and it is a clipping answer to a legibility
+#:      question.
+#:   3. Then it was RENDERED and looked at. At 53px, after `.stat-card`'s
+#:      12px side padding, a label has about 29px of content width — less
+#:      than one price. The en-dash became a line of its own in four of the
+#:      eight cards ("$500K" / "–" / "$750K") and the wrap ran to two or
+#:      three lines unpredictably, so the row read as a rendering fault
+#:      rather than as dense. A non-breaking space after the dash did not fix
+#:      it: the width is the problem, not the break opportunity.
+#:
+#: At six the labels break once, in the same place. D-107's measured number
+#: was right all along.
+#:
+#: The cost is resolution: a $600K–$2.4M market gets a $500K step and four
+#: bands rather than a $250K step and eight, because the ladder has no rung
+#: between them. That is the correct trade — four legible bands beat eight
+#: unreadable ones — and it is the reason to widen the LADDER rather than
+#: raise this number, if the resolution ever matters more.
+MAX_BANDS = 6
 
 #: Below this many closings the extent is not worth deriving from history: a
 #: handful of sales does not describe a market's price range any better than

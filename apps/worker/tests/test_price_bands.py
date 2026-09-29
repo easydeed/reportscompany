@@ -112,10 +112,10 @@ def test_every_boundary_is_a_multiple_of_a_ladder_step():
 ])
 def test_no_market_produces_more_bands_than_the_row_holds(low, high):
     """
-    The cards are a flex row measured to hold six comfortably (D-107); past
-    MAX_BANDS the labels stop being legible. A step that would overflow is
-    rejected in favour of the next rung, so the row never truncates — which
-    is the defect D-107 closed, arriving from the other end.
+    The cards are a flex row that holds six. Past that a label has under
+    30px of content width and the en-dash wraps onto a line of its own — see
+    MAX_BANDS for the three attempts it took to establish that, the last of
+    which was rendering it and looking.
     """
     step, edges = band_edges(low, high)
     assert 1 <= len(edges) <= MAX_BANDS, f"{len(edges)} bands for {low}–{high}"
