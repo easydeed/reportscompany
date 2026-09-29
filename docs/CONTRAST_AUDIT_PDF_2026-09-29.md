@@ -198,10 +198,44 @@ The worst of the tail is teal's `.cover-label` on the `#34d1c3` accent panel, wh
 
 ## The gate
 
-A hard gate at 4.5:1 fails 1,387 runs on the first commit, so it cannot be the starting point.
-**The shape that fits is the one the colour lint already uses: a baseline that may only shrink** —
-`scripts/template_color_baseline.txt`'s ratchet, whose weakness (keyed by file path, so a template
-replacement invalidates it) is fixable here by keying on the **(selector, foreground, background)**
-triple instead, which survives a file move and a class rename does not silently pass.
+`apps/worker/tests/test_pdf_contrast.py`, with the board in `pdf_contrast_baseline.txt`.
 
-That decision is the next thing, and it is deliberately not taken in this document.
+A hard gate at 4.5:1 fails 1,387 runs on the first commit, so it is a **ratchet**: every failing
+combination that exists today is recorded, and the build fails on one that is not. New unreadable
+text cannot ship; the existing 1,387 become a debt with a number on it.
+
+**Keyed on (family, selector, foreground, background) — no file path.**
+`scripts/template_color_baseline.txt` keys on paths, which is its weakness: a template replacement
+invalidates every line and "may only shrink" then constrains nothing. This survives a rewrite —
+a replacement template set inherits the entries whose selectors it reuses and earns a failure for
+every new pairing it introduces. **410 combinations** on the board today. No counts are recorded:
+the number of runs is a function of fixture size, the pairing is the defect.
+
+**A missing browser is a failure, not a skip.** `PDF_CONTRAST_REQUIRE_BROWSER=1` is set in CI.
+A gate that goes quiet when its tooling is absent is the failure this whole exercise was about.
+CI gains a node setup and `playwright install chromium`; the measurement itself is 38 seconds for
+all 90 documents, so the install is the slow part.
+
+**The baseline cannot rot in either direction.** A second test fails when an entry no longer
+fails — meaning something was fixed and the board was not updated — and points at
+`--regen-contrast-baseline`, whose diff is then the evidence of the fix. A third asserts the
+measurement actually looked at something (>8,000 runs, 8 market families, 5 property themes),
+because zero findings and zero runs are indistinguishable from outside and that confusion is
+exactly what left these documents unaudited.
+
+**Four regressions applied and each seen to fail:** a new unreadable pairing introduced in the
+CSS (caught, 1.54:1 and 1.61:1, named in the failure) · the classic aerial footer genuinely fixed
+without regenerating (caught as two stale entries) · the browser required and absent (failed with
+the reason) · the browser absent and not required (skipped, as intended).
+
+**The first regression did not regress.** Inserting `color: #cccccc` at the top of
+`.stats-bar-label` left the rule's own `color: var(--gray-600)` below it, which won — so the gate
+passed, correctly, on a template that had not changed. Worth recording: a contrast regression
+written by hand into a CSS block is easy to write in a way that does nothing, and a gate that
+"passes the regression test" then proves nothing at all.
+
+## What has not been done
+
+**No fixes.** The 1,387 are on the board, unchanged. The masthead is the one to take first: it is
+560 of them, it is a single construct, `worker.themes` already computes the values it needs, and
+the element that already uses them is the only one that nearly passes.
