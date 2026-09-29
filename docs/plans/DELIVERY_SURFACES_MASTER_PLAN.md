@@ -448,6 +448,26 @@ Two things came out of it that belong to the plan rather than the entry:
 
 ## 07 · Workstream D · Market report PDFs
 
+> ## COMPLETE, 2026-09-29
+>
+> All three tickets delivered. **17 defects filed from D-097 on, 11 closed.**
+>
+> | | delivered |
+> |---|---|
+> | **7.1 Page architecture** | Variant A. The masthead moved into the document body and the header slot carries a slim running head, because PDFShift accepts differing `start_at` values with a 200 and silently applies `max(header, footer)` to both — measured, not read (D-103). Reserved space 21.8% → 12.1%; `closed` went 6 pages to 5, 25 rows to 29 |
+> | **7.2 Pagination** | The narrative box is a fixed four lines so page-1 capacity cannot depend on model output (§7.2), the masthead's title and subtitle are bounded so it cannot depend on city or filter length (D-102), and `PAGE_1_CAPACITY` pins the result for all eight types |
+> | **7.3 Charts** | Two: the twelve-month median/pace trend and the price-band distribution. Both to the mark specs, both `primary_ink`, no legend, selective direct labels |
+>
+> **Four defects were found by building it, not by reviewing it:** DOM read from a path the feed
+> does not use and overstated by 162% (D-105); bathrooms read from a key the feed does not have
+> (D-106); the trend chart reading a context key nothing ever wrote, so it had never rendered
+> (D-113); and "price bands" that were quartiles of the current result set, so the boundaries
+> moved $105,500 between runs while the counts could not move at all (D-111).
+>
+> **Six entries remain open and none of them is D's work to finish:** D-106 needs the credential
+> trip, D-109 and D-110 belong with Claude Design's template replacement, and D-097, D-098 and
+> D-100 are Workstream C colour decisions that predate this section.
+
 Unchanged from v1 §07.
 
 **7.1 Page architecture** — full masthead page 1 (~150pt); one-line running head after (~38pt).
