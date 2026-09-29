@@ -649,17 +649,18 @@
     <section class="page property">
       <div class="page-header">
         <div class="page-header-label">Property Overview</div>
-        <h2 class="page-header-title">Prospective Property</h2>
+        <h2 class="page-header-title">Property Information</h2>
       </div>
       <div class="property-two-col">
         <div>
           <div class="property-section">
-            <div class="property-section-header">Owner Information</div>
+            <div class="property-section-header">Parcel &amp; Legal Information</div>
             <table class="property-table">
-              <tr><td>Primary Owner</td><td>{{ property.owner_name | default('-') }}</td></tr>
-              <tr><td>Secondary Owner</td><td>{{ property.secondary_owner | default('-') }}</td></tr>
               <tr><td>Site Address</td><td>{{ property.full_address }}</td></tr>
-              <tr><td>Mailing Address</td><td>{{ property.mailing_address | default(property.full_address) }}</td></tr>
+              <tr><td>APN</td><td>{{ property.apn | default('-') }}</td></tr>
+              <tr><td>County</td><td>{{ property.county | default('-') }}</td></tr>
+              <tr><td>Census Tract</td><td>{{ property.census_tract | default('-') }}</td></tr>
+              <tr><td>Legal Description</td><td>{{ property.legal_description | default('-') }}</td></tr>
             </table>
           </div>
           <div class="property-section">
@@ -673,15 +674,6 @@
           </div>
         </div>
         <div>
-          <div class="property-section">
-            <div class="property-section-header">Legal Information</div>
-            <table class="property-table">
-              <tr><td>APN</td><td>{{ property.apn | default('-') }}</td></tr>
-              <tr><td>County</td><td>{{ property.county | default('-') }}</td></tr>
-              <tr><td>Census Tract</td><td>{{ property.census_tract | default('-') }}</td></tr>
-              <tr><td>Legal Description</td><td>{{ property.legal_description | default('-') }}</td></tr>
-            </table>
-          </div>
           <div class="property-section">
             <div class="property-section-header">Property Details</div>
             <table class="property-table">

@@ -50,7 +50,11 @@ SITEX = {
     "year_built": 1949, "property_type": "Single Family Residential",
     "pool": "None", "garage": "1", "assessed_value": 428248,
     "land_value": 337378, "improvement_value": 90870,
-    "tax_amount": 5198, "tax_year": 2024,
+    "tax_amount": 5198, "tax_year": 2024, "census_tract": "4089.00",
+    # Carried so test_no_owner_identity_in_property_report can prove they do
+    # NOT render. A fixture that omits the field cannot test its absence.
+    "secondary_owner": "MENDOZA YESSICA S",
+    "mailing_address": "742 Evergreen Terrace, Springfield, CA 90210",
 }
 
 # Four comps, which is what the API's ladder returns in a thin market. Four is
