@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 53 | Real, unfixed |
+| `open` | 55 | Real, unfixed |
 | `fixed` | 75 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **132** | D-001 … D-132, contiguous, no duplicates |
+| **Total** | **134** | D-001 … D-134, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 13 · ROUGH 20. (Sums to 53, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 16 · FRAGILE 13 · ROUGH 21. (Sums to 55, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -6818,6 +6818,67 @@ CMA is and is a product feature rather than a bug fix. **[JERRY]**
 
 ---
 
+**JERRY'S ANSWER, 2026-09-29 — and it is two things, not one.**
+
+> The subject's sale-price row shows the **last actual sale price**, not an assessment. Separately,
+> an **estimated value** is derived by us from the comparable range — a different figure with a
+> different label, not a substitute for this one. If the feed carries a last sale, read it; if it
+> doesn't, show nothing rather than a substitute. Never the assessment in an unlabelled price row.
+> Investigate whether the data exists at all before designing around it.
+
+**INVESTIGATION — the answer is "one of the two sources is unknowable from here, and that is
+itself the finding".**
+
+**SiteX: cannot be answered from the repository, and the two possible answers lead to different
+tickets.**
+
+| | |
+|---|---|
+| `SiteXClient._parse_response` | extracts address, owner, legal, tax and characteristics. Reads **no** sale-history field |
+| `PropertyData` | has no slot for one, so a field present in the payload would be dropped at the boundary regardless |
+| captured payloads | **none.** Every `.json`, `.py` and `.md` in the repository was searched for `PropertyProfile`; the only hit is the parser itself |
+
+So *"SiteX does not give us last-sale data"* and *"SiteX gives it to us and we throw it away"* are
+indistinguishable from inside the code. The first is a vendor/feed-id question; the second is a
+twenty-line parsing ticket. **One real lookup separates them**, and `raw_response` is already
+retained on every lookup, so nothing new has to be built to find out.
+
+`scripts/probe_sitex_sale_history.py` — one address lookup, read only, prints every key under
+`Feed.PropertyProfile` and opens any section whose name suggests sale, transfer, deed or
+transaction history. It does **not** print owner names or mailing addresses at any depth, and it
+truncates every value, because the output is meant to be pasted into a ticket and D-116 is about
+exactly that data leaving the system. The redaction is tested
+(`apps/api/tests/test_sitex_probe_redaction.py`, with the weakening applied and seen to fail),
+not trusted. Matched on substrings rather than a fixed key list, because the exact spelling is
+the thing being discovered.
+
+**SimplyRETS: the field exists; the coverage does not follow from that.** `closePrice` and
+`closeDate` are already proven fields on closed listings (D-074, D-105). A subject that has been
+MLS-listed and closed can be found. But the MLS knows only MLS history — **a home sold FSBO,
+off-market, at auction, or transferred within a family is invisible to it, and so is one that has
+never been listed.** So a hit proves the field and says nothing about how often a real subject
+will have one. Probe section 3b reports the field and states that limitation in its verdict
+rather than letting a "CONFIRMED" read as coverage.
+
+**A THIRD READ-WITH-NO-WRITER, FOUND WHILE LOOKING.** `estimated_value` is written by nothing —
+that is this entry. `routes/mobile_reports.py:187-188` reads `last_sale_date` and
+`last_sale_price` off the stored `property_data` JSON, and **nothing writes either one**:
+`tasks.py:2277` builds that blob from four address fields plus whatever the lead-capture form
+left there. Three fields, one family, and it is D-009's family — see **D-133**.
+
+**WHAT IS NOT BUILT, DELIBERATELY.** Jerry asked for the investigation before the design, and the
+design depends on the probe. The estimated-value half needs a stated method that survives a
+seller asking how it was calculated, which is its own ticket and its own decision — recorded as
+**D-134** rather than started.
+
+**What can be said now, and is not blocked on anything:** the assessment must stop appearing in a
+row headed `Sale Price`. That is true under every outcome of the probe, and it is the whole of
+the harm. It is not done here only because Jerry's instruction is that the row carries the last
+actual sale, and what fills it is what the probe settles — an empty row shipped now would be
+replaced within the week.
+
+---
+
 ### D-119 — the Area Sales Analysis table shows three comps; the chart beside it shows four
 
 **Severity:** WRONG · **Affects:** the Area Sales Analysis page in all five themes ·
@@ -7326,6 +7387,75 @@ L5 returns fewer than three; `search_params` in the response already carries
 `fallback_level_used`, so the wizard can show the agent which window ran; the page's heading
 follows from `comps_window` with no further change. **Not built — this is the recommendation, not
 the decision.**
+
+---
+
+### D-133 — `last_sale_date` and `last_sale_price` are read in one place and written in none
+
+**Severity:** WRONG · **Affects:** the mobile report detail endpoint ·
+**Found during:** D-118's investigation
+**Status:** `open`
+
+`routes/mobile_reports.py:187-188` builds its `PropertyData` response with:
+
+```python
+last_sale_date=property_data.get("last_sale_date"),
+last_sale_price=property_data.get("last_sale_price"),
+```
+
+`property_data` is the JSON column on `consumer_reports`. The only writer is `tasks.py:2277`,
+which builds it from `address`, `city`, `state`, `zip` plus whatever the lead-capture form left
+there, and `setdefault`s the same four. **Neither key is ever set**, by that writer or any other
+— searched across every `.py`, `.sql`, `.ts` and `.tsx` in the repository.
+
+So the mobile endpoint has always returned `null` for both, and any client rendering a "last
+sold for X in Y" line has always rendered it empty.
+
+**Third instance of one family, and the family is D-009's.** `estimated_value` (D-118),
+`last_sale_date` and `last_sale_price` are all consumed by code that assumes a producer nobody
+wrote. D-118's fallback is the worst version — reading a field nothing writes and *substituting*
+the tax assessment — because the substitution makes the absence invisible.
+
+**The general form, for §0.6:** a read of an optional field is indistinguishable from a read of a
+field that does not exist. `dict.get()` returns `None` for both, and a `or` fallback turns both
+into a plausible value. The check is not "does the code handle a missing value" — it is **"what
+writes this, and when"**.
+
+**Do not fix by populating it.** Whether a last-sale figure can be sourced at all is D-118's open
+question. This entry exists so that when it is answered, the mobile endpoint is not forgotten —
+it is the second consumer, and only the PDF was being looked at.
+
+---
+
+### D-134 — the estimated value has no method, and "analysing the comparable ranges" is not one
+
+**Severity:** ROUGH · **Affects:** the subject's value figure on every property report ·
+**Found during:** D-118's answer
+**Status:** `open` — **[JERRY]**, scope before build
+
+Jerry, 2026-09-29, alongside D-118's last-sale row:
+
+> An **estimated** value is derived by us from the comparable range — a different figure with a
+> different label, and clearly ours rather than a recorded fact. Scope it and report before
+> building; whatever the method is has to survive a seller asking how it was calculated.
+
+Nothing like this exists today. `stats.price_low` / `price_high` are the min and max of the
+comps, `avg_price_per_sqft` is the mean of per-comp ratios, and no code combines them into an
+estimate for the subject.
+
+**Why this is filed rather than started.** The method is the deliverable, not the arithmetic. A
+seller asking "how did you get this number" must get an answer that is true, short, and the same
+every time — which rules out anything tuned per report. It interacts with at least four open
+entries: **D-119** (the analysis table drops all but three comps, so "the comparable range" and
+"what the page shows" are already different sets), **D-132** (in a thin market the range may rest
+on one or two sales), **D-125** (the subject's sqft is a float from SiteX and may be absent), and
+**D-118** itself, since an estimate sitting beside a last-sale row needs the two to be visibly
+different kinds of number.
+
+**Minimum the ticket must state before any code:** which comps feed it (all returned, or the
+three the table shows), whether it is a point or a range, whether it adjusts for the subject's
+size, what it does when the inputs are too thin, and the exact sentence printed under it.
+Recorded now so the figure is not invented by whoever gets to the template first.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 

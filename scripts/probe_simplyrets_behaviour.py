@@ -524,6 +524,56 @@ def main():
         )
     print()
 
+    # ── 3b. can the SUBJECT's own last sale be found? (D-118) ───────────────
+    #
+    # Jerry, 2026-09-29: the subject's price row should be its LAST ACTUAL
+    # SALE, and if the feed does not carry one, show nothing rather than a
+    # substitute. Today it shows the county's Prop 13 assessment.
+    #
+    # SimplyRETS is one of two candidate sources and the cheaper to test. It
+    # only knows MLS history: a home sold FSBO, off-market, at auction or
+    # transferred within a family is invisible to it, and so is one that has
+    # never been listed. So a hit here proves the field exists and says
+    # nothing about coverage — which is the number that decides whether a
+    # "last sale" row can be a standard part of the page or has to be
+    # conditional. Both are printed.
+    print("3b. Does a closed listing carry closePrice and closeDate? (D-118)")
+    sample = _get(auth, "status=Closed&limit=20", "  status=Closed&limit=20        ")
+    if not sample or not sample[0]:
+        verdicts["D-118"] = (
+            "NOT SETTLED — no closed listings came back, so neither field "
+            "could be inspected."
+        )
+    else:
+        rows = sample[0]
+        with_price = sum(1 for r in rows if r.get("closePrice"))
+        with_date = sum(1 for r in rows if (r.get("mls") or {}).get("closeDate")
+                        or r.get("closeDate"))
+        # D-105's lesson: the field the product wants may be nested where the
+        # product does not look. Report WHERE it was found, not just whether.
+        top_level = sum(1 for r in rows if r.get("closeDate"))
+        under_mls = sum(1 for r in rows if (r.get("mls") or {}).get("closeDate"))
+        print(f"  closePrice present on {with_price}/{len(rows)}")
+        print(f"  closeDate  present on {with_date}/{len(rows)} "
+              f"(top level {top_level}, under `mls` {under_mls})")
+        if with_price and with_date:
+            verdicts["D-118"] = (
+                f"FIELD CONFIRMED — closePrice on {with_price}/{len(rows)} and "
+                f"closeDate on {with_date}/{len(rows)} closed listings "
+                f"(top level {top_level}, under `mls` {under_mls}). This says "
+                f"the MLS carries a sale price and date; it does NOT say the "
+                f"subject of any given report will be in it. Coverage is the "
+                f"open question and only a real address list answers it."
+            )
+        else:
+            verdicts["D-118"] = (
+                f"PARTIAL — closePrice on {with_price}/{len(rows)}, closeDate "
+                f"on {with_date}/{len(rows)}. A last-sale row cannot be built "
+                f"on a field this sparse without a fallback, and the fallback "
+                f"is exactly what Jerry ruled out."
+            )
+    print()
+
     # ── 4. the exact total, without paging (D-081) ──────────────────────────
     print("4. Does count=true return X-Total-Count? (D-081 — the months-of-supply numerator)")
     _get(auth, "status=Active&limit=1", "  status=Active&limit=1           ")
@@ -817,7 +867,8 @@ def main():
     #: add itself to it — a verdict reached and thrown away, on a trip that
     #: costs someone a credential handover to repeat. The assertion below makes
     #: that impossible rather than relying on the next person remembering.
-    ORDER = ("D-074", "D-075", "D-076", "D-081", "D-084", "D-113", "DECISION-01")
+    ORDER = ("D-074", "D-075", "D-076", "D-081", "D-084", "D-113", "D-118",
+             "DECISION-01")
     for defect in ORDER:
         print(f"\n{defect}: {verdicts.get(defect, 'INCONCLUSIVE — a request failed above')}")
     unprinted = sorted(set(verdicts) - set(ORDER))
