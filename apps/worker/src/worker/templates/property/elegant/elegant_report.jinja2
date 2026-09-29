@@ -556,7 +556,7 @@
         <div class="range-slider-labels"><span>{{ stats.price_low | format_currency_short }}</span><span>{{ stats.price_high | format_currency_short }}</span></div>
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
-      <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics including square footage, bedrooms, bathrooms, and lot size.</p>
+      <p class="range-note">{{ comps_window.note }}</p>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">08</div></div>
     </section>
     {% endif %}

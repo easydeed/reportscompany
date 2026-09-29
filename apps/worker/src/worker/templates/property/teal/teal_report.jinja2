@@ -1427,7 +1427,7 @@
           <span class="mini-bars"><span></span><span></span></span>
         </h2>
       </div>
-      <div class="subtitle">SALES IN THE PAST 12 MONTHS</div>
+      <div class="subtitle">{{ comps_window.subtitle }}</div>
 
       <div class="analysis-intro">
         <div class="analysis-intro-text">
@@ -1619,7 +1619,7 @@
           <span class="mini-bars"><span></span><span></span></span>
         </h2>
       </div>
-      <div class="subtitle">PROPERTIES THAT HAVE RECENTLY SOLD OR LISTED</div>
+      <div class="subtitle">{{ comps_window.subtitle }}</div>
 
       <div class="comps-grid">
         {% for comp in comparables[:4] %}
@@ -1696,10 +1696,8 @@
         </div>
 
         <p class="small muted" style="margin-top: 14px; line-height: 1.55;">
-          Above are the average property details for homes that are close in proximity to yours AND have been sold within
-          the last 12-months. The range represents the low AND the high sales price for the properties that were sold in the
-          last 12-months. Only the properties that closely match yours were used. The factors that were analyzed were
-          Square Footage, No. Of Beds, No. of Baths, &amp; Lot Size.
+          {{ comps_window.note }} Only the properties that closely match yours were used. The factors that were
+          analyzed were Square Footage, No. Of Beds, No. of Baths, &amp; Lot Size.
         </p>
       </div>
       <div class="page-footer">

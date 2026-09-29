@@ -997,6 +997,91 @@ class PropertyReportBuilder:
         logger.info("_build_comparables_context: returning %d processed comps", len(comparables))
         return comparables
     
+    #: The comparable-sale window, in days. Jerry, 2026-09-29: six months.
+    #: The API sends `minclosedate` for the same number
+    #: (routes/property.COMP_CLOSE_WINDOW_DAYS) and re-filters client-side.
+    #: Two deployments, so the constant cannot be shared; a test asserts the
+    #: two agree, because a query window and a printed window that drift apart
+    #: IS D-117.
+    COMP_CLOSE_WINDOW_DAYS = 180
+
+    def _comps_window(self) -> Dict[str, str]:
+        """What the report may truthfully say about the comps it is carrying.
+
+        D-117 was two failures, not one. The query filtered on no date while
+        every theme printed "the last 12 months" — and separately, the wizard
+        defaults to ACTIVE listings (property-wizard.tsx:53), so a report could
+        head a list of homes currently for sale with "SALES IN THE PAST 12
+        MONTHS". Correcting 12 to 6 fixes the first and makes the second worse,
+        by stating a wrong thing more precisely.
+
+        So the copy is derived from what the comps actually are, using the same
+        active/closed distinction `_build_comparables_context` already applies
+        per comp. The page describes its contents rather than asserting a
+        window somebody hoped for.
+        """
+        comps = self.report_data.get("comparables") or []
+        months = self.COMP_CLOSE_WINDOW_DAYS // 30
+
+        def _closed(c):
+            status = str(c.get("status") or "Active").lower()
+            return status not in ("active", "pending")
+
+        closed = sum(1 for c in comps if _closed(c))
+        active = len(comps) - closed
+
+        if not comps:
+            # D-108's empty state, on this surface. Falling through to the
+            # mixed wording would head an empty table "RECENT SALES AND
+            # CURRENT LISTINGS", which is a claim about nothing.
+            return {
+                "label": "No comparable properties found",
+                "subtitle": "NO COMPARABLE PROPERTIES FOUND",
+                "pill": "No results",
+                "note": (
+                    "No comparable properties matched this home's "
+                    "characteristics in the search area. Widening the radius or "
+                    "the square-footage tolerance may return results."
+                ),
+            }
+
+        if comps and not active:
+            return {
+                "label": f"Sales in the past {months} months",
+                "subtitle": f"SALES IN THE PAST {months} MONTHS",
+                "pill": f"Last {months} months",
+                "note": (
+                    f"The above statistics represent average property details for "
+                    f"comparable homes sold within the last {months} months. The price "
+                    f"range indicates the low and high sale prices for properties "
+                    f"matching your home's characteristics."
+                ),
+            }
+        if comps and not closed:
+            return {
+                "label": "Comparable homes currently for sale",
+                "subtitle": "COMPARABLE HOMES CURRENTLY FOR SALE",
+                "pill": "Active listings",
+                "note": (
+                    "The above statistics represent average property details for "
+                    "comparable homes currently listed for sale. The price range "
+                    "indicates the low and high asking prices for properties "
+                    "matching your home's characteristics. These homes have not sold, "
+                    "so the figures are what sellers are asking rather than what "
+                    "buyers have paid."
+                ),
+            }
+        return {
+            "label": f"Recent sales and current listings",
+            "subtitle": "RECENT SALES AND CURRENT LISTINGS",
+            "pill": f"Last {months} months",
+            "note": (
+                f"The above statistics combine comparable homes sold within the last "
+                f"{months} months with comparable homes currently listed for sale. "
+                f"The price range therefore mixes sale prices with asking prices."
+            ),
+        }
+
     def _format_price(self, price: Any) -> str:
         """Format price for display."""
         if price is None:
@@ -1514,6 +1599,9 @@ class PropertyReportBuilder:
             
             # Comparables
             "comparables": self._build_comparables_context(),
+
+            # What the page may truthfully say about those comps (D-117)
+            "comps_window": self._comps_window(),
             
             # Statistics (unified format for all themes)
             "stats": self._build_stats_context(),

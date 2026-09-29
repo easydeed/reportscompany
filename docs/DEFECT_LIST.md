@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 52 | Real, unfixed |
-| `fixed` | 74 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 53 | Real, unfixed |
+| `fixed` | 75 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **130** | D-001 … D-130, contiguous, no duplicates |
+| **Total** | **132** | D-001 … D-132, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 6 · WRONG 14 · FRAGILE 12 · ROUGH 20. (Sums to 52, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 13 · ROUGH 20. (Sums to 53, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116 (`fix/e1-remove-owner-block`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -6687,7 +6687,7 @@ absence test).
 
 **Severity:** BROKEN · **Affects:** every property report; every theme's Area Sales Analysis
 heading and body copy · **Found during:** Workstream E measurement (E2)
-**Status:** `open`
+**Status:** `fixed` — `fix/e1-remove-owner-block`
 
 `apps/api/src/api/routes/property.py`, `_build_params` inside `get_comparables`. The params
 assembled for SimplyRETS are `status`, `type`, `limit`, `postalCodes`, `cities`,
@@ -6717,6 +6717,65 @@ the answer was.
 thin markets, where the ladder already struggles to reach `FALLBACK_MIN = 5`; making the copy
 honest costs nothing and can ship first. Which one is right depends on whether a four-year-old
 comp is better than no comp, and that is a valuation question, not an engineering one. **[JERRY]**
+
+---
+
+**FIXED 2026-09-29.** Jerry: **six months**, `minclosedate`, and correct the copy.
+
+`routes/property.COMP_CLOSE_WINDOW_DAYS = 180`, sent as
+`minclosedate = today − 180` on **every level of the six-level fallback ladder** — a later level
+widens the search and must not widen the window with it — and re-filtered client-side by
+`_closed_within_window`. `minclosedate`, never `mindate`: D-075 measured `mindate` being accepted
+and doing nothing, silently. The client-side pass is not belt and braces; `minclosedate` has only
+been measured against the public demo feed and the production probe has not come back, so the
+vendor filter is an optimisation and the local one is the guarantee. Same reasoning as
+`compute.moi.closed_in_window` and `build_closed_history`.
+
+**A SECOND DEFECT, FOUND WHILE FIXING THE FIRST, AND IT CHANGES WHAT "CORRECT THE COPY" MEANS.**
+
+`ComparablesRequest.status` defaults to `"Active"`, and the wizard defaults to it too
+(`property-wizard.tsx:53`, with a toggle to `Closed`). So a property report may carry **homes
+that are currently for sale and have not sold at all** — under a heading reading *SALES IN THE
+PAST 12 MONTHS* and a paragraph beginning *"comparable homes sold within the last 12 months"*.
+
+Changing 12 to 6 fixes the window and makes this worse: it states a wrong thing more precisely.
+So the copy is now derived from what the comps actually are, by
+`PropertyReportBuilder._comps_window()`, using the same active/closed distinction
+`_build_comparables_context` already applies per comp:
+
+| comps | heading | body |
+|---|---|---|
+| all closed | *Sales in the past 6 months* | *"…sold within the last 6 months…"* |
+| all active | *Comparable homes currently for sale* | *"…currently listed… what sellers are asking rather than what buyers have paid."* |
+| mixed | *Recent sales and current listings* | *"…mixes sale prices with asking prices."* |
+| none | *No comparable properties found* | what to widen |
+
+The page describes its contents instead of asserting a window somebody hoped for. This is beyond
+the literal instruction and is flagged as such; the alternative was to print "sold in the last 6
+months" over active listings.
+
+**And `minclosedate` is therefore sent only when the query is closed sales alone.** Not on
+`Active` — an active listing has no close date, so the filter either empties the result or is
+ignored, and neither is a filter. Not on `Active,Closed` either: SimplyRETS applies the parameter
+to the whole response, so it would silently drop the active half of a deliberately mixed search.
+The wizard never sends `All`, but the endpoint accepts it, and *unreachable from our UI* is not a
+reason to send a parameter that would be wrong if it arrived.
+
+**Two deployments, one number.** API and worker are deployed separately, so the constant cannot
+be shared; `PropertyReportBuilder.COMP_CLOSE_WINDOW_DAYS` mirrors it and
+`test_the_api_and_the_worker_agree_on_the_window` asserts they match. A query window and a
+printed window drifting apart *is* D-117, so the agreement is asserted rather than hoped for.
+
+**Tests.** `apps/api/tests/test_comp_close_window.py` drives the real endpoint with
+`simplyrets_fetch_properties` replaced by a spy, because `_build_params` is a closure with
+nothing importable to call and testing an extracted copy would prove the copy (§0.6). Plus a
+structural gate: no live template may hardcode a month count in window copy.
+Six regressions applied and each seen to fail — `mindate` for `minclosedate`, dropping the
+client-side pass, sending the window on an Active query, the two constants disagreeing, a
+hardcoded "12 MONTHS" back in a template, and calling active listings sales.
+
+**Not fixed, and Jerry asked for a recommendation rather than an assumption** — what the report
+does when six months returns fewer than three comps. See the note under D-132.
 
 ---
 
@@ -7184,6 +7243,89 @@ A secondary finding from the same pass: **206 of 2,344 runs straddle two differe
 across their own width. Both tools pick one. Neither is wrong about the pixel it sampled and
 neither reports that the run has two.
 
+
+---
+
+### D-131 — five unreachable copies of the property templates, carrying copy that has now drifted
+
+**Severity:** FRAGILE · **Affects:** nothing that renders — which is the problem ·
+**Found during:** D-117's copy fix
+**Status:** `open`
+
+`templates/property/<theme>/` holds two files per theme: `<theme>_report.jinja2`, which
+`THEME_TEMPLATES` maps to, and `<theme>.jinja2`, which **nothing references**. Checked by
+grepping every `.py` and `.jinja2` in the repository for each name: zero hits, no `include`, no
+`extends`, no loader path.
+
+They are not stubs. Each is a near-complete copy of the live template, and each carries the same
+sentence D-117 was about:
+
+> *The above statistics represent average property details for comparable homes sold within the
+> last 12 months…*
+
+Fixing the five live templates left five dead ones still claiming twelve months over a query that
+now uses six. Nobody sees it, and that is exactly the hazard: the next person searching for that
+sentence finds ten hits, changes some subset, and cannot tell which mattered. D-052's family —
+code referenced by nothing — with the added edge that this copy *looks* current.
+
+The structural gate in `test_property_production_render.py` deliberately checks only the five
+live templates, because failing on dead files would pressure the next person into editing them
+rather than deleting them. `test_no_owner_identity_in_property_report.py` walks all ten, because
+that rule is about disclosure and a file that might one day be wired up should not carry an
+owner block.
+
+**Delete them, or wire them up and delete the others.** Not both, and not neither.
+
+---
+
+### D-132 — six months of comps has no floor, and the ladder cannot widen time
+
+**Severity:** WRONG · **Affects:** property reports in thin markets; the consumer lead-capture
+path most of all · **Found during:** D-117, which created the condition
+**Status:** `open` — **[JERRY]**, recommendation below
+
+Jerry asked what the report does when six months returns too few comps. It currently does nothing
+special, and the answer matters more after D-117 than before it.
+
+**What the ladder already absorbs, measured.** The window filter runs *before* the
+`len(filtered) >= FALLBACK_MIN` check, so a result thinned by the window escalates the ladder
+exactly as one thinned by the sqft filter does. Given twenty listings all outside the window,
+**all six levels run** and the response is empty rather than stale
+(`test_the_ladder_widens_in_response_to_the_window`).
+
+**What it cannot absorb.** The six levels widen sqft tolerance, bed range, subtype and radius —
+radius by 3× at L5. **Not one of them widens time.** So in a market where nothing comparable has
+closed in 180 days, the ladder exhausts itself and returns whatever it has, which may be zero.
+Before D-117 that market returned four-year-old sales; now it returns none. Both are wrong, and
+the new failure is the more visible one.
+
+**Where it lands.** D-119 records what the analysis table does with too few comps: at *n* = 2 the
+Low and Medium columns hold the same listing; at *n* = 1 all three do; at *n* = 0
+`extract_comp_stats({})` fills the table with zeros. None of those states is guarded, so a thin
+market does not produce a thin report — it produces a confident-looking one that is wrong.
+
+**RECOMMENDATION — a seventh ladder level that widens the window to twelve months, and a page
+that says which window it used.**
+
+| | |
+|---|---|
+| **why not "show fewer and say so"** | It is honest, and it makes D-119's degenerate table the common path in thin markets. A CMA whose comparison table shows one listing twice is not a thinner product, it is a broken one. Worth doing *as well*, not *instead* |
+| **why not "refuse to generate"** | Worst outcome on the funnel this report reaches. A stranger who typed their address gets nothing, and the agent is not in the loop to notice |
+| **why widening works here** | `comps_window` already derives the page's copy from the comps rather than from a constant — that is why it was built that way. A twelve-month fallback can state *"Sales in the past 12 months"* truthfully with **no new copy decision and no new template change**. The machinery is in place |
+| **why it matches the ladder** | Every other level widens an axis, records which level was used, and reports it. Time is the one axis the ladder was never given, and there is no principled reason for the exception |
+
+**The months-of-supply parallel Jerry drew, stated precisely.** `describe_moi` does not widen its
+window when data is thin; it returns a "no estimate" shape and the page says so. That precedent
+supports the *honesty* half — say which window produced these comps — and does not by itself
+support widening. The difference is that a market report without months-of-supply still has seven
+other metrics, and a CMA without comparables has nothing. So: widen, but only after six months
+has genuinely failed, and never silently.
+
+**Concretely, if accepted:** `COMP_FALLBACK_WINDOW_DAYS = 365` as an L6 level entered only when
+L5 returns fewer than three; `search_params` in the response already carries
+`fallback_level_used`, so the wizard can show the agent which window ran; the page's heading
+follows from `comps_window` with no further change. **Not built — this is the recommendation, not
+the decision.**
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 

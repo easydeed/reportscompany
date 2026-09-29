@@ -9,7 +9,7 @@ import json
 import logging
 import random
 import string
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import radians, cos, sin, asin, sqrt
 from typing import Any, Dict, List, Literal, Optional
 
@@ -222,6 +222,44 @@ class PropertySearchResponse(BaseModel):
 
 # ComparableProperty - Using simple dicts now (like Worker does) to avoid Pydantic validation issues
 # with SimplyRETS data that may have None values or unexpected types
+
+
+#: How far back a comparable sale may have closed. Jerry, 2026-09-29: six
+#: months. Named rather than inlined so the query and the copy the templates
+#: print cannot drift apart — which is exactly how D-117 happened, with every
+#: theme claiming twelve months over a query that filtered on nothing at all.
+COMP_CLOSE_WINDOW_DAYS = 180
+
+
+def _closed_since(days: int) -> str:
+    """`YYYY-MM-DD`, `days` ago, for SimplyRETS' `minclosedate`."""
+    return (datetime.utcnow().date() - timedelta(days=days)).isoformat()
+
+
+def _closed_within_window(listings: List[Dict], days: int) -> List[Dict]:
+    """Drop closed listings whose close date is outside the window.
+
+    THE CLIENT-SIDE PASS IS NOT BELT AND BRACES, IT IS THE ACTUAL GUARANTEE.
+    `mindate` was measured being accepted and silently ignored (D-074/D-075),
+    and `minclosedate` has only been measured against the public demo feed —
+    the production probe has not come back. Sending the parameter costs nothing
+    if the vendor ignores it; relying on it alone would cost correctness. Same
+    reasoning as `compute.moi.closed_in_window` and `build_closed_history`.
+
+    A listing with NO close date is kept. That is deliberate: an Active listing
+    has not closed, so a close-date window says nothing about it, and dropping
+    it here would silently empty an Active comps search.
+    """
+    cutoff = (datetime.utcnow().date() - timedelta(days=days)).isoformat()
+    kept = []
+    for lst in listings:
+        closed = (lst.get("mls") or {}).get("closeDate") or lst.get("closeDate")
+        if not closed:
+            kept.append(lst)
+            continue
+        if str(closed)[:10] >= cutoff:
+            kept.append(lst)
+    return kept
 
 
 class ComparablesRequest(BaseModel):
@@ -555,11 +593,29 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                           include_subtype: bool = True,
                           use_city: bool = True) -> Dict[str, Any]:
             """Build SimplyRETS params for one ladder attempt."""
+            sr_status = status_map.get(payload.status, "Active")
             p: Dict[str, Any] = {
-                "status": status_map.get(payload.status, "Active"),
+                "status": sr_status,
                 "type": sr_type,
                 "limit": payload.limit * 4,
             }
+
+            # D-117. The window is six months, and it is sent ONLY when the
+            # query is closed sales alone.
+            #
+            # `minclosedate`, not `mindate`: D-075 measured `mindate` being
+            # accepted and doing nothing, silently.
+            #
+            # NOT on "Active", because an active listing has no close date and
+            # the filter would either empty the result or be ignored. NOT on
+            # "Active,Closed" either — SimplyRETS applies the parameter to the
+            # whole response, so it would drop the active half. The wizard only
+            # ever sends Active or Closed (property-wizard.tsx:53), but the
+            # endpoint accepts All, and "unreachable from our UI" is not a
+            # reason to send a parameter that would be wrong if it arrived.
+            if sr_status == "Closed":
+                p["minclosedate"] = _closed_since(COMP_CLOSE_WINDOW_DAYS)
+
             # Location — prefer postalCodes (precise) + cities (deterministic)
             if subject_zip:
                 p["postalCodes"] = subject_zip
@@ -639,6 +695,18 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             # (to avoid over-filtering by the API at looser levels); we still enforce
             # type consistency ourselves on every level.
             filtered = post_filter_by_property_type(filtered, sr_subtype)
+            # D-117: the vendor-side filter is not trusted on its own. Applied
+            # on every ladder level, because a later level that widens the
+            # search must not widen the window with it.
+            before_window = len(filtered)
+            filtered = _closed_within_window(filtered, COMP_CLOSE_WINDOW_DAYS)
+            if len(filtered) != before_window:
+                logger.warning(
+                    "Comps %s: close-date window dropped %d of %d client-side "
+                    "(minclosedate was sent: %s)",
+                    label, before_window - len(filtered), before_window,
+                    "minclosedate" in params,
+                )
 
             total_before_filter = len(raw)
 
