@@ -37,9 +37,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 37 | Real, unfixed |
-| `fixed` | 70 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 71 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **111** | D-001 … D-111, contiguous, no duplicates |
+| **Total** | **112** | D-001 … D-112, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 1 · WRONG 10 · FRAGILE 10 · ROUGH 16. (Sums to 37, the open total.)
 
@@ -58,7 +58,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -6077,6 +6077,136 @@ versus 33 / 219 / 363 distinct labels for quartiles. And the counts now vary —
 **Also still open in this function** (unchanged by the above):
 `hottest = min(bands, key=lambda b: b["avg_dom"] if b["avg_dom"] > 0 else 999)` — a band whose
 sales all went under contract the day they listed scores 999 and can never be the hottest band.
+
+
+---
+
+
+### D-112 — the market masthead paints every label in hardcoded white on a band that is often light
+
+**Severity:** WRONG · **Affects:** page 1 of every market report, every table header, and the
+default palette of every account that has not chosen an accent
+**Status:** `fixed` — `fix/masthead-contrast-and-neutral-default`
+
+Found 2026-09-29 by the first contrast measurement these documents have ever had
+(`docs/CONTRAST_AUDIT_PDF_2026-09-29.md`). **560 failing text runs, the largest single finding in
+a corpus of 1,387.**
+
+```css
+.masthead {
+  background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%,
+                                      var(--primary-color) 100%);
+  color: #ffffff;
+}
+.masthead-subtitle { color: rgba(255,255,255,0.7); }
+```
+
+**The variable names say the opposite of what they hold.** `market.jinja2` set `--header-bg` from
+the affiliate's **primary** and `--primary-color` from their **accent**, so the band ran
+*brand → brand → accent* with every label hardcoded white or 70% white.
+
+| brand | white title (needs 3:1) | 70% white subtitle (needs 4.5:1) |
+|---|---|---|
+| lime `#84cc16` | **1.98** | **1.61** |
+| amber `#f59e0b` | **2.15** | **1.71** |
+| demo_title `#dc2626` | 4.83 | **2.99** |
+| luxury_estates `#0d9488` | 3.74 | **2.60** |
+| coastal `#0e7490` | 5.36 | **3.47** |
+| violet `#7c3aed` | 5.70 | **3.58** |
+
+**The subtitle and metric label failed for every brand at every stop.** There was no configuration
+in which they passed.
+
+`--header-bg` is also `.data-table thead th`'s background, so every table header in the product
+was white text on the raw brand colour for the same reason.
+
+---
+
+**WHY THE BAND AND NOT THE TEXT.** The obvious fix is a better text colour. Measured, it cannot
+work: **for three of the six audited brands no single colour clears 4.5:1 on both ends** — white
+fails on amber and lime, near-black fails on coastal and violet. A band whose two ends are that
+far apart in luminance cannot carry any one text colour, so the band is the defect.
+
+`darken_until_readable(surface, text, alpha)` darkens each stop until the text on it is readable
+and **stops at the first step that works**, so a brand already dark enough is returned untouched
+rather than dulled to a safe constant.
+
+**Guaranteed for the TRANSLUCENT subtitle, not for opaque white**, which is the harder case and
+the one that was failing everywhere. The opaque title is then safe by construction, and the muted
+subtitle survives as a design element instead of being flattened to the same white as the title.
+`MASTHEAD_SUBTITLE_ALPHA` is pinned in the builder and asserted against the stylesheet, so the two
+halves of one decision cannot drift — the §7.2 narrative-box contract in a second place.
+
+| | before | after |
+|---|---|---|
+| title | 1.98 – 5.70 | **7.41 – 7.57** |
+| subtitle / metric label | 1.61 – 3.58 | **4.53** |
+| `--accent-on-dark` (the highlight) | 3.74 for two brands | **4.53 – 4.63** |
+| market runs below threshold | **734** | **66** |
+| worst ratio on the market surface | 1.08:1 | 2.66:1 |
+
+The 66 that remain are the six status and tier badge colours — semantic chips on a 10% tint of
+themselves, brand-independent, one decision, and deliberately not taken here.
+
+---
+
+**THE PERMANENT UNREAD WARNING IS GONE.** `_report_unreachable` printed
+
+```
+[CONTRAST] on_dark: cannot reach 4.5:1 for #0d9488 on #1B365D/#0d9488;
+           best achievable 3.74:1. Returning it anyway
+```
+
+**on every single render.** The derivation worked, knew its own limit, and reported it to a log
+nobody reads — the shape this project keeps finding. `compute_color_roles` is now fed the
+guaranteed band instead of the raw colours, and **the log does not appear once across 90 renders**.
+It is asserted rather than observed: `UNREACHABLE_CONTRAST_COUNT` must not move, so the degraded
+path becoming normal again is a test failure.
+
+---
+
+**THE DEFAULT ACCENT WAS AN AFFILIATE'S BRAND.** `DEFAULT_ACCENT = "#0d9488"` is Luxury Estates'
+teal, so every account that had not picked an accent shipped someone else's identity — and a third
+of the masthead's failures were **brand-independent** because the band always ended in that teal.
+
+Now `#4F46E5`, which is not a new colour: it is `DEFAULT_PRIMARY_COLOR` in `templates.ts` and
+`social-templates.ts`, and the email moved to it for the same reason in D-098 — *a default is not
+the affiliate's colour; nobody chose it, and it is ours to set.* The market PDF was the last
+surface still defaulting to something else, so an unbranded account's PDF and its email did not
+match. Now they do.
+
+**And the same defect was one layer further down.** Thirteen template-level fallbacks
+(`default('#0d9488')`, `#a6e4de`, `#5eead4`, `#0f766e`) were shades of that same teal, reachable
+through any render path that omits the context value. Changing only the Python would have left it
+live. All thirteen replaced and annotated `lint-allow-hex` rather than baselined, because a
+platform default **is** a brand literal and the annotation exists for exactly that. Colour-lint
+baseline 111 → 98.
+
+---
+
+**PULLED IN BECAUSE THIS CHANGE MOVED THEM.** `.stat-block-accent` paints accent-coloured text on
+a 35% tint of the same accent, and the footer's initials circle painted the raw *primary* on a
+tint of the *accent*. Both were already failing; changing the default moved one of them the wrong
+way (`stat-block-label` 2.08 → 1.54). A fix that makes something worse is not finished, so both
+now use `ink_on(colour, background)` — the existing readability helper applied to the **tint**
+rather than to white, which is a different and easier background than `theme_color_on_light`
+assumes.
+
+---
+
+**SEEN TO FAIL — five regressions, each observed red.** The band returning the raw colours · the
+guarantee weakened to opaque white · darkening to a constant instead of stopping when satisfied ·
+`DEFAULT_ACCENT` restored to the teal · the stylesheet's subtitle opacity dropped below what the
+band guarantees.
+
+**The fifth one did not fail on its first attempt.** `rgba(255,255,255,0.7)` appears four times in
+the stylesheet and the edit hit `.report-header`'s copy, not `.masthead-subtitle`'s — the test
+passed, correctly, on a masthead that had not changed. §0.6's substring rule in a fifth costume:
+the string was right, the *site* was not, and a regression applied to the wrong site proves
+nothing.
+
+**The ratchet caught its own fix.** Regenerating the contrast board was refused until the
+staleness test was satisfied: **190 entries no longer fail**, 0 added, 410 → 220.
 
 
 ---

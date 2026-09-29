@@ -21,13 +21,20 @@
   <style>
     /* ===================== CSS CUSTOM PROPERTIES ===================== */
     :root {
-      --primary-color: #0d9488;
-      --accent-color: #0d9488;
-      --accent-light: #a6e4de;
-      --accent-on-dark: #5eead4;
-      --accent-on-light: #0d7268;
+      /* The platform palette. market.jinja2's :root overrides all of these
+         on every real render and explains why they are not a teal. */
+      --primary-color: #4F46E5;  /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+      --accent-color: #4F46E5;   /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+      --accent-light: #8c86ee;   /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+      --accent-on-dark: #c6c5ff; /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+      --accent-on-light: #4F46E5;/* lint-allow-hex: platform default, not an affiliate's (D-112) */
       --accent-text: #ffffff;
-      --header-bg: #18235c;
+      --header-bg: #18235c;     /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+      /* The gradient's far stop. A dark derivation of the accent, never the
+         raw accent — see market.jinja2's :root and D-112. */
+      --band-end: #453dca;       /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+      --accent-on-tint: #211d69; /* lint-allow-hex: platform default, not an affiliate's (D-112) */
+      --muted-on-tint: #2e2b28;  /* lint-allow-hex: platform default, not an affiliate's (D-112) */
 
       --page-width: 8.5in;
       --page-height: 11in;
@@ -125,7 +132,7 @@
 
     /* ===================== GRADIENT HEADER (2-column) ===================== */
     .report-header {
-      background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%, var(--primary-color) 100%);
+      background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%, var(--band-end) 100%);
       padding: 15px 25px;
       color: var(--white);
       flex-shrink: 0;
@@ -509,7 +516,7 @@
        document context — and it is as tall as it is, rather than as tall as
        pdf_engine reserved for it. */
     .masthead {
-      background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%, var(--primary-color) 100%);
+      background: linear-gradient(135deg, var(--header-bg) 0%, var(--header-bg) 50%, var(--band-end) 100%);
       /* Full-bleed: .page-content has side padding, and a masthead inset from
          the page edge reads as a card rather than a header. The negative
          margins undo the padding without the content below needing to know. */
@@ -841,8 +848,16 @@
       letter-spacing: 0.8px;
     }
 
+    .stat-block-accent .stat-block-label {
+      /* --gray-500 is chosen for a white card; on the accent tint it
+         measured 1.54:1 (D-112). */
+      color: var(--muted-on-tint);
+    }
+
     .stat-block-accent .stat-block-value {
-      color: var(--primary-color);
+      /* On the tint, not on white (D-112). The raw accent on a 35% tint of
+         itself is two shades of one colour: 1.62:1 measured. */
+      color: var(--accent-on-tint);
     }
 
     .stat-block-accent {
