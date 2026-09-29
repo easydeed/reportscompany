@@ -47,6 +47,14 @@ CHARS_PER_LINE = 97
 #: (Jerry, 2026-09-28 — D-102). Both remain two-page reports with all nine
 #: listings; the choice was what page 1 leads with.
 #:
+#: THE `with_trend` ROWS WERE NOT EVIDENCE UNTIL 2026-09-29 (D-113). Nothing
+#: wrote `closed_history` on the production path, so no report had ever entered
+#: that state: the numbers were measured from a fixture the measuring script
+#: supplied to itself, describing a layout the product could not produce, and
+#: D-102's decision was taken on them. Re-measured after the fetch landed —
+#: **identical**, which is the good outcome and does not retroactively make the
+#: earlier run evidence. It was a correct prediction, confirmed late.
+#:
 #: Within a state the number does not move with content: the narrative box is
 #: fixed (§7.2) and the masthead's title and subtitle are bounded (D-102), so
 #: these are properties of the layout rather than of a fixture.

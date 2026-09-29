@@ -36,12 +36,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 38 | Real, unfixed |
-| `fixed` | 71 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 37 | Real, unfixed |
+| `fixed` | 72 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **113** | D-001 … D-113, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 11 · FRAGILE 10 · ROUGH 16. (Sums to 38, the open total.)
+**Open by severity:** BROKEN 1 · WRONG 10 · FRAGILE 10 · ROUGH 16. (Sums to 37, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -58,7 +58,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -6219,7 +6219,7 @@ staleness test was satisfied: **190 entries no longer fail**, 0 added, 410 → 2
 
 **Severity:** WRONG · **Affects:** §7.3's trend chart on `market_snapshot` and `inventory`, and
 D-102's page-1 decision for `market_snapshot`
-**Status:** `open`
+**Status:** `fixed` — `fix/d113-trend-history-never-fetched`
 
 Found 2026-09-29 while starting D-111, whose recommended fix was to take its price-band extent
 from "the twelve-month history `monthly_trend.py` already fetches". **It does not. Nothing does.**
@@ -6283,6 +6283,59 @@ does not, so the choice is now:
 
 Both beat what ships. Recorded here rather than chosen, because the first is a fetch-path change
 and that is not a decision to make inside a banding fix.
+
+---
+
+**FIXED 2026-09-29 — the fetch, the refusal, and the gate's marker off.**
+
+`build_closed_history(params)` asks for `status=Closed` with **`minclosedate = today − 365`** —
+not `mindate`, which D-075 measured doing nothing at all, and the series buckets by `close_date`
+so the filter has to be the one the feed applies to that field. `tasks.py` issues it for the two
+report types in `TREND_REPORT_TYPES` and no others: it is a second vendor request, and six
+reports that cannot use the answer should not buy it.
+
+Cost is what `compute/monthly_trend.py`'s header priced: **one query, two requests at
+`page_max = 500`**, against decision 01's 13 for a count series.
+
+**No report filters on the history query.** The trend is the *market's* twelve months. A chart
+captioned "median sale price" that silently showed only 3-bed homes under $1.5M is a different
+statistic wearing the same label, and a test asserts each filter key stays out.
+
+**Truncation refuses rather than draws.** `closed_history_truncated` is set when the fetch returns
+`>= TREND_HISTORY_FETCH_LIMIT` rows, and `median_series` / `count_series` already refuse on it —
+D-078's rule, the same contract `closed_was_truncated` carries for months of supply. Both halves
+existed; what was missing was anything setting the flag. Asserted end to end, because **a fetch
+setting a flag nothing reads is the shape of this defect all over again.**
+
+**A failed fetch is non-fatal** and degrades to exactly what shipped for three weeks: no chart. A
+market report without a trend is a complete report; one that failed to send because its chart
+could not be drawn is not.
+
+**`TREND_REPORT_TYPES` is DERIVED from `TREND_SERIES`, not a second literal** — the first draft of
+that line was a second literal. The caller deciding whether to buy the data and the builder
+deciding whether to draw it must read one list; two copies fail quietly in both directions.
+
+**The contract gate's `xfail(strict=True)` came off**, which is what strict was for. Reverting the
+producer was applied as a regression and the gate caught it — the first time it has been seen to
+fail on the real defect rather than a planted one.
+
+**PAGE_1_CAPACITY re-measured: identical.** That is the good outcome and it does not make the
+earlier run evidence. It was a correct prediction, confirmed late.
+
+---
+
+**AND A CORRECTION TO D-102, WHICH IS THE PART WORTH CARRYING.**
+
+D-102's decision — that `market_snapshot`'s page 1 carries the twelve-month trend rather than a
+row of three listings — **was taken on measurements from a state production could not enter.**
+The numbers were real, the script produced them honestly, and the script supplied
+`closed_history` to itself. Nothing in the chain was dishonest and the conclusion was still
+reached on evidence that was not describing the product.
+
+The decision holds now that the data flows, and the re-measurement says so. But "the measurement
+was right" is a different claim from "the measurement was of the thing we were deciding about",
+and only the second one was ever in doubt. Recorded because the next decision taken on a
+fixture-fed measurement will look exactly as sound as this one did.
 
 
 ## BLOCKED-NEEDS-DEPLOYED-ACCESS (Phase 2B)

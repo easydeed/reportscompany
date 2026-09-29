@@ -720,7 +720,7 @@ it.**
   now what the D-108 gate does automatically, in both languages, for every numeric the builders
   emit.
 
-- **A test that supplies its own input cannot tell you the input arrives.** Found 2026-09-29:
+- **A TEST THAT SUPPLIES ITS OWN INPUT PROVES THE CONSUMER AND SAYS NOTHING ABOUT THE PRODUCER.** A category, not an instance — every fixture-fed test in this repository has this shape, and each one is silent about the same half. Found 2026-09-29:
   §7.3's twelve-month trend chart has never rendered in a customer's report. It reads
   `report_data["closed_history"]`, and **nothing on the production path writes that key** — no
   builder emits it and `tasks.py` never adds it, so the guard returns None on every render
@@ -743,9 +743,25 @@ it.**
   than deleted**, so the known failure cannot become a permanent one: fixing D-113 turns it XPASS
   and fails until the marker goes.
 
-  The general form: **whenever a feature degrades silently when its input is missing, something
-  has to assert the input arrives** — and it cannot be a test of that feature, because those
-  tests are exactly the ones that supply it.
+  **The category, stated so it applies past this key.** Unit tests are supposed to supply their
+  inputs; that is what makes them unit tests, and none of them is wrong. What is missing is that
+  *nothing else* was checking the other side, so the suite's coverage of the feature and the
+  suite's coverage of the pipeline looked like the same thing. **Wherever a consumer degrades
+  quietly on a missing input, the assertion that the input arrives has to live outside the tests
+  of that consumer** — they are precisely the ones that cannot make it.
+
+  Three symptoms to search for, because the shape is recognisable before it bites:
+
+  - a reader with a `if not x: return <empty>` guard and no caller-side test;
+  - a fixture or measuring script that sets a key the production path does not;
+  - a decision taken on a measurement whose inputs the measurer provided. **D-102 was one.**
+    Its numbers were real and its conclusion holds, and it was still reached on evidence that
+    was not describing the product. "The measurement was right" and "the measurement was of the
+    thing being decided" are different claims, and only the second was ever in doubt.
+
+  The remedy is the contract gate: assert that something *writes* what something else *reads*,
+  by parsing both sides. It generalises past this one key and past this one pair of modules, and
+  it is cheap — the whole check is one AST walk over each side.
 
 ---
 

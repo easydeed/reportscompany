@@ -92,24 +92,18 @@ def _written(paths) -> set:
 PRODUCERS = [SRC / "report_builders.py", SRC / "tasks.py"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="D-113: `closed_history` and `closed_history_truncated` have no "
-           "producer, so the twelve-month trend chart never renders. Filed, "
-           "not fixed — the fix is a fetch-path change with a vendor cost and "
-           "a pagination decision attached. STRICT on purpose: when D-113 is "
-           "fixed this turns XPASS and fails until the marker is removed, so "
-           "the known failure cannot quietly become a permanent one.",
-)
 def test_every_key_the_market_builder_reads_is_produced_somewhere():
     """
     THE GATE. A read with no producer is a feature that cannot run, and a
     graceful fallback makes it silent.
 
-    If this fails on a NEW key, either wire the producer or add the key to
-    `OPTIONAL` with the reason the fallback is the intended path. Do not
-    delete the finding, and do not widen `OPTIONAL` to clear D-113 — an
-    exemption would say the chart is meant never to draw.
+    If this fails, either wire the producer or add the key to `OPTIONAL` with
+    the reason the fallback is the intended path. Do not delete the finding,
+    and do not add a key here to clear a missing fetch — an exemption would
+    say the feature is meant never to run, which is what D-113 was.
+
+    Was `xfail(strict=True)` while D-113 stood. The marker came off with the
+    fetch, which is what strict is for.
     """
     read = _reads(SRC / "market_builder.py", "report_data")
     produced = _written(PRODUCERS)
