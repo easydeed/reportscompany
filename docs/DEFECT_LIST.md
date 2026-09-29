@@ -6101,7 +6101,7 @@ run — the boundaries stopped absorbing the variation.
 
 | | |
 |---|---|
-| how many bands | target 6, hard maximum 8, and `band_edges` stops emitting past it regardless — the open-ended top band absorbs the rest. **Measured at eight: 53px per card, row 95px, zero labels clipped**, the same row height D-107 measured at six. The first draft cited D-107's six-card measurement for a limit of eight, which it does not support |
+| how many bands | **six** — see below, it took three goes |
 | under twelve months of history | falls back to this period's results **and says so on the page** — the caption carries "may shift between reports". Bands that will move look identical to bands that will not, and the whole point is that two runs can be compared |
 | empty bands become routine | kept, not dropped. The chart's "none" row and the cards' zero rendering were both written while unreachable and are now exercised by a test that renders one |
 
@@ -6122,15 +6122,38 @@ $50K–$90M range fell through to the top rung and produced **46 bands**. The co
 construction now.
 
 **PAGE_1_CAPACITY MOVED, AND THE REASON IS D-113'S LESSON ONE FILE LATER.**
-`price_bands` 4/3 → **2/1**, `new_listings` 4/3 → **3/2**. Not because the layout changed: the
+`price_bands` 4/3 → **3/2**, `new_listings` 4/3 → **3/2** (via 2/1, before `MAX_BANDS` came
+down to six and gave a listing back). Not because the layout changed: the
 measuring script set `price_bands` to a **two-entry literal it supplied to itself**, while
 production emits six to eight, so the pinned numbers described a card row the product does not
 render. The fixture builds its bands with the real `build_bands` now. Caught only because D-113
 had just been written up.
 
-**`price_bands` with a narrative now fits ONE listing on page 1**, which reads as an accident
-rather than a choice. Same shape as D-102 and it wants the same kind of decision — **flagged, not
-taken.**
+**HOW MANY BANDS TOOK THREE GOES, AND THE LAST ONE WAS LOOKING AT IT.**
+
+1. The first draft said **eight**, citing D-107's measurement — which was of **six** cards
+   (56px each, row 95.2px, nothing clipped) and does not support eight.
+2. So eight was measured: 53px per card, row 95px, **zero labels clipped**. That reads like a
+   pass. It is a clipping answer to a legibility question.
+3. Then it was **rendered and looked at**. At 53px, after `.stat-card`'s 12px side padding, a
+   label has about **29px of content width** — less than one price. The en-dash became a line of
+   its own in four of the eight cards (`$500K` / `–` / `$750K`) and the wrap ran to two or three
+   lines unpredictably, so the row read as a rendering fault rather than as dense. A
+   non-breaking space after the dash did not fix it and was removed: the width is the problem,
+   not the break opportunity.
+
+**`MAX_BANDS = 6`. D-107's measured number was right all along**, and two of the three attempts
+to improve on it were measurements that answered a question nobody had asked.
+
+The cost is resolution — a $600K–$2.4M market now gets a $500K step and four bands rather than a
+$250K step and eight, because the ladder has no rung between them. Four legible bands beat eight
+unreadable ones, and if the resolution ever matters more the fix is to widen the **ladder**, not
+to raise the cap.
+
+**`price_bands` page 1 holds two listings with a narrative, and that is decided rather than
+open** (Jerry, 2026-09-29): this is a distribution report, the cards and the chart **are** the
+content, and the listings are supporting detail. Unlike `market_snapshot` (D-102) nothing is
+competing for that space, so there is no trade to make.
 
 **Four regressions seen to fail:** the extent taken from this period's results instead of the
 history · empty bands dropped again · the `999` sentinel restored · quartile boundaries restored,
