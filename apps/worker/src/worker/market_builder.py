@@ -46,6 +46,23 @@ from worker.themes import derive_theme
 logger = logging.getLogger(__name__)
 
 
+def _first_present(source, *keys):
+    """First key whose value is not None, or None. NOT `a or b`.
+
+    D-108. `source.get("a") or source.get("b", 0)` treats a real 0 as absent
+    and falls through — the same zero-is-falsy defect as Jinja's
+    `{% if value %}`, in Python. It is the more damaging half of the pair,
+    because it destroys the distinction before the template can render it:
+    a studio (0 bedrooms) and a listing with no bed count both arrived as 0,
+    and the template hid both, which is why it read as correct.
+    """
+    for key in keys:
+        value = source.get(key)
+        if value is not None:
+            return value
+    return None
+
+
 def _pct(val) -> str | None:
     """Convert a ratio (0-1 or 90-110 range) to a percentage string for prompts."""
     if val is None:
@@ -250,10 +267,6 @@ class MarketReportBuilder:
 
     # ── §7.3 price-band distribution ───────────────────────────────────────
 
-    #: How many bands the stat-card row shows. The cards are capped at four in
-    #: pricebands_layout; the chart is not.
-    BAND_CARDS_SHOWN = 4
-
     def _band_chart_note(self):
         """The sample line under the band chart, or None.
 
@@ -272,11 +285,11 @@ class MarketReportBuilder:
         if len(counted) < 2:
             return None
         total = sum(b["count"] for b in counted)
-        note = f"Active listings by price band · {total:,} listings across {len(counted)} bands"
-        if len(counted) > self.BAND_CARDS_SHOWN:
-            note += (f" · the cards above show the first {self.BAND_CARDS_SHOWN}; "
-                     f"the chart shows all {len(counted)}")
-        return note
+        # The clause that used to follow — "the cards above show the first 4;
+        # the chart shows all 6" — existed only to describe D-107, and D-107 is
+        # fixed: the cards render every band now, so the caption has nothing to
+        # apologise for.
+        return f"Active listings by price band · {total:,} listings across {len(counted)} bands"
 
     # ── §7.3 median trend ──────────────────────────────────────────────────
 
@@ -407,13 +420,20 @@ class MarketReportBuilder:
             items.append({
                 "address": item.get("street_address") or item.get("address", ""),
                 "city": item.get("city", ""),
-                "list_price": item.get("list_price") or item.get("price", 0),
+                # `_first_present`, not `a or b or 0` (D-108). The `or` chain
+                # is the same zero-is-falsy defect as `{% if value %}`, one
+                # layer earlier and worse: it collapsed a real 0 AND a missing
+                # value into the same 0, so the template could not tell a
+                # studio from a listing with no bed count. It looked correct
+                # only because the template then hid both. Fixing the template
+                # without this would have printed "Studio" over missing data.
+                "list_price": _first_present(item, "list_price", "price"),
                 "close_price": item.get("close_price"),
-                "beds": item.get("bedrooms") or item.get("beds", 0),
-                "baths": item.get("bathrooms") or item.get("baths", 0),
-                "sqft": item.get("sqft") or item.get("living_area", 0),
+                "beds": _first_present(item, "bedrooms", "beds"),
+                "baths": _first_present(item, "bathrooms", "baths"),
+                "sqft": _first_present(item, "sqft", "living_area"),
                 "status": item.get("status", "Active"),
-                "days_on_market": item.get("days_on_market") or item.get("dom", 0),
+                "days_on_market": _first_present(item, "days_on_market", "dom"),
                 # safe_url: vendor photo URLs land in src="…" in a template
                 # Jinja autoescapes — which does nothing about the scheme, and
                 # a PDF is rendered by a real browser. See safe_url's docstring.
@@ -459,8 +479,12 @@ class MarketReportBuilder:
         counts = self.report_data.get("counts") or {}
         return {
             "median_list_price": metrics.get("median_list_price"),
-            "median_close_price": metrics.get("median_close_price") or metrics.get("median_sold_price"),
-            "avg_dom": metrics.get("avg_dom") or metrics.get("median_dom"),
+            "median_close_price": _first_present(metrics, "median_close_price", "median_sold_price"),
+            # `_first_present`, not `or` (D-108). An avg DOM of 0 is reachable
+            # now that D-105 reads the feed's own value — a same-day sale
+            # reports 0 — and `or` would have skipped past it to `median_dom`
+            # and then to None, which the page renders as "no data".
+            "avg_dom": _first_present(metrics, "avg_dom", "median_dom"),
             "months_of_inventory": metrics.get("months_of_inventory"),
             # The window months-of-supply is measured over is a choice, and a
             # reader cannot check a number whose basis is not stated (§0.6
@@ -469,8 +493,10 @@ class MarketReportBuilder:
             "months_of_inventory_pace": (
                 (metrics.get("months_of_inventory_display") or {}).get("pace_label")
             ),
-            "price_per_sqft": metrics.get("price_per_sqft") or metrics.get("avg_price_per_sqft"),
-            "list_to_sale_ratio": metrics.get("list_to_sale_ratio") or metrics.get("close_to_list_ratio") or metrics.get("sale_to_list_ratio"),
+            "price_per_sqft": _first_present(metrics, "price_per_sqft", "avg_price_per_sqft"),
+            "list_to_sale_ratio": _first_present(
+                metrics, "list_to_sale_ratio", "close_to_list_ratio", "sale_to_list_ratio"
+            ),
             "active_count": counts.get("Active", 0),
             "pending_count": counts.get("Pending", 0),
             "closed_count": counts.get("Closed", 0),
@@ -511,11 +537,11 @@ class MarketReportBuilder:
             "lookback_days": self.report_data.get("lookback_days", 30),
             "listing_count": self.report_data.get("total_listings") or sum(counts.values()) or len(listings),
             "median_list_price": metrics.get("median_list_price"),
-            "median_price": metrics.get("median_close_price") or metrics.get("median_list_price"),
-            "avg_dom": metrics.get("avg_dom") or metrics.get("median_dom"),
+            "median_price": _first_present(metrics, "median_close_price", "median_list_price"),
+            "avg_dom": _first_present(metrics, "avg_dom", "median_dom"),
             "months_of_inventory": metrics.get("months_of_inventory"),
-            "list_to_sale_ratio": _pct(metrics.get("list_to_sale_ratio") or metrics.get("sale_to_list_ratio")),
-            "close_to_list_ratio": _pct(metrics.get("close_to_list_ratio") or metrics.get("sale_to_list_ratio")),
+            "list_to_sale_ratio": _pct(_first_present(metrics, "list_to_sale_ratio", "sale_to_list_ratio")),
+            "close_to_list_ratio": _pct(_first_present(metrics, "close_to_list_ratio", "sale_to_list_ratio")),
             "closed_count": counts.get("Closed", 0),
             "active_count": counts.get("Active", 0),
             "min_price": min(prices) if prices else None,

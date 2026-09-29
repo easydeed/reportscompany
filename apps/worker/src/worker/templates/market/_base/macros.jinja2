@@ -36,6 +36,28 @@
 
 
 {# ── Gallery Layout (A): new_listings_gallery, featured_listings, open_houses #}
+{# ── Nothing matched ───────────────────────────────────────────────────────
+   D-108. A report whose search returned nothing still renders and still says
+   so, IN THE TERMS OF THE SEARCH. "No listings found for this period" leaves
+   the reader unable to tell an empty market from a filter that excluded
+   everything, and those have opposite responses. Echoing city, window and
+   filters makes the difference readable on the page.
+
+   This does NOT decide whether such a report should be SENT. That is a
+   scheduling question, filed as D-110, not answered here. #}
+{% macro no_results_notice(header) %}
+<div class="empty-state" style="text-align:center;padding:1.25in 0;">
+  <p style="font-size:13px;font-weight:600;color:#44403c;margin:0 0 6px;">
+    No listings matched this search.
+  </p>
+  <p class="subtle" style="font-size:11px;color:#78716c;margin:0;">
+    {{ header.title }}{% if header.city %} in {{ header.city }}{% endif %} &middot;
+    last {{ header.lookback_days }} days{% if header.subtitle %} &middot; {{ header.subtitle }}{% endif %}
+  </p>
+</div>
+{% endmacro %}
+
+
 {% macro gallery_layout(header, listings, stats, report_type, agent, ai_narrative=none,
                         listings_section_label=none, listings_truncation_note=none,
                         listings_more_note=none) %}
@@ -68,7 +90,7 @@
         <div class="listing-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
         <div class="listing-address">{{ listing.address | default('Address unavailable') | truncate(40) }}</div>
         <div class="listing-details">
-          {% if listing.beds %}<span class="listing-detail"><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
+          {% if listing.beds is not none %}<span class="listing-detail">{% if listing.beds %}<strong>{{ listing.beds }}</strong> bd{% else %}<strong>Studio</strong>{% endif %}</span>{% endif %}
           {% if listing.baths %}<span class="listing-detail"><strong>{{ listing.baths }}</strong> ba</span>{% endif %}
           {% if listing.sqft %}<span class="listing-detail"><strong>{{ listing.sqft | format_number }}</strong> sf</span>{% endif %}
         </div>
@@ -86,7 +108,7 @@
 </div>
 {% else %}
 <div class="gallery-grid">
-  <p style="grid-column:1/-1;text-align:center;color:var(--gray-500);padding:2in 0;font-size:11px;">No listings found for this period.</p>
+  <div style="grid-column:1/-1;">{{ no_results_notice(header) }}</div>
 </div>
 {% endif %}
 {% endif %}
@@ -111,13 +133,13 @@
 {% endif %}
 
 <div class="stats-bar avoid-break">
-  {% if stats.avg_dom %}
+  {% if stats.avg_dom is not none %}
   <div class="stats-bar-row">
     <span class="stats-bar-label">Avg Days on Market</span>
     <span class="stats-bar-value">{{ stats.avg_dom }}</span>
   </div>
   {% endif %}
-  {% if stats.months_of_inventory %}
+  {% if stats.months_of_inventory is not none %}
   <div class="stats-bar-row">
     <span class="stats-bar-label">Months of Inventory{% if stats.months_of_inventory_pace %} <span class="stats-note">({{ stats.months_of_inventory_pace }})</span>{% endif %}</span>
     <span class="stats-bar-value">{{ stats.months_of_inventory }}</span>
@@ -183,7 +205,7 @@
         <div class="listing-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
         <div class="listing-address">{{ listing.address | default('Address unavailable') | truncate(40) }}</div>
         <div class="listing-details">
-          {% if listing.beds %}<span class="listing-detail"><strong>{{ listing.beds }}</strong> bd</span>{% endif %}
+          {% if listing.beds is not none %}<span class="listing-detail">{% if listing.beds %}<strong>{{ listing.beds }}</strong> bd{% else %}<strong>Studio</strong>{% endif %}</span>{% endif %}
           {% if listing.baths %}<span class="listing-detail"><strong>{{ listing.baths }}</strong> ba</span>{% endif %}
           {% if listing.sqft %}<span class="listing-detail"><strong>{{ listing.sqft | format_number }}</strong> sf</span>{% endif %}
         </div>
@@ -217,13 +239,13 @@
     {% endif %}
   </div>
   <div class="hero-stat-right">
-    {% if stats.avg_dom %}
+    {% if stats.avg_dom is not none %}
     <div class="mini-stat">
       <div class="mini-stat-value">{{ stats.avg_dom }}</div>
       <div class="mini-stat-label">Avg DOM</div>
     </div>
     {% endif %}
-    {% if stats.months_of_inventory %}
+    {% if stats.months_of_inventory is not none %}
     <div class="mini-stat">
       <div class="mini-stat-value">{{ stats.months_of_inventory }}</div>
       <div class="mini-stat-label">Mo. Supply{% if stats.months_of_inventory_pace %}<br><span class="stats-note">{{ stats.months_of_inventory_pace }}</span>{% endif %}</div>
@@ -268,10 +290,10 @@
       {% for l in listings %}
       <tr>
         <td class="td-address">{{ l.address | default('-') | truncate(28) }}</td>
-        <td class="td-muted">{{ l.beds | default('-') }}/{{ l.baths | default('-') }}</td>
+        <td class="td-muted">{% if l.beds is none %}-{% elif l.beds %}{{ l.beds }}{% else %}Studio{% endif %}/{{ l.baths if l.baths is not none else '-' }}</td>
         <td class="td-muted">{% if l.sqft %}{{ l.sqft | format_number }}{% else %}-{% endif %}</td>
         <td class="td-price">{% if report_type == 'closed' and l.close_price %}{{ l.close_price | format_currency }}{% elif l.list_price %}{{ l.list_price | format_currency }}{% else %}-{% endif %}</td>
-        <td class="td-muted">{{ l.days_on_market if l.days_on_market else '-' }}</td>
+        <td class="td-muted">{% if l.days_on_market is none %}-{% elif l.days_on_market %}{{ l.days_on_market }}{% else %}New{% endif %}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -311,7 +333,7 @@
     <div class="stat-block-label">Median Price</div>
   </div>
   {% endif %}
-  {% if stats.avg_dom %}
+  {% if stats.avg_dom is not none %}
   <div class="stat-block">
     <div class="stat-block-value">{{ stats.avg_dom }}</div>
     <div class="stat-block-label">Avg DOM</div>
@@ -323,7 +345,7 @@
     <div class="stat-block-label">Price / Sq Ft</div>
   </div>
   {% endif %}
-  {% if stats.months_of_inventory %}
+  {% if stats.months_of_inventory is not none %}
   <div class="stat-block">
     <div class="stat-block-value">{{ stats.months_of_inventory }}</div>
     <div class="stat-block-label">Months Supply{% if stats.months_of_inventory_pace %}<br><span class="stats-note">{{ stats.months_of_inventory_pace }}</span>{% endif %}</div>
@@ -359,10 +381,10 @@
         <div class="property-card-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
         <div class="property-card-address">{{ listing.address | default('Address unavailable') | truncate(40) }}{% if listing.city %}, {{ listing.city }}{% endif %}</div>
         <div class="property-card-details">
-          {% if listing.beds %}<span class="property-card-detail"><strong>{{ listing.beds }}</strong> beds</span>{% endif %}
+          {% if listing.beds is not none %}<span class="property-card-detail">{% if listing.beds %}<strong>{{ listing.beds }}</strong> beds{% else %}<strong>Studio</strong>{% endif %}</span>{% endif %}
           {% if listing.baths %}<span class="property-card-detail"><strong>{{ listing.baths }}</strong> baths</span>{% endif %}
           {% if listing.sqft %}<span class="property-card-detail"><strong>{{ listing.sqft | format_number }}</strong> sqft</span>{% endif %}
-          {% if listing.days_on_market %}<span class="property-card-detail"><strong>{{ listing.days_on_market }}</strong> DOM</span>{% endif %}
+          {% if listing.days_on_market is not none %}<span class="property-card-detail">{% if listing.days_on_market %}<strong>{{ listing.days_on_market }}</strong> DOM{% else %}<strong>New</strong>{% endif %}</span>{% endif %}
         </div>
       </div>
     </div>
@@ -372,7 +394,7 @@
 </div>
 {% else %}
 <div class="property-list">
-  <p style="text-align:center;color:var(--gray-500);padding:1in 0;font-size:11px;">No listings found for this period.</p>
+  {{ no_results_notice(header) }}
 </div>
 {% endif %}
 {% endmacro %}
@@ -389,7 +411,13 @@
   </div>
   <div class="stat-cards">
     {% if price_bands %}
-    {% for band in price_bands[:4] %}
+    {# EVERY band, not the first four (D-107). The [:4] dated to the squashed
+       base commit with no recorded intent, and measured it was protecting
+       nothing: six cards fit at 56px each with labels on three lines, nothing
+       clipped, costing 10.4px of row height. It was an aesthetic preference
+       paid for in hidden information — a report that drops "nothing above
+       $1.6M" from an agent showing it to a client. #}
+    {% for band in price_bands %}
     <div class="stat-card">
       <div class="stat-card-value">{{ band.count | default(0) }}</div>
       <div class="stat-card-label">{{ band.label | default('') }}</div>
@@ -402,7 +430,7 @@
       <div class="stat-card-label">Median Price</div>
     </div>
     {% endif %}
-    {% if stats.avg_dom %}
+    {% if stats.avg_dom is not none %}
     <div class="stat-card">
       <div class="stat-card-value">{{ stats.avg_dom }}</div>
       <div class="stat-card-label">Avg DOM</div>
@@ -414,7 +442,7 @@
       <div class="stat-card-label">Price / Sq Ft</div>
     </div>
     {% endif %}
-    {% if stats.months_of_inventory %}
+    {% if stats.months_of_inventory is not none %}
     <div class="stat-card">
       <div class="stat-card-value">{{ stats.months_of_inventory }}</div>
       <div class="stat-card-label">Months Supply{% if stats.months_of_inventory_pace %}<br><span class="stats-note">{{ stats.months_of_inventory_pace }}</span>{% endif %}</div>
@@ -459,7 +487,7 @@
       </div>
       <div class="property-details">
         <div class="property-price">{% if listing.list_price %}{{ listing.list_price | format_currency }}{% else %}&mdash;{% endif %}</div>
-        <div class="property-specs">{% if listing.beds %}{{ listing.beds }} bd{% endif %}{% if listing.baths %} &bull; {{ listing.baths }} ba{% endif %}{% if listing.sqft %} &bull; {{ listing.sqft | format_number }} sqft{% endif %}</div>
+        <div class="property-specs">{% if listing.beds is not none %}{% if listing.beds %}{{ listing.beds }} bd{% else %}Studio{% endif %}{% endif %}{% if listing.baths %} &bull; {{ listing.baths }} ba{% endif %}{% if listing.sqft %} &bull; {{ listing.sqft | format_number }} sqft{% endif %}</div>
       </div>
       <div class="property-status">
         {% if listing.status %}
@@ -473,7 +501,7 @@
 </div>
 {% else %}
 <div class="property-rows">
-  <p style="text-align:center;color:var(--gray-500);padding:1in 0;font-size:11px;">No listings found for this period.</p>
+  {{ no_results_notice(header) }}
 </div>
 {% endif %}
 
@@ -664,7 +692,9 @@
       Last <span class="masthead-highlight">{{ header.lookback_days }} days</span>
       {%- if header.subtitle %} · {{ header.subtitle }}{% endif %} · Live MLS Data
     </p>
-    {% if header.total_count %}
+    {# 0 is a result, not a missing field (D-108): the report shows the
+       number it matched rather than dropping the block. #}
+    {% if header.total_count is not none %}
     <div class="masthead-metric">
       <span class="masthead-metric-value">{{ header.total_count }}</span>
       <span class="masthead-metric-label">{{ header.title }}</span>

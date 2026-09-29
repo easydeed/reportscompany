@@ -45,7 +45,11 @@ def snapshot_metrics(rows: List[Dict]) -> Dict:
         "new_listings_7d": len(new7),
         "median_list_price": round(med([r["list_price"] for r in active if r.get("list_price")])),
         "median_close_price": round(med([r["close_price"] for r in closed if r.get("close_price")])),
-        "avg_dom": round(avg([r["days_on_market"] for r in rows if r.get("days_on_market")]) or 0,1),
+        # `is not None`, not a bare `.get()` (D-108). A same-day sale reports a
+        # DOM of 0, and 0 is falsy, so the bare filter dropped exactly the
+        # fastest sales out of the average of how fast things sell. Newly
+        # reachable: D-105 made the report read the feed's own DOM.
+        "avg_dom": round(avg([r["days_on_market"] for r in rows if r.get("days_on_market") is not None]) or 0,1),
         "avg_price_per_sqft": round(avg([r["price_per_sqft"] for r in active if r.get("price_per_sqft")]) or 0),
         "close_to_list_ratio": round(ctl or 100.0,1),
         "months_of_inventory": moi,

@@ -144,7 +144,14 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     median_list_price = _median([l["list_price"] for l in active if l.get("list_price")])
     
     # Avg DOM: Use closed listings (days from list to close)
-    avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market")])
+    #
+    # `is not None` on every DOM filter in this file (D-108, 8 sites). A bare
+    # `if l.get("days_on_market")` is falsy for 0, so a same-day sale was
+    # dropped from the average of how long things take to sell — the one
+    # observation the statistic most needs to include, removed silently. The
+    # zero became reachable when D-105 made the extractor read the feed's own
+    # value instead of computing list-to-close.
+    avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market") is not None])
     
     # MOI: one implementation, in compute/moi.py. This used to be the formula
     # itself, with a 99.9 sentinel for "no closed sales" — which is D-056's
@@ -190,7 +197,7 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
                 "count": len(closed_props),  # Closed sales in period
                 "active_count": len(active_props),  # Current active inventory
                 "median_price": _median([p["close_price"] for p in closed_props if p.get("close_price")]) if closed_props else _median([p["list_price"] for p in active_props if p.get("list_price")]),
-                "avg_dom": _average([p["days_on_market"] for p in closed_props if p.get("days_on_market")]) if closed_props else _average([p["days_on_market"] for p in active_props if p.get("days_on_market")])
+                "avg_dom": _average([p["days_on_market"] for p in closed_props if p.get("days_on_market") is not None]) if closed_props else _average([p["days_on_market"] for p in active_props if p.get("days_on_market") is not None])
             })
     
     # Price tiers (dynamic based on market)
@@ -398,7 +405,7 @@ def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
     
     # Compute metrics
     median_price = _median([l["list_price"] for l in new_listings if l.get("list_price")])
-    avg_dom = _average([l["days_on_market"] for l in new_listings if l.get("days_on_market")])
+    avg_dom = _average([l["days_on_market"] for l in new_listings if l.get("days_on_market") is not None])
     avg_ppsf = _average([l["price_per_sqft"] for l in new_listings if l.get("price_per_sqft")])
     
     return {
@@ -531,7 +538,7 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     active_sorted = sorted(active, key=lambda x: x.get("days_on_market") or 0, reverse=True)
     
     # Median DOM
-    median_dom = _median([l["days_on_market"] for l in active if l.get("days_on_market")])
+    median_dom = _median([l["days_on_market"] for l in active if l.get("days_on_market") is not None])
 
     # ── Median asking price (D-057) ─────────────────────────────────────────
     #
@@ -683,7 +690,7 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
     
     # Metrics
     median_price = _median([l["close_price"] for l in closed if l.get("close_price")])
-    avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market")])
+    avg_dom = _average([l["days_on_market"] for l in closed if l.get("days_on_market") is not None])
     
     # Close-to-list ratio
     ctl_ratios = [l["close_to_list_ratio"] for l in closed if l.get("close_to_list_ratio")]
@@ -751,7 +758,7 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
     min_price = min(prices)
     max_price = max(prices)
     median_price = _median(prices)
-    avg_dom = _average([l["days_on_market"] for l in listings if l.get("days_on_market")])
+    avg_dom = _average([l["days_on_market"] for l in listings if l.get("days_on_market") is not None])
     
     # Define bands (use quartiles for dynamic banding)
     sorted_prices = sorted(prices)
@@ -790,7 +797,7 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
         
         if band_listings:
             band_prices = [l.get("list_price") or l.get("close_price") for l in band_listings if l.get("list_price") or l.get("close_price")]
-            band_dom = [l["days_on_market"] for l in band_listings if l.get("days_on_market")]
+            band_dom = [l["days_on_market"] for l in band_listings if l.get("days_on_market") is not None]
             band_ppsf = [l["price_per_sqft"] for l in band_listings if l.get("price_per_sqft")]
             
             bands.append({

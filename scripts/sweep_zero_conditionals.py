@@ -1,73 +1,50 @@
-"""Every Jinja conditional on a value that can honestly be zero.
+"""Re-run D-108's enumeration by hand.
 
-D-108. `{% if x %}` is falsy for 0, so a real zero renders as nothing.
+The check itself lives in `apps/worker/tests/_zero_conditionals.py` and runs in
+CI as `test_zero_conditionals.py`. This script is the same walk with its
+workings printed, for when you want the list rather than a pass/fail — after
+adding a template, or before deciding whether a new field needs an exemption.
 
-WHICH NAMES ARE NUMERIC IS DERIVED, NOT GUESSED: build a real context from the
-market and property builders, walk it, and collect the leaf paths whose values
-are int/float. Then match every bare `{% if ... %}` in every template against
-that set. A hand-written list of "numeric-looking names" is the mistake this
-project keeps finding.
+One implementation, two front ends. An audit script and a gate that each
+carried their own copy of the rule would disagree, and the one that disagreed
+quietly would be the gate.
 """
-import ast, re, sys
+import sys
 from pathlib import Path
 
-REPO = Path("/home/user/reportscompany")
-sys.path.insert(0, str(REPO / "apps/worker/src"))
-TEMPLATES = REPO / "apps/worker/src/worker/templates"
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "apps/worker/tests"))
 
-# ── numeric leaf names, from a real built context ───────────────────────────
-import importlib.util
-spec = importlib.util.spec_from_file_location("m", REPO / "scripts/measure_market_pagination.py")
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-from worker.market_builder import MarketReportBuilder, ALL_REPORT_TYPES
+from _zero_conditionals import (  # noqa: E402
+    EXEMPT, audit_all, audit_python, numeric_leaf_names, unexempt,
+    unused_exemptions,
+)
 
-numeric_names = set()
+names = numeric_leaf_names()
+findings = audit_all() + audit_python(names)
+open_ = unexempt(findings)
 
-def walk(obj):
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            if isinstance(v, bool):
-                continue
-            if isinstance(v, (int, float)):
-                numeric_names.add(k)
-            walk(v)
-    elif isinstance(obj, list):
-        for v in obj[:3]:
-            walk(v)
+print(f"\n{len(names)} numeric leaf names, derived from real built contexts")
+print(f"{len(findings)} places a template or a statistic decides one of them\n   by truthiness alone")
+print(f"{len(open_)} of those are not exempt\n")
 
-for rt in ALL_REPORT_TYPES:
-    d = m.report_data(rt, 6)
-    d["price_bands"] = [{"label": "a", "count": 3, "pct": 20}]
-    b = MarketReportBuilder(d)
-    walk(b._build_stats_context())
-    walk(b._build_header_context())
-    walk(b._build_listings_context())
-    walk(d)
-
-# ── every bare conditional in every template ────────────────────────────────
-COND = re.compile(r"\{%-?\s*if\s+(.+?)\s*-?%\}", re.S)
-BARE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$")
-
-hits = []
-for path in sorted(TEMPLATES.rglob("*.jinja2")):
-    text = path.read_text(encoding="utf-8")
-    for match in COND.finditer(text):
-        expr = " ".join(match.group(1).split())
-        if not BARE.match(expr):
-            continue                      # comparisons, `is not none`, and/or — already explicit
-        leaf = expr.split(".")[-1]
-        if leaf in numeric_names:
-            line = text[:match.start()].count("\n") + 1
-            hits.append((str(path.relative_to(TEMPLATES)), line, expr, leaf))
-
-print(f"{len(numeric_names)} numeric leaf names derived from built contexts")
-print(f"{len(hits)} bare conditionals on one of them\n")
 by_file = {}
-for f, line, expr, leaf in hits:
-    by_file.setdefault(f, []).append((line, expr))
-for f in sorted(by_file):
-    print(f"{f}")
-    for line, expr in sorted(by_file[f]):
-        print(f"   {line:>5}  {{% if {expr} %}}")
-print()
-print("distinct expressions:", ", ".join(sorted({e for _, _, e, _ in hits})))
+for f in findings:
+    by_file.setdefault(f.template, []).append(f)
+for template in sorted(by_file):
+    print(template)
+    for f in sorted(by_file[template], key=lambda f: (f.line, f.expr)):
+        mark = "OPEN " if f in open_ else "     "
+        reason = EXEMPT.get(f.expr) or EXEMPT.get(f.expr.split(".")[-1]) or ""
+        print(f"  {mark}{f.line:>5}  {f.expr:<28} {f.kind:<8} {reason}")
+    print()
+
+stale = unused_exemptions(findings)
+if stale:
+    print(f"STALE EXEMPTIONS (nothing uses these any more): {stale}")
+if open_:
+    print("OPEN — these render nothing when the value is a real 0:")
+    for f in open_:
+        print(f"  {f}")
+    sys.exit(1)
+print("No template hides a zero it has not been excused for.")

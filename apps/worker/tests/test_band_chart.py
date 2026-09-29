@@ -124,12 +124,23 @@ def test_the_caption_counts_the_same_bands_the_chart_draws():
     assert "79 listings" in html
 
 
-def test_the_caption_says_when_the_cards_show_fewer_bands_than_the_chart():
-    """Four cards beside six bars, with nothing said about it, reads as a
-    rendering fault."""
+def test_the_cards_and_the_chart_show_the_same_bands():
+    """D-107, inverted from the test that used to live here.
+
+    That test asserted the caption's apology — "the cards above show the first
+    4; the chart shows all 6" — which existed only to describe the defect. The
+    cards render every band now, so the thing to protect is that they agree.
+    A six-band market showing four cards above six bars is what this prevents.
+    """
     six = BANDS + [{"label": "$1.3M – $1.6M", "count": 11}, {"label": "$1.6M+", "count": 5}]
-    assert "the cards above show the first 4" in render(six)
-    assert "the cards above show the first" not in render(BANDS)
+    html = render(six)
+    cards = re.findall(r'<div class="stat-card-label">([^<]*)</div>', html)
+    bars = re.findall(r'text-anchor="end"[^>]*>([^<]+)</text>', chart(html))
+    assert cards == [b["label"] for b in six], cards
+    assert bars == [b["label"] for b in six], bars
+    assert "the cards above show the first" not in html, (
+        "the caption is still apologising for a layout that has been fixed"
+    )
 
 
 def test_the_chart_carries_no_script_and_no_external_reference():
