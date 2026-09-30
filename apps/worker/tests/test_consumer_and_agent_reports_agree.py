@@ -291,7 +291,13 @@ def test_the_subject_s_last_sale_reaches_the_consumer_report():
     cells = [re.sub("<[^>]+>", "", c).strip()
              for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", price_row[0], re.S)]
     assert "Dec 2015" in cells[1], cells
-    assert cells[2:5] == ["$470,000", "$631,500", "$635,000"], cells
+    # $590,000, not $631,500, since D-119. The Medium column used to be
+    # `sorted_by_price[len // 2]` — the THIRD-cheapest of four — and is now
+    # the lower median. The four comps are 470,000 / 590,000 / 631,500 /
+    # 635,000, so the table's three columns are the cheapest, the lower
+    # median and the dearest, and 631,500 is the one of the four the
+    # three-column summary does not carry.
+    assert cells[2:5] == ["$470,000", "$590,000", "$635,000"], cells
 
 
 def test_both_paths_render_the_same_analysis_table():

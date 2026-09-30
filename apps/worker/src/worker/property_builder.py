@@ -584,6 +584,62 @@ PAGE_ORDER = [
 CONTENTS_OMITS = ("cover", "contents")
 
 
+def _analysis_columns(sorted_by_price):
+    """Low / Medium / High for the Area Sales Analysis table. (D-119)
+
+    THREE FAILURES IN FOUR LINES, and they shared one cause: three fixed
+    slots indexed into a list of any length, with nothing checking that the
+    three came out distinct or that the reader was told how many there were.
+
+    1. **It silently dropped comps.** For four comps the old code took index
+       0, `len // 2` = 2, and -1 — so index 1 was in no column, while the
+       chart directly above the table drew all four. Nothing on the page said
+       three of four.
+    2. **"Medium" was not a median.** `len // 2` on a price-sorted list of
+       four is the THIRD-cheapest. The column labelled Medium sat at $631,500
+       against a true median of $610,750.
+    3. **It collapsed silently below three comps.** At n=2, `low` and `med`
+       and `high` resolved to indices 0, 1, 1 — one listing filling two
+       columns, presented as two. At n=1 the same listing filled all three.
+       At n=0 `extract_comp_stats({})` returned a full row of zeros and the
+       table rendered `0 0 0 0` throughout.
+
+    THE RULE HERE, STATED SO IT CAN BE OVERRULED CHEAPLY. No listing appears
+    in more than one column; a column with no distinct listing is blank; and
+    the note says how many comps the summary was drawn from, so a reader can
+    see that three columns is a summary rather than the set.
+
+        n = 0   nothing, and the note says so
+        n = 1   Medium only — the median of one element is that element, and
+                a Low and a High imply a spread that does not exist
+        n = 2   Low and High — that IS the spread; no median of two
+        n >= 3  Low = cheapest, Medium = LOWER median, High = dearest
+
+    Lower median, `(n - 1) // 2`, rather than nearest-to-the-true-median:
+    on an even-length list the two middle listings are equidistant from the
+    median price BY CONSTRUCTION, so "nearest" has no answer and would be
+    decided by sort stability. `(n - 1) // 2` is the conventional lower
+    median and is the same listing every time.
+    """
+    n = len(sorted_by_price)
+    if n == 0:
+        return {}, {}, {}, "No comparable sales were found for this property."
+    if n == 1:
+        return {}, sorted_by_price[0], {}, (
+            "One comparable sale. A low/median/high spread needs at least two, "
+            "so the single sale is shown under Median.")
+    if n == 2:
+        return sorted_by_price[0], {}, sorted_by_price[1], (
+            "Two comparable sales, shown as the low and the high. Two sales "
+            "have no median.")
+    low, high = sorted_by_price[0], sorted_by_price[-1]
+    med = sorted_by_price[(n - 1) // 2]
+    return low, med, high, (
+        f"Low, median and high of {n} comparable sales. The table summarises "
+        f"the spread; every one of the {n} appears on the Sales Comparables "
+        f"page.")
+
+
 def paginate(page_set):
     """`(page_numbers, contents_keys)` for one report's final page set. (D-121)
 
@@ -1464,11 +1520,7 @@ class PropertyReportBuilder:
             key=lambda x: self._extract_price(x) or 0
         )
         
-        # Get low, medium, high comps
-        low_comp = sorted_by_price[0] if sorted_by_price else {}
-        high_comp = sorted_by_price[-1] if sorted_by_price else {}
-        med_idx = len(sorted_by_price) // 2
-        med_comp = sorted_by_price[med_idx] if sorted_by_price else {}
+        low_comp, med_comp, high_comp, analysis_note = _analysis_columns(sorted_by_price)
         
         def _safe_num(val, default=0):
             """Convert value to a number, returning default for None/'-'/non-numeric."""
@@ -1480,6 +1532,20 @@ class PropertyReportBuilder:
                 return default
 
         def extract_comp_stats(comp):
+            # D-119: an EMPTY column is empty, not a row of zeros. `{}` is
+            # what `_analysis_columns` returns for a column with no distinct
+            # listing behind it — two comps have no median, one has no
+            # spread — and the old code ran it through `_safe_num(..., 0)`
+            # field by field, so the table printed `0` for the distance,
+            # `$0` for the price and `0` for the year built of a property
+            # that does not exist. Same rule as D-137: absent is absent.
+            # `format_currency` and `format_number` both pass `-` through
+            # unchanged, checked rather than assumed.
+            if not comp:
+                return {k: ABSENT for k in (
+                    "distance", "sqft", "price_per_sqft", "year_built",
+                    "lot_size", "bedrooms", "bathrooms", "stories", "pools",
+                    "price", "price_display")}
             raw_price = self._extract_price(comp) or 0
             sqft = comp.get("sqft") or comp.get("living_area") or comp.get("area")
             return {
@@ -1607,6 +1673,10 @@ class PropertyReportBuilder:
             "low": extract_comp_stats(low_comp),
             "medium": extract_comp_stats(med_comp),
             "high": extract_comp_stats(high_comp),
+            # D-119: what this table is a summary OF. A three-column table
+            # beside a four-bar chart, with nothing saying three of four are
+            # shown, reads as the whole set.
+            "analysis_note": analysis_note,
         }
     
     @staticmethod

@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 55 | Real, unfixed |
-| `fixed` | 93 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 54 | Real, unfixed |
+| `fixed` | 94 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **152** | D-001 … D-152, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 55, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 15 · ROUGH 22. (Sums to 54, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -7033,7 +7033,7 @@ whose price is secretly a list price**, because nothing distinguishes them. File
 
 **Severity:** WRONG · **Affects:** the Area Sales Analysis page in all five themes ·
 **Found during:** Workstream E measurement (E6)
-**Status:** `open`
+**Status:** `fixed` — `fix/d119-table-and-chart-disagree`
 
 `_build_stats_context` reduces the comparables to exactly three named slots:
 
@@ -7061,6 +7061,75 @@ the column labelled Medium sat at $631,500 against a true median of $610,750. Th
 listing, which is the right choice and is what makes the label wrong. (E5 filed the opposite —
 that Medium is a computed median and therefore no property at all. That is the QA fixture's
 behaviour, not the builder's.)
+
+> **FIXED 2026-10-01 — `fix/d119-table-and-chart-disagree`.** All three failures came from the
+> same four lines: three fixed slots indexed into a list of any length, with nothing checking
+> that the three came out distinct or that the reader was told how many there were.
+> `_analysis_columns` replaces them.
+>
+> **THE RULE, STATED SO IT CAN BE OVERRULED CHEAPLY.** No listing appears in more than one
+> column; a column with no distinct listing is blank; the page says how many comps the summary
+> was drawn from.
+>
+> | | |
+> |---|---|
+> | n = 0 | nothing, and the note says the search returned nothing |
+> | n = 1 | **Medium only** — the median of one element is that element, and a Low and a High imply a spread that does not exist |
+> | n = 2 | **Low and High** — that *is* the spread; two sales have no median |
+> | n ≥ 3 | Low = cheapest, Medium = **lower** median, High = dearest |
+>
+> **Lower median, `(n-1)//2`, rather than nearest-to-the-true-median**, because on an
+> even-length list the two middle listings are equidistant from the median price *by
+> construction* — for the four on this entry, both $590,000 and $631,500 are exactly $20,750
+> away — so "nearest" has no answer and would be settled by sort stability. Measured on the
+> production render, Medium is now **$590,000**.
+>
+> **Three of four is still three of four, and the page now says so.** A three-column summary
+> beside a four-bar chart is a legitimate design; presenting it as the whole set is not. Every
+> theme prints `stats.analysis_note` under the table — *"Low, median and high of 4 comparable
+> sales. The table summarises the spread; every one of the 4 appears on the Sales Comparables
+> page."* — derived from the count in `_analysis_columns`, so it cannot describe a selection
+> the table did not make.
+>
+> **The empty column was the quietest of the three.** `extract_comp_stats({})` ran every field
+> through `_safe_num(..., 0)`, so a column with no listing behind it printed `0` for the
+> distance, `$0` for the price and `0` for the year built — of a property that does not exist.
+> It now returns `-` throughout; `format_currency` and `format_number` pass `-` through
+> unchanged, checked rather than assumed. D-137's rule, in the one place that function could be
+> handed `{}`.
+>
+> **No `opacity` on the note.** Both contrast measurers read `getComputedStyle().color`, which
+> does not include an element's opacity — faded text would measure as its unfaded colour and
+> E15's invisibility floor would not see it. The first draft had `opacity:.75`.
+>
+> Three regressions applied and each seen to fail: the original four-line selection restored,
+> `len // 2` restored, and the empty-column guard removed. 56 tests, 12 of them a parametrised
+> sweep over n = 0…12 asserting no listing reaches two columns at any length.
+>
+> **AND IT MADE AN AUDIT QUIETER, WHICH NOTHING WOULD HAVE REPORTED.**
+> `_zero_conditionals.numeric_leaf_names()` derives "every dict key the builders fill with a
+> number" by building a context and collecting the int/float keys — deliberately derived rather
+> than listed, *"a hand-written set of numeric-looking names is the mistake this repo keeps
+> re-finding"*. It built the property context from `PropertyReportBuilder({})`, on the stated
+> premise that **"its builder fills every numeric with a default, so an empty input still names
+> them all."**
+>
+> This entry's fix falsified that premise on purpose. With no comps, `stats.low.price` and its
+> siblings are now `-` rather than `0`, so `price` stopped being a numeric leaf and **two real
+> comprehension findings in `tasks.py` silently stopped being reported.** Nothing failed — the
+> audit just covered less. It was caught only because `test_the_exemption_list_does_not_outlive
+> _what_it_excused` noticed the `price` exemption had become unused, which is the *other*
+> direction of the same check and the reason that test exists.
+>
+> The set is now derived from a populated context as well as an empty one, so a field that is
+> only numeric when there is data to put in it is still named. Third instance this week of an
+> instrument's sensitivity depending on the data it happened to be fed.
+>
+> **Two existing tests were asserting on the wrong column afterwards, one of them vacuously.**
+> `test_the_numeric_rows_show_absence_rather_than_zero` builds a one-comp report and checked
+> `stats["low"]` — which is now blank *as a column*, so `stories == ABSENT` and
+> `pools == ABSENT` would have passed for a reason with nothing to do with stories or pools.
+> Both moved to `medium`, the column a single comp fills.
 
 ---
 

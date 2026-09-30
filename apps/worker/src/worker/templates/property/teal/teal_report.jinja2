@@ -1489,6 +1489,18 @@
             </tr>
           </tfoot>
         </table>
+        {# D-119: what the three columns are a summary OF. NO `opacity` here:
+         the contrast measurers read `getComputedStyle().color`, which does
+         not include an element's opacity, so faded text measures as its
+         unfaded colour and the invisibility floor added for E15 would not
+         see it. Colour is inherited, which is measured correctly. Without this the table
+         sits beside a four-bar chart showing three columns, with nothing
+         saying three of four — and reads as the whole set. The text is
+         derived from the comp count in `_analysis_columns`, so it cannot
+         describe a selection the table did not make. #}
+      {% if stats.analysis_note %}
+      <div class="analysis-note" style="margin-top:10px; font-size:10px; line-height:1.5;">{{ stats.analysis_note }}</div>
+      {% endif %}
       </div>
       <div class="page-footer">
         <div class="brand">TrendyReports</div>
