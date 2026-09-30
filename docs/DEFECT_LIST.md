@@ -5605,6 +5605,17 @@ market that was slower than it was.
 the only real sample available. Reports already sent are not corrected by this; the entry records
 that plainly rather than implying a retroactive fix.
 
+> **VERIFIED AGAINST PRODUCTION DATA — 2026-10-01.** Jerry ran
+> `scripts/sweep_extract_field_paths.py --capture` against a raw capture of **301 real
+> listings**: **24 reads, 0 unacknowledged misreads**, every path checked against a live
+> payload rather than the two bundled fixtures. `mls.daysOnMarket` is confirmed as the path the feed uses. The top-level read is still flagged and still acknowledged: it runs only when the nested one returned `None`, and it is written as an `if dom is None` reassignment rather than `a or b` because a DOM of 0 is a real value. That reasoning survives the verification intact.
+>
+> This is the difference between *fixed* and *confirmed*. The fix was made against a captured
+> fixture, where a key absent from both files is **unproven rather than wrong** — the sweep's
+> own stated limit. Against 301 rows from a real market it is proven. The verification needed
+> D-150's `--raw-out`, because the only capture on disk before that was a snapshot with its
+> rows stripped.
+
 
 ---
 
@@ -5614,6 +5625,36 @@ that plainly rather than implying a retroactive fix.
 **Status:** `open`
 
 Found by the D-105 sweep, not looked for. Same shape, same file, one line apart.
+
+> **THE CLEAN SWEEP DOES NOT CLEAR THIS ENTRY, AND IT IS WORTH BEING EXACT ABOUT WHY.**
+> The 2026-10-01 run over **301 real listings** reports *0 unacknowledged misreads*. D-106 is
+> still `open` and `compute/extract.py` still reads `pr.get("bathrooms")`.
+>
+> The sweep flags a read as **MISREAD** only when the key exists in the payload *at a different
+> path*. `bathrooms` exists at no path at all, so the verdict is **"not in fixtures"** — which
+> is the tool declining to judge, not passing. It does not fail the run and it does not appear
+> in the misread count. So "0 misreads" is true and says nothing about this defect.
+>
+> What the capture *does* add: `bathrooms` is now **absent from 301 rows of a real market**
+> rather than absent from two bundled fixtures. The sweep's own docstring calls the latter
+> *unproven rather than wrong*. This upgrades D-106's diagnosis from a strong inference to a
+> measured fact — the feed does not send that key — while leaving the defect exactly as open
+> as it was.
+>
+> **The general lesson, and it is the same one as the probe's 0/20:** a clean run from an
+> instrument is only as informative as the verdicts the instrument can produce. This one had
+> three — ok, MISREAD, and *not in fixtures* — and only the middle one failed the build. See
+> the note on D-145 for the sweep's other limit, which is that it covers `extract.py` alone.
+>
+> **FIXED IN THE INSTRUMENT, 2026-10-01.** With `--capture`, a key that resolves at no path in
+> hundreds of real rows is now `ABSENT FROM CAPTURE` and exits 1 — because at that sample size
+> it is no longer unproven, and *a read that never resolves is a column that is always empty*.
+> Without a capture the verdict stays a shrug, correctly, and the summary now says so out loud
+> rather than printing a bare all-clear. `bathrooms` is in `ACKNOWLEDGED` with this entry named
+> and the words **"acknowledged is not fixed"**, on the same contract as D-105's fallback: a
+> known finding is tolerated with its reason recorded, a new one fails. Remove the line when
+> the path is fixed; **this entry, not that file, is the source of truth for whether it has
+> been.**
 
 `compute/extract.py:54` reads
 
@@ -8361,12 +8402,15 @@ build what a reader sees.
 > **THE NESTED-PATH FAMILY IS NOW AT FOUR, AND THE FOURTH WAS FOUND BY THE INSTRUMENT REPEATING
 > THE ERROR IT WAS WRITTEN TO DETECT.**
 >
-> | | field | read as | lives at |
-> |---|---|---|---|
-> | 1 | `closeDate` | top level | `sales.closeDate` |
-> | 2 | `daysOnMarket` (D-105) | top level | `mls.daysOnMarket` |
-> | 3 | `bathrooms` (D-106) | `property.bathrooms` | `bathsFull` / `bathsHalf` |
-> | 4 | `closePrice` (D-145) | top level | `sales.closePrice` |
+> | | field | read as | lives at | state, 2026-10-01 |
+> |---|---|---|---|---|
+> | 1 | `closeDate` | top level | `sales.closeDate` | fixed · **confirmed against 301 real rows** |
+> | 2 | `daysOnMarket` (D-105) | top level | `mls.daysOnMarket` | fixed · **confirmed against 301 real rows** |
+> | 3 | `bathrooms` (D-106) | `property.bathrooms` | `bathsFull` / `bathsHalf` | **still open.** The sweep's clean run does not clear it — see D-106 |
+> | 4 | `closePrice` (D-145) | top level | `sales.closePrice` | fixed · **confirmed against 301 real rows** |
+>
+> `closeDate` has no entry of its own; it was corrected in `extract.py` before this board
+> existed, which is why this table is where it is recorded.
 >
 > The probe exists to catch exactly this, and section 3b counted
 > `r["closePrice"]` — the same top-level guess the production code makes. So the probe's answer
@@ -8377,8 +8421,23 @@ build what a reader sees.
 > `scripts/sweep_extract_field_paths.py` is the general answer to this family, and it is only as
 > good as the payloads it checks against — two bundled fixtures, where a key absent from both is
 > *unproven* rather than wrong. Its `--capture` argument is what turns that into a real sample,
-> and the reason it had never been used is **D-150**: the only capture on disk is a snapshot
-> with its rows stripped. Both halves are now ready and neither has met production.
+> and the reason it had never been used is **D-150**: the only capture on disk was a snapshot
+> with its rows stripped.
+>
+> **RUN, 2026-10-01: 24 reads, 0 unacknowledged misreads, against 301 real listings.** One
+> acknowledged flag remains, D-105's `daysOnMarket` fallback, with its reasoning intact.
+>
+> **TWO LIMITS ON READING THAT AS AN ALL-CLEAR, both structural:**
+>
+> 1. **It covers `compute/extract.py` and nothing else.** The four sites D-145 fixed —
+>    `routes/property.py`, `worker/tasks.py`, `services/simplyrets.py`,
+>    `schemas/property.py` — are not swept. Their guarantee is
+>    `test_close_price_field_path.py`, an AST guard that requires the receiver be the `sales`
+>    object. So the chain is: the capture proves `sales.closePrice` is where the feed puts it,
+>    and the guard proves all four sites read exactly there. Sound, but indirect — the sweep
+>    did not look at them.
+> 2. **A key that exists at no path reports "not in fixtures", which does not fail the run.**
+>    That is how a clean sweep coexists with D-106 still being open. See that entry.
 
 **The guard.** `apps/api/tests/test_close_price_field_path.py` walks the AST of all four files
 and fails on any read of `closePrice`/`closeDate`/`contractDate` off anything that is not the
@@ -8414,11 +8473,26 @@ enforcing it would drop. Three parts, and only the third is unanswered.
    (property-wizard.tsx:53 sends Active or Closed); reachable from the endpoint. Asserted in
    `test_an_all_status_search_has_no_vendor_window_so_the_client_pass_is_the_only_one`.
 
-3. **The per-subject comp count cannot be measured from anything on disk** — see **D-150**. The
-   Downey capture bounds it from above only: **31 closings in 30 days, all carrying
-   `sales.closeDate`**, so roughly 186 city-wide inside six months against a floor of
-   `COMP_MIN_FOR_ANALYSIS = 3`. That is a ceiling, not the answer — one address's comps are what
-   survives radius, sqft band, beds and subtype.
+3. **The per-subject comp count cannot be measured from anything on disk** — this was true when
+   written, and D-150's `--raw-out` fixed it. **MEASURED 2026-10-01, on a raw capture of a real
+   market:**
+
+   | | |
+   |---|---|
+   | kept at the six-month window | **192 of 200** |
+   | dropped | **8 — 4%** |
+   | what was dropped | **2023 sales.** 9559 Firestone, 6521 Rivergrove among them |
+   | readmitted by L6's twelve-month window | **1, city-wide** |
+
+   **The window costs 4% and the 4% deserved to go.** A 2023 closing is not a comparable for a
+   2026 valuation by any standard, so this is the filter doing its job rather than buying
+   correctness with coverage. And L6 is now measured rather than theoretical: it fires, and it
+   recovers one sale — cheap insurance, correctly sized as a last resort rather than a rung.
+
+   **The ceiling caveat stands and is not resolvable from a capture.** 192 is *city-wide*; one
+   address's comps are what survives radius, sqft band, beds and subtype. A quiet market
+   narrowed four ways is where six months could still bite. That is what the log line below
+   answers, on real traffic.
 
 **PART 3 ANSWERS ITSELF FROM THIS DEPLOY, AND THAT IS THE BETTER MEASUREMENT.** property.py:743
 logs `"Comps %s: close-date window dropped %d of %d client-side (minclosedate was sent: %s)"`
@@ -8612,8 +8686,21 @@ cost is a credential trip each time, which is the scarcest thing in this remedia
   reimplemented — over a raw capture at both windows, and in snapshot mode says plainly which
   part of the question it cannot reach rather than estimating it.
 
-**One trip now serves all three.** Nothing here has been run against production; the tools are
-ready and the numbers are not in yet.
+**RUN AGAINST PRODUCTION, 2026-10-01 — one trip, all three questions.** The sweep came back
+24 reads / 0 unacknowledged misreads over 301 listings; `measure_window_cost.py --raw` returned
+192 of 200 kept at six months with L6 readmitting 1. Both are recorded on D-145. The tools were
+speculative when this entry was written and are not now.
+
+**AND THE DEFAULT WAS THE REST OF THE DEFECT.** The first fix put the raw dump behind
+`--raw-out`, which leaves the default output still discarding what most callers need — the
+remedy exists and the trap is unchanged for whoever does not know to reach for it. Both files
+are now written **every run**, with `--no-raw` to decline, and the module docstring opens with a
+table of which output answers which question. The person running this has already spent the
+credentials; the marginal cost of keeping the rows is a file write.
+
+`--no-raw` prints `"this capture cannot answer a field-path or filter question (D-150)"` rather
+than passing silently, because the whole of this entry is that a capture's inadequacy was
+discovered three separate times, each time by someone who had already spent a trip.
 
 ---
 
