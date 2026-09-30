@@ -47,14 +47,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 3.12, not 3.11, and this is not a preference. apps/api/src/api/main.py
-      # imports routes/auth.py, which imports services/email.py, which does not
-      # COMPILE on 3.11: it interpolates strings containing \u escapes inside
+      # 3.12, because that is what production runs. It used to be 3.12 for a
+      # second, sharper reason as well, and that reason is now gone:
+      # services/email.py interpolated strings containing \u escapes inside
       # f-string expression parts, which PEP 701 only permits from 3.12
       # ("SyntaxError: f-string expression part cannot include a backslash",
-      # services/email.py:729). The API service runs in production, so the
-      # deployed runtime is necessarily 3.12+. Pinning 3.11 here meant CI could
-      # not have collected the API suite even once the install step was fixed.
+      # services/email.py:729), so the API suite could not be COLLECTED on
+      # 3.11 at all. D-147 fixed the source rather than continuing to pin
+      # around it, and tests/../test_sources_parse.py compiles every file on
+      # whichever interpreter is running so it cannot come back unnoticed.
+      #
+      # The pin stays at 3.12 anyway: CI should run what the deployed runtime
+      # runs, not the oldest version the code happens to tolerate.
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

@@ -43,3 +43,9 @@ dump.rdb
 # (4bcb3d2), with no .gitmodules entry, so every CI checkout logged
 # `fatal: No url found for submodule path ... in .gitmodules` during cleanup.
 .claude/worktrees/
+
+# Raw credentialed captures from tools/dump_market_snapshot.py --raw-out.
+# Unlike tmp/market_snapshot_*.json (aggregates), these are whole feed rows:
+# agent names, office details, every field the MLS returned. The three
+# showing/remarks fields are stripped by the tool; nothing else is.
+tmp/*_raw.json

@@ -55,6 +55,26 @@ def load_payloads(capture: Path | None) -> dict:
         # A capture is a page of rows, or an object wrapping one. Take the
         # first row of whichever, because `index()` wants one listing's shape
         # and every row in a page shares it.
+        # A MARKET SNAPSHOT IS NOT A CAPTURE, and accepting one would be worse
+        # than refusing it. `tools/dump_market_snapshot.py`'s output carries
+        # `listings_sample`, which looks like rows and is not: five closed and
+        # five active, already NORMALISED (`close_price`, not
+        # `sales.closePrice`) and with every date field stripped. Reading it
+        # here would report the feed's own key names as absent from real data
+        # — the exact false negative that made the probe say 0/20 and got
+        # D-144 filed on a premise that was not true.
+        if isinstance(data, dict) and "listings_sample" in data and "metrics" in data:
+            sys.exit(
+                f"{capture} is a market SNAPSHOT, not a capture of raw rows.\n"
+                f"Its `listings_sample` is five closed and five active rows, "
+                f"already normalised and with the date fields removed, so "
+                f"every path below would read as absent and none of it would "
+                f"be true.\n"
+                f"Re-capture the rows themselves:\n"
+                f"    python3 tools/dump_market_snapshot.py --city {data.get('city', 'Downey')} "
+                f"--raw-out tmp/{str(data.get('city', 'downey')).lower()}_raw.json\n"
+                f"    python3 scripts/sweep_extract_field_paths.py --capture "
+                f"tmp/{str(data.get('city', 'downey')).lower()}_raw.json")
         rows = data if isinstance(data, list) else (
             data.get("listings") or data.get("rows") or data.get("data") or [])
         if not isinstance(rows, list) or not rows:
