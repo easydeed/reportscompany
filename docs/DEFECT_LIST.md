@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 55 | Real, unfixed |
-| `fixed` | 78 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 79 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **137** | D-001 … D-137, contiguous, no duplicates |
+| **Total** | **138** | D-001 … D-138, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 14 · ROUGH 21. (Sums to 55, the open total.)
 
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -7758,6 +7758,67 @@ plausible *fact*.
 row that either omits itself or says "not reported". Not done here: it is four fields across five
 themes and belongs with the wider "absent renders as measured" pass (D-125, D-120's `stories`,
 B12's bare hyphen), which should settle one convention rather than four.
+
+---
+
+### D-138 — the consumer lead page's search silently dropped the last-sale fields the day they were added
+
+**Severity:** WRONG · **Affects:** every consumer CMA — the path that reaches a stranger ·
+**Found during:** closing D-118's own stated flag
+**Status:** `fixed` — `fix/wizard-lookup-contract`
+
+D-118 added three fields to `PropertyData` and taught two wizards to read them. `tsc` passed. The
+agent wizard worked. **The consumer wizard did not**, and nothing said so.
+
+`/v1/cma/{agent_code}/search` does not return `PropertyData`. It returns `PropertySearchResult`,
+a **hand-copied projection** in `lead_pages.py` that lists fourteen fields by name — and had
+none of the three. So:
+
+```
+SiteX returns it  →  PropertyData carries it  →  PropertySearchResult drops it
+                  →  the wizard reads undefined  →  /request receives nothing
+                  →  the report's price row says N/A
+```
+
+No exception, no log line, no type error. The frontend declares the fields optional, which is
+correct — a property that has never transferred has no sale — so `undefined` is indistinguishable
+from *this house has never sold*.
+
+**It is the project's signature failure, on code written the same day the rule about it was
+written down.** D-113: a producer silently stopping short of a consumer. D-133: a read nobody
+writes. D-135: nineteen of them. This one is a producer that *was* wired, through a projection
+nobody thought of as a producer.
+
+**And it landed on the consumer path specifically** — the one that reaches someone who typed
+their address into a landing page and has no agent to notice the report is thinner than it should
+be. The agent path worked, which is exactly how it would have survived review.
+
+**Fixed:** `PropertySearchResult` gains the three fields and `lot_size`, which was missing for the
+same reason and which `ReportRequestPayload` had been accepting from nobody.
+
+**Gated, at the boundary that actually broke.**
+`apps/api/tests/test_property_lookup_contract.py` asserts, in both languages:
+
+| | |
+|---|---|
+| the fields survive `PropertySearchResponse` | the agent path |
+| `PropertySearchResult` carries them | the path that broke |
+| `ReportRequestPayload` accepts everything the search can return | the next hop, same failure one step later |
+| the `.tsx` spells them identically | **a rename typechecks and sends `undefined`** |
+| the consumer wizard *sends* them, not just reads them | reading is not forwarding |
+| the hand-copied projection carries no name | D-116, at the one place the shape is retyped |
+
+Five regressions applied and each seen to fail, including the original bug and a camelCase
+rename in the `.tsx`.
+
+**A second finding, filed here rather than separately: `last_sale_document` was parsed and
+displayed nowhere.** It was added on the reasoning that a recorder's document number is the only
+field letting a figure be checked against the county record. Nothing displayed it and nothing
+asked for it. **A parsed field with no consumer is D-135's mirror** — the same debt as a read with
+no producer, accruing the same way, by looking deliberate. Removed. The probe recorded the key
+name, `raw_response` still holds the value, and it is one line to add back on the day something
+wants it. `test_every_last_sale_field_on_the_model_reaches_a_consumer` now fails in **both**
+directions for this family.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 

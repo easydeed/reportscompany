@@ -116,7 +116,15 @@ class PropertyData(BaseModel):
     last_sale_price: Optional[int] = None
     last_sale_date: Optional[str] = None          # ISO `YYYY-MM-DD`
     last_sale_price_per_sqft: Optional[float] = None
-    last_sale_document: str = ""                  # recorder's document number
+    #
+    # `DocumentNumber` is in the same block and is NOT parsed. It was, for one
+    # commit, on the reasoning that it is the only field letting a figure be
+    # checked against the county record — but nothing displayed it and nothing
+    # asked for it. A parsed field with no consumer is D-135's mirror: the
+    # same debt as a read with no producer, and it accrues the same way, by
+    # looking deliberate. The probe recorded the key name, `raw_response`
+    # still carries the value, and adding it back is one line on the day
+    # something wants it. D-138.
 
     # Tax/Assessment
     assessed_value: Optional[int] = None
@@ -656,7 +664,6 @@ class SiteXClient:
                 self._safe_float(sale_info.get("PricePerSQFT"))
                 if self._safe_int(sale_info.get("SalesPrice")) else None
             ),
-            last_sale_document=str(sale_info.get("DocumentNumber") or ""),
 
             # Tax/Assessment
             assessed_value=self._safe_int(tax_info.get("AssessedValue")),

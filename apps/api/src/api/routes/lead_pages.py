@@ -69,6 +69,16 @@ class PropertySearchResult(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     property_type: Optional[str] = None
+    lot_size: Optional[int] = None
+    # D-118. This is a HAND-COPIED projection of PropertyData, so a field
+    # added there does not appear here — it is silently dropped, the consumer
+    # wizard reads `undefined`, and the report's price row falls back to N/A
+    # with no error anywhere. That is what happened to these three when they
+    # were added yesterday; `tsc` passed because the frontend declares them
+    # optional. A test now asserts the two models agree.
+    last_sale_price: Optional[int] = None
+    last_sale_date: Optional[str] = None
+    last_sale_price_per_sqft: Optional[float] = None
 
 
 class ReportRequestPayload(BaseModel):
@@ -243,6 +253,10 @@ async def search_property(
             latitude=property_data.latitude,
             longitude=property_data.longitude,
             property_type=property_data.property_type or None,
+            lot_size=property_data.lot_size,
+            last_sale_price=property_data.last_sale_price,
+            last_sale_date=property_data.last_sale_date,
+            last_sale_price_per_sqft=property_data.last_sale_price_per_sqft,
         )]
         
     except Exception as e:
