@@ -48,6 +48,7 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 """
 import html
 import os
+import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
@@ -1050,6 +1051,20 @@ def _build_closed_sales_body(
     return body
 
 
+def _label_share(pct_str):
+    """The percentage a band's label prints, as an int, or None. (D-115)
+
+    The bar's width comes from here so that it can only ever depict the
+    number the reader sees. `pct_str` is built as `f"{n:.0f}%"` one caller
+    away; parsed rather than recomputed, because recomputing reintroduces the
+    possibility of the two disagreeing.
+    """
+    m = re.match(r"\s*(\d+(?:\.\d+)?)\s*%", str(pct_str or ""))
+    if not m:
+        return None
+    return max(0, min(100, int(round(float(m.group(1))))))
+
+
 def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]:
     """
     One dict per price band, with the bar width and the percentage label
@@ -1061,20 +1076,33 @@ def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]
     100%. Splitting the two calculations across a builder and a template is how
     that happens again.
 
-    The 2% floor keeps a band with one listing visible as a sliver rather than
-    vanishing, which would read as "no listings in this band".
-    """
-    counts = []
-    for _, count_str, _, _ in trend_stats:
-        try:
-            counts.append(int(count_str))
-        except (ValueError, TypeError):
-            counts.append(0)
-    max_count = max(counts) or 1
+    FIXED 2026-10-01 (D-115): THE BAR IS THE NUMBER PRINTED BESIDE IT.
 
+    It used to be `count / max_count` — the band's share of the LARGEST band —
+    while the label was its share of the TOTAL. Both correct in isolation;
+    the pairing was the defect. A reader takes the bar as a picture of the
+    number next to it, and it was a picture of a different one.
+
+    The width is now parsed from `pct_str` itself rather than recomputed from
+    a total, so it depicts the PRINTED value including its rounding. Deriving
+    both from `count / total` would have left the bar and the label able to
+    differ by a rounding step, which is the same defect one order of
+    magnitude down.
+
+    THE 2% FLOOR IS GONE, AND THAT IS A JUDGEMENT WORTH SEEING. It existed so
+    a one-listing band would not vanish and read as "no listings in this
+    band". Kept, it would draw a 2% bar beside a label reading 0% or 1% —
+    this defect again, smaller. The count is printed on every row ("N
+    listings"), so a band with listings is never invisible; only its bar is,
+    and only when its share rounds to zero, which is what the label says too.
+    Restoring the floor means accepting a bar that contradicts its label.
+    """
     rows = []
-    for (label, count_str, pct_str, is_highlight), count_val in zip(trend_stats, counts):
-        bar_pct = max(int((count_val / max_count) * 100), 2)
+    for label, count_str, pct_str, is_highlight in trend_stats:
+        # None when the label is not a percentage we can read. A bar drawn
+        # from a guess would be the defect this fixes, so there is no bar.
+        share = _label_share(pct_str)
+        bar_pct = share if share is not None else 0
         rows.append({
             "label": label,
             "count": count_str,
@@ -2506,7 +2534,9 @@ def schedule_email_html(
         bands_data = _get_price_bands(metrics) if has_price_bands else None
         if bands_data:
             total_count = sum(b.get("count", 0) for b in bands_data) or 1
-            max_count = max((b.get("count", 0) for b in bands_data), default=1) or 1
+            # `max_count` was computed here and used by nothing once D-115
+            # stopped normalising the bars to the largest band. Removed rather
+            # than left: an unused normaliser is an invitation to normalise.
             most_active_name = max(bands_data, key=lambda b: b.get("count", 0)).get("name")
             for b in bands_data:
                 cnt = b.get("count", 0)

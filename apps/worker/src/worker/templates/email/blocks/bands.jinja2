@@ -11,6 +11,13 @@
   Move-Up read 43% beside a bar filled to 100%. `bar_pct` and the percentage
   label have to come from the same place or they drift again; they are computed
   together in `_band_rows()` and arrive here already reconciled.
+
+  FIXED 2026-10-01, D-115: `bar_pct` is now PARSED FROM THE LABEL, so the bar
+  cannot depict a different number from the one printed beside it — not even
+  by a rounding step. A band whose share rounds to zero draws no bar at all;
+  the filled cell is omitted rather than given `width="0%"`, which several
+  clients render as a hairline. Its listing count is still on the row, so the
+  band is not invisible — only its bar is, which is what a 0% label says.
 -#}
               <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
                 {% for b in bands %}
@@ -25,7 +32,9 @@
                               <td style="vertical-align: middle;">
                                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-radius: 4px; overflow: hidden;">
                                   <tr>
+                                    {%- if b.bar_pct %}
                                     <td width="{{ b.bar_pct }}%" style="height: 24px; background-color: {{ b.bar_bg }};"></td>
+                                    {%- endif %}
                                     <td width="{{ b.empty_pct }}%" style="height: 24px; background-color: #e5e7eb;"></td>
                                   </tr>
                                 </table>
