@@ -1,14 +1,18 @@
 """
-D-147 — `apps/api` did not import on the Python version the repo pins for its
-release check.
+D-147 — `apps/api` did not parse on Python 3.11.
 
 `services/email.py` had `\\u2019` inside the expression part of an f-string.
 That is a syntax error before 3.12 and legal from 3.12 on. `backend-tests.yml`
-runs on 3.12 and was green; `release-check.yml` pins 3.11 and would have died
-on `from api.main import app` before reaching a single assertion — but it is
-`workflow_dispatch` only, so nobody had run it. The whole API test suite was
-uncollectable on the interpreter the pre-release gate uses, and the gate that
-would have said so is the one that never runs.
+runs on 3.12 and was green — deliberately, with a comment naming this exact
+line. `release-check.yml` pinned 3.11 and would have died on
+`from api.main import app` before reaching a single assertion, but it was
+`workflow_dispatch` only and had run **zero times ever**. Sizing that gate is
+what deleted it (D-151): it would have failed first on a `requirements.txt`
+that has never existed in this repository, so the only thing it could ever
+have caught was itself.
+
+So the syntax error was known and routed around rather than fixed. This test
+is the part that is new.
 
 One compile pass over every source file costs milliseconds and does not care
 which of the two versions is right. It fails on whichever interpreter is
