@@ -173,8 +173,15 @@ Standalone Next.js preview apps for developing report layouts, schedule builders
 |----------|------|----------|
 | Backend tests | `backend-tests.yml` | PR + push |
 | Frontend tests | `frontend-tests.yml` | PR + push |
-| E2E tests | `e2e.yml` | PR + push |
-| Release check | `release-check.yml` | PR + push |
+| E2E tests | `e2e.yml` | **manual only** — disabled D-045 |
+
+> `release-check.yml` was here, listed as "PR + push". It was `workflow_dispatch` only, it
+> ran **zero times in the life of the repository**, and it could not have run: it installed
+> from a `requirements.txt` that has never existed here. Deleted 2026-09-30 (D-151). This
+> table said it fired on every PR, which is how a workflow that does nothing reads as
+> coverage.
+>
+> `e2e.yml`'s row was wrong in the same direction: it has been manual-only since D-045.
 
 ---
 
@@ -398,8 +405,9 @@ pytest tests/ -v
 # Runs automatically on PR + push via GitHub Actions
 .github/workflows/backend-tests.yml
 .github/workflows/frontend-tests.yml
-.github/workflows/e2e.yml
-.github/workflows/release-check.yml
+
+# Manual only (workflow_dispatch). Does NOT run on PR or push.
+.github/workflows/e2e.yml          # disabled D-045
 ```
 
 ### API Smoke Tests

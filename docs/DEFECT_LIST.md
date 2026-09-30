@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 56 | Real, unfixed |
-| `fixed` | 90 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 91 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **150** | D-001 … D-150, contiguous, no duplicates |
+| **Total** | **151** | D-001 … D-151, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 56, the open total.)
 
@@ -8420,10 +8420,19 @@ enforcing it would drop. Three parts, and only the third is unanswered.
    `COMP_MIN_FOR_ANALYSIS = 3`. That is a ceiling, not the answer — one address's comps are what
    survives radius, sqft band, beds and subtype.
 
-**Production already emits the measurement, and could not before.** property.py:743 logs
-`"Comps %s: close-date window dropped %d of %d client-side (minclosedate was sent: %s)"` when
-the count changes. That line has never fired, because the count never changed. From this deploy
-it is the real number, on real traffic, with no credential trip — grep it after the first day.
+**PART 3 ANSWERS ITSELF FROM THIS DEPLOY, AND THAT IS THE BETTER MEASUREMENT.** property.py:743
+logs `"Comps %s: close-date window dropped %d of %d client-side (minclosedate was sent: %s)"`
+whenever the count changes. **That line has never fired in the life of the repository**, because
+the count never changed — the filter dropped nothing, always. From this deploy it is the real
+number, per request, per ladder level, across every market and subject that actually gets a
+report.
+
+**So do not construct a thin market to test against.** A synthetic population answers the
+question I would have designed it to answer; real traffic answers the one that exists. **Check
+the log after a week**, and read it as: a near-zero drop on `status=Closed` confirms D-074's
+finding that the vendor filter is exact, and anything larger means it is not. A raw capture of
+a genuinely thin market (D-150's `--raw-out`) is still worth having, but as a second opinion
+rather than the primary source it would have been.
 
 **And D-132's seventh level had never run against a real window.** Every ladder test predating
 this was written while the filter was a no-op, so L6 was only ever exercised by the sqft, bed
@@ -8513,6 +8522,8 @@ opinion matters at that moment. Seen to fail against the reverted line.
 > alias for `backend-tests.yml` would be the alternative if a manual pre-release button is
 > wanted. Not done here — removing a workflow that says "Release Check" is a call to make
 > deliberately, not as a side effect of a comps fix.
+>
+> **Done, 2026-09-30: see D-151.**
 
 ---
 
@@ -8603,6 +8614,44 @@ cost is a credential trip each time, which is the scarcest thing in this remedia
 
 **One trip now serves all three.** Nothing here has been run against production; the tools are
 ready and the numbers are not in yet.
+
+---
+
+### D-151 — a workflow named "Release Check" that has never run and could not run
+
+**Severity:** FRAGILE · **Affects:** anyone reading the Actions tab, and `SOURCE_OF_TRUTH.md`,
+which listed it as firing on every PR · **Found during:** sizing D-147
+**Status:** `fixed` — `chore/delete-release-check`
+
+`.github/workflows/release-check.yml` is deleted. The sizing D-147 asked for — *what would this
+gate have caught?* — has one answer: **itself, and nothing else.**
+
+| | |
+|---|---|
+| runs, ever (GitHub Actions API) | **0** |
+| trigger | `workflow_dispatch` only, despite the docs |
+| first blocker | `pip install -r requirements.txt` — **that file has never existed here.** `apps/api` and `apps/worker` are Poetry projects |
+| second blocker | on 3.11, `from api.main import app` raised `SyntaxError` (D-147) |
+| third problem | its `e2e-tests` job duplicates `e2e.yml`, which **D-045 deliberately disabled** after 783 consecutive failures |
+
+Both of the first two are in the workflow's own configuration, not in the code it would test. It
+could not have reached an assertion on any commit in this repository's history. The third is
+worse than dead weight: running it by hand would have resurrected, through a side door, a job
+that was switched off on purpose.
+
+**Deleted rather than repaired.** Repairing it would produce a second copy of
+`backend-tests.yml` — which already installs via Poetry, pins the interpreter production runs,
+and runs the same suites. If a manual pre-release button is wanted later it should be written
+against what CI actually does, not recovered from this.
+
+**Checked before deleting:** `main` is not a protected branch, so no required status check can
+name it; nothing in the repository references it but the two docs corrected here.
+
+**`SOURCE_OF_TRUTH.md` said it ran on "PR + push".** It never did. The same table said `e2e.yml`
+runs on PR + push, and that has been manual-only since D-045 — both rows are corrected. **A
+docs table that grants a workflow triggers it does not have is how a gate that does nothing
+reads as coverage,** which is the whole of this entry: the cost was never the wasted minutes, it
+was the four-row table that made someone believe four things were being checked.
 
 ---
 
