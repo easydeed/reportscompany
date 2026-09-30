@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 56 | Real, unfixed |
-| `fixed` | 89 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 90 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **149** | D-001 … D-149, contiguous, no duplicates |
+| **Total** | **150** | D-001 … D-150, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 56, the open total.)
 
@@ -8354,10 +8354,31 @@ did not find, and the fixtures are checked against
 `tests/fixtures/listing_closed_minimal.json`, which is captured rather than written.
 
 This is §0.6's coincidence class in its purest form — **two wrong paths agreeing is not a
-test** — and it is the third instance of the shape after D-105 (`daysOnMarket`) and D-106
-(`bathrooms`). `compute/extract.py` has read `sales.closePrice` correctly since it was written,
-so the repo held both the right path and the wrong one, and the wrong one was in the four files
-that build what a reader sees.
+test**. `compute/extract.py` has read `sales.closePrice` correctly since it was written, so the
+repo held both the right path and the wrong one, and the wrong one was in the four files that
+build what a reader sees.
+
+> **THE NESTED-PATH FAMILY IS NOW AT FOUR, AND THE FOURTH WAS FOUND BY THE INSTRUMENT REPEATING
+> THE ERROR IT WAS WRITTEN TO DETECT.**
+>
+> | | field | read as | lives at |
+> |---|---|---|---|
+> | 1 | `closeDate` | top level | `sales.closeDate` |
+> | 2 | `daysOnMarket` (D-105) | top level | `mls.daysOnMarket` |
+> | 3 | `bathrooms` (D-106) | `property.bathrooms` | `bathsFull` / `bathsHalf` |
+> | 4 | `closePrice` (D-145) | top level | `sales.closePrice` |
+>
+> The probe exists to catch exactly this, and section 3b counted
+> `r["closePrice"]` — the same top-level guess the production code makes. So the probe's answer
+> **confirmed the code's mistake instead of catching it**, and "0 of 20" read as a fact about
+> the feed. An instrument that shares the assumption it is testing returns agreement, not
+> evidence. 3b now counts every location separately and prints where each field was found.
+>
+> `scripts/sweep_extract_field_paths.py` is the general answer to this family, and it is only as
+> good as the payloads it checks against — two bundled fixtures, where a key absent from both is
+> *unproven* rather than wrong. Its `--capture` argument is what turns that into a real sample,
+> and the reason it had never been used is **D-150**: the only capture on disk is a snapshot
+> with its rows stripped. Both halves are now ready and neither has met production.
 
 **The guard.** `apps/api/tests/test_close_price_field_path.py` walks the AST of all four files
 and fails on any read of `closePrice`/`closeDate`/`contractDate` off anything that is not the
@@ -8371,6 +8392,51 @@ date, and `""` is the honest answer. Same rule as D-137, one field over.
 **Noted, not filed.** `normalize_comparable` / `normalize_comparables` in
 `apps/api/schemas/property.py` are exported and have **no production caller** — D-135's family.
 Fixed here rather than deleted because deleting an exported helper is a separate decision.
+
+**WHAT THE NOW-REAL WINDOW COSTS — measured 2026-09-30, `feat/measure-the-window-cost`.**
+
+The open question on merge was that the filter had never actually filtered, so nobody knew what
+enforcing it would drop. Three parts, and only the third is unanswered.
+
+1. **On `status=Closed` — the only closed path the wizard reaches — the window was never off.**
+   `minclosedate` is sent on every closed ladder level, and D-074 confirmed in production that
+   it filters correctly: **60,874 closings in 90 days against 962,517 unfiltered.** The vendor
+   was enforcing the window server-side the whole time. What was void was the **backstop**, not
+   the window. The expected client-side drop on this path is near zero, and a large one would
+   mean the vendor filter is not what D-074 measured.
+
+2. **On `status=All`, the fix is not a backstop — it is the whole mechanism.** `minclosedate`
+   is sent only when the resolved status is `Closed` (property.py:642), correctly, since the
+   vendor applies it to the whole response and would drop the active half. But
+   `_closed_within_window` runs on **every** level regardless of status (property.py:742). So
+   an `All` search has no vendor window at all, and until this week it had no client one either.
+   That path now drops out-of-window sales for the first time. Not reachable from the wizard
+   (property-wizard.tsx:53 sends Active or Closed); reachable from the endpoint. Asserted in
+   `test_an_all_status_search_has_no_vendor_window_so_the_client_pass_is_the_only_one`.
+
+3. **The per-subject comp count cannot be measured from anything on disk** — see **D-150**. The
+   Downey capture bounds it from above only: **31 closings in 30 days, all carrying
+   `sales.closeDate`**, so roughly 186 city-wide inside six months against a floor of
+   `COMP_MIN_FOR_ANALYSIS = 3`. That is a ceiling, not the answer — one address's comps are what
+   survives radius, sqft band, beds and subtype.
+
+**Production already emits the measurement, and could not before.** property.py:743 logs
+`"Comps %s: close-date window dropped %d of %d client-side (minclosedate was sent: %s)"` when
+the count changes. That line has never fired, because the count never changed. From this deploy
+it is the real number, on real traffic, with no credential trip — grep it after the first day.
+
+**And D-132's seventh level had never run against a real window.** Every ladder test predating
+this was written while the filter was a no-op, so L6 was only ever exercised by the sqft, bed
+and subtype filters — not by time, which is the only reason L6 exists. Four tests now cover it,
+three of which fail against the pre-fix read: a vendor that honours `minclosedate` and returns
+more at twelve months than at six; a vendor that **ignores** it, where the client pass is what
+escalates the ladder and L6's wider window is what legitimately readmits the sales; the
+converse, that nothing older leaks when six months suffices; and the `All` path above.
+
+One of those four was written wrong first and the failure was worth more than the test: three
+in-window comps clears `COMP_MIN_FOR_ANALYSIS` (3) but not `FALLBACK_MIN` (5), so the ladder
+runs all six space-widening levels and skips only the time-widening one. Two thresholds, easy to
+misremember as one.
 
 ---
 
@@ -8422,9 +8488,31 @@ one that never runs, and the gate that runs cannot see it.
 milliseconds, holds no opinion about which Python version is right, and fails on the one whose
 opinion matters at that moment. Seen to fail against the reverted line.
 
-**Still open, deliberately not fixed here:** `release-check.yml` pins 3.11 while
-`backend-tests.yml` pins 3.12. One of those is wrong about what production runs, and picking
-which is not an engineering-only call.
+> **CORRECTION, 2026-09-30 — this was already known, and the entry above overstated the
+> discovery.** `backend-tests.yml` carries a comment naming `services/email.py:729` and the
+> exact PEP 701 rule, and pins 3.12 *because of it*. It also records that there is no
+> `requirements.txt` and that the old install step failed before running a test. So the syntax
+> error was documented and worked around; what nobody had done was fix the source. The fix
+> stands and the compile guard is new, but "found by trying to run the comps tests" describes
+> how **I** met it, not when the project did. `backend-tests.yml`'s comment has been updated,
+> since its stated reason for the 3.12 pin no longer holds — the pin stays, because CI should
+> run what production runs.
+>
+> **Sizing, as asked: what would `release-check.yml` have caught? Nothing. It would have caught
+> itself.** The GitHub Actions API reports **0 runs, ever**. Both of its blockers are in its own
+> configuration, not in the code it would test:
+>
+> 1. `pip install -r requirements.txt` — **that file has never existed in this repository.**
+>    `apps/api` and `apps/worker` are Poetry projects. It dies at the install step.
+> 2. Had that been fixed, on 3.11 it would have died at `from api.main import app` — on the
+>    error above, which `backend-tests.yml` had already routed around.
+>
+> Its value to date is zero and its cost is not: it duplicates `backend-tests.yml`'s job with a
+> manifest that does not exist and an interpreter production does not use, while appearing in
+> the workflow list as a release gate. **Recommendation: delete it.** A `workflow_dispatch`
+> alias for `backend-tests.yml` would be the alternative if a manual pre-release button is
+> wanted. Not done here — removing a workflow that says "Release Check" is a call to make
+> deliberately, not as a side effect of a comps fix.
 
 ---
 
@@ -8475,6 +8563,46 @@ is a **rent**, counted as a closed sale. That would also be polluting `median_cl
 can be named; (2) a decision on whether a mean or a median is the right statistic here; (3)
 whether lease listings belong in a sale-price aggregate at all. Not fixed, because (1) has to
 come before anyone chooses between (2) and (3) — the same discipline that turned D-144 around.
+
+---
+
+### D-150 — the capture tool cannot answer the questions captures are taken for
+
+**Severity:** FRAGILE · **Affects:** every investigation that needs real feed rows, and
+therefore every credential trip · **Found during:** trying to measure D-145's window cost
+**Status:** `fixed` — `feat/measure-the-window-cost`
+
+`tools/dump_market_snapshot.py` writes aggregates plus `listings_sample`: **five closed rows and
+five active ones**, already normalised to our own key names, with `list_date`, `close_date`,
+`contract_date` and `modified` **stripped from each**. That is the right shape for reading a
+market at a glance and the wrong shape for every question a capture has actually been taken for
+since:
+
+| question | why the capture could not answer it |
+|---|---|
+| Does a closed listing carry a sale price, and where? (D-144/D-145) | the rows carrying `sales.closePrice` are not in the file — it had to be inferred from `median_close_price` |
+| What does the six-month comp window cost? (D-132) | needs close dates on every closed row; the sampler removes exactly those |
+| `sweep_extract_field_paths.py --capture` | wants the feed's own key names; `listings_sample` has been normalised |
+
+**Every one of those was asked of the Downey capture and none could be answered from it.** The
+cost is a credential trip each time, which is the scarcest thing in this remediation.
+
+**Three changes, all to instruments, none to product code:**
+
+* `--raw-out` writes every row exactly as the feed sent it, minus `privateRemarks`,
+  `showingContactName` and `showingInstructions` — the same three
+  `tmp/samples/*.sanitized.json` redact. Nothing else is reshaped, because a dump that quietly
+  normalises is how a capture ends up unable to answer its own question. `.gitignore` takes
+  `tmp/*_raw.json`: these are whole credentialed rows, unlike the aggregates already tracked.
+* `sweep_extract_field_paths.py` now **refuses** a market snapshot and prints the two commands
+  that fix it. Accepting one would have been worse than refusing: every path would have read as
+  absent and none of it true — the same false negative that made the probe report 0/20.
+* `scripts/measure_window_cost.py` runs the real `_closed_within_window` — imported, not
+  reimplemented — over a raw capture at both windows, and in snapshot mode says plainly which
+  part of the question it cannot reach rather than estimating it.
+
+**One trip now serves all three.** Nothing here has been run against production; the tools are
+ready and the numbers are not in yet.
 
 ---
 

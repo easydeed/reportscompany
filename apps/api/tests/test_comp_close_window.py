@@ -422,3 +422,147 @@ def test_an_active_comp_still_reports_its_asking_price(mock_auth):
     comp = next(c for c in body["comparables"] if c["address"] == "4 Active Ave")
     assert comp["price"] == 869900
     assert comp["close_price"] is None
+
+
+# ── D-132 · the seventh level, against a window that is actually real ──────
+#
+# Every test above this point was written while `_closed_within_window` was a
+# no-op (D-145): it read `mls.closeDate`, the feed writes `sales.closeDate`,
+# so nothing was ever dropped. The ladder's escalation was therefore only ever
+# exercised by the sqft/bed/subtype filters — L6 had never run against a
+# market where the WINDOW was what thinned the result, which is the only
+# reason L6 exists.
+#
+# The vendor here is a callable, so it can answer differently at 180 days than
+# at 365. A fixed list makes every level identical and the ladder can never be
+# seen to gain anything.
+
+
+def _sold(mls_id, days_ago, price=800000):
+    return {
+        "mlsId": mls_id,
+        "listPrice": price,
+        "sales": {"closeDate": _closed_since(days_ago), "closePrice": price},
+        "property": {"type": "RES"},
+        "address": {"full": f"{mls_id} Sold St"},
+        "geo": {"lat": 34.1008, "lng": -117.7678},
+    }
+
+
+def test_the_twelve_month_level_surfaces_sales_the_six_month_window_hid(mock_auth):
+    """A vendor that honours `minclosedate`, which D-074 confirmed it does.
+
+    Six months returns two comps — below `COMP_MIN_FOR_ANALYSIS`, so the
+    analysis table would be degenerate (D-119). Twelve months returns six.
+    L6 has to fire, and the extra four have to reach the response.
+    """
+    recent = [_sold("R1", 30), _sold("R2", 60)]
+    older = [_sold(f"O{i}", 200 + i * 20) for i in range(4)]
+
+    def vendor(params):
+        if params.get("minclosedate") == _closed_since(COMP_FALLBACK_WINDOW_DAYS):
+            return recent + older
+        return recent
+
+    sent, body = _call("Closed", vendor)
+    assert len(sent) == 7, f"expected all seven levels, {len(sent)} ran"
+    got = {c["address"] for c in body["comparables"]}
+    assert len(got) == 6, f"L6 ran but its extra sales did not survive: {sorted(got)}"
+    assert "O0 Sold St" in got, "a sale between 6 and 12 months old never arrived"
+
+
+def test_the_client_side_pass_escalates_the_ladder_when_the_vendor_over_returns(mock_auth):
+    """The case the client-side pass exists for, and could not reach until now.
+
+    This vendor ignores `minclosedate` — the exact failure D-074/D-075
+    measured for `mindate` — and returns four sales older than six months on
+    every level. Before D-145 they were kept, so L0 returned six comps and the
+    report printed year-old sales under copy promising six months. Now they
+    are dropped, the ladder escalates because of it, and L6's wider window is
+    what legitimately readmits them.
+
+    So the fix does not lose the comps; it makes the report honest about which
+    window they came from, which is the whole of D-117.
+    """
+    everything = [_sold("R1", 30), _sold("R2", 60)] + [
+        _sold(f"O{i}", 200 + i * 20) for i in range(4)
+    ]
+    sent, body = _call("Closed", lambda params: list(everything))
+
+    assert len(sent) == 7, (
+        f"the window dropped four of six comps and the ladder did not escalate; "
+        f"{len(sent)} levels ran"
+    )
+    assert sent[-1]["minclosedate"] == _closed_since(COMP_FALLBACK_WINDOW_DAYS)
+    assert len(body["comparables"]) == 6
+
+
+def test_the_six_month_levels_return_only_six_month_sales(mock_auth):
+    """The other direction: when six months IS enough, nothing older leaks.
+
+    Two thresholds, and they are not the same number. `FALLBACK_MIN` is 5 —
+    the ladder keeps widening sqft, beds, subtype and radius until it has
+    that many, so three in-window comps still runs L0 through L5.
+    `COMP_MIN_FOR_ANALYSIS` is 3 — the bar for widening TIME, and three
+    clears it, so L6 is skipped. Six levels, not one.
+
+    Written as "one level" first, which was wrong, and the failure is the
+    useful part: the ladder chases five comps by widening space and settles
+    for three rather than widen time. That is D-132's deliberate asymmetry
+    and it is easy to misremember as a single threshold.
+    """
+    everything = [_sold(f"R{i}", 30 + i * 20) for i in range(3)] + [
+        _sold(f"O{i}", 200 + i * 20) for i in range(4)
+    ]
+    sent, body = _call("Closed", lambda params: list(everything))
+
+    assert len(sent) == 6, (
+        f"three in-window comps clears COMP_MIN_FOR_ANALYSIS but not "
+        f"FALLBACK_MIN: the six space-widening levels should run and the "
+        f"time-widening one should not. {len(sent)} ran"
+    )
+    assert _closed_since(COMP_FALLBACK_WINDOW_DAYS) not in {
+        p.get("minclosedate") for p in sent
+    }, "L6 widened the window although six months gave enough to analyse"
+    got = {c["address"] for c in body["comparables"]}
+    assert got == {"R0 Sold St", "R1 Sold St", "R2 Sold St"}, (
+        f"a sale older than the window reached the report: {sorted(got)}"
+    )
+
+
+def test_an_all_status_search_has_no_vendor_window_so_the_client_pass_is_the_only_one(mock_auth):
+    """The one path where the fix is not a backstop but the whole mechanism.
+
+    `minclosedate` is sent only when the resolved status is `Closed`
+    (property.py:642) — correctly, since the vendor applies it to the whole
+    response and would drop the active half of a mixed search. But
+    `_closed_within_window` runs on every level regardless of status
+    (property.py:742). So for `status=All` the client-side pass is the ONLY
+    close-date filter there is, and until D-145 it did nothing at all.
+
+    Asserted rather than left implicit because it is the one case where this
+    week's fix changes what a caller gets rather than merely making a
+    guarantee true. The wizard sends Active or Closed
+    (property-wizard.tsx:53); the endpoint accepts All.
+    """
+    mixed = [
+        {"mlsId": "A1", "listPrice": 500000, "property": {"type": "RES"},
+         "address": {"full": "1 Active Ave"},
+         "geo": {"lat": 34.1008, "lng": -117.7678}},
+        _sold("R1", 30),
+        _sold("O1", 400),
+    ]
+    sent, body = _call("All", lambda params: list(mixed))
+
+    for params in sent:
+        assert "minclosedate" not in params, (
+            "an All search must not send the vendor window — it would drop the "
+            "active half"
+        )
+    got = {c["address"] for c in body["comparables"]}
+    assert "1 Active Ave" in got, "the active listing was dropped by a close-date filter"
+    assert "R1 Sold St" in got
+    assert "O1 Sold St" not in got, (
+        "a sale from over a year ago survived an All search — the client-side "
+        "pass is the only window on this path"
+    )

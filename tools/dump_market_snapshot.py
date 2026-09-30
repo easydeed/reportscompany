@@ -1,9 +1,38 @@
 """
 Prompt 3A — Dump market snapshot builder output for Downey.
+
 Usage:
     python tools/dump_market_snapshot.py [--city Downey] [--days 30]
+    python tools/dump_market_snapshot.py --raw-out tmp/downey_raw.json
+
 Writes:
-    tmp/market_snapshot_downey.json
+    tmp/market_snapshot_<city>.json   the computed snapshot (always)
+    <--raw-out>                       every raw row exactly as the feed sent it
+
+WHY `--raw-out` EXISTS. The snapshot is aggregates plus `listings_sample`,
+which keeps **five closed rows and five active ones** and strips
+`list_date`, `close_date`, `contract_date` and `modified` from each. That is
+the right shape for eyeballing a market and the wrong shape for every
+question anyone has actually asked of a capture since:
+
+  * "Does a closed listing carry a sale price, and where?" (D-144/D-145) —
+    answerable only from the aggregates, by inference, because the rows that
+    carry `sales.closePrice` are not in the file.
+  * "What does the six-month comp window cost?" (D-132) — needs close dates
+    on every closed row. The sampler removes exactly those.
+  * `scripts/sweep_extract_field_paths.py --capture` — wants raw rows with
+    the feed's own key names. `listings_sample` has been normalised, so the
+    sweep cannot check a single path against it.
+
+A capture that cannot answer the questions a capture is taken for costs a
+credential trip each time. `--raw-out` writes the untouched list, so one trip
+serves the snapshot, the sweep and any filter measurement.
+
+IT IS RAW, AND RAW MEANS UNREDACTED. `tmp/samples/*.sanitized.json` exist
+because a listing carries `privateRemarks`, `showingContactName` and
+`showingInstructions`. Those fields are dropped here — nothing else is — and
+the file still holds agent names and office details, so treat it as a
+credentialed artifact and keep it out of git.
 """
 import json
 import os
@@ -242,6 +271,12 @@ def main():
     ap.add_argument("--city",   default="Downey")
     ap.add_argument("--days",   type=int, default=30)
     ap.add_argument("--limit",  type=int, default=200)
+    ap.add_argument(
+        "--raw-out", type=pathlib.Path, default=None,
+        help="also write every raw row, as the feed returned it, to this path "
+             "(minus the three showing/remarks fields). This is what the "
+             "field-path sweep and any window measurement need; the snapshot's "
+             "`listings_sample` is five rows with the dates removed.")
     args = ap.parse_args()
 
     out_dir = pathlib.Path("tmp")
@@ -250,6 +285,19 @@ def main():
     print(f"Fetching listings for {args.city}…")
     raw = fetch_listings(args.city, limit=args.limit)
     print(f"  Total raw listings: {len(raw)}")
+
+    if args.raw_out:
+        #: Dropped from the raw dump. `tmp/samples/*.sanitized.json` redact the
+        #: same three. Everything else is left exactly as the feed sent it,
+        #: because a dump that quietly reshapes rows is how a capture ends up
+        #: unable to answer the question it was taken for.
+        REDACT = ("privateRemarks", "showingContactName", "showingInstructions")
+        scrubbed = [{k: v for k, v in row.items() if k not in REDACT} for row in raw]
+        args.raw_out.parent.mkdir(parents=True, exist_ok=True)
+        args.raw_out.write_text(json.dumps(scrubbed, indent=2, default=str),
+                                encoding="utf-8")
+        print(f"  Raw rows written to {args.raw_out} ({len(scrubbed)} listings, "
+              f"{', '.join(REDACT)} removed)")
 
     print(f"\nComputing snapshot (lookback={args.days} days)…")
     result = compute_snapshot(raw, args.city, args.days)
