@@ -71,6 +71,17 @@ const COLLECT = () => {
     if (!el) continue;
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || parseFloat(cs.opacity) === 0) continue;
+    // D-154: glyphs painted by a gradient clipped to the text, rather than by
+    // `color`. This method blanks text with `-webkit-text-fill-color:
+    // transparent` — the very property such an element already sets — so
+    // blanking changes nothing, the "backdrop" sample returns the element's
+    // own paint, and `color` is not what the reader sees either. Both halves
+    // are wrong. Flagged here and DECLINED downstream rather than scored,
+    // because a number that means nothing is worse than an absence.
+    const _fill = cs.webkitTextFillColor || '';
+    const _clip = (cs.backgroundClip || '') + ' ' + (cs.webkitBackgroundClip || '');
+    const unmeasurable =
+      /transparent|rgba\(0,\s*0,\s*0,\s*0\)/.test(_fill) || /text/.test(_clip);
     const range = document.createRange();
     range.selectNodeContents(n);
     const r = range.getBoundingClientRect();
@@ -83,6 +94,7 @@ const COLLECT = () => {
       fg: (cs.webkitTextFillColor && cs.webkitTextFillColor !== 'rgba(0, 0, 0, 0)')
           ? cs.webkitTextFillColor : cs.color,
       size: parseFloat(cs.fontSize), weight: parseInt(cs.fontWeight, 10) || 400,
+      unmeasurable: unmeasurable,
       x: r.left + window.scrollX, y: r.top + window.scrollY, w: r.width, h: r.height,
     });
   }
@@ -201,17 +213,31 @@ def score(rows):
         bg = _hex(bg_rgb)
         out.append({**r, "fg_hex": fg, "bg_hex": bg,
                     "ratio": contrast(fg, bg),
-                    "needs": required(r["size"], r["weight"])})
+                    "needs": required(r["size"], r["weight"]),
+                    # D-154. Carried through rather than dropped, so a caller
+                    # can count what was declined — a blind spot nobody can
+                    # see the size of is the thing this repo keeps filing.
+                    "unmeasurable": bool(r.get("unmeasurable"))})
     return out
 
 
 def main():
     html_dir = Path(sys.argv[1])
     rows = score(measure(html_dir))
-    fails = sorted([r for r in rows if r["ratio"] < r["needs"]], key=lambda r: r["ratio"])
+    declined = [r for r in rows if r["unmeasurable"]]
+    fails = sorted([r for r in rows
+                    if r["ratio"] < r["needs"] and not r["unmeasurable"]],
+                   key=lambda r: r["ratio"])
     straddle = sum(1 for r in rows if r["agree"] < r["samples"])
 
     print(f"{len(rows)} text runs in {len({r['doc'] for r in rows})} documents")
+    if declined:
+        print(f"{len(declined)} DECLINED — glyphs painted by a gradient clipped to "
+              f"the text, not by `color` (D-154). Neither this method nor the DOM "
+              f"walker can read them; a number would be fiction.")
+        for r in sorted({(r["doc"].rsplit("__", 1)[0], r["selector"], r["text"][:30])
+                         for r in declined}):
+            print(f"    {r[0]:20s} {r[1][:24]:24s} {r[2]!r}")
     print(f"{sum(1 for r in rows if r['ratio'] < 4.5)} below 4.5:1 · "
           f"{len(fails)} below their WCAG threshold · "
           f"worst {min((r['ratio'] for r in rows), default=0):.2f}:1")

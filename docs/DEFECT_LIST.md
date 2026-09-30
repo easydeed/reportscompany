@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 53 | Real, unfixed |
-| `fixed` | 96 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 97 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **153** | D-001 … D-153, contiguous, no duplicates |
+| **Total** | **154** | D-001 … D-154, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 14 · ROUGH 22. (Sums to 53, the open total.)
 
@@ -7596,9 +7596,14 @@ market surface's D-112 shape again: a small number of role definitions, not a lo
 > colours landing just under 4.5 on the aerial page's slightly-grey background. Fixing those
 > means darkening a brand role, which is this entry's remaining 223 and not E15's.
 >
-> **RE-MEASURED THROUGH THE CORRECTED INSTRUMENT — 2026-10-01, after D-130.** The ten
-> production renders, pixel-sampled: **215 failing runs in 52 combinations, of 2,291 measured.
-> Worst 1.90:1**, so nothing on the surface is invisible any more.
+> **RE-MEASURED THROUGH THE CORRECTED INSTRUMENT — 2026-10-01, after D-130 and D-154.** The
+> ten production renders, pixel-sampled: **213 failing runs in 51 combinations, of 2,291
+> measured, with 2 declined. Worst 1.90:1**, so nothing on the surface is invisible any more.
+>
+> **213 rather than 215 because two of them were fiction.** Modern's cover title is painted by
+> a gradient clipped to the glyphs, which neither measurer can read (D-154) — it was reported
+> at 2.58:1 and is really 4.47:1 at its worst pair of stops, against a 3.0 threshold. The
+> declined runs are counted and named rather than dropped.
 >
 > | theme | failing |
 > |---|---|
@@ -9147,6 +9152,66 @@ tolerance has no boundaries.
 ceiling), naming the nearest pair left distinct and telling the reader to check that every
 merged pair really is one finding twice. `--spreads` is kept for the single-brand picture and
 is explicitly **not** the bound — which is the whole of what went wrong the first time.
+
+---
+
+### D-154 — the contrast measurer blanks glyphs with the same property a template uses to paint them
+
+**Severity:** FRAGILE · **Affects:** every contrast number on the property surface, and the
+ratchet · **Found during:** reading modern's cover CSS while nudging it for D-153
+**Status:** `fixed` — `fix/d154-unmeasurable-text`
+
+`measure_contrast_by_pixel.py` reads the backdrop by rendering the page a second time with
+
+```css
+* { color: transparent; -webkit-text-fill-color: transparent }
+```
+
+and sampling the pixel under each text run. Sound for text painted by `color`. **Not sound for
+text painted by a gradient clipped to the glyphs** — `background-clip: text` with
+`-webkit-text-fill-color: transparent` — because such an element:
+
+* has no meaningful `color`, so the measured **foreground** is whatever `color` happens to be
+  and is not what the reader sees; and
+* is **already** transparent-filled, so blanking changes nothing and the **backdrop** sample
+  returns the element's own gradient rather than what sits behind it.
+
+**Both halves are wrong, and neither is wrong loudly.** The script's header names the
+`currentColor` case as its caveat. This is its sibling and was not named.
+
+**THE INSTRUMENT'S TECHNIQUE COLLIDING WITH A TEMPLATE'S TECHNIQUE** is a shape nothing else on
+this board covers. It is also not fixed by D-130: the DOM walker resolved a declared `color`
+too, so it had the same blind spot for a different reason and switching instruments could not
+have helped.
+
+**ENUMERATED, NOT GUESSED — AND IT IS ONE ELEMENT.**
+`scripts/find_unmeasurable_text.py` asks every element in all **90** corpus documents whether
+its glyphs are painted by `color`. The answer: **`modern`'s `.cover-title span` — "Report" —
+and nothing else**, six documents, one per brand. So this is **one known blind spot, not an
+asterisk on the 215**, which is the difference the enumeration was for.
+
+**And that one element was a FALSE FAILURE the ratchet could never clear.** Reported as
+`#ffffff on #ff786a`, **2.58:1** against a 3.0 threshold. The real thing is the coral gradient
+on the dark navy cover:
+
+| | on `#1A1F36` | on `#2D3348` |
+|---|---|---|
+| `#FF6B5B` | 5.80:1 | **4.47:1** |
+| `#FFB199` | 9.28:1 | 7.15:1 |
+
+Comfortably over 3.0 everywhere. Two baseline lines — `property__modern span #ffffff/#8fd02b`
+and `#ffffff/#f6a722` — recorded a defect that does not exist, on a file whose rule is that it
+may only shrink.
+
+**FIXED BY DECLINING, NOT BY GUESSING.** The measurer flags such runs and reports them
+separately; the gate and E15's floor both exclude them. **A number that means nothing is worse
+than an absence** — and worse still on a ratchet, as a line nobody can ever clear. Regenerating
+dropped exactly those two: 615 → 613 failing runs, 178 → 176 combinations.
+
+**The count is asserted.** `EXPECTED_DECLINED = 1`, with the failure message telling the next
+person to work out the real contrast by hand and update it. A blind spot nobody can see the
+size of is the thing this board keeps filing; one that grows silently would be the same defect
+again.
 
 ---
 

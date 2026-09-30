@@ -1018,6 +1018,27 @@ it.**
   a given input, ask what else reads that builder for its own purposes — the consumer will not
   tell you, because it will keep passing.
 
+  **SECOND INSTANCE, THREE DAYS LATER, BY THE PERSON WHO WROTE THIS DOWN.** D-153 needed a
+  colour tolerance for the contrast baseline. The gap between "same backdrop sampled twice"
+  and "genuinely different backdrop" was derived from the **ten single-brand property
+  renders** — 21 groups spread 1–37, 7 spread 131–614, nothing between — and **48** was
+  recommended from that gap. The gate's corpus is **ninety documents across six brand
+  colours**, and two of those brands are 41 apart. At 48, fourteen of 178 baseline entries
+  collapse, *including every two-brand pair* — the gate losing precisely the distinction six
+  brands are rendered to make. The right number, derived from the corpus the constant is
+  applied to, is 12.
+
+  Both instances are the same sentence with a different noun: a set derived from ten documents
+  and used on ninety; a set derived from an empty context and used on a populated one. **The
+  tell was available both times and both times I did not look for it** — the question "what is
+  in the input this will be used against that is not in the input I derived from" is one
+  sentence and answers it.
+
+  Two instances in three days is the argument for the rule being mechanical rather than
+  remembered: **write down what the derivation input contains and what the application input
+  contains, side by side, before trusting the number.** Where they differ, the number is
+  unproven.
+
 ---
 
 ## Phase 0 — Security & Tooling
