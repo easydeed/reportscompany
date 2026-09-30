@@ -11,7 +11,7 @@
 # Regenerate after FIXING something (never to clear a new failure):
 #     python3 -m pytest apps/worker/tests/test_pdf_contrast.py --regen-contrast-baseline
 #
-# 719 failing runs, 220 combinations, worst 1.00:1, of 10746 runs measured.
+# 660 failing runs, 203 combinations, worst 1.00:1, of 10512 runs measured.
 # Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.
 
 market__new_listings	span.listing-tier-badge.tier-high	#d97706	#fef0da
@@ -41,7 +41,6 @@ property__bold	div.cover-label	#d69649	#dc2626
 property__bold	div.cover-label	#d69649	#f59e0b
 property__bold	div.cover-street	#ffffff	#84cc16
 property__bold	div.cover-street	#ffffff	#f59e0b
-property__bold	div.num	#ffffff	#ffffff
 property__bold	div.page-header-label	#d69649	#0d9488
 property__bold	div.page-header-label	#d69649	#0e7490
 property__bold	div.page-header-label	#d69649	#7c3aed
@@ -58,12 +57,10 @@ property__bold	span	#d69649	#7c3aed
 property__bold	span	#d69649	#84cc16
 property__bold	span	#d69649	#dc2626
 property__bold	span	#d69649	#f59e0b
-property__classic	div.brand	#ffffff	#ffffff
 property__classic	div.cover-brand-text	#ffffff	#84cc16
 property__classic	div.cover-brand-text	#ffffff	#f59e0b
 property__classic	div.cover-label	#4a90a4	#fdfbf7
 property__classic	div.cover-label	#4a90a4	#ffffff
-property__classic	div.num	#ffffff	#ffffff
 property__classic	div.page-header-label	#4a90a4	#ffffff
 property__classic	div.page-header-label	#c4b7a6	#0d9488
 property__classic	div.page-header-label	#c4b7a6	#0e7490
@@ -90,12 +87,6 @@ property__classic	td	#ffffff	#4a90a4
 property__classic	th	#ffffff	#0d9488
 property__classic	th	#ffffff	#84cc16
 property__classic	th	#ffffff	#f59e0b
-property__elegant	div.brand	#e8d5a3	#f3f8f9
-property__elegant	div.brand	#e8d5a3	#f3faf9
-property__elegant	div.brand	#e8d5a3	#f8f5fe
-property__elegant	div.brand	#e8d5a3	#f9fcf3
-property__elegant	div.brand	#e8d5a3	#fdf4f4
-property__elegant	div.brand	#e8d5a3	#fffaf3
 property__elegant	div.contents-label	#0b8277	#faf7f2
 property__elegant	div.contents-label	#53810c	#faf7f2
 property__elegant	div.cover-agent-name	#ffffff	#6aa312
@@ -138,14 +129,11 @@ property__elegant	div.cover-logo	#c9a962	#925e06
 property__elegant	div.cover-logo	#c9a962	#c47e09
 property__elegant	div.cover-street	#ffffff	#84cc16
 property__elegant	div.cover-street	#ffffff	#f59e0b
+property__elegant	div.num	#0b8277	#f3faf9
 property__elegant	div.num	#0b8277	#faf7f2
+property__elegant	div.num	#53810c	#f9fcf3
 property__elegant	div.num	#53810c	#faf7f2
-property__elegant	div.num	#ffffff	#f3f8f9
-property__elegant	div.num	#ffffff	#f3faf9
-property__elegant	div.num	#ffffff	#f8f5fe
-property__elegant	div.num	#ffffff	#f9fcf3
-property__elegant	div.num	#ffffff	#fdf4f4
-property__elegant	div.num	#ffffff	#fffaf3
+property__elegant	div.num	#dc2626	#fdf4f4
 property__elegant	div.property-label	#0b8277	#faf7f2
 property__elegant	div.property-label	#53810c	#faf7f2
 property__elegant	div.property-section-title	#0b8277	#faf7f2
@@ -208,12 +196,8 @@ property__modern	td	#ffffff	#84cc16
 property__modern	td	#ffffff	#f59e0b
 property__teal	div.agent-role	#639910	#ffffff
 property__teal	div.agent-role	#b77608	#ffffff
-property__teal	div.brand	#0da89a	#f8f8f9
-property__teal	div.brand	#0e9cc2	#f8f8f9
-property__teal	div.brand	#84cc16	#f8f8f9
-property__teal	div.brand	#a979ff	#f8f8f9
-property__teal	div.brand	#f59e0b	#f8f8f9
-property__teal	div.brand	#ff5151	#f8f8f9
+property__teal	div.brand	#0b8277	#f8f8f9
+property__teal	div.brand	#53810c	#f8f8f9
 property__teal	div.cover-label	#0da89a	#34d1c3
 property__teal	div.cover-label	#0e9cc2	#34d1c3
 property__teal	div.cover-label	#84cc16	#34d1c3
@@ -223,7 +207,6 @@ property__teal	div.cover-label	#ff5151	#34d1c3
 property__teal	div.cover-logo-text	#0da89a	#ffffff
 property__teal	div.cover-logo-text	#84cc16	#ffffff
 property__teal	div.cover-logo-text	#f59e0b	#ffffff
-property__teal	div.num	#ffffff	#f8f8f9
 property__teal	h1	#ffffff	#34d1c3
 property__teal	h2.section-title	#84cc16	#ffffff
 property__teal	h2.section-title	#f59e0b	#ffffff

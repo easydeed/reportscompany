@@ -1294,9 +1294,21 @@
           </div>
           {% endfor %}
         </div>
-        <div class="page-footer" style="background:transparent; border:none; color:#fff;">
-          <div class="brand" style="color:var(--teal-on-dark);">TrendyReports</div>
-          <div class="num" style="color:#fff;">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div>
+        {# E15/D-129: teal's failing footer is on the CONTENTS page, not the
+           aerial one — D-129's table filed it with the others on aerial.
+           Teal's contents is split: a dark gradient on the left, a LIGHT
+           panel on the right, and this footer is inside the panel. Measured
+           1.07:1 (num, white) and 1.78:1 (brand, the mint accent) on the
+           panel's near-white. The accent's hex is on D-129's entry and not
+           here: `lint_template_colors.py` matches a BRAND-ADJACENT hex
+           anywhere in the file, including prose about one, so a measurement
+           written out reads as a brand literal. Neutrals like the `#555e7f`
+           below are not matched, which is why that one stays.
+           Teal's AERIAL footer is white on #555e7f at 6.38:1 and is
+           correctly white — it is left alone. #}
+        <div class="page-footer" style="background:transparent; border:none;">
+          <div class="brand">TrendyReports</div>
+          <div class="num">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div>
         </div>
       </div>
     </section>

@@ -7497,6 +7497,45 @@ secondary string and `#ff6b5b` as a fill behind white text. Both are single toke
 Elegant's 16 are almost all on the market-trends page it shares with the others. This is the
 market surface's D-112 shape again: a small number of role definitions, not a long tail.
 
+> **THE INVISIBLE SIX ARE FIXED — 2026-10-01, `fix/e15-invisible-page-number`. The other 223
+> are not, and are a palette decision.** E15 is closed with them.
+>
+> Every theme's aerial footer carried `style="color:#fff"`, written as though it sat on the
+> dark map band. `.aerial` is a **light** page with a 6.5in map in the middle and the footer
+> below it. Removing the inline overrides lets each theme's own `.page-footer` colours apply,
+> which were designed for a light page all along.
+>
+> | | before | after |
+> |---|---|---|
+> | bold `div.num` | 1.00:1 `#ffffff` on `#ffffff` | **14.24:1** |
+> | classic `div.num` | 1.00:1 | **12.12:1** |
+> | classic `div.brand` | 1.00:1 | **5.85:1** |
+> | elegant `div.num` | 1.11:1 on `#f3f3f3` | **15.68:1** |
+> | elegant `div.brand` | 1.31:1 | **6.22:1** |
+> | teal `div.num` | 1.07:1 on `#f7f7f9` | **13.69:1** |
+>
+> **THIS ENTRY'S OWN TABLE PUT TEAL'S ON THE WRONG PAGE.** It listed teal's 1.07:1 as "the same
+> page number" on the aerial page. It is on the **contents** page: teal's contents is split,
+> dark gradient left, light panel right, and the footer is in the panel. Teal's aerial footer
+> is white on `#555e7f` at 6.38:1 and is correctly white — as is modern's, on `#1a1f36` at
+> 16.24:1. **Two of the five themes were already right and were left alone**, which reading the
+> entry rather than the render would not have told me.
+>
+> **It is a trade, not a pure win, and the ratchet said so.** The baseline goes from 220
+> combinations to 203 and from 719 failing runs to 660 — **23 pairings removed, 5 added.** The
+> five added are `#0b8277`, `#53810c` and `#dc2626` at **4.38–4.49:1**, brand-derived footer
+> colours landing just under 4.5 on the aerial page's slightly-grey background. Fixing those
+> means darkening a brand role, which is this entry's remaining 223 and not E15's.
+>
+> **A floor, deliberately outside the ratchet.** `test_no_invisible_text_in_property_reports.py`
+> fails on any run below **1.5:1**, with no baseline and no exceptions. A ratchet can absorb an
+> invisible pairing by regeneration — which is how `03` in white on white survived long enough
+> to be filed as a *missing* number rather than an unreadable one. The threshold is derived
+> from the measured distribution rather than from a standard: the six above sit at 1.00–1.31,
+> the next-worst run in the corpus is **1.90** (teal's `#34d1c3` headings, legible and ugly,
+> and a palette decision), and **nothing lands between them.** It reads the pixel, not the DOM,
+> because the walker produces 22 false 1.00:1 readings on this surface (D-130).
+
 ---
 
 ### D-130 — the contrast auditor over-reports on absolutely-positioned and `pointer-events:none` text
@@ -8339,6 +8378,25 @@ half: **"market trends failed on 40% of consumer reports last week" is a number 
 currently produce.**
 
 Not fixed here. D-141 restored the page this defect was hiding behind; this is the general case.
+
+
+> **A SECOND INSTANCE, AND IT IS NOW THE ONLY WAY EITHER PAGE IS TESTED — 2026-10-01.**
+> `market_trends` needs a live SimplyRETS fetch and `overview` needs an OpenAI key, and
+> `render_html` drops either without a word. D-121's numbering work covers both pages by
+> **injecting** their data: `report_data["overview_text"]` is read before the model is called
+> (*"allow pre-injection"*, property_builder.py:1853) and `market_trends_data` the same way.
+>
+> That was the right move for numbering — it is the only way the nine-page document has ever
+> been rendered — and it leaves this entry's question exactly where it was. **The numbering is
+> proven; "does the page actually arrive" is not, for either page.** Nothing in production sets
+> `overview_text`, so the production route still runs through `generate_overview`, and a
+> failure inside that call is invisible to every test that now exercises the page.
+>
+> So this defect has two instances rather than one, and both are conditional pages whose
+> production route can fail silently while their rendered form is well covered. The counter or
+> status this entry asks for is what distinguishes *the page was not requested* from *the page
+> was requested and did not arrive*, and injection cannot answer it by construction.
+
 
 ---
 
