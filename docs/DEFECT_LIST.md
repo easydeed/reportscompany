@@ -9079,9 +9079,69 @@ line in the file for the second time in one day, which would bury D-130's diff �
 that the instrument changed. **Both should not land in the same commit.**
 
 **What it would take:** pick a tolerance, defend it against the measured spread of a single
-gradient's samples (available from any run's JSON), and regenerate once. Worth doing before the
-next template rewrite, not before the Claude Design handover — the 215 figure D-129 now carries
-is a count of runs, which this does not affect.
+gradient's samples (available from any run's JSON), and regenerate once.
+
+---
+
+### RECOMMENDATION — 2026-10-01, `docs/d153-key-stability`. Measured, not fixed.
+
+**FIRST, THE TRIGGER IS NOW OBSERVED RATHER THAN INFERRED.** The entry above reasoned it from
+the instrument switch; my own PR flagged that as an inference. Tested directly: elegant's cover
+rendered twice, the second with `padding-top:40px` and `margin-left:60px` on the cover text and
+**no colour changed at all**. Of 11 cover runs, **2 sampled a different backdrop** —
+`#171717` → `#161616`. So a layout nudge does move the key, and the amount it moves it is
+**distance 3** on a sum-of-absolute-RGB-differences scale.
+
+Three was small enough to be worth saying plainly: the failure is not that the colour moves a
+lot, it is that the key is an EXACT hex and any movement at all is a new key.
+
+**THE SPREADS, MEASURED ACROSS THE TEN PRODUCTION RENDERS.** Grouping every run by
+`(document, selector, page)` — so the only thing varying inside a group is where the text sits:
+
+| | groups | spread (sum of |ΔR|+|ΔG|+|ΔB|) |
+|---|---|---|
+| same rule, backdrop varies by position | **21** | 1, 2, 4, 5, 9, 11, 14, 14, 17, 17, 18, 20, 21, 21, 27, 27, 29, 29, **37, 37, 37** |
+| genuinely different backgrounds | **7** | **131**, 277, 312, 383, 585, 601, 614 |
+
+**There is a gap between 37 and 131 and nothing lands in it.** The 37s are alternating table-row
+stripes (`#f0ebe3` against `#faf7f2`); the 131+ are a coloured header band or cell against the
+page, which must stay distinct because the ratio genuinely differs.
+
+**RECOMMENDED: a tolerance of 48, applied at COMPARISON time, not by rewriting the file.**
+
+Not quantisation into buckets. Snapping each channel to a grid has a boundary problem that
+makes it worse than the disease: two colours 3 apart can straddle a grid line and land in
+different buckets, so the defect it is meant to cure survives at every boundary. Instead leave
+the baseline exactly as it is — four fields, human-readable, colours named — and change the
+`read_baseline` comparison so a finding matches an entry when the family and selector are equal
+and **both colours are within 48**.
+
+| | |
+|---|---|
+| **48 because** | comfortably above the largest observed same-rule spread (37) and comfortably below the smallest genuinely-different one (131) — it sits in the empty gap rather than being chosen round |
+| **costs nothing to adopt** | no regeneration, no format change, every existing entry keeps matching, and D-130's diff stays legible as the record of the instrument change |
+| **the risk, stated** | a genuinely new pairing within 48 of an existing one is absorbed silently. Bounded by the evidence above, not eliminated by it |
+| **the failure mode if wrong** | too tight and the churn continues; too loose and two real pairings collide. Both are visible in the regenerate diff, which is the thing a reviewer reads |
+
+**AND IT NEEDS APPLYING IN BOTH DIRECTIONS, or it creates the defect it removes.**
+`test_the_baseline_does_not_outlive_what_it_recorded` computes `baseline − failures` and reports
+the remainder as fixed-but-unrecorded. Left on exact equality while the forward check uses a
+tolerance, every entry absorbed by the tolerance would be reported as stale, and regenerating to
+clear that is the one move the file forbids. §0.6 — *a guard asserting A ⇒ B is half a guard*,
+and this is the same pair of directions one layer down.
+
+**RE-DERIVE IT, DO NOT INHERIT IT.** `scripts/measure_key_stability.py` runs both
+measurements — `--spreads` for the two populations and the gap between them, `--nudge` for the
+trigger. Both numbers are properties of the templates, so a redesign moves them, and 48 is only
+defensible while the gap stays open. Today it reports **GAP: 94**. The script says so in its
+own output rather than leaving the next person to work out whether the constant still means
+anything.
+
+**Do it before the Claude Design handover, not after.** A new template set moves every line, so
+on the first render of the new design a position-keyed baseline reports churn as findings —
+precisely when a reviewer most needs the signal to mean something. **Not shipped here:** this
+is a change to how the gate decides, three days after changing what it measures, and those two
+want separate diffs for the same reason D-130 and D-153 did.
 
 ---
 
