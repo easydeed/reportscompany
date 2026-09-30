@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 55 | Real, unfixed |
-| `fixed` | 81 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 56 | Real, unfixed |
+| `fixed` | 82 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **140** | D-001 … D-140, contiguous, no duplicates |
+| **Total** | **142** | D-001 … D-142, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 14 · ROUGH 21. (Sums to 55, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 15 · ROUGH 21. (Sums to 56, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -7959,6 +7959,192 @@ a filename as the selector — and `docs/TEST_DURABILITY.md`'s point exactly.
 
 Four regressions applied and each seen to fail, the first being the one that was impossible
 before: **dropping a field from the production builder alone**, with no edit to the test.
+
+---
+
+### D-141 — the consumer CMA has no Area Sales Analysis, and nothing decided that
+
+**Severity:** WRONG · **Affects:** every CMA delivered through the landing-page funnel ·
+**Found during:** D-140's extraction, which put the page set somewhere it could be read ·
+**Status:** `fixed` — `docs/d141-consumer-page-set`
+
+`CONSUMER_PAGES` is not the agent default. It drops `contents` and **`analysis`**, and adds
+`market_trends` and `overview`.
+
+---
+
+**1 · Was it decided, or did it accrete?**
+
+**It accreted.** `git log -S` on every distinguishing string — `"selected_pages"`,
+`market_trends", "overview` — in `tasks.py` returns exactly two commits: D-140's extraction
+yesterday, and **`4bcb3d2`**. That is commit **182 of 182**, the squashed base, dated 2026-05-18,
+and its message is entirely about *"show 1 row of cards on Market Snapshot page 1"* — nine
+paragraphs about `.force-new-page` and gallery rows, with no mention of the consumer CMA or its
+pages.
+
+Same method and same answer as the `[:4]` slice: **traces to the squashed base with no recorded
+intent.** Nobody chose this; it arrived.
+
+---
+
+**2 · What the consumer report actually lacks.** Both paths rendered from one identical SiteX
+lookup and four identical comps:
+
+| | agent | consumer |
+|---|---|---|
+| `<section>` elements | **7** | **5** |
+| rendered page titles | Property Information · **Area Sales Analysis** · Sales Comparables · Range of Sales | Property Information · Sales Comparables · Range of Sales |
+| the comps comparison table | ✓ | **✗** |
+| the sales chart | ✓ | **✗** |
+| **the last-sale figure ($369,000 · Dec 2015)** | ✓ | **✗** |
+
+**Nothing else carries it.** Sales Comparables shows four cards — four *other* houses' prices.
+Range of Sales shows `$470k – $635k` and four averages. **Neither ever places the subject
+property against the comps.** The Subject column, the price-per-sqft comparison and the sale
+price row all live on the page that is missing, so a homeowner who asked what their house is
+worth receives a document showing four neighbours' sale prices and a band, and nothing that says
+*and here is yours*.
+
+It also means **D-118's fix does not reach this path at all.** The last-sale figure was wired
+through the projection, the payload, the row and the builder (D-138, D-139, D-140) — and then
+lands on a page the consumer report does not print.
+
+*A false positive worth recording:* grepping the HTML for `"AREA SALES ANALYSIS"` returns a hit
+on the consumer render. It is inside a `<style>` block — a CSS selector name, not content. The
+`<section>` count and the rendered `section-title` list are the honest measures. §0.6's substring
+rule, caught during this investigation rather than after it.
+
+---
+
+**3 · Are `market_trends` and `overview` better for that reader?**
+
+**They are both conditional, and the page they replaced is not.** Measured:
+
+| supplied | sections | pages |
+|---|---|---|
+| nothing | **5** | Property Information · Sales Comparables · Range of Sales |
+| `market_trends_data` | 6 | + Market Trends |
+| both | 7 | + Property Overview |
+
+`market_trends` needs a live SimplyRETS fetch and `overview` needs an OpenAI key; `render_html`
+silently drops either when its data does not arrive. So the consumer report traded **one page
+that always renders** for **two that may not** — and in an environment without both services it
+is a five-page document.
+
+On the merits the two additions are defensible for that reader: a market gauge and a plain-English
+summary suit a homeowner better than a specification table. **But they are additions, and the
+analysis page was not theirs to displace.** Nothing about including them required excluding it.
+
+---
+
+**VERDICT: a defect, and the fifth way the consumer path is thinner than the agent one** —
+after D-116 (owner identity), D-138 (last-sale fields), D-139 (nine parcel and tax fields) and
+D-140 (the gate that could not see any of it).
+
+**Recommendation, not built:** add `analysis` back to `CONSUMER_PAGES`, keeping `market_trends`
+and `overview`. It is a one-line change to a now-shared constant and it restores the table the
+document exists to provide. Two things to weigh first: whether `contents` should return as well
+(it is unguarded and mis-numbered — D-121 — so adding it before that is fixed would ship a
+contents page listing pages this set does not contain), and that the consumer report would then
+be eight pages rather than five.
+
+*Incidentally visible in the render:* the consumer report's footers read `04` then `07` on
+consecutive pages. That is D-121's hardcoded numbering, wrong here for the same reason it is
+wrong everywhere, and more obviously so on a path whose page set differs.
+
+---
+
+**FIXED 2026-09-30.** Jerry: add `analysis` back, keep `market_trends` and `overview`, leave
+`contents` out until D-121.
+
+```python
+CONSUMER_PAGES = ["cover", "aerial", "property", "analysis",
+                  "comparables", "range", "market_trends", "overview"]
+```
+
+**Verified by the thing that matters, not by the page appearing.** Three PRs of plumbing
+(D-138, D-139, D-140) landed or did not land on this one line, and *the page renders* is not
+*the figure is on it*. Rendered:
+
+```
+Sale Price   $369,000 · Dec 2015   $470,000   $631,500   $635,000
+```
+
+— in the consumer report, in the analysis table, in the price row, identical to the agent's. A
+test asserts the value in the row in the table, and a second asserts the two paths render the
+**same** table cell for cell, because a consumer table built from a thinner context would pass
+the first and still differ.
+
+**PAGE COUNT: five → eight.** What a stranger receives changes materially. Precisely: **six**
+pages when neither external service answers, seven with market trends, **eight** with both. The
+consumer report was four-to-six before. `analysis` is the only one of the three that renders
+unconditionally.
+
+**`contents` STAYS OUT UNTIL D-121 IS FIXED — AND THEN COMES BACK HERE.** Its block is
+hardcoded and unguarded, so adding it now ships a contents page listing pages this set does not
+contain, numbered wrongly. **When D-121 lands, add `contents` to `CONSUMER_PAGES`.** The
+reminder is on this entry, in the constant's own comment, and in
+`test_contents_stays_out_until_d121`.
+
+**The silent-conditional trade is filed separately as D-142**, because "the page is absent" and
+"the page failed" being indistinguishable is a defect in its own right, not a footnote to this
+one.
+
+**Two of my own tests were passing by coincidence, again.** Both fixtures had `comparables=[]`,
+so the analysis table's comp columns were `$0` on both sides and
+`test_both_paths_render_the_same_analysis_table` would have compared two rows of zeros. And the
+page-count test asserted on `builder.page_set`, which `render_html` never updates — it prunes a
+local copy — so it reported eight pages for a six-page document, **measuring the intent instead
+of the output, which is the error this whole defect is made of.** Both fixed; counted from the
+render now.
+
+Four regressions applied and each seen to fail: removing `analysis` again, adding `contents`
+early, the last-sale figure ceasing to reach this path, and a page dropped from the set.
+
+---
+
+### D-142 — a page that fails to load and a page that was never asked for look identical
+
+**Severity:** FRAGILE · **Affects:** the consumer CMA's `market_trends` and `overview` pages;
+the agent report's too where selected · **Found during:** D-141
+**Status:** `open`
+
+`render_html` builds `market_trends` from a live SimplyRETS fetch and `overview` from an OpenAI
+call. When either returns nothing it removes the page from the set and logs at `info`:
+
+```python
+if market_trends_data is None and "market_trends" in page_set:
+    page_set = [p for p in page_set if p != "market_trends"]
+    logger.info("market_trends: page REMOVED from page_set (no data returned)")
+```
+
+The document then renders one page shorter, with nothing in it saying so. **A report missing its
+market-trends page because SimplyRETS was down is byte-for-byte the same document as one whose
+page set never included it.** Measured on the consumer path: six sections with neither service,
+seven with trends, eight with both.
+
+**Why this is its own entry.** The removal is the right *behaviour* — a half-rendered gauge is
+worse than no gauge, and D-108 settled that a report should say what it could not find rather
+than print zeros. What is missing is the saying. There is no signal at any level:
+
+| who | what they see |
+|---|---|
+| the recipient | a shorter document, no explanation |
+| the agent | nothing — no flag on the report row |
+| us | one `info` line per render, in a log nobody reads per-report |
+
+**It is the D-113 family with the arrow reversed.** There, a consumer read a key no producer
+wrote. Here a producer fails and the consumer silently narrows. Both are invisible from both
+ends; both were found only by counting what came out.
+
+**What it would take.** The page set that was *requested* and the set that *rendered* are both
+in hand at the end of `render_html` — the difference is computable in one line. Somewhere to put
+it is the open question: a `pages_dropped` column on the report row (visible to the agent, and
+to us in aggregate), a line in the document itself, or both. The aggregate is the more valuable
+half: **"market trends failed on 40% of consumer reports last week" is a number nobody can
+currently produce.**
+
+Not fixed here. D-141 restored the page this defect was hiding behind; this is the general case.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 
