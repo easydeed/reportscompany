@@ -331,19 +331,16 @@
     <section class="page property">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Property Overview</div><h2 class="property-title">Prospective Property</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Property Overview</div><h2 class="property-title">Property Information</h2><div class="gold-rule"></div></div>
       <div class="property-section">
-        <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Owner & Legal Information</div></div>
+        <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Parcel & Legal Information</div></div>
         <div class="property-grid">
           <table class="property-table">
-            <tr><td class="label">Primary Owner</td><td class="value">{{ property.owner_name | default('-') }}</td></tr>
-            <tr><td class="label">Secondary Owner</td><td class="value">{{ property.secondary_owner | default('-') }}</td></tr>
             <tr><td class="label">Site Address</td><td class="value">{{ property.full_address }}</td></tr>
-            <tr><td class="label">Mailing Address</td><td class="value">{{ property.mailing_address | default(property.full_address) }}</td></tr>
-          </table>
-          <table class="property-table">
             <tr><td class="label">APN</td><td class="value">{{ property.apn | default('-') }}</td></tr>
             <tr><td class="label">County</td><td class="value">{{ property.county | default('-') }}</td></tr>
+          </table>
+          <table class="property-table">
             <tr><td class="label">Census Tract</td><td class="value">{{ property.census_tract | default('-') }}</td></tr>
             <tr><td class="label">Legal Description</td><td class="value">{{ property.legal_description | default('-') }}</td></tr>
           </table>
@@ -559,7 +556,7 @@
         <div class="range-slider-labels"><span>{{ stats.price_low | format_currency_short }}</span><span>{{ stats.price_high | format_currency_short }}</span></div>
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
-      <p class="range-note">The above statistics represent average property details for comparable homes sold within the last 12 months. The price range indicates the low and high sale prices for properties matching your home's characteristics including square footage, bedrooms, bathrooms, and lot size.</p>
+      <p class="range-note">{{ comps_window.note }}</p>
       <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">08</div></div>
     </section>
     {% endif %}

@@ -792,6 +792,24 @@ it.**
   a divisor are different decisions; and a fixed accent readable on a theme's navy is not
   readable on an affiliate's brand. **Same value, different consumer, different obligation.**
 
+- **A read of an optional field is indistinguishable from a read of a field nothing writes.**
+  *Added 2026-09-29, from D-118's investigation.* `dict.get(k)` returns `None` for "absent this
+  time" and for "absent always", and an `or` fallback turns both into a plausible value. Three
+  instances found in one afternoon, all on the property surface:
+  `sitex_data["estimated_value"]` (written by nothing, so its `or assessed_value` fallback is
+  the only path and the subject's *Sale Price* is a Prop 13 assessment — D-118), and
+  `last_sale_date` / `last_sale_price`, read by the mobile endpoint and set by no writer
+  anywhere (D-133).
+
+  The worst version is the one with a fallback, because the fallback makes the absence
+  invisible. A bare `None` renders as a gap somebody eventually asks about; `or assessed_value`
+  renders as a number nobody questions.
+
+  This is the same shape as D-113 — `closed_history` read by the builder and emitted by no
+  producer — and as D-009. The check is not *does the code handle a missing value*. It is
+  **what writes this, and when.** Grep for assignment before reasoning about the read, and if
+  the answer is "nothing", the ticket is about the producer no matter how the consumer looks.
+
 - **A document rendered by something other than the production path is evidence about that
   something.** *Added 2026-09-29, from the Workstream E measurement.* The E register's 22
   tickets were written from a careful review of six property PDFs. The PDFs came from

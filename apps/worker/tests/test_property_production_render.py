@@ -50,7 +50,11 @@ SITEX = {
     "year_built": 1949, "property_type": "Single Family Residential",
     "pool": "None", "garage": "1", "assessed_value": 428248,
     "land_value": 337378, "improvement_value": 90870,
-    "tax_amount": 5198, "tax_year": 2024,
+    "tax_amount": 5198, "tax_year": 2024, "census_tract": "4089.00",
+    # Carried so test_no_owner_identity_in_property_report can prove they do
+    # NOT render. A fixture that omits the field cannot test its absence.
+    "secondary_owner": "MENDOZA YESSICA S",
+    "mailing_address": "742 Evergreen Terrace, Springfield, CA 90210",
 }
 
 # Four comps, which is what the API's ladder returns in a thin market. Four is
@@ -228,4 +232,68 @@ def test_the_analysis_table_shows_the_same_fields_in_every_theme(renders):
     assert not differing, (
         f"the analysis table's fields differ by theme (vs {THEMES[0]}): {differing}. "
         "An agent switching themes changes what analysis their client receives."
+    )
+
+
+# ── D-117 · what the page may say about the comps it is carrying ───────────
+
+# The months figure is derived from the constant, never typed, so the copy
+# cannot drift from the query the way it did for twelve months.
+WINDOW_MONTHS = PropertyReportBuilder.COMP_CLOSE_WINDOW_DAYS // 30
+
+
+def _with_status(theme, status):
+    data = report_data(theme)
+    data["comparables"] = [{**c, "status": status} for c in data["comparables"]]
+    return PropertyReportBuilder(data).render_html()
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_closed_comps_are_described_as_sales_in_the_window(theme):
+    html = _with_status(theme, "Closed")
+    assert f"last {WINDOW_MONTHS} months" in html or \
+           f"PAST {WINDOW_MONTHS} MONTHS" in html, f"{theme} states no window"
+    assert "12 months" not in html and "12-month" not in html
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_active_comps_are_not_described_as_sales(theme):
+    """The wizard DEFAULTS to Active (property-wizard.tsx:53). Correcting
+    twelve months to six on a list of homes that have not sold would state a
+    wrong thing more precisely, which is worse than vaguely."""
+    html = _with_status(theme, "Active")
+    lower = html.lower()
+    for claim in (f"sold within the last {WINDOW_MONTHS} months",
+                  f"sales in the past {WINDOW_MONTHS} months"):
+        assert claim not in lower, f"{theme} calls active listings {claim!r}"
+    assert "currently" in lower or "asking" in lower, \
+        f"{theme} says nothing about these being listings rather than sales"
+
+
+def test_the_empty_case_claims_nothing():
+    data = report_data("teal")
+    data["comparables"] = []
+    window = PropertyReportBuilder(data)._comps_window()
+    assert "No comparable properties" in window["label"]
+    for text in window.values():
+        assert f"{WINDOW_MONTHS} months" not in text, (
+            "an empty table must not be headed with a window it did not search"
+        )
+
+
+# The construct, not the symptom: any month count typed into window copy can
+# drift from COMP_CLOSE_WINDOW_DAYS, which is exactly what D-117 was.
+WINDOW_COPY = re.compile(
+    r"(?:last|past|within)\s+(?:the\s+)?(\d+)[\s-]*months?", re.I)
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_no_live_template_hardcodes_a_comp_window(theme):
+    from worker.property_builder import TEMPLATES_DIR
+    path = TEMPLATES_DIR / THEME_TEMPLATES[theme]
+    text = path.read_text(encoding="utf-8")
+    found = WINDOW_COPY.findall(text)
+    assert not found, (
+        f"{path.name} hardcodes a {found} month window in its copy. The number "
+        "belongs to COMP_CLOSE_WINDOW_DAYS and reaches the page through "
+        "`comps_window` — a typed one is how D-117 happened."
     )
