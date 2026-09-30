@@ -21,6 +21,7 @@ import os
 import re
 import logging
 import colorsys
+from datetime import date
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -961,6 +962,11 @@ class PropertyReportBuilder:
             is_active = status.lower() in ("active", "pending")
             display_date = self._fmt_date(list_date_raw if is_active else sold_date_raw)
             display_date_label = "Listed" if is_active else "Sold"
+            # D-118, per comp rather than per report: a card headed "Sale
+            # Price" over an active listing is showing the asking price.
+            # `_extract_price` returns list_price for those. Sits beside
+            # `sold_date_label` because it is the same distinction.
+            price_label = "List Price" if is_active else "Sale Price"
 
             resolved_addr = comp.get("address") or comp.get("full_address", "")
 
@@ -977,6 +983,7 @@ class PropertyReportBuilder:
                 # Dates
                 "sold_date": display_date,           # Formatted display date (may be list_date for active)
                 "sold_date_label": display_date_label,  # "Listed" or "Sold"
+                "price_label": price_label,            # "Sale Price" or "List Price"
                 "list_date": self._fmt_date(list_date_raw),
                 "status": status,
                 "days_on_market": comp.get("days_on_market") or comp.get("dom") or 0,
@@ -1005,6 +1012,49 @@ class PropertyReportBuilder:
     #: IS D-117.
     COMP_CLOSE_WINDOW_DAYS = 180
 
+    #: The windows the API's comp ladder can search, smallest first
+    #: (routes/property.COMP_CLOSE_WINDOW_DAYS and COMP_FALLBACK_WINDOW_DAYS).
+    COMP_WINDOW_BUCKETS_MONTHS = (6, 12)
+
+    @classmethod
+    def _window_months(cls, comps) -> int:
+        """The window that actually covers these comps, not the one hoped for.
+
+        D-132 gives the API a seventh ladder level that widens the search to
+        twelve months when six returns under three sales. The page must then
+        say twelve, or it is D-117 again one level up — a stated window the
+        query did not use.
+
+        It is DERIVED from the comps rather than plumbed through, and that is
+        deliberate. The alternative is carrying the window from the API
+        response through the wizard, the create payload, the
+        `property_reports` row and into `report_data` — four hops, each of
+        which can drop it, for a number that is already implied by the data.
+        Deriving it also survives a report being regenerated later or its
+        comps being edited by hand, where a stored window would go stale.
+
+        Rounded UP to the ladder's own buckets rather than reported exactly,
+        because "sales in the past 7 months" invites the question of why
+        seven, and the honest answer is that six is the window and this is the
+        fallback.
+        """
+        oldest = 0
+        today = date.today()
+        for c in comps:
+            raw = c.get("close_date") or c.get("sold_date") or ""
+            try:
+                closed = date.fromisoformat(str(raw)[:10])
+            except (ValueError, TypeError):
+                continue
+            oldest = max(oldest, (today - closed).days)
+        for bucket in cls.COMP_WINDOW_BUCKETS_MONTHS:
+            if oldest <= bucket * 31:
+                return bucket
+        # Older than any window the ladder searches — legacy rows, or comps
+        # edited by hand. Report what is actually there rather than a bucket
+        # that would understate it.
+        return max(cls.COMP_WINDOW_BUCKETS_MONTHS[-1], -(-oldest // 31))
+
     def _comps_window(self) -> Dict[str, str]:
         """What the report may truthfully say about the comps it is carrying.
 
@@ -1019,9 +1069,14 @@ class PropertyReportBuilder:
         active/closed distinction `_build_comparables_context` already applies
         per comp. The page describes its contents rather than asserting a
         window somebody hoped for.
+
+        `price_row` is the analysis table's price-row heading, and it is here
+        for the same reason: over active listings, `_extract_price` returns
+        `list_price`, so a row headed "Sale Price" is showing what sellers are
+        asking. Same defect as the subtitle, one row lower down. (D-118.)
         """
         comps = self.report_data.get("comparables") or []
-        months = self.COMP_CLOSE_WINDOW_DAYS // 30
+        months = self._window_months(comps)
 
         def _closed(c):
             status = str(c.get("status") or "Active").lower()
@@ -1038,6 +1093,7 @@ class PropertyReportBuilder:
                 "label": "No comparable properties found",
                 "subtitle": "NO COMPARABLE PROPERTIES FOUND",
                 "pill": "No results",
+                "price_row": "Price",
                 "note": (
                     "No comparable properties matched this home's "
                     "characteristics in the search area. Widening the radius or "
@@ -1050,6 +1106,7 @@ class PropertyReportBuilder:
                 "label": f"Sales in the past {months} months",
                 "subtitle": f"SALES IN THE PAST {months} MONTHS",
                 "pill": f"Last {months} months",
+                "price_row": "Sale Price",
                 "note": (
                     f"The above statistics represent average property details for "
                     f"comparable homes sold within the last {months} months. The price "
@@ -1062,6 +1119,7 @@ class PropertyReportBuilder:
                 "label": "Comparable homes currently for sale",
                 "subtitle": "COMPARABLE HOMES CURRENTLY FOR SALE",
                 "pill": "Active listings",
+                "price_row": "List Price",
                 "note": (
                     "The above statistics represent average property details for "
                     "comparable homes currently listed for sale. The price range "
@@ -1075,6 +1133,7 @@ class PropertyReportBuilder:
             "label": f"Recent sales and current listings",
             "subtitle": "RECENT SALES AND CURRENT LISTINGS",
             "pill": f"Last {months} months",
+            "price_row": "Price",
             "note": (
                 f"The above statistics combine comparable homes sold within the last "
                 f"{months} months with comparable homes currently listed for sale. "
@@ -1341,19 +1400,41 @@ class PropertyReportBuilder:
             }
         
         # Property in question stats (from sitex_data)
-        # Use assessed_value as fallback for estimated_value since SiteX may not provide it
-        est_value = sitex_data.get("estimated_value") or sitex_data.get("assessed_value") or 0
+        #
+        # D-118. THIS ROW USED TO SHOW THE COUNTY'S PROP 13 ASSESSMENT:
+        #
+        #     est_value = (sitex_data.get("estimated_value")
+        #                  or sitex_data.get("assessed_value") or 0)
+        #
+        # `estimated_value` is written by nothing anywhere in the repository,
+        # so the fallback was not a fallback — it was the only path, and every
+        # report printed a 1970s-reassessment figure in a row headed "Sale
+        # Price" beside real closed sales 50% higher. A seller reading that
+        # anchors low.
+        #
+        # Jerry, 2026-09-29: the row carries the LAST ACTUAL SALE, and where
+        # the feed has none it shows nothing rather than a substitute. Whether
+        # any feed carries one is open (D-118 / D-134, settled by
+        # scripts/probe_sitex_sale_history.py). The removal is correct under
+        # every outcome of that probe, so it does not wait for it.
+        #
+        # `None`, not `0`: zero is a price. `format_currency(None)` renders
+        # "N/A", which is what an unknown sale price is.
+        est_value = sitex_data.get("estimated_value")
         piq = {
             "distance": 0,
             "sqft": _safe_num(sitex_data.get("sqft"), 0),
-            "price_per_sqft": _safe_num(self._calc_price_per_sqft(est_value, sitex_data.get("sqft")), 0),
+            "price_per_sqft": (
+                _safe_num(self._calc_price_per_sqft(est_value, sitex_data.get("sqft")), 0)
+                if est_value is not None else None
+            ),
             "year_built": _safe_num(sitex_data.get("year_built"), 0),
             "lot_size": _safe_num(sitex_data.get("lot_size"), 0),
             "bedrooms": _safe_num(sitex_data.get("bedrooms"), 0),
             "bathrooms": _safe_num(sitex_data.get("bathrooms"), 0),
             "stories": _safe_num(sitex_data.get("stories"), 0),
             "pools": 1 if sitex_data.get("pool") else 0,
-            "price": _safe_num(est_value, 0),
+            "price": _safe_num(est_value, 0) if est_value is not None else None,
         }
         
         # Calculate avg price per sqft across all comps

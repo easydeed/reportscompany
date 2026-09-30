@@ -1476,7 +1476,7 @@
           </tbody>
           <tfoot>
             <tr>
-              <td>Sales Price</td>
+              <td>{{ comps_window.price_row }}</td>
               <td>{{ stats.piq.price | format_currency }}</td>
               <td>{{ stats.low.price | format_currency }}</td>
               <td>{{ stats.medium.price | format_currency }}</td>
@@ -1635,7 +1635,7 @@
               {{ comp.address }}
             </div>
             <div class="comp-price">
-              <span class="lbl">Sale Price</span>
+              <span class="lbl">{{ comp.price_label | default('Sale Price') }}</span>
               <span class="val">{{ comp.sale_price | format_currency }}</span>
             </div>
             <div class="comp-stats">

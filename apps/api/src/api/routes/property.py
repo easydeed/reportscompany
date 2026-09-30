@@ -230,6 +230,24 @@ class PropertySearchResponse(BaseModel):
 #: theme claiming twelve months over a query that filtered on nothing at all.
 COMP_CLOSE_WINDOW_DAYS = 180
 
+#: D-132. Six months is a hard floor the rest of the ladder cannot climb past:
+#: its levels widen sqft tolerance, bed range, subtype and radius, and not one
+#: of them widens TIME. In a market where nothing comparable has closed in 180
+#: days, L0-L5 exhaust themselves and return whatever they have — which may be
+#: nothing, and D-119 records what the analysis table does with nothing.
+#:
+#: So there is a seventh level at twelve months, entered ONLY when six has
+#: genuinely failed. It is last, so no report gets a twelve-month comp while a
+#: six-month one exists.
+COMP_FALLBACK_WINDOW_DAYS = 365
+
+#: Below this the analysis table stops being an analysis: at two comps its Low
+#: and Medium columns hold the same listing, at one all three do, at zero it
+#: renders a row of zeros (D-119). This is the threshold for widening the
+#: window, NOT the target — FALLBACK_MIN stays 5 and the earlier levels still
+#: chase it.
+COMP_MIN_FOR_ANALYSIS = 3
+
 
 def _closed_since(days: int) -> str:
     """`YYYY-MM-DD`, `days` ago, for SimplyRETS' `minclosedate`."""
@@ -591,7 +609,8 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
 
         def _build_params(sqft_var, extra_beds: int = 0,
                           include_subtype: bool = True,
-                          use_city: bool = True) -> Dict[str, Any]:
+                          use_city: bool = True,
+                          window_days: int = COMP_CLOSE_WINDOW_DAYS) -> Dict[str, Any]:
             """Build SimplyRETS params for one ladder attempt."""
             sr_status = status_map.get(payload.status, "Active")
             p: Dict[str, Any] = {
@@ -614,7 +633,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             # endpoint accepts All, and "unreachable from our UI" is not a
             # reason to send a parameter that would be wrong if it arrived.
             if sr_status == "Closed":
-                p["minclosedate"] = _closed_since(COMP_CLOSE_WINDOW_DAYS)
+                p["minclosedate"] = _closed_since(window_days)
 
             # Location — prefer postalCodes (precise) + cities (deterministic)
             if subject_zip:
@@ -663,17 +682,22 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             return out
 
         # Ladder definition:
-        #   (label, sqft_var, extra_beds, include_subtype, use_city, radius_miles)
+        #   (label, sqft_var, extra_beds, include_subtype, use_city,
+        #    radius_miles, window_days)
         # sqft_var=None → no sqft filter
-        # radius progressively widens at later levels
+        # radius progressively widens at later levels; the WINDOW widens only
+        # at the last one (D-132), and only if it is reached.
         _r = payload.radius_miles
+        _w = COMP_CLOSE_WINDOW_DAYS
         ladder = [
-            ("L0:strict",              base_sqft_variance, 0, True,  True,  _r),
-            ("L1:no-subtype",          base_sqft_variance, 0, False, True,  _r),
-            ("L2:sqft+30%",            0.30,               0, False, True,  _r),
-            ("L3:sqft+50%,beds+1",     0.50,               1, False, True,  _r),
-            ("L4:no-sqft,beds+2",      None,               2, False, True,  _r),
-            ("L5:no-sqft,radius*3",    None,               2, False, True,  _r * 3),
+            ("L0:strict",              base_sqft_variance, 0, True,  True,  _r,     _w),
+            ("L1:no-subtype",          base_sqft_variance, 0, False, True,  _r,     _w),
+            ("L2:sqft+30%",            0.30,               0, False, True,  _r,     _w),
+            ("L3:sqft+50%,beds+1",     0.50,               1, False, True,  _r,     _w),
+            ("L4:no-sqft,beds+2",      None,               2, False, True,  _r,     _w),
+            ("L5:no-sqft,radius*3",    None,               2, False, True,  _r * 3, _w),
+            ("L6:window-12mo",         None,               2, False, True,  _r * 3,
+             COMP_FALLBACK_WINDOW_DAYS),
         ]
 
         listings: List[Dict] = []
@@ -681,8 +705,17 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
         fallback_level_used = "L0:strict"
         total_before_filter = 0
 
-        for label, sqft_var, extra_beds, incl_sub, use_city, radius in ladder:
-            params = _build_params(sqft_var, extra_beds, incl_sub, use_city)
+        for label, sqft_var, extra_beds, incl_sub, use_city, radius, window in ladder:
+            # D-132: the twelve-month level is a last resort, not a rung. It is
+            # skipped entirely unless six months left the result too thin to
+            # analyse, so no report carries a year-old comp while a six-month
+            # one exists.
+            if window != COMP_CLOSE_WINDOW_DAYS and len(best_listings) >= COMP_MIN_FOR_ANALYSIS:
+                logger.warning(
+                    "Comps %s: SKIPPED — %d comps inside %d days is enough",
+                    label, len(best_listings), COMP_CLOSE_WINDOW_DAYS)
+                break
+            params = _build_params(sqft_var, extra_beds, incl_sub, use_city, window)
             logger.warning(f"Comps fallback {label}: params={params}")
 
             raw = await simplyrets_fetch_properties(params, limit=payload.limit * 4)
@@ -699,7 +732,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             # on every ladder level, because a later level that widens the
             # search must not widen the window with it.
             before_window = len(filtered)
-            filtered = _closed_within_window(filtered, COMP_CLOSE_WINDOW_DAYS)
+            filtered = _closed_within_window(filtered, window)
             if len(filtered) != before_window:
                 logger.warning(
                     "Comps %s: close-date window dropped %d of %d client-side "
@@ -818,6 +851,12 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
         elif _lv.startswith("l3") or _lv.startswith("l4"):
             _conf_grade  = "C"
             _conf_reason = "Sqft + beds loosened"
+        elif _lv.startswith("l6"):
+            # D-132. Distinct from L5's "thin market" because the reason is
+            # different in kind: not that we searched wider in space, but that
+            # we had to go back a year in time. The agent should see which.
+            _conf_grade  = "D"
+            _conf_reason = "Widened to 12 months — under 3 sales in 6"
         else:
             _conf_grade  = "C"
             _conf_reason = "Thin market"

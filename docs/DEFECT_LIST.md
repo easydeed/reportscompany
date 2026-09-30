@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 55 | Real, unfixed |
-| `fixed` | 75 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 56 | Real, unfixed |
+| `fixed` | 77 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **134** | D-001 … D-134, contiguous, no duplicates |
+| **Total** | **137** | D-001 … D-137, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 16 · FRAGILE 13 · ROUGH 21. (Sums to 55, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 16 · FRAGILE 14 · ROUGH 21. (Sums to 56, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -6783,7 +6783,8 @@ does when six months returns fewer than three comps. See the note under D-132.
 
 **Severity:** WRONG · **Affects:** the Area Sales Analysis table in all five themes, and the
 price-per-sqft derived from it · **Found during:** Workstream E measurement (E3)
-**Status:** `open`
+**Status:** `fixed` — `fix/d118-remove-assessment-row` (the assessment is out; what fills
+the row is D-134, and it stays empty until then)
 
 `property_builder.py:_build_stats_context`:
 
@@ -6871,11 +6872,33 @@ design depends on the probe. The estimated-value half needs a stated method that
 seller asking how it was calculated, which is its own ticket and its own decision — recorded as
 **D-134** rather than started.
 
-**What can be said now, and is not blocked on anything:** the assessment must stop appearing in a
-row headed `Sale Price`. That is true under every outcome of the probe, and it is the whole of
-the harm. It is not done here only because Jerry's instruction is that the row carries the last
-actual sale, and what fills it is what the probe settles — an empty row shipped now would be
-replaced within the week.
+**REMOVED 2026-09-30, on Jerry's instruction, without waiting for the probe.**
+
+> A wrong number is worse than an empty one, and if the probe says SiteX has no sale data the row
+> stays empty regardless. Don't hold a correct removal on a replacement that may not arrive.
+
+`est_value = sitex_data.get("estimated_value")` — no fallback. `piq.price` and
+`piq.price_per_sqft` are `None` when it is absent, **not `0`**: zero is a price, and
+`format_currency(0)` renders `$0`. `format_currency(None)` renders `N/A`, which is what an
+unknown sale price is. Rendered, all five themes:
+
+```
+Sale Price     N/A     $470,000   $631,500   $635,000
+Price/Sq.Ft.   N/A     $610       $671       $696
+```
+
+The assessment survives on the property page under `Assessed Value`, inside `Tax & Assessment`,
+which is where it was always correct. A test asserts both directions: gone from the analysis
+table, still present in the report.
+
+**And the row's LABEL lied the same way the subtitle did.** Over active comps `_extract_price`
+returns `list_price`, so a row headed *Sale Price* was showing asking prices. It now comes from
+`comps_window.price_row` — *Sale Price* / *List Price* / *Price* — and the per-comp cards from
+`comp.price_label`, beside the `sold_date_label` that already made the same distinction.
+
+Four regressions applied and seen to fail: restoring the fallback, `0` instead of `None`,
+severing the row from `estimated_value` altogether (so a later producer fix would look broken),
+and calling asking prices sale prices.
 
 ---
 
@@ -6918,7 +6941,7 @@ behaviour, not the builder's.)
 
 **Severity:** WRONG · **Affects:** the teal Area Sales Analysis table; the `pools` and `stories`
 context keys in all five themes · **Found during:** Workstream E measurement (E8)
-**Status:** `open`
+**Status:** `open` — **but not for the reason first filed. See the correction at the end.**
 
 ```python
 "pools": 1 if sitex_data.get("pool") else 0,
@@ -6944,6 +6967,43 @@ everyone else.
 
 Only teal renders these two rows (see D-124), so only teal shows the contradiction — but both
 values are in the context for all five themes and any theme that adds the row inherits it.
+
+---
+
+**CORRECTION, 2026-09-30 — the mechanism as filed is UNREACHABLE, and I filed it.**
+
+The generalised contract gate (D-135) settled it: **`sitex_data` never carries `pool`.** Neither
+producer writes it —
+
+| producer | keys | has `pool`? |
+|---|---|---|
+| `services/sitex.PropertyData.model_dump()` | 28 | **no** |
+| the wizard's `sitex_data` payload (`step-generate.tsx:104`) | 25 | **no** |
+
+So `1 if sitex_data.get("pool") else 0` always takes the `else`, `pools` is always `0`, and the
+truthy-`"None"` bug cannot fire in production. The `"None"` in the evidence came from **my own
+test fixture**, which invented a `pool` key SiteX does not return.
+
+This is the failure this workstream was opened to avoid, committed by the person auditing for
+it. §0.6 says *a document rendered by something other than the production path is evidence about
+that something* — and **a fixture is that something too.** The Workstream E measurement replaced
+the QA generator's invented context with a production-*shaped* one and never checked that every
+key in it was one production can actually produce. Shaped like production is not the same as
+producible by production.
+
+**What is actually wrong, and it is worse than the bug it replaces.** With no data behind them,
+the defaults assert facts:
+
+```python
+"pool":       sitex_data.get("pool") or "No",             # every report: "Pool/Spa: No"
+"tax_status": sitex_data.get("tax_status") or "Current",  # every report: "Tax Status: Current"
+```
+
+`No` and `Current` are not placeholders. They are claims about a specific person's property,
+printed with the same weight as the APN. A dash says *we don't know*; these say *we checked*.
+The pool claim reaches a seller who may well have one; the tax claim asserts a stranger's
+property taxes are paid. **Refiled as D-137**, which is the live defect. This entry stays open
+only for `stories`, whose missing-as-zero is real and unaffected.
 
 ---
 
@@ -7343,7 +7403,7 @@ owner block.
 
 **Severity:** WRONG · **Affects:** property reports in thin markets; the consumer lead-capture
 path most of all · **Found during:** D-117, which created the condition
-**Status:** `open` — **[JERRY]**, recommendation below
+**Status:** `fixed` — `fix/d118-remove-assessment-row`
 
 Jerry asked what the report does when six months returns too few comps. It currently does nothing
 special, and the answer matters more after D-117 than before it.
@@ -7385,8 +7445,48 @@ has genuinely failed, and never silently.
 **Concretely, if accepted:** `COMP_FALLBACK_WINDOW_DAYS = 365` as an L6 level entered only when
 L5 returns fewer than three; `search_params` in the response already carries
 `fallback_level_used`, so the wizard can show the agent which window ran; the page's heading
-follows from `comps_window` with no further change. **Not built — this is the recommendation, not
-the decision.**
+follows from `comps_window` with no further change.
+
+---
+
+**ACCEPTED AND BUILT, 2026-09-30.**
+
+`COMP_FALLBACK_WINDOW_DAYS = 365`, `COMP_MIN_FOR_ANALYSIS = 3`. The ladder gains a seventh
+element — a per-level `window_days` — and `L6:window-12mo` last.
+
+**It is a last resort, not a rung.** The level is skipped entirely unless the best result so far
+is under three, so no report carries a year-old comp while a six-month one exists. Being last
+also matters on its own: a twelve-month query earlier in the ladder would win on count and mask
+a perfectly good six-month result. Both are tested, and the ordering test failed when the level
+was moved up.
+
+**The client-side pass widens with it.** `_closed_within_window(filtered, window)` — the
+level's own window, not the constant. D-117 established that the vendor filter is never trusted;
+leaving the local pass at 180 would have made L6 fetch a year and discard it, which is a
+failure mode that looks exactly like the feed ignoring the parameter.
+
+**Grade D with its own reason.** L6 was falling into the same `else` as L5 and reporting *Thin
+market*. It now reports *Widened to 12 months — under 3 sales in 6*, because the reason differs
+in kind: not that the search went wider in space, but that it went back in time.
+
+**THE PAGE STATES THE WINDOW THAT COVERS ITS COMPS, AND IT IS DERIVED, NOT PLUMBED.**
+`PropertyReportBuilder._window_months` reads the oldest `close_date` among the comps and rounds
+up to the ladder's own buckets — 6, then 12, then the real figure for anything older. The
+alternative was carrying the window from the API response through the wizard, the create
+payload, the `property_reports` row and into `report_data`: four hops, each able to drop it, for
+a number the data already implies. Deriving it also survives a report being regenerated later or
+its comps edited by hand, where a stored window goes stale. Without this the page would say six
+months over a twelve-month search — **D-117 again, one level up.**
+
+**A test bug this surfaced, worth recording.** The spy in `test_comp_close_window.py` returned a
+fixed list for every ladder level, so no level could ever be seen to gain anything, and the
+grading test passed for the wrong reason — the ladder correctly declined to credit L6 for a tie.
+The spy now takes a callable and models a feed where a listing appears only if the query's window
+reaches it. A mock that cannot distinguish the levels cannot test a ladder.
+
+Five regressions applied and seen to fail: L6 not last, L6 unconditional, the client-side pass
+left at six months, the page stating the constant instead of the comps, and absolute dates back
+in the fixture.
 
 ---
 
@@ -7456,6 +7556,138 @@ different kinds of number.
 three the table shows), whether it is a point or a range, whether it adjusts for the subject's
 size, what it does when the inputs are too thin, and the exact sentence printed under it.
 Recorded now so the figure is not invented by whoever gets to the template first.
+
+---
+
+### D-135 — the contract gate, generalised: nineteen reads with no producer on one surface
+
+**Severity:** WRONG · **Affects:** the property page's Property Details and Tax blocks in all
+five themes; the mobile report endpoint · **Found during:** extending D-113's gate on Jerry's
+instruction
+**Status:** `open` — the gate is built and baselined; the gaps it found are not fixed
+
+D-113's contract test asked one question — *does everything `market_builder` reads off
+`report_data` have a producer?* — and it was scoped to that one (reader, holder, producer)
+triple because that is where the first instance was found. Two more turned up within the week,
+both outside its reach: `estimated_value` (D-118) and `last_sale_*` (D-133).
+
+Jerry, 2026-09-30: *extend it, and report what it catches — if there's a fourth, that changes
+this from a recurring defect to a structural property.*
+
+**It is a fourth and eighteen more.**
+
+| surface | reads | orphans |
+|---|---|---|
+| `market_builder` ← `report_data` | 17 | **0** |
+| `property_builder` ← `sitex_data` | 41 | **19** |
+| `mobile_reports` ← `property_data` | 17 | **3** |
+
+**The `sitex_data` nineteen**, measured against the only two things that can produce that blob —
+`services/sitex.PropertyData.model_dump()` (28 keys, read off the model rather than guessed from
+the route) and the wizard's payload at `step-generate.tsx:104` (25 keys):
+
+```
+pool  zoning  garage  fireplace  stories  census_tract  housing_tract  lot_number
+page_grid  partial_bath  percent_improved  tax_status  tax_rate_area  total_rooms
+num_units  use_code  mailing_address  notes  estimated_value
+```
+
+Every one is read by `_build_property_context` or `_build_stats_context`. None is produced by
+either path. So the Property Details block renders `Zoning: -`, `Garage: -`, `Fireplace: -`,
+`Census Tract: -` on every real report — and two of them do something worse than a dash, which
+is **D-137**.
+
+**One of them is produced by neither path but differs between them**, which is its own finding:
+`land_value` and `improvement_value` are in SiteX's 28 and *not* in the wizard's 25, so the same
+property renders `$337,378` when the worker looked it up and **`$0`** when the wizard supplied
+the data. `tax_year` renders `2024` or `-`. Same house, two reports, different numbers,
+depending only on which code path created it.
+
+**The `mobile_reports` three** are D-133's two plus `tax_assessed_value` — and that third is a
+different species: not *nobody writes it* but *the writer calls it something else*
+(`tasks.py` writes `assessed_value`). A near-miss is the one a reader's eye skips over, so the
+gate has a test asserting it is reported rather than matched.
+
+**How the gate works, and two things it had to get right.**
+
+*Alias chains.* `comp.get("distance_miles") or comp.get("distance")` is one requirement with two
+spellings. Counting them separately reported every alias in the codebase, and a gate whose
+output is mostly noise gets skimmed — which is how a real finding gets missed. An `or` chain of
+`.get()`s on one holder is now a single group, satisfied if any member is produced.
+
+*Naming every producer.* The first run reported `apn` and `property_type` as orphans on the
+mobile surface. Both are written, at `lead_pages.py:302,312`, which was missing from the
+producer list. **A gate with an incomplete producer set invents gaps**, and an invented gap
+costs the same trust as a missed one.
+
+**Baselined, not xfailed.** A strict xfail per surface says "these are broken" and hides a new
+orphan appearing beside them. The baseline is asserted exactly and fails in both directions: a
+new gap fails, and a *fixed* gap fails too, because a stale baseline protects nothing. Both
+directions were applied and seen to fail, along with a planted D-118-shaped orphan and the
+removal of the alias grouping.
+
+**The answer to Jerry's question is yes.** Three instances made it a recurring defect; nineteen
+on one surface makes it a property of how this context is assembled — a builder written against
+a data source nobody diffed it with.
+
+---
+
+### D-136 — two context builders invent demographics, and nothing renders them yet
+
+**Severity:** FRAGILE · **Affects:** nothing today · **Found during:** D-135's gate
+**Status:** `open`
+
+`_build_neighborhood_context` reads `sitex_data["neighborhood"]` and
+`_build_area_analysis_context` reads `sitex_data["area_analysis"]`. Neither key exists in either
+producer (D-135), so both always take their defaults — and the defaults are **invented figures**:
+
+```python
+"female_ratio": neighborhood.get("female_ratio", "51.5"),
+"male_ratio":   neighborhood.get("male_ratio",   "48.5"),
+"avg_beds":     neighborhood.get("avg_beds",     "3"),
+"area_min_radius": area.get("area_min_radius", "0.1 mi"),
+```
+
+**Checked before filing, because the severity turns on it:** no live template references
+`neighborhood.*` or `area_analysis.*`. Both contexts are built on every render and consumed by
+nothing, so **no report has ever printed a fabricated demographic.** This is FRAGILE, not WRONG,
+and saying so precisely is the D-113 discipline — an unreachable state is not a live defect.
+
+It is filed because the gun is loaded. The contexts are in `render_html`'s dict under plausible
+names, and the first person to put a "Neighborhood" page in a theme wires up
+`51.5% female / 48.5% male` for a census tract nobody looked at. Delete both builders, or
+source them.
+
+---
+
+### D-137 — the property page asserts "Pool/Spa: No" and "Tax Status: Current" with no data behind either
+
+**Severity:** WRONG · **Affects:** the property page in all five themes, every report ·
+**Found during:** D-135's gate, while correcting D-120
+**Status:** `open`
+
+```python
+"pool":       sitex_data.get("pool") or "No",
+"tax_status": sitex_data.get("tax_status") or "Current",
+```
+
+Neither key is produced by SiteX's model or the wizard's payload (D-135), so the `or` is not a
+fallback — it is the only path, and **every property report ever generated has stated that the
+home has no pool and that its taxes are current.**
+
+These are not the same as the eighteen fields that render `-`. A dash says *we don't know*.
+`No` and `Current` say *we checked*, in the same type and the same table as the APN and the legal
+description, which are real. A seller with a pool sees their report deny it. A stranger who
+typed their address into a landing page gets a document asserting their tax standing.
+
+Same `or`-chain family as D-118 — and D-118 is the precedent for the severity, because there the
+fallback rendering a *plausible number* is what made the absence invisible. Here it renders a
+plausible *fact*.
+
+**The fix is to distinguish absent from false**, which means `None` rather than a default, and a
+row that either omits itself or says "not reported". Not done here: it is four fields across five
+themes and belongs with the wider "absent renders as measured" pass (D-125, D-120's `stories`,
+B12's bare hyphen), which should settle one convention rather than four.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 

@@ -792,6 +792,25 @@ it.**
   a divisor are different decisions; and a fixed accent readable on a theme's navy is not
   readable on an affiliate's brand. **Same value, different consumer, different obligation.**
 
+- **A fixture shaped like production is not the same as one production can produce.**
+  *Added 2026-09-30.* The Workstream E measurement replaced a QA script's invented context with
+  a production-*shaped* `report_data` and rendered through the real builder — which was the
+  right move and caught seven false tickets. It then filed **D-120** on a `sitex_data["pool"]`
+  value of `"None"`. No producer writes `pool` at all: neither
+  `services/sitex.PropertyData.model_dump()` (28 keys) nor the wizard's payload (25). The
+  `"None"` was invented by the fixture, and the entry described a state production cannot enter
+  — filed by the person auditing for exactly that, two days after writing the rule about it.
+
+  The rule above says a document rendered by something other than the production path is
+  evidence about that something. **A fixture is that something too.** Shaping it correctly
+  proves the consumer handles that shape; it says nothing about whether the shape occurs.
+
+  The check is cheap and is now a test (D-135): **diff the keys the consumer reads against the
+  keys the producer can emit.** On that one surface it found nineteen reads with no producer,
+  and two of them assert facts rather than render dashes (D-137). Do it before writing the
+  fixture, not after — a fixture is a claim about the producer, and an unchecked claim is how
+  both D-113 and D-120 happened.
+
 - **A read of an optional field is indistinguishable from a read of a field nothing writes.**
   *Added 2026-09-29, from D-118's investigation.* `dict.get(k)` returns `None` for "absent this
   time" and for "absent always", and an `or` fallback turns both into a plausible value. Three
