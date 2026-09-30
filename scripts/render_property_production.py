@@ -35,23 +35,45 @@ if VARIANT == "full":
     os.environ["GOOGLE_MAPS_API_KEY"] = "AIzaFAKEKEYFORRENDERONLY"
 
 from worker.property_builder import PropertyReportBuilder, THEME_TEMPLATES  # noqa: E402
+sys.path.insert(0, str(REPO / "apps/api/src"))
+from api.services.sitex import PropertyData  # noqa: E402
 
 # ── report_data, shaped as fetch_report_with_joins() returns it ─────────────
+# ONLY KEYS A PRODUCER ACTUALLY WRITES — checked against
+# `api.services.sitex.PropertyData.model_fields` and the wizard's payload at
+# `step-generate.tsx`, and asserted below so it cannot drift.
+#
+# The earlier version of this fixture invented `zoning`, `pool`, `garage`,
+# `fireplace`, `census_tract`, `total_rooms`, `use_code`, `tax_status`,
+# `percent_improved`, `secondary_owner` and `mailing_address`. SiteX returns
+# none of them (D-135). So this script — the reproduction tool for the whole
+# Workstream E measurement — had been rendering a property page nobody can
+# receive, and the D-137 fix looked unapplied in its output because the
+# fixture was still feeding it `pool: "None"` and `tax_status: "Current"`.
+#
+# §0.6: a fixture shaped like production is not one production can produce.
+# That rule was written from this script's output and then not applied to
+# this script.
 SITEX = {
     "latitude": 34.1008, "longitude": -117.7678,
     "bedrooms": 2, "bathrooms": 1.0, "sqft": 786, "lot_size": 6155,
     "year_built": 1949, "property_type": "Single Family Residential",
-    "zoning": "LVPR4.5D*", "pool": "None", "garage": "1", "fireplace": "No",
     "assessed_value": 428248, "land_value": 337378, "improvement_value": 90870,
-    "tax_amount": 5198, "tax_year": 2024, "percent_improved": 21,
+    "tax_amount": 5198, "tax_year": 2024,
+    "county": "LOS ANGELES", "legal_description": "LOT 44 TR#6654",
+    "apn": "8381-021-001",
     # D-118: SiteX's SaleLoanInfo, exact keys confirmed by the probe.
     "last_sale_price": 369000, "last_sale_date": "2015-12-23",
     "last_sale_price_per_sqft": 469.0,
-    "secondary_owner": "MENDOZA YESSICA S",
-    "mailing_address": "1358 5th St, La Verne, CA 91750",
-    "census_tract": "4089.00", "county": "LOS ANGELES",
-    "total_rooms": 5, "use_code": "SFR", "tax_status": "Current",
 }
+
+_PRODUCED = set(PropertyData.model_fields)
+_invented = sorted(k for k in SITEX if k not in _PRODUCED)
+assert not _invented, (
+    f"this fixture invents keys SiteX does not return: {_invented}. "
+    f"A reproduction tool that feeds the builder impossible data reproduces "
+    f"a document nobody receives."
+)
 # Comparables shaped as fetch_comparables() stores them (SimplyRETS-derived).
 #
 # Close dates are RELATIVE. Written absolute, this fixture quietly aged past

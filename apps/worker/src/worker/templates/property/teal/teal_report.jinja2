@@ -1384,7 +1384,7 @@
           <table class="kv-table">
             <tr><td class="key">Year Built:</td><td class="val">{{ property.year_built | default('-') }}</td></tr>
             <tr><td class="key">Garage:</td><td class="val">{{ property.garage | default('-') }}</td></tr>
-            <tr><td class="key">Pool/Spa:</td><td class="val">{{ property.pool | default('None') }}</td></tr>
+            <tr><td class="key">Pool/Spa:</td><td class="val">{{ property.pool | default('-') }}</td></tr>
             <tr><td class="key">Zoning:</td><td class="val">{{ property.zoning | default('-') }}</td></tr>
           </table>
         </div>
@@ -1404,7 +1404,7 @@
           <table class="kv-table">
             <tr><td class="key">Tax Amount:</td><td class="val">{{ property.tax_amount | format_currency }}/yr</td></tr>
             <tr><td class="key">Tax Year:</td><td class="val">{{ property.tax_year | default('-') }}</td></tr>
-            <tr><td class="key">Tax Status:</td><td class="val">{{ property.tax_status | default('Current') }}</td></tr>
+            <tr><td class="key">Tax Status:</td><td class="val">{{ property.tax_status | default('-') }}</td></tr>
           </table>
         </div>
       </div>
@@ -1471,8 +1471,8 @@
             <tr><td>Lot Size</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
             <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
             <tr><td>Baths</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
-            <tr><td>Stories</td><td>{{ stats.piq.stories | default('0') }}</td><td>{{ stats.low.stories | default('0') }}</td><td>{{ stats.medium.stories | default('0') }}</td><td>{{ stats.high.stories | default('0') }}</td></tr>
-            <tr><td>Pools</td><td>{{ stats.piq.pools | default('0') }}</td><td>{{ stats.low.pools | default('0') }}</td><td>{{ stats.medium.pools | default('0') }}</td><td>{{ stats.high.pools | default('0') }}</td></tr>
+            <tr><td>Stories</td><td>{{ stats.piq.stories | default('-') }}</td><td>{{ stats.low.stories | default('-') }}</td><td>{{ stats.medium.stories | default('-') }}</td><td>{{ stats.high.stories | default('-') }}</td></tr>
+            <tr><td>Pools</td><td>{{ stats.piq.pools | default('-') }}</td><td>{{ stats.low.pools | default('-') }}</td><td>{{ stats.medium.pools | default('-') }}</td><td>{{ stats.high.pools | default('-') }}</td></tr>
           </tbody>
           <tfoot>
             <tr>
@@ -1635,7 +1635,7 @@
               {{ comp.address }}
             </div>
             <div class="comp-price">
-              <span class="lbl">{{ comp.price_label | default('Sale Price') }}</span>
+              <span class="lbl">{{ comp.price_label | default('Price') }}</span>
               <span class="val">{{ comp.sale_price | format_currency }}</span>
             </div>
             <div class="comp-stats">
@@ -1647,7 +1647,7 @@
               <div class="stat"><span class="tiny">Bed/Bath</span><b>{{ comp.bedrooms }}/{{ comp.bathrooms }}</b></div>
               <div class="stat"><span class="tiny">Year Blt</span><b>{{ comp.year_built }}</b></div>
               <div class="stat"><span class="tiny">Lot Area</span><b>{{ comp.lot_size | format_number }}</b></div>
-              <div class="stat"><span class="tiny">Pool</span><b>{{ 'Yes' if comp.pool else 'No' }}</b></div>
+              <div class="stat"><span class="tiny">Pool</span><b>{{ '-' if comp.pool is none else ('Yes' if comp.pool else 'No') }}</b></div>
             </div>
           </div>
         </article>
