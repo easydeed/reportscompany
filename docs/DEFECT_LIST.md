@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 56 | Real, unfixed |
-| `fixed` | 82 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 55 | Real, unfixed |
+| `fixed` | 84 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **142** | D-001 … D-142, contiguous, no duplicates |
+| **Total** | **143** | D-001 … D-143, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 15 · ROUGH 21. (Sums to 56, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 13 · FRAGILE 15 · ROUGH 22. (Sums to 55, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -7000,7 +7000,8 @@ behaviour, not the builder's.)
 
 **Severity:** WRONG · **Affects:** the teal Area Sales Analysis table; the `pools` and `stories`
 context keys in all five themes · **Found during:** Workstream E measurement (E8)
-**Status:** `open` — **but not for the reason first filed. See the correction at the end.**
+**Status:** `fixed` — `fix/d137-absent-is-not-a-default`, together with D-137. **The
+mechanism as first filed was unreachable; see the correction at the end.**
 
 ```python
 "pools": 1 if sitex_data.get("pool") else 0,
@@ -7734,7 +7735,7 @@ source them.
 
 **Severity:** WRONG · **Affects:** the property page in all five themes, every report ·
 **Found during:** D-135's gate, while correcting D-120
-**Status:** `open`
+**Status:** `fixed` — `fix/d137-absent-is-not-a-default`
 
 ```python
 "pool":       sitex_data.get("pool") or "No",
@@ -7754,10 +7755,66 @@ Same `or`-chain family as D-118 — and D-118 is the precedent for the severity,
 fallback rendering a *plausible number* is what made the absence invisible. Here it renders a
 plausible *fact*.
 
-**The fix is to distinguish absent from false**, which means `None` rather than a default, and a
-row that either omits itself or says "not reported". Not done here: it is four fields across five
-themes and belongs with the wider "absent renders as measured" pass (D-125, D-120's `stories`,
-B12's bare hyphen), which should settle one convention rather than four.
+---
+
+**FIXED 2026-09-30.** Jerry took this before D-121: the readership went from zero to every
+consumer report in one merge (D-141), and on that path there is no agent to catch it.
+
+**One convention, one spelling:** `ABSENT = "-"`, matching what `zoning`, `garage` and
+`fireplace` already printed, so an unknown field looks the same wherever it appears.
+
+**TWO LAYERS, AND FIXING ONE WOULD HAVE LEFT THE OTHER.** The templates carried their own
+assertions — `{{ property.tax_status | default('Current') }}`,
+`{{ stats.piq.stories | default('0') }}`, `{{ 'Yes' if comp.pool else 'No' }}`. The construct
+lives in Python *and* in Jinja, so both were swept and both are gated. §0.6's *grep for the
+construct*, across a language boundary.
+
+**The whole family, found by scanning rather than by memory** — and the first scan was too
+narrow. `X.get(k) or "<str>"` missed `X.get(k, "<str>")`, which is where
+`comp.get("pool", "No")` was hiding: **every comp card on every report read "Pool: No"**, on a
+field no producer writes.
+
+| site | was | now |
+|---|---|---|
+| `property.pool` | `or "No"` | `or ABSENT` |
+| `property.tax_status` | `or "Current"` | `or ABSENT` |
+| comp card pool | `comp.get("pool", "No") == "Yes"` | `_tri_state_bool` |
+| `stats.*.pools` | `1 if …get("pool") else 0` | `ABSENT` when absent |
+| `stats.*.stories` | `_safe_num(…, 0)` | `ABSENT` when absent |
+| teal `comp.price_label` fallback | `default('Sale Price')` | `default('Price')` |
+
+**`_tri_state_bool` is the distinction the bug collapsed, and it cuts both ways.** Absent → None.
+But **SiteX spells "no pool" as the literal string `"None"`, which is a genuine negative and
+stays False.** D-120 got that backwards — it read the string as truthy and reported a pool. A
+regression that turns a real negative into an absence is applied and seen to fail, because
+over-correcting here would be the same defect wearing the other hat.
+
+**AND THE REPRODUCTION TOOL WAS LYING.** `scripts/render_property_production.py` invented
+`zoning`, `pool`, `garage`, `fireplace`, `census_tract`, `total_rooms`, `use_code`, `tax_status`,
+`percent_improved`, `secondary_owner` and `mailing_address` — none of which SiteX returns
+(D-135). So the fix looked unapplied in its output, because the fixture was still feeding it
+`pool: "None"`. **§0.6's rule about fixtures was written from this script's output and then not
+applied to this script.** It now asserts its own keys against `PropertyData.model_fields`, and
+that assertion is a regression seen to fail.
+
+Rendered on a fixture production can actually produce, the property page now reads
+`Pool/Spa: -`, `Tax Status: -`, `Zoning: -`, `Garage: -`, `Census Tract: -` — **the first time
+anyone has seen what this page really looks like** — with real figures in Assessed Value, Land
+Value, Tax Year, APN, County and Legal.
+
+**Gated:** `apps/worker/tests/test_absent_is_not_a_default.py`, scoped by *holder* rather than by
+allow-listing everything else, so its output is entirely findings. A default on a brand colour or
+an agent's job title is about us and is not this rule's business; a default on `sitex_data`,
+`comp`, `property` or `stats` is a claim about somebody's house and needs a recorded reason or it
+fails. Five regressions applied and each seen to fail, including the template layer alone and the
+over-correction.
+
+**D-120 closes with it.** Its `stories` half is fixed by the same change, and its correction note
+stands: the mechanism first filed was unreachable, and the real defect was worse.
+
+**Found on the way, not fixed:** four themes fall back to `(000) 000-0000`,
+`agent@example.com` and `info@example.com` for agent contact details. Placeholder contact data in
+client-facing output is B2's family, not this entry's — **filed as D-143**.
 
 ---
 
@@ -8145,6 +8202,32 @@ half: **"market trends failed on 40% of consumer reports last week" is a number 
 currently produce.**
 
 Not fixed here. D-141 restored the page this defect was hiding behind; this is the general case.
+
+---
+
+### D-143 — the property report falls back to a placeholder phone number and email
+
+**Severity:** ROUGH · **Affects:** the agent contact block, four themes ·
+**Found during:** D-137's scan, which reported them and then excluded them as out of scope
+**Status:** `open`
+
+```jinja
+{{ agent.phone | default('(000) 000-0000') }}
+{{ agent.email | default('agent@example.com') }}
+{{ agent.email | default('info@example.com') }}
+```
+
+An agent with no phone number on file gets `(000) 000-0000` printed on a client-facing document,
+and `agent@example.com` beside it. Unlike D-137's defaults these are not *wrong claims about the
+property* — they are placeholders reaching a customer, which is **B2's family** (`Footer Logo`
+rendering as literal text).
+
+Out of D-137's scope on purpose: that entry is about a default that asserts a fact, and its gate
+is scoped to property holders so its output stays entirely findings. This is a different rule —
+*no placeholder may render* — and it wants its own sweep across both surfaces, which is B2's.
+
+`agent.phone` and `agent.email` are produced by `fetch_report_with_joins` from the `users` row,
+so the fallback fires only when the column is empty. How often that is, is unmeasured.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 

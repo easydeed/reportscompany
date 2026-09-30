@@ -436,7 +436,7 @@
             <div class="property-item"><span class="property-item-label">Square Feet</span><span class="property-item-value">{{ property.sqft | default('-') | int | format_number }}</span></div>
             <div class="property-item"><span class="property-item-label">Zoning</span><span class="property-item-value">{{ property.zoning | default('-') }}</span></div>
             <div class="property-item"><span class="property-item-label">Lot Size</span><span class="property-item-value">{{ property.lot_size | default('-') | int | format_number }} sq ft</span></div>
-            <div class="property-item"><span class="property-item-label">Pool/Spa</span><span class="property-item-value">{{ property.pool | default('None') }}</span></div>
+            <div class="property-item"><span class="property-item-label">Pool/Spa</span><span class="property-item-value">{{ property.pool | default('-') }}</span></div>
           </div>
         </div>
         <div class="property-section">

@@ -518,6 +518,21 @@ def _text_on_accent(hex_color: str) -> str:
     return _best_of(("#ffffff", "#14151a"), normalize_hex_color(hex_color))
 
 
+def _tri_state_bool(value):
+    """True / False / None — never collapsing "unknown" into "no". (D-137)
+
+    SimplyRETS and SiteX both express a boolean attribute as a string when
+    they express it at all, and as nothing when they do not. `or False` and
+    `.get(k, "No") == "Yes"` both turn the third case into the second, which
+    is how a report came to tell people their home has no pool.
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in ("yes", "y", "true", "1")
+
+
 def compute_color_roles(hex_color: str, dark_bg="#18235c") -> Dict[str, str]:
     """
     From a single accent hex, compute a complete set of color roles:
@@ -578,6 +593,19 @@ logger.warning("[DIAGNOSTIC] property_builder loaded at startup")
 logger.warning("[DIAGNOSTIC] GOOGLE_MAPS_API_KEY present: %s, length: %d", bool(GOOGLE_MAPS_API_KEY), len(GOOGLE_MAPS_API_KEY))
 logger.warning("[DIAGNOSTIC] OPENAI_API_KEY present: %s, length: %d", bool(OPENAI_API_KEY), len(OPENAI_API_KEY))
 logger.warning("[DIAGNOSTIC] TEMPLATES_DIR: %s, exists: %s", TEMPLATES_DIR, TEMPLATES_DIR.exists())
+
+
+#: What the report prints where it has no data. D-137: the alternative is a
+#: DEFAULT, and a default in a property report is a claim. `pool or "No"` and
+#: `tax_status or "Current"` asserted, with nothing behind either, that a
+#: specific person's home has no pool and their taxes are paid — in the same
+#: type and the same table as the APN and the legal description, which are
+#: real. A dash says *we don't know*; those said *we checked*.
+#:
+#: Matches the spelling already used by zoning, garage, fireplace and the rest
+#: of `_build_property_context`, so an unknown field looks the same wherever
+#: it appears.
+ABSENT = "-"
 
 
 class PropertyReportBuilder:
@@ -781,7 +809,10 @@ class PropertyReportBuilder:
             "year_built": sitex_data.get("year_built") or 0,
             "garage": sitex_data.get("garage") or "-",
             "fireplace": sitex_data.get("fireplace") or "-",
-            "pool": sitex_data.get("pool") or "No",
+            # D-137. Was `or "No"`. `pool` is produced by NEITHER SiteX's
+            # model nor the wizard's payload (D-135), so the default was the
+            # only path and every report stated the home has no pool.
+            "pool": sitex_data.get("pool") or ABSENT,
             "total_rooms": sitex_data.get("total_rooms") or "-",
             "num_units": sitex_data.get("num_units") or "-",
             "units": sitex_data.get("num_units") or "-",  # V0 template naming
@@ -803,7 +834,9 @@ class PropertyReportBuilder:
             "improvement_value": sitex_data.get("improvement_value") or 0,
             "percent_improved": sitex_data.get("percent_improved") or 0,
             "improvement_pct": sitex_data.get("percent_improved") or 0,  # V0 template naming
-            "tax_status": sitex_data.get("tax_status") or "Current",
+            # D-137. Was `or "Current"` — an assertion about a stranger's
+            # property taxes, on a field no producer writes.
+            "tax_status": sitex_data.get("tax_status") or ABSENT,
             "tax_rate_area": sitex_data.get("tax_rate_area") or "-",
             "tax_year": sitex_data.get("tax_year") or "-",
             
@@ -1005,7 +1038,12 @@ class PropertyReportBuilder:
                 "lot_display": comp.get("lot_display") or "",
                 "hoa_fee": comp.get("hoa_fee"),
                 "hoa_frequency": comp.get("hoa_frequency") or "",
-                "pool": comp.get("pool") if isinstance(comp.get("pool"), bool) else (comp.get("pool", "No") == "Yes"),
+                # D-137, tri-state: True / False / None. The old expression
+                # collapsed absent into False via `comp.get("pool", "No")`,
+                # so every comp card read "Pool: No". No producer writes
+                # `pool` on a comp — not the API's projection, not the
+                # wizard's payload — so that was every card, always.
+                "pool": _tri_state_bool(comp.get("pool")),
             })
         
         logger.info("_build_comparables_context: returning %d processed comps", len(comparables))
@@ -1411,8 +1449,14 @@ class PropertyReportBuilder:
                 "lot_size": _safe_num(comp.get("lot_size"), 0),
                 "bedrooms": _safe_num(comp.get("bedrooms"), 0),
                 "bathrooms": _safe_num(comp.get("bathrooms"), 0),
-                "stories": _safe_num(comp.get("stories"), 0),
-                "pools": 1 if comp.get("pool") else 0,
+                # D-120/D-137: a house with zero storeys is not a thing, and
+                # a pool count of 0 on an unwritten field is the same claim as
+                # "No" one table up. Display strings, because the template
+                # prints these raw and Jinja's `default` does not fire on None.
+                "stories": _safe_num(comp.get("stories"), 0)
+                           if comp.get("stories") is not None else ABSENT,
+                "pools": ABSENT if _tri_state_bool(comp.get("pool")) is None
+                         else int(_tri_state_bool(comp.get("pool"))),
                 "price": _safe_num(raw_price, 0),
                 # Same key as the subject so the template is one expression.
                 # No date: the comps' dates are already a column on the Sales
@@ -1483,8 +1527,10 @@ class PropertyReportBuilder:
             "lot_size": _safe_num(sitex_data.get("lot_size"), 0),
             "bedrooms": _safe_num(sitex_data.get("bedrooms"), 0),
             "bathrooms": _safe_num(sitex_data.get("bathrooms"), 0),
-            "stories": _safe_num(sitex_data.get("stories"), 0),
-            "pools": 1 if sitex_data.get("pool") else 0,
+            "stories": _safe_num(sitex_data.get("stories"), 0)
+                       if sitex_data.get("stories") is not None else ABSENT,
+            "pools": ABSENT if _tri_state_bool(sitex_data.get("pool")) is None
+                     else int(_tri_state_bool(sitex_data.get("pool"))),
             "price": piq_price,
             # The subject's cell carries the sale's DATE as well as its figure.
             # Without it a 2015 sale reads as a current valuation sitting 25%

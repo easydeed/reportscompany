@@ -307,16 +307,24 @@ def test_every_comparable_reaches_the_area_sales_analysis(theme, builders):
 
 # ── D-120 · `pools` is computed from a truthy string ────────────────────────
 
-@pytest.mark.xfail(strict=True, reason='D-120 — `1 if sitex["pool"] else 0`, and "None" is truthy')
 @pytest.mark.parametrize("theme", THEMES)
 def test_the_analysis_table_agrees_with_the_property_page_about_the_pool(theme, builders):
+    """FIXED 2026-09-30 by D-137. Was a strict xfail.
+
+    The contradiction was `1 if sitex_data.get("pool") else 0` against
+    `pool or "No"` — SiteX spells "no pool" as the STRING "None", which is
+    truthy, so the table said 1 while the page said None. Both now route
+    through `_tri_state_bool`, which distinguishes absent from a real
+    negative instead of collapsing them.
+    """
     b = builders[theme]
-    says_no_pool = b._build_property_context()["pool"] in ("None", "No", "-", "")
-    has_pool = bool(b._build_stats_context()["piq"]["pools"])
-    assert says_no_pool != has_pool, (
-        "the property page prints Pool/Spa: "
-        f"{b._build_property_context()['pool']!r} and the analysis table one "
-        f"page later prints Pools: {b._build_stats_context()['piq']['pools']}"
+    page = b._build_property_context()["pool"]
+    table = b._build_stats_context()["piq"]["pools"]
+    says_no_pool = page in ("None", "No", "-", "")
+    has_pool = table == 1
+    assert not (says_no_pool and has_pool), (
+        f"the property page prints Pool/Spa: {page!r} and the analysis table "
+        f"one page later prints Pools: {table!r}"
     )
 
 
