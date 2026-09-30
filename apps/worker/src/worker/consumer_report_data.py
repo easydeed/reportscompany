@@ -34,13 +34,33 @@ keeps every field the report needs visible in one signature.
 """
 from typing import Any, Dict, List, Optional
 
-#: The consumer CMA's page set. Deliberately NOT the agent default (which is
-#: cover/contents/aerial/property/analysis/comparables/range): this path drops
-#: contents and analysis and adds market_trends and overview. Recorded here
-#: rather than inline because the two page sets differing is a product choice
-#: someone should be able to find, not an accident to rediscover.
+#: The consumer CMA's page set.
+#:
+#: D-141. This diverged from the agent default by ACCIDENT, not by decision —
+#: `git log -S` on every distinguishing string traces it to commit 182 of 182,
+#: the squashed base, whose message is about Market Snapshot gallery rows. The
+#: divergence dropped `analysis`, and with it the only page that places the
+#: subject property against its comps: the comparison table, the sales chart,
+#: and the last-sale price row. A homeowner who asked what their house is
+#: worth received four neighbours' sale prices and nothing about their own.
+#:
+#: `analysis` restored 2026-09-30. `market_trends` and `overview` stay — they
+#: suit this reader — but they were additions and were never a reason to
+#: exclude the analysis.
+#:
+#: `contents` is still OUT, and deliberately: its block is hardcoded and
+#: unguarded (D-121), so it would list pages this set does not contain and
+#: number them wrongly. **PUT `contents` BACK HERE WHEN D-121 IS FIXED** —
+#: this set is the reason it was left out, so this is where the reminder
+#: belongs.
+#:
+#: BEWARE: `market_trends` needs a live SimplyRETS fetch and `overview` needs
+#: an OpenAI key, and `render_html` drops either without a word when its data
+#: does not arrive (D-142). So this list is the MAXIMUM, not the guarantee —
+#: six pages when both services answer, four when neither does. `analysis`
+#: renders unconditionally, which is half of why it belongs here.
 CONSUMER_PAGES = [
-    "cover", "aerial", "property",
+    "cover", "aerial", "property", "analysis",
     "comparables", "range",
     "market_trends", "overview",
 ]
