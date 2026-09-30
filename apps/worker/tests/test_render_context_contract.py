@@ -266,7 +266,14 @@ SURFACES = [
         # lead_pages.py:302,312 — a gate that names an incomplete producer set
         # INVENTS gaps, which is the failure mode that gets a gate ignored.
         lambda: _written([SRC / "tasks.py", API / "routes/lead_pages.py"]),
-        {"last_sale_date", "last_sale_price", "tax_assessed_value"},  # D-133
+        # CLEARED 2026-09-30. All three were D-133: `last_sale_*` written by
+        # nobody, and `tax_assessed_value` read while the producer wrote
+        # `assessed_value`. The first two now come from SiteX's SaleLoanInfo
+        # through lead_pages and tasks (D-118); the third reads both
+        # spellings. The baseline caught the fix — it failed as "no longer
+        # orphaned" before this edit, which is the direction a ratchet is
+        # usually missing.
+        set(),
     ),
 ]
 

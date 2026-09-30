@@ -1014,7 +1014,7 @@
           <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
         </tbody>
         <tfoot>
-          <tr><td>{{ comps_window.price_row }}</td><td>{{ stats.piq.price | format_currency }}</td><td>{{ stats.low.price | format_currency }}</td><td>{{ stats.medium.price | format_currency }}</td><td>{{ stats.high.price | format_currency }}</td></tr>
+          <tr><td>{{ comps_window.price_row }}</td><td>{{ stats.piq.price_display }}</td><td>{{ stats.low.price_display }}</td><td>{{ stats.medium.price_display }}</td><td>{{ stats.high.price_display }}</td></tr>
         </tfoot>
       </table>
       <div class="page-footer"><div class="brand">Bold Collection • TrendyReports</div><div class="num">05</div></div>

@@ -24,6 +24,7 @@ from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
 import os
+from datetime import date as _date
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,29 @@ class PropertyData(BaseModel):
     year_built: Optional[int] = None
     property_type: str = ""
     
+    # Last recorded sale — SiteX's `SaleLoanInfo` (D-118)
+    #
+    # The probe confirmed SiteX has been returning this on every lookup and
+    # `_parse_response` read none of it, so the subject's price row showed the
+    # Prop 13 assessment instead. It also explains the $369,000 in Group A of
+    # the six reviewed PDFs, which nobody could account for: that was the real
+    # last sale price, reaching the page by a path the current code stopped
+    # taking.
+    #
+    # `price_per_sqft` is SiteX's own `PricePerSQFT`, not derived. Deriving it
+    # would silently disagree with theirs wherever their sqft differs from the
+    # one in `PropertyCharacteristics`, and the row sits next to comps whose
+    # ratio comes from a different calculation again.
+    #
+    # DELIBERATELY NOT PARSED from the same block: SellerName, LenderName,
+    # TitleCompany. Person and counterparty names, out for the same reason the
+    # owner block came out (D-116) — and the structural gate in
+    # test_no_owner_identity_in_property_report.py would fail on them.
+    last_sale_price: Optional[int] = None
+    last_sale_date: Optional[str] = None          # ISO `YYYY-MM-DD`
+    last_sale_price_per_sqft: Optional[float] = None
+    last_sale_document: str = ""                  # recorder's document number
+
     # Tax/Assessment
     assessed_value: Optional[int] = None
     tax_amount: Optional[float] = None
@@ -571,6 +595,9 @@ class SiteXClient:
         characteristics = profile.get("PropertyCharacteristics", {}) or {}
         legal_info = profile.get("LegalDescriptionInfo", {}) or {}
         tax_info = profile.get("AssessmentTaxInfo", {}) or {}
+        # D-118. Confirmed present in production by
+        # scripts/probe_sitex_sale_history.py and read by nothing until now.
+        sale_info = profile.get("SaleLoanInfo", {}) or {}
         
         # Build address - prefer direct Site* fields, fall back to nested PropertyAddress
         street = profile.get("SiteAddress", "") or prop_address.get("StreetAddress", "")
@@ -618,6 +645,19 @@ class SiteXClient:
             year_built=self._safe_int(characteristics.get("YearBuilt")),
             property_type=characteristics.get("UseCode", "") or characteristics.get("PropertyType", ""),
             
+            # Last recorded sale (D-118). `_sitex_date` because TransferDate is
+            # a YYYYMMDD int and 0 means absent, not 1970.
+            last_sale_price=self._safe_int(sale_info.get("SalesPrice")),
+            last_sale_date=self._sitex_date(sale_info.get("TransferDate")),
+            # Theirs, already computed — not derived. Only meaningful beside a
+            # price, so it is dropped when the sale is absent rather than left
+            # as a ratio of nothing.
+            last_sale_price_per_sqft=(
+                self._safe_float(sale_info.get("PricePerSQFT"))
+                if self._safe_int(sale_info.get("SalesPrice")) else None
+            ),
+            last_sale_document=str(sale_info.get("DocumentNumber") or ""),
+
             # Tax/Assessment
             assessed_value=self._safe_int(tax_info.get("AssessedValue")),
             tax_amount=self._safe_float(tax_info.get("TaxAmount")),
@@ -659,6 +699,46 @@ class SiteXClient:
         
         return street, city, state, zip_code
     
+    @staticmethod
+    def _sitex_date(value: Any) -> Optional[str]:
+        """SiteX's `YYYYMMDD` integer -> an ISO `YYYY-MM-DD` string, or None.
+
+        `TransferDate` arrives as the INT `20151223`, not a date string, and
+        the failure modes all look like numbers:
+
+          * `0` — the field present and empty. Passed to any epoch-based
+            parser this becomes 1970-01-01, and a report would state the home
+            last sold in 1970. This is the specific trap Jerry flagged.
+          * `None` / `""` — absent.
+          * `20151332` — a real month, an impossible day. `date()` rejects it;
+            guessing would print a date nobody recorded.
+          * `201512` / `2015` — truncated. Rejected rather than padded: a sale
+            "in 2015" and a sale "on 1 December 2015" are different claims.
+
+        Returns a STRING rather than a `date` because it is stored as JSON on
+        `property_reports.sitex_data` and crosses into the worker, where a
+        `date` would arrive as whatever the serialiser made of it.
+        """
+        if value is None or value == "":
+            return None
+        try:
+            n = int(str(value).strip())
+        except (ValueError, TypeError):
+            return None
+        # REDUNDANT, AND KEPT ON PURPOSE. Measured: `date()` already rejects
+        # every one of 0, -20151223, 201512, 2015, 99999999, 10000000 and
+        # 2015122300, because floor division sends each to an impossible
+        # year, month or day. So the `try` below is what actually protects,
+        # and this line states the expected shape for the next reader rather
+        # than doing work. Said plainly because a guard whose removal changes
+        # nothing will otherwise be assumed load-bearing by whoever finds it.
+        if n <= 0 or not (10_000_000 <= n <= 99_999_999):
+            return None
+        try:
+            return _date(n // 10_000, n // 100 % 100, n % 100).isoformat()
+        except ValueError:
+            return None
+
     def _safe_int(self, value: Any) -> Optional[int]:
         """Safely convert to int"""
         if value is None or value == "":

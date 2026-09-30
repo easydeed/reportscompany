@@ -789,6 +789,13 @@ class PropertyReportBuilder:
             "property_type": self.report_data.get("property_type") or sitex_data.get("property_type") or "",
             "use_code": sitex_data.get("use_code") or "-",
             
+            # Last recorded sale (D-118). Kept as raw values here; the
+            # analysis table's preformatted cell is built in
+            # _build_stats_context, which is where the comps' cells are built.
+            "last_sale_price": sitex_data.get("last_sale_price"),
+            "last_sale_date": sitex_data.get("last_sale_date"),
+            "last_sale_price_per_sqft": sitex_data.get("last_sale_price_per_sqft"),
+
             # Tax/Assessment
             "assessed_value": sitex_data.get("assessed_value") or 0,
             "tax_amount": sitex_data.get("tax_amount") or 0,
@@ -1141,6 +1148,16 @@ class PropertyReportBuilder:
             ),
         }
 
+    def _price_with_date(self, price, iso_date=None) -> str:
+        """`$369,000 · Dec 2015`, or `$470,000`, or `N/A`. (D-118)"""
+        if price is None:
+            return "N/A"
+        shown = _fmt_currency(price)
+        when = self._fmt_date(iso_date) if iso_date else ""
+        # A literal middle dot, not `&middot;`. These templates render with
+        # autoescape ON, so an entity would print as `&amp;middot;`.
+        return f"{shown} \u00b7 {when}" if when else shown
+
     def _format_price(self, price: Any) -> str:
         """Format price for display."""
         if price is None:
@@ -1397,6 +1414,11 @@ class PropertyReportBuilder:
                 "stories": _safe_num(comp.get("stories"), 0),
                 "pools": 1 if comp.get("pool") else 0,
                 "price": _safe_num(raw_price, 0),
+                # Same key as the subject so the template is one expression.
+                # No date: the comps' dates are already a column on the Sales
+                # Comparables page, and repeating four of them here would
+                # crowd a row whose point is the price spread.
+                "price_display": self._price_with_date(_safe_num(raw_price, 0), None),
             }
         
         # Property in question stats (from sitex_data)
@@ -1420,21 +1442,59 @@ class PropertyReportBuilder:
         #
         # `None`, not `0`: zero is a price. `format_currency(None)` renders
         # "N/A", which is what an unknown sale price is.
+        #
+        # RESOLVED 2026-09-30: the probe found SiteX carries it after all, in
+        # `SaleLoanInfo`, and the parser had never read it. The row now shows
+        # the LAST RECORDED SALE — for the measurement's subject, $369,000 in
+        # December 2015. That is also the $369,000 nobody could account for in
+        # Group A of the six reviewed PDFs: real data, by a path the current
+        # code stopped taking.
+        #
+        # `estimated_value` stays in the chain and stays first. It is still
+        # written by nothing (D-133), and D-134 will decide what computes it;
+        # when it does, a derived estimate should outrank a ten-year-old sale.
+        last_sale = sitex_data.get("last_sale_price")
+        vendor_ppsf = sitex_data.get("last_sale_price_per_sqft")
         est_value = sitex_data.get("estimated_value")
+
+        if est_value is not None:
+            # A value we computed. Its ratio has to be computed too — SiteX's
+            # PricePerSQFT belongs to SiteX's sale price, not to ours.
+            piq_price, piq_ppsf = est_value, _safe_num(
+                self._calc_price_per_sqft(est_value, sitex_data.get("sqft")), 0)
+        elif last_sale is not None:
+            # SiteX's own figure. Use SiteX's own ratio rather than dividing:
+            # theirs is computed against the sqft recorded with the SALE, which
+            # can differ from PropertyCharacteristics after an addition, and a
+            # row that disagrees with itself is worse than one that is a little
+            # stale.
+            piq_price = _safe_num(last_sale, 0)
+            piq_ppsf = (_safe_num(vendor_ppsf, 0) if vendor_ppsf is not None
+                        else _safe_num(self._calc_price_per_sqft(
+                            last_sale, sitex_data.get("sqft")), 0))
+        else:
+            piq_price, piq_ppsf = None, None
+
         piq = {
             "distance": 0,
             "sqft": _safe_num(sitex_data.get("sqft"), 0),
-            "price_per_sqft": (
-                _safe_num(self._calc_price_per_sqft(est_value, sitex_data.get("sqft")), 0)
-                if est_value is not None else None
-            ),
+            "price_per_sqft": piq_ppsf,
             "year_built": _safe_num(sitex_data.get("year_built"), 0),
             "lot_size": _safe_num(sitex_data.get("lot_size"), 0),
             "bedrooms": _safe_num(sitex_data.get("bedrooms"), 0),
             "bathrooms": _safe_num(sitex_data.get("bathrooms"), 0),
             "stories": _safe_num(sitex_data.get("stories"), 0),
             "pools": 1 if sitex_data.get("pool") else 0,
-            "price": _safe_num(est_value, 0) if est_value is not None else None,
+            "price": piq_price,
+            # The subject's cell carries the sale's DATE as well as its figure.
+            # Without it a 2015 sale reads as a current valuation sitting 25%
+            # below four recent comps, which is the same anchoring harm the
+            # assessment did — a true number presented as answering a question
+            # it does not answer.
+            "price_display": self._price_with_date(
+                piq_price,
+                sitex_data.get("last_sale_date") if est_value is None else None,
+            ),
         }
         
         # Calculate avg price per sqft across all comps

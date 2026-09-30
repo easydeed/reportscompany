@@ -93,7 +93,14 @@ class ReportRequestPayload(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     property_type: Optional[str] = None
-    
+    # D-118. Carried from the SiteX lookup the lead page already performed, so
+    # the consumer report shows the same last-sale figure the agent's does.
+    # Without these three the consumer path reads keys nobody writes — which
+    # is the defect being fixed, recreated one hop along.
+    last_sale_price: Optional[int] = None
+    last_sale_date: Optional[str] = None
+    last_sale_price_per_sqft: Optional[float] = None
+
     @field_validator('phone')
     @classmethod
     def validate_phone(cls, v):
@@ -310,6 +317,9 @@ async def request_report(
             "latitude": payload.latitude,
             "longitude": payload.longitude,
             "property_type": payload.property_type,
+            "last_sale_price": payload.last_sale_price,
+            "last_sale_date": payload.last_sale_date,
+            "last_sale_price_per_sqft": payload.last_sale_price_per_sqft,
         }
         property_data = {k: v for k, v in property_data.items() if v is not None}
         

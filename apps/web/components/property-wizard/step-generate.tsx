@@ -123,6 +123,13 @@ export function StepGenerate({
             property_type: property.property_type || "",
             unit_number: property.unit_number || "",
             unit_type: property.unit_type || "",
+            // D-118. Without these three the worker's sitex_data has no sale
+            // and the subject's price row falls back to N/A — the wizard path
+            // and the lookup path would disagree, which is D-135's
+            // land_value/$0 split all over again.
+            last_sale_price: property.last_sale_price,
+            last_sale_date: property.last_sale_date,
+            last_sale_price_per_sqft: property.last_sale_price_per_sqft,
           },
           comparables: selectedComps.map((c) => ({
             id: c.id,

@@ -2527,6 +2527,13 @@ def process_consumer_report(self, report_id: str):
                             "year_built": property_data.get("year_built"),
                             "assessed_value": 0,
                             "owner_name": property_data.get("owner_name", ""),
+                            # D-118. The consumer path is the one that reaches
+                            # a stranger, so it gets the same figure the agent
+                            # path does — or None, never a substitute.
+                            "last_sale_price": property_data.get("last_sale_price"),
+                            "last_sale_date": property_data.get("last_sale_date"),
+                            "last_sale_price_per_sqft":
+                                property_data.get("last_sale_price_per_sqft"),
                         },
                         "comparables": comparables[:6],
                         "agent": {

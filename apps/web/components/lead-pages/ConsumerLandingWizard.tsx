@@ -31,6 +31,11 @@ interface Property {
   bathrooms?: number;
   sqft?: number;
   year_built?: number;
+  // D-118: carried from the property search so the consumer's report shows
+  // the same last-sale figure the agent's does.
+  last_sale_price?: number;
+  last_sale_date?: string;
+  last_sale_price_per_sqft?: number;
 }
 
 // Progress stages for property search
@@ -266,6 +271,9 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
           bathrooms: selectedProperty!.bathrooms,
           sqft: selectedProperty!.sqft,
           year_built: selectedProperty!.year_built,
+          last_sale_price: selectedProperty!.last_sale_price,
+          last_sale_date: selectedProperty!.last_sale_date,
+          last_sale_price_per_sqft: selectedProperty!.last_sale_price_per_sqft,
         })
       });
       
