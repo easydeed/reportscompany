@@ -11,6 +11,7 @@ Run it whenever extract.py gains a read, and whenever a fresh payload is
 captured:
 
     python3 scripts/sweep_extract_field_paths.py
+    python3 scripts/sweep_extract_field_paths.py --capture out/downey.json
 
 WHAT IT FOUND, 2026-09-28: `daysOnMarket` read at the top level where the feed
 puts it under `mls` (D-105, fixed), and `bathrooms` read as `property.bathrooms`
@@ -21,13 +22,50 @@ where the feed carries `bathsFull`/`bathsHalf` (D-106, open). A third flag,
 LIMIT, STATED. It checks against `tests/fixtures/listing_*.json` — captured
 responses, real in shape, but two of them. A key absent from both is unproven
 rather than wrong. `tools/dump_market_snapshot.py` fetches a live page with
-SimplyRETS credentials and would widen the sample in one call.
+SimplyRETS credentials; pass its output with `--capture` and every row in it
+joins the sample.
 """
-import ast, json, sys
+import argparse, ast, json, sys
 from pathlib import Path
 
-REPO = Path("/home/user/reportscompany")
-FIXTURES = {p.stem: json.load(open(p)) for p in sorted((REPO / "tests/fixtures").glob("listing_*.json"))}
+#: Derived from this file's own location, not hardcoded. It was
+#: `Path("/home/user/reportscompany")`, which runs on exactly one machine —
+#: and the point of this script is that somebody with credentials runs it
+#: against a fresh capture, on theirs.
+REPO = Path(__file__).resolve().parents[1]
+
+
+def load_payloads(capture: Path | None) -> dict:
+    """The shapes to check reads against.
+
+    `tests/fixtures/listing_*.json` are two captured responses: real in shape,
+    and two. A key absent from both is UNPROVEN rather than wrong, and the
+    difference matters — this tool points, it does not conclude.
+
+    `--capture` widens that. `tools/dump_market_snapshot.py` writes a live
+    page fetched with real credentials, so one file can carry hundreds of rows
+    from a real market rather than two from a demo one. Passing it here is the
+    difference between "absent from two fixtures" and "absent from 301 real
+    listings", which are different findings.
+    """
+    out = {p.stem: json.load(open(p))
+           for p in sorted((REPO / "tests/fixtures").glob("listing_*.json"))}
+    if capture:
+        data = json.loads(capture.read_text(encoding="utf-8"))
+        # A capture is a page of rows, or an object wrapping one. Take the
+        # first row of whichever, because `index()` wants one listing's shape
+        # and every row in a page shares it.
+        rows = data if isinstance(data, list) else (
+            data.get("listings") or data.get("rows") or data.get("data") or [])
+        if not isinstance(rows, list) or not rows:
+            sys.exit(f"{capture}: no list of listings found. Top-level keys: "
+                     f"{list(data)[:10] if isinstance(data, dict) else type(data).__name__}")
+        # Every row, not just the first: a field present on some listings and
+        # absent from others is exactly what two fixtures cannot show.
+        for i, row in enumerate(rows):
+            out[f"{capture.stem}[{i}]"] = row
+        print(f"capture: {capture.name} — {len(rows)} listing(s)\n")
+    return out
 
 
 def walk(obj, path=""):
@@ -122,6 +160,17 @@ ACKNOWLEDGED = {
         "than `a or b` ON PURPOSE: a DOM of 0 is a real value and `or` would "
         "discard it, which is the defect one line over in a different costume.",
 }
+
+_parser = argparse.ArgumentParser(description=__doc__)
+_parser.add_argument(
+    "--capture", type=Path, default=None,
+    help="a JSON page of real listings (tools/dump_market_snapshot.py's "
+         "output). Every row in it joins the two bundled fixtures, so a key "
+         "reported absent is absent from real data rather than from a sample "
+         "of two.")
+_args = _parser.parse_args()
+
+FIXTURES = load_payloads(_args.capture)
 
 TARGET = REPO / "apps/worker/src/worker/compute/extract.py"
 rows = sweep(TARGET)

@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 55 | Real, unfixed |
+| `open` | 56 | Real, unfixed |
 | `fixed` | 84 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **143** | D-001 … D-143, contiguous, no duplicates |
+| **Total** | **144** | D-001 … D-144, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 13 · FRAGILE 15 · ROUGH 22. (Sums to 55, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 56, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -6961,6 +6961,25 @@ cell, and letting a computed estimate inherit SiteX's ratio and date.
 
 ---
 
+**PROBE RETURNED 2026-09-30, AND ITS VERDICT ON THIS ENTRY IS HALF WRONG — SPLIT.**
+
+`closePrice` on **0 of 20** closed listings. `closeDate` on **0 of 20**. The probe's own wording
+was *"cannot be built on a field this sparse without a fallback"*, and that conflates two
+different questions. Corrected in the script so a re-run says the right thing:
+
+| | |
+|---|---|
+| **the subject's last-sale row** | **unaffected, and shipped.** It does not come from SimplyRETS. SiteX answers it from `SaleLoanInfo`, cleanly, and this result changes nothing about it |
+| **any comp-level sale price** | **no source exists.** The feed does not carry the fields. That is not sparseness to engineer around — it is the absence of a producer, and no fallback can invent one |
+
+The second half matters beyond this entry: a comp's `price` on the analysis table and the
+comparables cards is `listPrice` wherever `closePrice` is absent, which is **every closed comp
+on this feed**. So a "Sale Price" column over closed comps is showing list prices. D-118's own
+`comps_window.price_row` work labels active comps correctly; **it cannot label a closed comp
+whose price is secretly a list price**, because nothing distinguishes them. Filed as **D-144**.
+
+---
+
 ### D-119 — the Area Sales Analysis table shows three comps; the chart beside it shows four
 
 **Severity:** WRONG · **Affects:** the Area Sales Analysis page in all five themes ·
@@ -8228,6 +8247,94 @@ is scoped to property holders so its output stays entirely findings. This is a d
 
 `agent.phone` and `agent.email` are produced by `fetch_report_with_joins` from the `users` row,
 so the fallback fires only when the column is empty. How often that is, is unmeasured.
+
+---
+
+### D-144 — a closed comp's "sale price" is its list price, because the feed carries no close price
+
+**Severity:** WRONG · **Affects:** the comparables cards and the analysis table, every property
+report · **Found during:** the 2026-09-30 probe, splitting D-118's verdict
+**Status:** `open`
+
+The probe measured `closePrice` present on **0 of 20** closed listings and `closeDate` on
+**0 of 20**. `_extract_price` falls back to `listPrice`, so on this feed **every closed comp's
+price is what the seller asked, printed in a column headed *Sale Price*.**
+
+**This is not D-117's problem and the D-118 work does not cover it.** `comps_window.price_row`
+distinguishes a set of *active* comps from a set of *closed* ones and labels the column
+accordingly — correct, and no help here, because these comps **are** closed. Their status says
+Closed, their date says Closed, and their price is a list price with nothing marking it as one.
+A label derived from status cannot catch a value that disagrees with its own status.
+
+**Three things it could be, and they need settling in this order:**
+
+1. **A vendor/feed question.** `closePrice` is a standard RESO field. 0/20 may mean this feed
+   does not license it, or that the probe's 20 rows came from a source that does not populate
+   it. **Twenty rows from one query is not the whole feed** — the next credential trip should
+   count it across statuses and postcodes before anyone concludes it is absent everywhere.
+2. **If it is genuinely absent:** the honest rendering is to label the column *List Price* for
+   closed comps too, and say so — the same move D-118 made for the subject's row, for the same
+   reason.
+3. **Only then:** whether a CMA built on asking prices rather than sale prices is a CMA. That
+   is Jerry's, not engineering's.
+
+**Not fixed, because every fix depends on (1).** Relabelling now would be right if the field is
+truly absent and wrong if the probe's sample was unrepresentative — and a column relabelled
+twice is worse than one relabelled once.
+
+---
+
+## PROBE RETURNED — 2026-09-30, production credentials, read only
+
+Jerry ran `scripts/probe_simplyrets_behaviour.py` against the production feed. **Verbatim, as
+the probe reported them.**
+
+| | verdict |
+|---|---|
+| **D-074** | **CONFIRMED.** `minclosedate` filters correctly at a real date: **60,874 in 90 days against 962,517 unfiltered.** The 210-day workaround goes |
+| **D-075** | `mindate` accepted and ignored. Confirms the shipped choice of `minclosedate` everywhere |
+| **D-076** | multi-value `status` — see the probe output; the repeated-parameter form shipped is correct either way |
+| **D-081** | **CONFIRMED.** `count=true` works and respects filters: **125 for `postalCodes=92503` against 70,519 feed-wide.** Months-of-supply is one cheap request |
+| **D-113** | **CONFIRMED at the window the chart uses: 244,158 closings in 365 days** |
+| **decision 01** | **13 requests, monotone, differences cleanly. §7.3 is affordable** |
+
+**The canary worked on 7 of 12 — and what it found is worse than a gap.** Every misspelling
+returned the **whole feed, silently**, including lowercase `postalcodes`. A mistyped filter does
+not error; it widens the query to everything, and the result reads as a big market rather than
+as a bug. That is D-084, confirmed, and it is the reason the canary section exists.
+
+**Two of the twelve failed for a bug in the probe, not the feed.** `cities=San Diego` and
+`q=San Diego` raised `InvalidURL` on the unencoded space — **and those two are precisely the
+parameters D-087's city-contamination fix depends on.** So the trip spent its credentials and
+returned "untestable" for the only question that would have moved D-087. Fixed: `_encode`
+percent-encodes each value (commas preserved, since SimplyRETS takes comma-separated lists), and
+both now reach the feed. `minclosedate` timed out and is re-queued.
+
+**`--only` added so the re-run costs one section.** Asking for the whole probe again would spend
+a credential handover on five questions already answered. Verdicts for sections that did not run
+now print **SKIPPED**, not INCONCLUSIVE — those mean different things, and a re-run that reports
+five inconclusive results looks like five failures.
+
+> **One command for Jerry:**
+> ```
+> SIMPLYRETS_USERNAME=... SIMPLYRETS_PASSWORD=... \
+>   python3 scripts/probe_simplyrets_behaviour.py --only 5
+> ```
+> Read only. ~26 requests. It answers whether `cities` and `q` filter in production — and if
+> `cities` does, city reports get exact counts back and the 1000-row ceiling lifts (D-087).
+
+**A dependency `--only` exposed, found by running it rather than reading it.** Section 5's
+canaries compare against the unfiltered baseline that section 1 fetched, so `--only 5` raised
+`UnboundLocalError`. The baseline is now fetched outside the section gates. A section-skipping
+flag that has not been run is a flag that does not work.
+
+**The Downey capture is the real-payload fixture.** 301 listings, avg DOM 36.4, MOI 2.4 — used
+for the D-105 and D-106 confirmations instead of asking for another trip.
+`scripts/sweep_extract_field_paths.py` now takes `--capture` and adds **every row** in it to the
+sample, because a field present on some listings and absent from others is exactly what two
+bundled fixtures cannot show. Its hardcoded `/home/user/reportscompany` is gone — it derives the
+repo root from its own location, so it runs on Jerry's machine, which is the entire point of a
+script somebody else is meant to run.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 
