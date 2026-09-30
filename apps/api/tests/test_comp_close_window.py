@@ -118,12 +118,20 @@ BODY = {
 
 
 def _call(status, listings=()):
-    """Run the real endpoint and return every params dict the ladder sent."""
+    """Run the real endpoint and return every params dict the ladder sent.
+
+    `listings` may be a list (returned for every level) or a callable taking
+    the params dict — which is how a real feed behaves, and the only way to
+    test that a wider window surfaces sales a narrower one did not. A fixed
+    list makes every level identical, so the ladder can never be seen to gain
+    anything, and a test written against it would assert the wrong thing
+    confidently.
+    """
     sent = []
 
     async def _spy(params, limit=None):
         sent.append(dict(params))
-        return list(listings)
+        return list(listings(params) if callable(listings) else listings)
 
     with patch("api.routes.property.simplyrets_fetch_properties", _spy):
         res = client.post("/v1/property/comparables", json={**BODY, "status": status})
@@ -136,7 +144,10 @@ def _call(status, listings=()):
 
 def test_a_closed_search_sends_minclosedate_at_the_six_month_mark(mock_auth):
     sent, _ = _call("Closed")
-    for params in sent:
+    # The first six levels. The seventh deliberately widens (D-132) and has
+    # its own tests below; asserting six months on every level would have
+    # made this pass only while L6 did not exist.
+    for params in sent[:6]:
         assert params["minclosedate"] == _closed_since(COMP_CLOSE_WINDOW_DAYS)
 
 
@@ -240,9 +251,9 @@ def test_the_ladder_widens_in_response_to_the_window(mock_auth):
              "property": {"type": "RES"}, "address": {"full": "2 Stale St"},
              "geo": {"lat": 34.1008, "lng": -117.7678}}
     sent, body = _call("Closed", [stale] * 20)
-    assert len(sent) == 6, (
-        f"expected all six ladder levels to run when the window empties every "
-        f"result; {len(sent)} ran"
+    assert len(sent) == 7, (
+        f"expected all seven ladder levels to run when the window empties "
+        f"every result; {len(sent)} ran"
     )
     # NOT `minbeds`: `max(1, beds - 1 - extra)` clamps to 1 at every level for
     # a two-bed subject, so it is identical across all six and would have made
@@ -251,3 +262,93 @@ def test_the_ladder_widens_in_response_to_the_window(mock_auth):
     assert len(shapes) > 1, "the ladder sent the same query six times"
     assert len({p.get("maxbeds") for p in sent}) > 1, "the bed range never widened"
     assert body["comparables"] == [], "a four-year-old sale survived the window"
+
+
+# ── D-132 · the seventh ladder level ───────────────────────────────────────
+
+from api.routes.property import (  # noqa: E402
+    COMP_FALLBACK_WINDOW_DAYS,
+    COMP_MIN_FOR_ANALYSIS,
+)
+
+
+def _closed_res(mls_id, days_ago):
+    return {"mlsId": mls_id, "mls": {"closeDate": _closed_since(days_ago)},
+            "property": {"type": "RES"}, "address": {"full": f"{mls_id} Any St"},
+            "geo": {"lat": 34.1008, "lng": -117.7678}}
+
+
+def test_the_twelve_month_level_is_skipped_when_six_months_was_enough(mock_auth):
+    """It is a last resort, not a rung. No report gets a year-old comp while
+    a six-month one exists."""
+    fresh = [_closed_res(f"F{i}", 20 + i) for i in range(COMP_MIN_FOR_ANALYSIS)]
+    sent, _ = _call("Closed", fresh)
+    windows = {p["minclosedate"] for p in sent}
+    assert _closed_since(COMP_FALLBACK_WINDOW_DAYS) not in windows, (
+        "the twelve-month window was searched although six months returned "
+        f"{COMP_MIN_FOR_ANALYSIS} comps"
+    )
+
+
+def test_the_twelve_month_level_runs_when_six_months_returns_too_few(mock_auth):
+    """Two comps is D-119's degenerate table: Low and Medium hold the same
+    listing. That is the state the widening exists to avoid."""
+    thin = [_closed_res("F1", 20), _closed_res("F2", 40)]
+    assert len(thin) < COMP_MIN_FOR_ANALYSIS
+    sent, _ = _call("Closed", thin)
+    assert sent[-1]["minclosedate"] == _closed_since(COMP_FALLBACK_WINDOW_DAYS)
+    assert len(sent) == 7, f"expected all seven levels, {len(sent)} ran"
+
+
+def test_the_widened_level_is_always_last(mock_auth):
+    """Order matters: a twelve-month query earlier in the ladder would win on
+    count and mask a perfectly good six-month result."""
+    sent, _ = _call("Closed", [_closed_res("F1", 20), _closed_res("F2", 40)])
+    six = _closed_since(COMP_CLOSE_WINDOW_DAYS)
+    twelve = _closed_since(COMP_FALLBACK_WINDOW_DAYS)
+    assert [p["minclosedate"] for p in sent] == [six] * 6 + [twelve]
+
+
+def test_the_client_side_pass_uses_the_level_s_own_window(mock_auth):
+    """The vendor filter is never trusted (D-117), so the local one has to
+    widen with the level or L6 would return nothing it fetched."""
+    nine_months = _closed_res("OLD", 270)
+    _, body = _call("Closed", [nine_months])
+    addresses = [c["address"] for c in body["comparables"]]
+    assert "OLD Any St" in addresses, (
+        "a nine-month-old sale was dropped by the client-side pass even on "
+        "the twelve-month level"
+    )
+
+
+def _feed(days_by_id):
+    """A feed that only returns a sale if the query's window reaches it."""
+    def _serve(params):
+        cutoff = params.get("minclosedate", "0000-00-00")
+        return [_closed_res(i, d) for i, d in days_by_id.items()
+                if _closed_since(d) >= cutoff]
+    return _serve
+
+
+def test_a_widened_search_is_graded_and_says_why(mock_auth):
+    """Distinct from L5's 'thin market': the reason differs in kind, and the
+    agent should see which."""
+    _, body = _call("Closed", _feed({"F1": 20, "F2": 40, "O1": 250, "O2": 300}))
+    assert body["comp_ladder_level"].startswith("L6"), body["comp_ladder_level"]
+    assert "12 months" in body["comp_confidence_reason"]
+    assert len(body["comparables"]) == 4
+
+
+def test_a_tie_does_not_get_credited_to_the_widened_level(mock_auth):
+    """If twelve months surfaces nothing six did not, the report is built
+    from six-month comps and must not be labelled as widened."""
+    _, body = _call("Closed", _feed({"F1": 20, "F2": 40}))
+    assert not body["comp_ladder_level"].startswith("L6"), (
+        "a level that found nothing new was credited with the result"
+    )
+
+
+def test_an_active_search_is_unaffected_by_the_widening(mock_auth):
+    """No close-date window applies, so no level may invent one."""
+    sent, _ = _call("Active")
+    assert all("minclosedate" not in p for p in sent)

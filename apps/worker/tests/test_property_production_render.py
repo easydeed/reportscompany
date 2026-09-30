@@ -28,6 +28,7 @@ error rather than a finding, and the distinction matters.
 import os
 import re
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -60,20 +61,43 @@ SITEX = {
 # Four comps, which is what the API's ladder returns in a thin market. Four is
 # also the smallest count at which "one of them is missing from the analysis"
 # is unambiguous rather than an artefact of a degenerate case.
+# Close dates are RELATIVE, and that is not a style preference. Written with
+# absolute dates ("2026-05-10" …), this fixture silently aged past the
+# six-month window as the calendar moved, and the D-132 tests began reporting
+# a twelve-month window for comps meant to be recent. A fixture with a
+# hardcoded date encodes the day it was written; D-117 is the same mistake in
+# the product.
+def _days_ago(n: int) -> str:
+    return (date.today() - timedelta(days=n)).isoformat()
+
+
 COMPS = [
-    {"address": "1889 Bonita Ave", "price": 631500, "close_date": "2026-05-10",
+    {"address": "1889 Bonita Ave", "price": 631500, "close_date": _days_ago(40),
      "sqft": 940, "bedrooms": 2, "bathrooms": 1, "year_built": 1953,
      "lot_size": 7446, "distance": 0.58, "status": "Closed", "days_on_market": 12},
-    {"address": "1507 2nd St", "price": 635000, "close_date": "2026-03-15",
+    {"address": "1507 2nd St", "price": 635000, "close_date": _days_ago(150),
      "sqft": 912, "bedrooms": 3, "bathrooms": 1, "year_built": 1952,
      "lot_size": 6261, "distance": 0.54, "status": "Closed", "days_on_market": 21},
-    {"address": "1845 Walnut St", "price": 470000, "close_date": "2026-04-25",
+    {"address": "1845 Walnut St", "price": 470000, "close_date": _days_ago(95),
      "sqft": 770, "bedrooms": 3, "bathrooms": 1, "year_built": 1910,
      "lot_size": 4917, "distance": 0.24, "status": "Closed", "days_on_market": 34},
-    {"address": "1848 1st St", "price": 590000, "close_date": "2026-04-08",
+    {"address": "1848 1st St", "price": 590000, "close_date": _days_ago(112),
      "sqft": 698, "bedrooms": 1, "bathrooms": 1, "year_built": 1950,
      "lot_size": 5500, "distance": 0.30, "status": "Closed", "days_on_market": 8},
 ]
+
+
+def test_the_fixture_comps_stay_inside_the_six_month_window():
+    """The guard for the bug above: if someone reinstates absolute dates, or
+    the window shrinks, this says so instead of the D-132 tests failing for a
+    reason that has nothing to do with D-132."""
+    oldest = max((date.today() - date.fromisoformat(c["close_date"])).days
+                 for c in COMPS)
+    assert oldest <= PropertyReportBuilder.COMP_CLOSE_WINDOW_DAYS, (
+        f"the oldest fixture comp is {oldest} days old, outside the "
+        f"{PropertyReportBuilder.COMP_CLOSE_WINDOW_DAYS}-day window it is "
+        f"meant to sit inside"
+    )
 
 
 def report_data(theme):
@@ -146,13 +170,65 @@ def test_the_contents_page_lists_only_pages_the_report_contains(theme, renders, 
 
 # ── D-118 · the subject's "Sale Price" is its tax assessment ────────────────
 
-@pytest.mark.xfail(strict=True, reason="D-118 — est_value falls through to assessed_value")
 @pytest.mark.parametrize("theme", THEMES)
 def test_the_subject_price_is_not_the_county_assessment(theme, builders):
+    """FIXED 2026-09-30. Was a strict xfail; the assessment is gone.
+
+    `estimated_value` is written by nothing, so `or assessed_value` was not a
+    fallback — it was the only path, and the subject's price was a Prop 13
+    figure beside real sales 50% higher.
+    """
     piq = builders[theme]._build_stats_context()["piq"]
     assert piq["price"] != SITEX["assessed_value"], (
         "the subject's price in the Sale Price row is the Prop 13 assessed "
         f"value ({SITEX['assessed_value']}), printed beside real closed sales"
+    )
+    assert piq["price"] is None, (
+        "with no last-sale figure the cell must be empty, not zero — "
+        "`format_currency(0)` renders '$0', which is a price"
+    )
+    assert piq["price_per_sqft"] is None, (
+        "price-per-sqft derived from an absent price is the same wrong number "
+        "divided by area"
+    )
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_the_assessment_appears_only_under_its_own_label(theme, renders):
+    """Jerry kept the Tax & Assessment block. What went is the assessment
+    standing in for a sale price."""
+    html = renders[theme]
+    assert "428,248" in html, f"{theme} lost the Tax & Assessment block entirely"
+    assert "428,248" not in analysis_table(html), (
+        f"{theme}'s analysis table still carries the assessed value"
+    )
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_an_estimated_value_would_still_reach_the_row(theme):
+    """The removal must not have severed the row from its real source.
+
+    Nothing writes `estimated_value` today (D-133), so without this the
+    subject cell would be permanently empty for a reason nobody could see,
+    and a later fix to the producer would look broken.
+    """
+    data = report_data(theme)
+    data["sitex_data"] = {**SITEX, "estimated_value": 700000}
+    piq = PropertyReportBuilder(data)._build_stats_context()["piq"]
+    assert piq["price"] == 700000
+    assert piq["price_per_sqft"] == 890  # 700000 / 786
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_the_price_row_says_which_kind_of_price_it_shows(theme):
+    """Over active listings `_extract_price` returns list_price, so a row
+    headed "Sale Price" shows what sellers are asking. Same defect as the
+    subtitle, one row lower."""
+    assert "Sale Price" in _with_status(theme, "Closed")
+    active = _with_status(theme, "Active")
+    assert "List Price" in active
+    assert "Sale Price" not in analysis_table(active), (
+        f"{theme}'s analysis table calls asking prices sale prices"
     )
 
 
@@ -297,3 +373,49 @@ def test_no_live_template_hardcodes_a_comp_window(theme):
         "belongs to COMP_CLOSE_WINDOW_DAYS and reaches the page through "
         "`comps_window` — a typed one is how D-117 happened."
     )
+
+
+# ── D-132 · the page states the window that actually covers its comps ──────
+
+def _aged(theme, *days_ago):
+    data = report_data(theme)
+    base = data["comparables"]
+    data["comparables"] = [
+        {**base[i % len(base)], "status": "Closed", "close_date": _days_ago(d)}
+        for i, d in enumerate(days_ago)
+    ]
+    return PropertyReportBuilder(data)
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_comps_inside_six_months_are_stated_as_six(theme):
+    assert _aged(theme, 20, 90, 170)._comps_window()["subtitle"] == \
+        "SALES IN THE PAST 6 MONTHS"
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_a_comp_from_the_widened_window_is_stated_as_twelve(theme):
+    """D-132's L6 searches twelve months when six returns under three. If the
+    page still said six it would be D-117 again, one level up — a stated
+    window the query did not use."""
+    window = _aged(theme, 20, 270)._comps_window()
+    assert window["subtitle"] == "SALES IN THE PAST 12 MONTHS"
+    assert "last 12 months" in window["note"]
+
+
+def test_a_comp_older_than_any_ladder_window_is_reported_not_rounded_down():
+    """Legacy rows and hand-edited comps exist. Understating their age is the
+    D-117 failure with a smaller number."""
+    assert _aged("teal", 20, 1100)._comps_window()["subtitle"] == \
+        "SALES IN THE PAST 36 MONTHS"
+
+
+def test_the_window_comes_from_the_comps_and_not_from_the_constant():
+    """The derivation is the point: plumbing the window from the API through
+    the wizard, the payload and the DB row is four hops that can each drop it,
+    for a number the data already implies."""
+    import inspect
+    src = inspect.getsource(PropertyReportBuilder._window_months)
+    assert "close_date" in src and "COMP_WINDOW_BUCKETS_MONTHS" in src
+    assert PropertyReportBuilder.COMP_WINDOW_BUCKETS_MONTHS[0] == \
+        PropertyReportBuilder.COMP_CLOSE_WINDOW_DAYS // 30
