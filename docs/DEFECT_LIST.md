@@ -7177,6 +7177,27 @@ neither names)
 > set changes. A list of expected rows would have to be updated alongside the templates and
 > would then agree with them by construction. Four regressions applied, each seen to fail.
 >
+> **THE OVERVIEW GAP, CLOSED 2026-10-01 — `test/d121-overview-numbering`.** The fix shipped
+> with `overview` covered by `paginate()`'s unit tests and by no render at all: it needs an
+> OpenAI key and is dropped silently without one. **It is also the page most able to break
+> numbering** — it renders second, before the contents page, so its presence moves every other
+> page by one *including the contents page's own number*, and puts a contents row pointing at a
+> page the reader has already passed. The page most likely to expose a numbering defect was the
+> one no render had ever numbered.
+>
+> **No key was needed.** `render_html` reads `report_data["overview_text"]` first — *"allow
+> pre-injection"*, property_builder.py:1853 — and only calls the model when that is absent, and
+> `market_trends_data` is injectable the same way. **The nine-page document had never been
+> rendered in a test.** It now is, for all five themes, and `overview` is listed at page 2 by a
+> contents page that is page 3.
+>
+> **Two regressions that only this set catches**, both literals that are correct in the
+> seven-page default: modern's contents footer `02` (contents is page 3 with overview present)
+> and elegant's property footer `04` (page 5). The default and six-page tests stayed green on
+> both; only the nine-page one failed. **That is the two-sets rule paying for itself** — and
+> `test_the_same_page_is_numbered_differently_in_the_three_sets` now states it as an assertion,
+> pinning `comparables` to 5, 6 and 8 across the three, so no single literal can satisfy it.
+>
 > **Still open next door:** the aerial page's number is now correct and still **invisible** in
 > four themes — white on white, D-129/E15. Deriving the number does not paint it.
 

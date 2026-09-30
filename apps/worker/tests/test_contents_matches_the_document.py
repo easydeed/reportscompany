@@ -273,3 +273,125 @@ def test_the_contents_of_a_shorter_report_still_points_at_real_pages(theme, shor
             f"{theme}, six-page set: contents says {label!r} at page {page}; "
             f"that page is headed {heading!r}"
         )
+
+
+# ── the page that shifts everything after it ───────────────────────────────
+#
+# `overview` renders SECOND, before the contents page itself, so its presence
+# moves every other page by one INCLUDING the contents page's own number, and
+# puts a contents row pointing at a page the reader has already passed. It is
+# the page most able to break numbering and, until now, the only one no render
+# had ever numbered: it needs an OpenAI key, is dropped silently without one,
+# and was covered by `paginate()`'s unit tests alone.
+#
+# No key is needed. `render_html` reads `report_data["overview_text"]` first
+# ("allow pre-injection", property_builder.py:1853) and only calls the model
+# when that is absent — so supplying the text is enough to render the page.
+# `market_trends_data` is injectable the same way. The nine-page document has
+# never been rendered in a test before this one.
+
+FULL_SET = list(PAGE_ORDER)
+
+
+@pytest.fixture(scope="module")
+def full_renders():
+    from worker.compute.market_trends import SAMPLE_MARKET_TRENDS
+    out = {}
+    for t in THEMES:
+        data = dict(report_data(t))
+        data["selected_pages"] = list(FULL_SET)
+        data["overview_text"] = "A short executive summary, injected."
+        data["market_trends_data"] = SAMPLE_MARKET_TRENDS
+        out[t] = PropertyReportBuilder(data).render_html()
+    return out
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_every_page_renders_when_the_whole_set_is_asked_for(theme, full_renders):
+    """The floor the rest stand on: nine sections, or the numbering below is
+    asserting about a document that did not happen."""
+    assert len(_sections(full_renders[theme])) == len(FULL_SET), (
+        f"{theme}: asked for {len(FULL_SET)} pages, rendered "
+        f"{len(_sections(full_renders[theme]))} — a page was dropped and the "
+        f"numbering assertions below would pass against the wrong document"
+    )
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_overview_present_shifts_the_contents_page_itself(theme, full_renders):
+    """The case `paginate()`'s unit tests could not reach.
+
+    `overview` is page 2, so the contents page is page 3 rather than 2 and
+    every listed page moves by one. A literal anywhere in this chain is wrong
+    by exactly that.
+    """
+    sections = _sections(full_renders[theme])
+    printed = {}
+    for i, section in enumerate(sections, start=1):
+        found = FOOTER.findall(section)
+        if found:
+            printed[i] = int(found[0])
+    assert printed, f"{theme}: the nine-page render printed no page numbers"
+    for position, number in printed.items():
+        assert number == position, (
+            f"{theme}, nine-page set: page {position} prints {number}"
+        )
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_the_contents_lists_a_page_that_comes_before_it(theme, full_renders):
+    """`overview` is listed at page 2 by a contents page that is page 3.
+
+    A row pointing BACKWARDS is legitimate here and is the shape a numbering
+    scheme anchored to "the contents page is page 2" gets wrong.
+    """
+    html = full_renders[theme]
+    sections = _sections(html)
+    rows = _rows(html)
+    assert len(rows) == len(FULL_SET) - len(CONTENTS_OMITS)
+
+    first_ordinal, first_label, first_page = rows[0]
+    assert first_label.upper() == "PROPERTY OVERVIEW", (
+        f"{theme}: the first contents row is {first_label!r}, not the "
+        f"overview page — the nine-page order changed"
+    )
+    assert int(first_page) == 2, (
+        f"{theme}: overview is listed at page {first_page}, and it renders "
+        f"second"
+    )
+    for _, label, page in rows:
+        heading = _heading(sections[int(page) - 1])
+        assert heading and heading.upper() == label.upper(), (
+            f"{theme}, nine-page set: contents says {label!r} at page {page}; "
+            f"that page is headed {heading!r}"
+        )
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_the_same_page_is_numbered_differently_in_the_three_sets(theme, renders, short_renders, full_renders):
+    """THE TWO-SETS RULE, STATED AS AN ASSERTION.
+
+    A derived number and a lucky literal are indistinguishable on one page
+    set — restoring bold's literal `05` on the analysis page passed against
+    the seven-page default because analysis IS page 5 there. So `comparables`
+    is checked across all three: page 5 without `property`, 6 in the default,
+    8 with everything. No single literal satisfies all three.
+    """
+    def comparables_page(html):
+        rows = {label.upper(): int(page) for _, label, page in _rows(html)}
+        return rows["SALES COMPARABLES"]
+
+    seen = {
+        "six-page (no property)": comparables_page(short_renders[theme]),
+        "seven-page default": comparables_page(renders[theme]),
+        "nine-page (everything)": comparables_page(full_renders[theme]),
+    }
+    assert seen == {
+        "six-page (no property)": 5,
+        "seven-page default": 6,
+        "nine-page (everything)": 8,
+    }, f"{theme}: {seen}"
+    assert len(set(seen.values())) == 3, (
+        f"{theme}: the same page got the same number in every set, so these "
+        f"renders cannot tell a derived number from a literal"
+    )
