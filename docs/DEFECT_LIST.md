@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 56 | Real, unfixed |
-| `fixed` | 92 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 55 | Real, unfixed |
+| `fixed` | 93 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **152** | D-001 … D-152, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 56, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 55, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -7140,7 +7140,45 @@ only for `stories`, whose missing-as-zero is real and unaffected.
 **Severity:** BROKEN · **Affects:** the contents page of all five property themes, in the default
 production page set · **Found during:** Workstream E measurement (E15, E17, and a third thing
 neither names)
-**Status:** `open`
+**Status:** `fixed` — `feat/d121-contents-page`
+
+> **FIXED 2026-10-01. All three failures had one cause and took one fix.** `paginate()` in
+> `property_builder.py` computes `page_numbers` and `contents_keys` from the final page set —
+> **after** the conditional drops, because a number computed before them numbers a document
+> that is not the one being rendered, which is precisely how the literals came to claim Market
+> Trends at page 07 of a report without one. Each theme declares one `_titles` map that the
+> page heading and the contents row both read, so a label cannot drift from the page it names.
+> The page footers read the same `page_numbers`, so contents and footer cannot disagree.
+>
+> Rendered through the production path, all five themes: contents rows 01–05 → pages 03–07,
+> footers 02…07, cover 01 unnumbered. `Aerial View` in the contents over a page headed
+> `Aerial View`.
+>
+> **`contents` is back in `CONSUMER_PAGES`** (the reminder was left there for this). The
+> consumer report is now **seven pages** when neither SimplyRETS nor OpenAI answers and **nine**
+> when both do — was six and eight.
+>
+> **The test that guarded this was a substring match and went on failing after the fix.**
+> `"Market Trends" in html` also matches the CSS comment
+> `/* ── Overview / Executive Summary Page ── */`, which every theme's stylesheet carries. So
+> the strict xfail stayed red for a reason unrelated to the defect. §0.6's substring rule, met
+> inside the fix for the defect it was guarding. It now matches the contents row.
+>
+> **And a regression that passed for the wrong reason.** Restoring bold's literal `05` on the
+> analysis page broke nothing — analysis **is** page 5 in the seven-page default, so the
+> literal was accidentally correct. The default set makes several of them so. The tests now
+> also render a set with `property` dropped, which shifts analysis to 4, comparables to 5 and
+> range to 6; the same literal fails there. A test that only exercises the default page set
+> cannot tell a derived number from a lucky one.
+>
+> `test_contents_matches_the_document.py` asserts the **relation** rather than the expected
+> rows — *the page number on a contents row identifies a section, and that section's own
+> heading is the row's label* — so it needs no expected values and keeps holding when the page
+> set changes. A list of expected rows would have to be updated alongside the templates and
+> would then agree with them by construction. Four regressions applied, each seen to fail.
+>
+> **Still open next door:** the aerial page's number is now correct and still **invisible** in
+> four themes — white on white, D-129/E15. Deriving the number does not paint it.
 
 The default page set, set in `PropertyReportBuilder.__init__` when `selected_pages` is empty, is
 seven pages:
@@ -8225,6 +8263,16 @@ render now.
 
 Four regressions applied and each seen to fail: removing `analysis` again, adding `contents`
 early, the last-sale figure ceasing to reach this path, and a page dropped from the set.
+
+> **`contents` RESTORED 2026-10-01, D-121 fixed.** It was held out of `CONSUMER_PAGES` on
+> purpose and the reminder was left on the constant. The consumer set is where a hardcoded
+> contents page shows worst — it differs from the default on four pages, so every literal row
+> would have been wrong for this reader specifically. **The consumer report is now seven pages
+> when neither SimplyRETS nor OpenAI answers and nine when both do** (was six and eight); the
+> D-142 parametrisation carries the new counts. `test_contents_stays_out_until_d121` became
+> `test_contents_is_back_and_describes_a_consumer_report`, which renders the consumer report
+> and requires every contents label to be a heading that exists in **that** document — the
+> assertion the old one was standing in for.
 
 ---
 

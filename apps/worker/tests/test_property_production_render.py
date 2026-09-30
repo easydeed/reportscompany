@@ -154,18 +154,36 @@ def test_the_default_page_set_is_the_seven_pages_the_rest_of_this_file_assumes(b
 # ── D-121 · the contents page is a literal block with no page_set guard ─────
 
 CONTENTS_ENTRIES = {
-    # Every theme's contents page names these, whatever the page set says.
+    # Every theme's contents page named these, whatever the page set said.
     "Executive Summary": "overview",
     "Market Trends": "market_trends",
 }
 
+#: A contents row, in either markup dialect — NOT the bare label.
+_CONTENTS_LABEL = re.compile(
+    r'class="(?:contents-text|name)">\s*([^<]*?)\s*<')
 
-@pytest.mark.xfail(strict=True, reason="D-121 — contents is hardcoded, not derived from page_set")
+
 @pytest.mark.parametrize("theme", THEMES)
 def test_the_contents_page_lists_only_pages_the_report_contains(theme, renders, builders):
+    """FIXED 2026-10-01 — `feat/d121-contents-page`. Was a strict xfail.
+
+    AND THE FIX EXPOSED THE TEST. This read `label in html`, which also
+    matches the CSS comment `/* ── Overview / Executive Summary Page ── */`
+    present in all five stylesheets — so after the defect was fixed it went on
+    failing, for a reason with nothing to do with the contents page. §0.6's
+    substring rule, met inside the fix for the defect this test was guarding.
+    It now matches the contents ROW, which is the construct.
+
+    The relation this is a corner of — every row points at a page whose own
+    heading is that row's label — is asserted in
+    `test_contents_matches_the_document.py`. This one is kept because it names
+    the two specific labels the defect produced.
+    """
     html, pages = renders[theme], builders[theme].page_set
-    listed = [label for label, page in CONTENTS_ENTRIES.items()
-              if label in html and page not in pages]
+    labels = {m.strip() for m in _CONTENTS_LABEL.findall(html)}
+    listed = sorted(label for label, page in CONTENTS_ENTRIES.items()
+                    if label in labels and page not in pages)
     assert not listed, (
         f"{theme}'s contents advertises {listed}, which the {len(pages)}-page "
         f"default set does not contain"
