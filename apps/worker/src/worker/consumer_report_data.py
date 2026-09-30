@@ -108,10 +108,18 @@ def build_consumer_report_data(
         "property_city": prop_city,
         "property_state": prop_state,
         "property_zip": prop_zip,
-        # D-116: read, and NOT rendered. The templates carry no owner block
-        # and a structural gate keeps it that way; this stays because the
-        # builder's context contract expects the key.
-        "owner_name": property_data.get("owner_name", ""),
+        # D-116/D-157: NOT FORWARDED AT ALL, which is stronger than "read and
+        # not rendered". The templates now CAN render an owner block — the
+        # agent path carries one — so the consumer path's protection can no
+        # longer be "no template does this". It is "this path does not have
+        # the data", plus a rendered-output test for all five themes.
+        #
+        # `audience` is what the templates gate on; this omission is what
+        # makes the gate unnecessary on this path rather than load-bearing.
+        "audience": "consumer",
+        # WHO ASKED, from the lead form. Absent when the form supplied none —
+        # no line on the cover, and never the owner's name as a substitute.
+        "prepared_for": property_data.get("requester_name", ""),
         # D-139: stored on the row and previously never forwarded.
         "apn": property_data.get("apn", ""),
         "property_county": property_data.get("county", ""),
@@ -134,7 +142,6 @@ def build_consumer_report_data(
             "improvement_value": property_data.get("improvement_value"),
             "tax_amount": property_data.get("tax_amount"),
             "tax_year": property_data.get("tax_year"),
-            "owner_name": property_data.get("owner_name", ""),
             # D-118: the same figure the agent path gets, or None — never a
             # substitute. This path reaches a stranger.
             "last_sale_price": property_data.get("last_sale_price"),

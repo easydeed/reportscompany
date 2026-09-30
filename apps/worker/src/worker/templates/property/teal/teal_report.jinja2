@@ -1172,6 +1172,14 @@
      } %}
   {% set _nums = page_numbers | default({}) %}
   {% set _toc = contents_keys | default([]) %}
+  {#- D-157: WHO THIS DOCUMENT IS FOR. "agent" may carry the owner of record;
+      "consumer" may not, and is addressed by the name the requester typed on
+      the lead form instead. Defaults to "agent" because the agent path does
+      not set it — a default of "consumer" would silently strip the block from
+      the surface that is meant to have it. The consumer path also omits the
+      owner data entirely, so this gate is the second line, not the only one. -#}
+  {% set _audience = audience | default('agent') %}
+  {% set _prepared_for = prepared_for | default('') %}
   <div class="sheet">
 
     {% if "cover" in _pages %}
@@ -1194,6 +1202,13 @@
         <div class="cover-address">
           <p class="addr-big">{{ property.street_address }}</p>
           <p class="addr-sub">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</p>
+          {# D-157: the REQUESTER, from the lead form — not the owner of record. Absent
+             when the form supplied no name; there is no fallback, because the only
+             other name available is a third party's from public record. Colour is
+             inherited rather than set, so it follows each cover's own palette. #}
+          {%- if _prepared_for %}
+          <div class="cover-prepared-for" style="margin-top:10px; font-size:12px; letter-spacing:.08em; text-transform:uppercase;">Prepared for {{ _prepared_for }}</div>
+          {%- endif %}
         </div>
       </div>
 
@@ -1368,6 +1383,17 @@
           <table class="kv-table">
             <tr><td class="key">Site Address:</td><td class="val">{{ property.full_address }}</td></tr>
             <tr><td class="key">APN:</td><td class="val">{{ property.apn | default('-') }}</td></tr>
+            {# D-157: OWNER OF RECORD, AGENT PATH ONLY. D-116 removed this because it
+                 printed an assessor-roll name to whoever requested a report on any
+                 address. An agent running a report knowingly is a different context.
+                 The consumer path does not carry the data at all; this gate is the
+                 second line. `mailing_address` stays out of both. #}
+            {%- if _audience == 'agent' and property.owner_name %}
+            <tr><td class="key">Owner of Record:</td><td class="val">{{ property.owner_name }}</td></tr>
+            {%- if property.secondary_owner and property.secondary_owner != '-' %}
+            <tr><td class="key"></td><td class="val">{{ property.secondary_owner }}</td></tr>
+            {%- endif %}
+            {%- endif %}
           </table>
           <table class="kv-table">
             <tr><td class="key">County:</td><td class="val">{{ property.county | default('-') }}</td></tr>

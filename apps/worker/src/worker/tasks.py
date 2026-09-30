@@ -112,6 +112,33 @@ def _post_filter_by_property_type(listings: list, simplyrets_subtype: Optional[s
     return filtered
 
 
+def requester_name(property_data) -> str:
+    """Who asked for this report. Never who owns the house. (D-155, D-156)
+
+    The consumer lead page collects a name and stores it on the report row as
+    `requester_name`. Both delivery paths used `owner_name` instead — the
+    assessor roll — so the email greeted a stranger with the record owner's
+    first name and the agent's SMS named the record owner as the lead.
+
+    THERE IS NO FALLBACK, AND THAT IS THE POINT. The only other name in scope
+    is a third party's from public record; substituting it is the defect, not
+    a graceful degradation. An unnamed requester gets no greeting, and the
+    agent gets no name.
+
+    A function rather than two `.get()` calls because the two sites disagreed
+    with the form for months while looking perfectly ordinary, and because a
+    guard can then assert that nothing in this file reads `owner_name` off a
+    report row again.
+    """
+    return ((property_data or {}).get("requester_name") or "").strip()
+
+
+def requester_first_name(property_data) -> str:
+    """The greeting form. `""` when there is no name to greet."""
+    full = requester_name(property_data)
+    return full.split()[0] if full else ""
+
+
 def safe_json_dumps(obj):
     """
     JSON serialization with datetime handling.
@@ -2685,7 +2712,15 @@ def process_consumer_report(self, report_id: str):
                             "email was attempted",
                         )
                     else:
-                        lead_name = (property_data.get("owner_name") or "").split()[0] if property_data.get("owner_name") else ""
+                        # D-155: `requester_name`, NOT `owner_name`. This
+                        # greeted whoever asked for the report with the RECORD
+                        # OWNER's first name — so a neighbour requesting a
+                        # report on 123 Oak St received "Hi Gerardo,". That is
+                        # D-116's defect in the envelope rather than the
+                        # document: the owner block came off the report and
+                        # the email kept carrying the name. No fallback; an
+                        # unnamed requester gets "Hi,".
+                        lead_name = requester_first_name(property_data)
                         greeting = f"Hi {lead_name}," if lead_name else "Hi,"
                         _co = company_name or account_name or ""
                         _ae = agent_email_addr or ""
@@ -2824,7 +2859,12 @@ def process_consumer_report(self, report_id: str):
                 if delivered:
                     # Notify agent via SMS (free — no credit decrement)
                     if agent_phone:
-                        lead_name = property_data.get("owner_name")
+                        # D-156: the LEAD is the person who filled the form,
+                        # not the name on the deed. This sent the agent the
+                        # record owner, so the agent chased the wrong person
+                        # by name — and on a report a neighbour requested,
+                        # handed them a third party's name unprompted.
+                        lead_name = requester_name(property_data) or None
                         logger.info(f"Sending agent notification to {agent_phone} for lead on {full_address}")
                         agent_sms = send_agent_notification_sms(
                             to_phone=agent_phone,
