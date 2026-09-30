@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 56 | Real, unfixed |
-| `fixed` | 91 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 92 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **151** | D-001 … D-151, contiguous, no duplicates |
+| **Total** | **152** | D-001 … D-152, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 56, the open total.)
 
@@ -8739,6 +8739,54 @@ runs on PR + push, and that has been manual-only since D-045 — both rows are c
 docs table that grants a workflow triggers it does not have is how a gate that does nothing
 reads as coverage,** which is the whole of this entry: the cost was never the wasted minutes, it
 was the four-row table that made someone believe four things were being checked.
+
+---
+
+### D-152 — the CI table claimed coverage that does not exist, on every row
+
+**Severity:** FRAGILE · **Affects:** anyone planning work around what CI checks · **Found
+during:** closing the one row left standing after D-151
+**Status:** `fixed` — `chore/frontend-tests-row`
+
+`SOURCE_OF_TRUTH.md` §2.7 listed four workflows as **"PR + push"**. Every row was wrong, and
+all four in the same direction — **claiming more coverage than exists**:
+
+| row | said | is |
+|---|---|---|
+| `release-check.yml` | PR + push | `workflow_dispatch`, 0 runs ever, could not run. Deleted (D-151) |
+| `e2e.yml` | PR + push | `workflow_dispatch` only, disabled D-045 |
+| `backend-tests.yml` | PR + push | PR + push **path-filtered** to seven trees and its own file |
+| `frontend-tests.yml` | PR + push | PR + push **path-filtered** to `apps/web/**` |
+
+**The bare phrase on the two working rows is what made the two dead ones plausible.** If the
+real workflows claim to run on every PR, a dead one claiming the same is unremarkable. D-151
+treated the wasted minutes as the cost; they were not. The cost was a table that made someone
+believe four things were checked, and a PR touching only `docs/` runs none of them.
+
+**Two live trigger gaps, found by checking the rows rather than trusting them:**
+
+1. **`frontend-tests.yml` listed its own file under `push` but not `pull_request`** — so a
+   change to that workflow could be reviewed and merged **without ever running it**. D-089's
+   shape exactly. `backend-tests.yml` has listed itself in both since D-089 and was the model.
+2. **`backend-tests.yml` did not list `tools/**`**, although `test_sources_parse.py` compiles
+   every file there. A tree the suite checks that could not trigger the suite — **and that gap
+   is mine**, made two branches ago when the compile guard gained `tools`.
+
+**The guard, because prose asking the next person to keep it in step is the fix that already
+failed.** `tests/test_ci_table_matches_workflows.py` parses the workflows and the table and
+asserts three properties, none of which depends on wording: every workflow has a row and every
+row a workflow; every path in a filter appears in its row **and every path a row claims is in
+the filter**; and a `pull_request`-filtered workflow lists its own file in both filters.
+
+**The second direction was added because losing it cost a change inside this branch.** The
+first version checked only filter → row. A stray `git checkout` reverted the `tools/**` addition
+while the row still advertised it, and all seven tests stayed green — a row promising coverage
+the workflow will not deliver, which is this entry's own defect pointing the other way. Four
+regressions were applied and each seen to fail.
+
+*(`yaml.safe_load` reads a workflow's bare `on:` key as the boolean `True`, a YAML 1.1 truthy
+token, so `d["on"]` raises `KeyError` on every GitHub workflow ever written. Noted in the
+helper, because it will be met again.)*
 
 ---
 
