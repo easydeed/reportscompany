@@ -7,6 +7,11 @@ on:
   pull_request:
     paths:
       - "apps/web/**"
+      # ITS OWN FILE, which `push` listed and `pull_request` did not. That is
+      # D-089's shape exactly — a job you can edit without triggering the job
+      # — and it meant a change to this workflow could be reviewed and merged
+      # without ever running it. `backend-tests.yml` lists itself in both.
+      - ".github/workflows/frontend-tests.yml"
 jobs:
   test:
     runs-on: ubuntu-latest

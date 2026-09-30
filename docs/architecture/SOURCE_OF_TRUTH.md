@@ -169,19 +169,33 @@ Standalone Next.js preview apps for developing report layouts, schedule builders
 
 ### 2.7 CI/CD — `.github/workflows/`
 
-| Workflow | File | Triggers |
-|----------|------|----------|
-| Backend tests | `backend-tests.yml` | PR + push |
-| Frontend tests | `frontend-tests.yml` | PR + push |
-| E2E tests | `e2e.yml` | **manual only** — disabled D-045 |
+| Workflow | File | Triggers — **all are path-filtered; none runs on every PR** |
+|---|---|---|
+| Backend tests | `backend-tests.yml` | PR + push on `apps/api/**`, `apps/worker/**`, `tests/**`, `db/**`, `tools/**`, `scripts/**`, `pytest.ini`, `apps/web/templates/**`, and its own file |
+| Frontend tests | `frontend-tests.yml` | PR + push on `apps/web/**` and its own file |
+| E2E tests | `e2e.yml` | **manual only** (`workflow_dispatch`) — disabled D-045 |
 
-> `release-check.yml` was here, listed as "PR + push". It was `workflow_dispatch` only, it
-> ran **zero times in the life of the repository**, and it could not have run: it installed
-> from a `requirements.txt` that has never existed here. Deleted 2026-09-30 (D-151). This
-> table said it fired on every PR, which is how a workflow that does nothing reads as
-> coverage.
+> **THIS TABLE WAS WRONG ON EVERY ROW, ALL IN THE SAME DIRECTION: claiming coverage that does
+> not exist.** Corrected over 2026-09-30 and 2026-10-01.
 >
-> `e2e.yml`'s row was wrong in the same direction: it has been manual-only since D-045.
+> * `release-check.yml` had a row saying "PR + push". It was `workflow_dispatch` only, ran
+>   **zero times in the life of the repository**, and could not have run — it installed from a
+>   `requirements.txt` that has never existed here. Deleted (D-151).
+> * `e2e.yml` said "PR + push". Manual-only since D-045.
+> * `backend-tests.yml` and `frontend-tests.yml` said "PR + push" flat, which reads as *every*
+>   PR. Both are path-filtered, and a PR touching only `docs/` or a workflow file runs neither.
+>   **That bare phrase is what made the other two rows look plausible** — if the real ones were
+>   "PR + push", a dead one claiming the same was unremarkable.
+>
+> **Two trigger gaps were found by checking this table and are now fixed** (same commit):
+> `frontend-tests.yml` listed its own file under `push` but not `pull_request`, so a change to
+> it could be reviewed and merged without running it; and `backend-tests.yml` did not list
+> `tools/**`, although `apps/api/tests/test_sources_parse.py` compiles every file there. Both
+> are D-089's shape — *a job you can edit without triggering the job* — one file and one
+> directory over.
+>
+> **Keep the path lists here in step with the workflows.** A row that says only "PR + push" is
+> the failure this note is about.
 
 ---
 
@@ -402,12 +416,13 @@ pytest tests/ -v
 ### CI Workflows
 
 ```bash
-# Runs automatically on PR + push via GitHub Actions
-.github/workflows/backend-tests.yml
-.github/workflows/frontend-tests.yml
+# On PR + push, but ONLY when their path filters match — see §2.7 for the
+# lists. A PR touching only docs/ runs neither.
+.github/workflows/backend-tests.yml    # apps/api, apps/worker, tests, db, tools, scripts
+.github/workflows/frontend-tests.yml   # apps/web
 
 # Manual only (workflow_dispatch). Does NOT run on PR or push.
-.github/workflows/e2e.yml          # disabled D-045
+.github/workflows/e2e.yml              # disabled D-045
 ```
 
 ### API Smoke Tests

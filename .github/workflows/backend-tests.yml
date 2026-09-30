@@ -17,6 +17,11 @@ on:
       - "db/**"
       - "pytest.ini"
       - "scripts/**"
+      # `tools/**` for the same reason as `tests/**` above, and it is a gap I
+      # made: test_sources_parse.py compiles every file under `tools/`, so the
+      # suite checks a tree that could not trigger it. D-089, one directory
+      # over.
+      - "tools/**"
       # apps/web is a frontend project, but its seven trendy-*.html templates
       # are a live render path (apps/web/lib/templates.ts's header explains how)
       # and the colour lint below is the only thing checking them. Without this
@@ -33,6 +38,11 @@ on:
       - "db/**"
       - "pytest.ini"
       - "scripts/**"
+      # `tools/**` for the same reason as `tests/**` above, and it is a gap I
+      # made: test_sources_parse.py compiles every file under `tools/`, so the
+      # suite checks a tree that could not trigger it. D-089, one directory
+      # over.
+      - "tools/**"
       # apps/web is a frontend project, but its seven trendy-*.html templates
       # are a live render path (apps/web/lib/templates.ts's header explains how)
       # and the colour lint below is the only thing checking them. Without this
