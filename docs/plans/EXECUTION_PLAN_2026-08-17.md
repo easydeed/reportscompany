@@ -986,6 +986,38 @@ it.**
   so in the test and move on. If both do, both are assertions. The tell is any comparison
   whose natural English is "X matches Y": *matches* is symmetric and the code almost never is.
 
+- **A DERIVED SET IS ONLY AS COMPLETE AS THE INPUT IT WAS DERIVED FROM — so derive it from more
+  than one.** *Added 2026-10-01, from a coverage regression caused by a correctness fix, which
+  is a category that is normally invisible.*
+
+  Deriving beats listing: `_zero_conditionals.numeric_leaf_names()` says so in its own
+  docstring — *"a hand-written set of numeric-looking names is the mistake this repo keeps
+  re-finding, and it goes stale the moment a builder adds a field."* That is right, and it is
+  not the whole story. It derived the property half from **one** input, `PropertyReportBuilder({})`,
+  on the stated premise that *"its builder fills every numeric with a default, so an empty
+  input still names them all."*
+
+  D-119 falsified that premise **on purpose and correctly**: a Low/Medium/High column with no
+  listing behind it must render `-` rather than `$0`. So on an empty input `stats.low.price`
+  became a string, `price` dropped out of the derived set, and two real comprehension findings
+  in `tasks.py` stopped being reported. **Nothing failed. The audit simply covered less.**
+
+  **The tell is that narrower coverage is always green.** A gate that stops looking at
+  something does not go red; it goes quiet, and quiet is what everyone is hoping for. This is
+  the same shape as the ratchet that absorbs an invisible pairing by regeneration (E15) and the
+  sweep whose third verdict did not fail the build (D-106) — a measurement that reports less
+  reads exactly like a system with less wrong with it.
+
+  It surfaced only because `test_the_exemption_list_does_not_outlive_what_it_excused` noticed
+  the now-unused `price` exemption — **the other direction of the rule above, on a case nobody
+  constructed.** Without that second assertion the narrowing would have shipped.
+
+  So: when a set is derived from a sample, the sample is part of the guard and needs the same
+  scrutiny as the assertion. Derive from an empty input *and* a populated one; where the shapes
+  differ meaningfully, from one of each. And when a change alters what a builder produces for
+  a given input, ask what else reads that builder for its own purposes — the consumer will not
+  tell you, because it will keep passing.
+
 ---
 
 ## Phase 0 — Security & Tooling
