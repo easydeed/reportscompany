@@ -323,6 +323,13 @@ this workstream before any design work begins.
 > Both fixes belong in a branch where the visible change is the point. Recorded here because a
 > register item with its number written in a code comment is exactly the kind of thing that gets
 > marked done by proximity.
+>
+> **Filed on the board 2026-09-29 as D-114 (B5) and D-115 (B6)**, both re-verified against current
+> code first. Recording "STILL OPEN" here and nowhere else was the same read-path failure as
+> D-009: the board is what gets worked from, and an item that lives only in a planning document
+> is not on it. Both were confirmed live — `_GALLERY_SIZES`' six placeholders are still unlabelled
+> grey blocks, and `_band_rows` still computes `bar_pct` from `max_count` while printing
+> `pct_str`.
 
 ### 05.1 · The email half of the register, re-checked against live renders
 
@@ -1002,6 +1009,59 @@ stranger who has just entered their address on a landing page, with no agent in 
 anything.
 
 It is also the surface where a seller decides what their home is worth.
+
+### E-0 · Measured before started — 2026-09-29
+
+**Everything below was written from six PDFs that were not production renders.** They came from
+`scripts/generate_all_property_pdfs.py`, a QA script that never calls `PropertyReportBuilder`: it
+carries its own copy of the Jinja filters and a 200-line `SAMPLE_CONTEXT` literal, and feeds the
+five real templates data production does not produce. So the review described the templates
+accurately and the product only where the two happen to agree.
+
+All five themes were re-rendered through the path `property_tasks/property_report.py` takes —
+`fetch_report_with_joins`-shaped `report_data` → `PropertyReportBuilder(...).render_html()` — in
+two variants (**bare**: no Maps key, default seven-page set, no agent photo; **full**: key set,
+photo set, all nine pages), screenshotted at Letter width, and looked at.
+`scripts/render_property_production.py` does it in one command.
+
+**The split: 11 reproduce · 7 do not · 3 resolve differently · 1 is lower priority than filed.**
+
+| | E tickets | board |
+|---|---|---|
+| **reproduces as filed** | E1, E2, E3, E6, E8, E14, E16, E18, E19, E20, E22 | D-116 – D-127 |
+| **does not reproduce — a property of `SAMPLE_CONTEXT` or of an older artefact** | E4, E5, E7, E9, E10, E11, E12 | — |
+| **reproduces with a different mechanism than filed** | E13 (wrong themes), E15 (invisible, not absent), E17 (part of a larger contents defect) | D-129, D-121 |
+| **real, lower priority — not in the default page set** | E21 | D-128 |
+
+**What the seven were.** `SAMPLE_CONTEXT` hardcodes the Unsplash aerial photograph (E4), the
+`123 Main St, Los Angeles` agent address (E12), `"generated_date": "Mar 3, 2026"` (E9), a
+`stats.medium.price` of `610750` beside another listing's dimensions (E5), a `stats.low` whose
+sqft and price come from two different comps (E7), and four comp dates from 2022–23 (E2's
+evidence, though E2 itself is real for a different reason). E10's date row and E11's skewed
+contents card appear in no production render. Detail on each is in `docs/DEFECT_LIST.md` under
+*Workstream E, measured before it was started*.
+
+**Three the review could not have found, because they are not visible in any render.** The comp
+query sends no date parameter at all (**D-117**); `sitex_data["estimated_value"]` is written by
+nothing, so the assessment fallback is the only path (**D-118**); the contents page is a literal
+block with no `page_set` guard, so it advertises two pages the default report does not contain
+(**D-121**). Renders prove consumers; producers are proved by reading the code that builds the
+input. Added to §0.6 of the execution plan.
+
+**Contrast, measured for the first time.** 229 of 2,344 text runs fail WCAG across the ten
+production renders, in 48 distinct combinations, worst 1.00:1 — the Aerial View page number is
+white on white in bold and classic. Modern is four times worse than elegant and almost all of it
+is two token definitions. Filed as **D-129**; the full report is
+`docs/CONTRAST_AUDIT_PROPERTY_2026-09-29.md`. The DOM-walker auditor over-reports here by 22 runs
+in 1,965 through two resolution bugs, and misses nothing — **D-130**.
+
+**The theme parity table below is wrong on the production path.** It records which themes render
+a cover photo, a real map and comp photos. Measured: **zero `<img>` tags in any theme** without a
+Maps key, and **no theme renders a comp photo in either variant**, because the comps the API
+stores carry no photo field. The differences in the reviewed set were differences between
+Unsplash URLs in the fixture. See **D-123**.
+
+---
 
 ### E-tier 1 · Live, and materially misleading
 

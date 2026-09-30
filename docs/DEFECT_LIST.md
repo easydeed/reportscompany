@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 36 | Real, unfixed |
+| `open` | 53 | Real, unfixed |
 | `fixed` | 73 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **113** | D-001 … D-113, contiguous, no duplicates |
+| **Total** | **130** | D-001 … D-130, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 1 · WRONG 9 · FRAGILE 10 · ROUGH 16. (Sums to 36, the open total.)
+**Open by severity:** BROKEN 7 · WRONG 14 · FRAGILE 12 · ROUGH 20. (Sums to 53, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -6506,6 +6506,642 @@ fixture-fed measurement will look exactly as sound as this one did.
   **Zero rows in sections 1 and 2** → close as unreachable, with the query as the evidence.
   **Any rows** → file it, and the fix is both sides: a guard in the ticker that marks the
   schedule failed rather than spinning, and cleanup of the rows.
+---
+
+## Workstream E, measured before it was started (2026-09-29)
+
+Every E ticket in the master plan §08 was written from a review of six property PDFs. Those six
+came from `scripts/generate_all_property_pdfs.py`, a QA script that **bypasses
+`PropertyReportBuilder` entirely** — it owns a copy of the Jinja filters and a 200-line
+`SAMPLE_CONTEXT` literal, and renders the same five templates with data production never
+produces. So the reviewed documents are the product's templates fed a fixture, not the product.
+
+Before fixing anything, all five themes were re-rendered through the path
+`property_tasks/property_report.py` actually takes — `fetch_report_with_joins`-shaped
+`report_data` → `PropertyReportBuilder(...).render_html()` — in two variants (`bare`: no
+Google Maps key, default 7-page set, no agent photo; `full`: key present, photo set, all nine
+pages), then screenshotted in Chromium at Letter width and looked at.
+
+**Eleven of the twenty-two reproduce. Seven do not — they are properties of the QA script's
+literal, not of the product.** The rest resolve differently than filed. The entries below are
+the eleven, plus what the measurement found that no E ticket names.
+
+**The seven that do not reproduce, with what was actually hardcoded:**
+
+| E | filed as | what production does |
+|---|---|---|
+| **E4** | the aerial page is a stock photo of a different country, with a pin dropped on it | `SAMPLE_CONTEXT["images"]["aerial_map"]` is an Unsplash URL. `_build_images_context` emits a Google Static Maps roadmap for the subject's lat/lng, or `None`. **Zero Unsplash references in any of the ten production renders.** The real defect underneath is D-121 |
+| **E5** | "Medium" is the *median* $610,750, not a comp — a chimera beside real rows | `SAMPLE_CONTEXT["stats"]["medium"]` is hand-written. `_build_stats_context` takes `sorted_by_price[len//2]` and `extract_comp_stats` reads every field off that one comp. Measured: medium = 1889 Bonita, $631,500 / 940 sf / 1953 / 7,446 lot / 0.58 mi — one real listing, coherent |
+| **E7** | Group A's rows sorted independently; the 698 sf comp priced at $470,000 | same cause. All three of low/medium/high are internally coherent in every production render |
+| **E9** | Market Trends six months stale — "JAN 2026 – MAR 2026", "Generated Mar 3, 2026" | `SAMPLE_CONTEXT["market_trends"]["generated_date"]` is the literal `"Mar 3, 2026"`. `compute/market_trends.py` sets `generated_date` to `now.strftime("%B %Y")` and `period_label` to `"Last 90 Days"`, both at fetch time |
+| **E10** | a date row of four dates above a five-column table, the first reading as the subject's | no such row exists in any theme. The four dates are the chart's x-axis labels, under the bars |
+| **E11** | `teal.pdf`'s contents renders as a skewed 3D card, one entry of seven, page number `0033` | teal's contents page renders correctly: six rows, dotted leaders, clean numerals. `teal.pdf` was an older artefact of a different generator run. D-121 is what is actually wrong with that page |
+| **E12** | teal cover prints `123 Main St, Los Angeles, CA 90012`; the wordmark strikes the phone number | `SAMPLE_CONTEXT["agent"]["address"]`. Production's `_build_agent_context` composes the address from `company_address`/`city`/`state`/`zip` and yields `""` when they are unset, which is the whole of it today. No overlap in the rendered cover: the `TR` mark sits bottom-right, the phone bottom-left |
+
+**And one that resolves inverted.** **E13** says teal's Area Sales summary row is dark navy on a
+dark navy band. Measured, teal's `Sale Price` row passes. The row *is* unreadable — in
+**classic** (`#ffffff` on `#4a90a4`, **3.61:1**) and **modern** (`#ffffff` on `#ff6b5b`,
+**2.80:1**), both below the 4.5:1 they need. Filed under D-129.
+
+This is D-113's lesson on a second surface, and the reason the measurement came first: *a
+document that was rendered by something other than the production path is evidence about that
+something.* Added to §0.6 of the master plan.
+
+---
+
+### D-114 — the missing-photo placeholder is an unlabelled grey box, on all six gallery sizes
+
+**Severity:** BROKEN · **Affects:** every email gallery — `featured_listings`, `open_houses`,
+`new_listings`, `price_bands`, and the three card sizes each uses · **Found during:** Workstream B
+(register item **B5**), re-verified 2026-09-29
+**Status:** `open`
+
+On the register since the v1 audit and never given a defect entry, which is the read-path failure
+D-009 was: an item marked **STILL OPEN** inside a planning document is not on the board, and the
+board is what gets worked from.
+
+`email/template.py:671`, `_GALLERY_SIZES`. Each of the six entries is a pair — the `<img>` and the
+placeholder that stands in when `hero_photo_url` is absent. All six placeholders are the same
+shape:
+
+```python
+'<div style="width: 100%; height: 160px; background: #f5f5f4; border: 1px solid #e5e7eb;"></div>'
+```
+
+A blank grey rectangle at the size of the photo, with no text, no glyph and no alt. A reader sees
+a listing card with a hole in it and cannot tell whether the photo failed to load or the listing
+has none. The register's fix — hatched fill, camera glyph, "Photo pending" — is unimplemented.
+
+**Why it looks fixed and is not.** The C consolidation put `B5` in a comment directly above
+`_GALLERY_SIZES`, explaining why the six placeholders are centralised. The comment says the
+opposite of closure — *"current behaviour preserved, because this is a restructure"* — but a
+register number written beside code reads as a fix to anyone skimming. The master plan §05 records
+this risk explicitly; this entry is the board half of that record.
+
+**Same family as D-122**, which is this defect on the property PDFs: an absent image handled by
+painting a shape the size of the image and saying nothing.
+
+---
+
+### D-115 — price-band bars are normalised to the largest band while the labels beside them show share of total
+
+**Severity:** WRONG · **Affects:** the `price_bands` email · **Found during:** Workstream B
+(register item **B6**), re-verified 2026-09-29
+**Status:** `open`
+
+The second register item with no board entry. `email/template.py:1053`, `_band_rows`:
+
+```python
+max_count = max(counts) or 1
+...
+bar_pct = max(int((count_val / max_count) * 100), 2)
+```
+
+`bar_pct` is the band's count as a fraction of the **largest band**. `pct` is `pct_str`, taken
+straight from `trend_stats`, which is the band's share of the **total**. The two are rendered on
+the same row, so the widest band always fills the track while its label reads whatever its real
+share is — the register's example is Move-Up at 43% beside a bar drawn to 100%.
+
+Both numbers are correct in isolation. Neither is wrong; the pairing is. A reader takes the bar as
+the picture of the number printed next to it, and it is a picture of a different number.
+
+**What the C consolidation did and did not do.** It moved both calculations into this one function
+so they cannot live in two files any more — which removes the *drift* risk and leaves the
+*disagreement* in place, deliberately, because a restructure whose acceptance is an empty render
+diff cannot also change what renders. The docstring says so. The defect is untouched.
+
+**The fix is one line** (`bar_pct` from `pct_str`'s value rather than from `max_count`) and one
+decision: whether a 4%-of-total band should be drawn as a 4% sliver or whether the chart wants a
+second, explicitly-labelled "relative to largest" reading. The 2% floor already in the code exists
+so a one-listing band does not vanish, and survives either choice.
+
+---
+
+### D-116 — the property report prints the owner's legal name to whoever requested it
+
+**Severity:** BROKEN · **Affects:** all five property themes, both report types, and the consumer
+lead-capture path in particular · **Found during:** Workstream E measurement (E1)
+**Status:** `open`
+
+Reproduced in all five production renders. The property page is headed **"Prospective Property"**
+and its first field is **`Primary Owner: HERNANDEZ GERARDO J`**, read from
+`report_data["owner_name"]` (SiteX assessor roll) via `_build_property_context`. Teal, bold,
+classic and modern print `secondary_owner` beside it; teal's aerial page adds body copy reading
+*"the neighborhood in which your prospective property is located."*
+
+**Why the delivery path is the severity.** `lead_pages.py` → the consumer CMA task generates this
+document for a stranger who typed their address into a landing page. What arrives is an automated
+PDF that opens by naming the occupant from the assessor roll, addresses them as a *prospective*
+buyer of their own home, and was not requested by name. The data is public record; leading with it
+in an unsolicited automated document is not the same act as looking it up.
+
+**Not a rendering bug.** `owner_name` is fetched, stored on `property_reports`, joined, built into
+the context and printed. Removing the block is a product decision about what a CMA is for —
+recorded here so the decision is made rather than inherited. The recipient knows who they are.
+
+---
+
+### D-117 — the comparables query applies no date filter at all, under copy that promises the last 12 months
+
+**Severity:** BROKEN · **Affects:** every property report; every theme's Area Sales Analysis
+heading and body copy · **Found during:** Workstream E measurement (E2)
+**Status:** `open`
+
+`apps/api/src/api/routes/property.py`, `_build_params` inside `get_comparables`. The params
+assembled for SimplyRETS are `status`, `type`, `limit`, `postalCodes`, `cities`,
+`minarea`/`maxarea`, `minbeds`/`maxbeds`, `minbaths`/`maxbaths`, `subtype`. **There is no
+`minclosedate`, no `mindate`, and no post-filter on `close_date` anywhere in the six-level
+fallback ladder.** Whatever the feed returns for a closed listing in that postal code is a comp,
+at any age.
+
+Meanwhile every theme prints a window:
+
+| theme | the claim |
+|---|---|
+| teal | `SALES IN THE PAST 12 MONTHS` as the Area Sales Analysis subtitle |
+| modern | a `LAST 12 MONTHS` pill on the chart card |
+| bold, classic, elegant | *"comparable homes sold within the last 12 months"* in the section body |
+
+`PropertyReportBuilder.fetch_comparables()` cannot correct it — it returns the stored list or
+`None` and never queries.
+
+**What the reviewed PDFs did and did not prove.** Their comps dated 5/10/23, 3/15/23, 4/25/22 and
+4/8/22 are `SAMPLE_CONTEXT` literals, so they are not evidence of a live date window. The absent
+filter is, and it is worse than a wrong window: there is no window. D-113's rule — *the render
+proves the consumer, the query proves the producer* — cuts both ways here, and the query is where
+the answer was.
+
+**Two fixes, and they are different tickets.** Adding `minclosedate` narrows the result set in
+thin markets, where the ladder already struggles to reach `FALLBACK_MIN = 5`; making the copy
+honest costs nothing and can ship first. Which one is right depends on whether a four-year-old
+comp is better than no comp, and that is a valuation question, not an engineering one. **[JERRY]**
+
+---
+
+### D-118 — the subject property's "Sale Price" is its Prop 13 tax assessment
+
+**Severity:** WRONG · **Affects:** the Area Sales Analysis table in all five themes, and the
+price-per-sqft derived from it · **Found during:** Workstream E measurement (E3)
+**Status:** `open`
+
+`property_builder.py:_build_stats_context`:
+
+```python
+# Use assessed_value as fallback for estimated_value since SiteX may not provide it
+est_value = sitex_data.get("estimated_value") or sitex_data.get("assessed_value") or 0
+piq = { ..., "price": _safe_num(est_value, 0),
+        "price_per_sqft": _safe_num(self._calc_price_per_sqft(est_value, sitex_data.get("sqft")), 0) }
+```
+
+Rendered, with the measurement's SiteX payload (`assessed_value: 428248`, `sqft: 786`):
+
+```
+Sale Price     $428,248    $470,000    $631,500    $635,000
+Price/Sq.Ft.   $544        $610        $671        $696
+```
+
+The first column is the subject. **$428,248 is the county's assessed value** — a Prop 13 figure
+that tracks the 1949 house's last reassessment, not what it would sell for — printed in a row
+whose other three cells are real closed sale prices, under a header that says `Sale Price` in
+every theme. The seller reading this sees their home valued 9% below the cheapest comp. `$544`
+per square foot is the same error divided by area.
+
+**`estimated_value` is never populated.** No writer anywhere in the repository sets it on
+`sitex_data`, so the `or` chain always falls through to the assessment. The comment describes the
+fallback as occasional; it is the only path.
+
+**Three ways out, and the choice is Jerry's:** leave the cell empty and label the row honestly for
+the subject; print the assessment under its own label (`Assessed`, which the property page
+already does correctly one page earlier); or compute an estimate from the comps, which is what a
+CMA is and is a product feature rather than a bug fix. **[JERRY]**
+
+---
+
+### D-119 — the Area Sales Analysis table shows three comps; the chart beside it shows four
+
+**Severity:** WRONG · **Affects:** the Area Sales Analysis page in all five themes ·
+**Found during:** Workstream E measurement (E6)
+**Status:** `open`
+
+`_build_stats_context` reduces the comparables to exactly three named slots:
+
+```python
+low_comp  = sorted_by_price[0]
+high_comp = sorted_by_price[-1]
+med_idx   = len(sorted_by_price) // 2
+med_comp  = sorted_by_price[med_idx]
+```
+
+With the four comps in the measurement (470,000 · 590,000 · 631,500 · 635,000) that is index 0,
+index 3 and index 2. **Index 1 — 1848 1st St at $590,000 — is in no column.** It appears in the
+chart directly above the table, in the Sales Comparables page's four cards, and in the Range of
+Sales averages. It is absent from the analysis, in all five themes, with nothing on the page
+saying three of four are shown.
+
+Generalising: for *n* comps the table shows at most 3 and silently drops *n−3*. It also collapses
+when *n* is small — at *n* = 2, `low` is index 0, `med_idx` is 1 and `high` is index 1, so the
+same listing fills two columns; at *n* = 1 all three columns are the same listing; at *n* = 0
+`extract_comp_stats({})` returns a full row of zeros and the table renders `0 0 0 0` throughout.
+None of these states is guarded.
+
+**"Medium" is not a median.** `len // 2` on a price-sorted list of four is the third-cheapest, so
+the column labelled Medium sat at $631,500 against a true median of $610,750. The value is a real
+listing, which is the right choice and is what makes the label wrong. (E5 filed the opposite —
+that Medium is a computed median and therefore no property at all. That is the QA fixture's
+behaviour, not the builder's.)
+
+---
+
+### D-120 — `pools` is computed from a truthy string, so a house with no pool has one, one page after saying it doesn't
+
+**Severity:** WRONG · **Affects:** the teal Area Sales Analysis table; the `pools` and `stories`
+context keys in all five themes · **Found during:** Workstream E measurement (E8)
+**Status:** `open`
+
+```python
+"pools": 1 if sitex_data.get("pool") else 0,
+```
+
+SiteX reports an absent pool as the **string** `"None"`, which is truthy, so the subject's `pools`
+is `1`. `_build_property_context` handles the same field correctly — `"pool": sitex_data.get("pool") or "No"` — and prints it verbatim. Rendered, teal, one page apart:
+
+```
+page 03   Pool/Spa:   None
+page 04   Pools       1     0     0     0
+```
+
+Two statements about one house, both from the same source field, contradicting each other inside
+one document.
+
+**The same row is a second defect.** `"stories": _safe_num(comp.get("stories"), 0)` renders
+`Stories  0  0  0  0` — SiteX does not return `stories` and neither does the comps payload, so a
+missing value is printed as the number zero for every column. This is D-090's family on a surface
+D-090 did not cover: *absent* rendered as *measured to be none*. A house with zero storeys is not
+a thing, so the row is self-evidently data-absent to a careful reader and quietly wrong to
+everyone else.
+
+Only teal renders these two rows (see D-124), so only teal shows the contradiction — but both
+values are in the context for all five themes and any theme that adds the row inherits it.
+
+---
+
+### D-121 — the contents page is hardcoded, and lists two pages the report does not contain
+
+**Severity:** BROKEN · **Affects:** the contents page of all five property themes, in the default
+production page set · **Found during:** Workstream E measurement (E15, E17, and a third thing
+neither names)
+**Status:** `open`
+
+The default page set, set in `PropertyReportBuilder.__init__` when `selected_pages` is empty, is
+seven pages:
+
+```python
+["cover", "contents", "aerial", "property", "analysis", "comparables", "range"]
+```
+
+`overview` and `market_trends` are **not** in it. Both pages are conditional on data that the
+default path does not request. But the contents page in every theme is a literal block of seven
+`<div class="contents-item">` rows with literal page numbers and no reference to `page_set`:
+
+```html
+<div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
+```
+
+`grep -c "if " ` over the contents block of each theme returns **0** for all five. Teal guards one
+row (`{% if "overview" in _pages and overview_text %}`) and nothing else.
+
+**Three separate failures, all on this one page.**
+
+1. **It advertises absent pages.** Every default production report's contents lists *Market
+   Trends* at page 07; four of the five also list *Executive Summary* at page 02. Neither page is
+   in the document. A reader turning to page 7 finds Sales Comparables.
+2. **The numbers are decorative.** The printed footers of teal's bare render run `03, 04, 05 …`
+   against contents entries claiming `04, 05, 06 …`. Every entry is off, by a margin that depends
+   on which optional pages happened to be dropped, and the literals skip `03` even when nothing is
+   dropped.
+3. **The labels are not the page titles.** Measured against each theme's own `page-header-title`:
+
+   | contents says | the page says |
+   |---|---|
+   | Aerial Property View / Aerial Snapshot | **Aerial View** |
+   | Property Information | **Prospective Property** |
+   | Estimated Value Range | **Range of Sales** |
+   | Comparable Sales *(elegant)* | **Sales Comparables** |
+
+E15 read the symptom as "the aerial page carries no number". It does carry one — see D-129, it is
+painted white on white. E11 read teal's contents as structurally broken; it renders correctly and
+is wrong in content instead.
+
+**The fix is structural or it will rot.** A contents page derived from `page_set` with numbers
+counted at render time removes all three at once; patching the literals leaves the next
+`selected_pages` value to break them again.
+
+---
+
+### D-122 — no theme handles a missing agent photo, and the theme that has one renders its alt text
+
+**Severity:** BROKEN · **Affects:** the cover of all five property themes, and the executive
+summary page · **Found during:** Workstream E measurement (E14)
+**Status:** `open`
+
+With `agent.photo_url` unset — the state for any user who has not uploaded an avatar, and the
+`bare` variant of the measurement — every theme paints the frame and nothing in it:
+
+| theme | what renders |
+|---|---|
+| bold | a solid navy square |
+| classic | nothing; the name shifts left into the gap |
+| elegant | an empty gold-ruled circle |
+| modern | a grey rounded square |
+| teal | a grey circle with a teal ring |
+
+Five themes, five different empty shapes, no label on any of them. `_build_agent_context` passes
+`photo_url` through and no template has a fallback branch.
+
+**And the populated case is worse.** In the `full` variant, with `photo_url` set to a URL that
+does not resolve, elegant's executive summary renders the browser's broken-image glyph **with the
+alt text `Zoe Noelle` wrapping out of the circle**. PDFShift renders from its own servers, so a
+photo behind any referrer or IP restriction reaches the customer exactly like this;
+`embed_images_as_base64` is best-effort and returns the original URL when the fetch fails.
+
+Same family as **D-114** (B5) on the email side: an absent image handled by painting a shape the
+size of the image and saying nothing. One labelled placeholder — initials, or a person glyph with
+the agent's name beside it — serves both surfaces, and the property report has the harder case
+because the frame shapes differ per theme.
+
+---
+
+### D-123 — the production property report contains no photographs of anything
+
+**Severity:** WRONG · **Affects:** all five property themes · **Found during:** Workstream E
+measurement (E20, which named two themes)
+**Status:** `open`
+
+Counted directly in the rendered HTML: `<img>` tags per document.
+
+| variant | bold | classic | elegant | modern | teal |
+|---|---|---|---|---|---|
+| **bare** (no Maps key) | **0** | **0** | **0** | **0** | **0** |
+| **full** (Maps key set) | 2 | 2 | 3 | 2 | 2 |
+
+The two or three in `full` are the Street View hero, the Static Maps aerial and the brand logo.
+**Comp photos are zero in every theme in both variants**, because `_build_comparables_context`
+resolves a comp's image from `image_url` / `photo_url` / `photos[0]`, and the comps the API's
+`get_comparables` route stores carry none of the three — its projection is address, price, beds,
+baths, sqft, `closeDate`, geo and distance. The `map_image_url` fallback needs the same Maps key.
+
+So a Sales Comparables page that is built entirely around four photo cards renders four grey
+rectangles, and a report whose Aerial View page exists to show an aerial view shows an empty
+placeholder under copy asserting *"This is an aerial view of the neighborhood in which your
+prospective property is located."*
+
+E20 filed this as a theme-parity gap — *"Classic renders no imagery at all"* while others do. The
+parity differences in the reviewed set came from which Unsplash URLs `SAMPLE_CONTEXT` happened to
+supply to which template. **On the production path no theme has an advantage, because no theme has
+a photograph.** Whether `GOOGLE_MAPS_API_KEY` is set in the worker's environment is not readable
+from the repository and is the first thing to check.
+
+---
+
+### D-124 — the analysis table's field set changes with the theme, so the theme choice changes the analysis
+
+**Severity:** FRAGILE · **Affects:** the Area Sales Analysis table, all five themes ·
+**Found during:** Workstream E measurement (E16)
+**Status:** `open`
+
+Rendered from one identical context, the table's rows:
+
+| row | bold | classic | elegant | modern | teal |
+|---|---|---|---|---|---|
+| Distance | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Living Area | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Price/Sq.Ft. | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Year Built | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Lot Size | ✓ | ✓ | ✓ | **✗** | ✓ |
+| Bedrooms | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Bathrooms | ✓ | ✓ | ✓ | **✗** | ✓ |
+| Stories | ✗ | ✗ | ✗ | ✗ | **✓** |
+| Pools | ✗ | ✗ | ✗ | ✗ | **✓** |
+| Sale Price | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+Every value is in `stats` for every theme; each template picks its own subset by hand. An agent
+switching from Classic to Modern for visual reasons silently removes lot size and bathrooms from
+the comparison their client receives, and switching to Teal adds two rows that are always `0`
+and `1/0/0/0` (D-120).
+
+FRAGILE rather than WRONG because no single render is incorrect — the property is that the
+document's content is a function of its skin, which no part of the system states or checks. The
+durable fix is one shared table partial driven by a field list; the cheap one is a test that
+renders all five and asserts the row sets match.
+
+---
+
+### D-125 — integers render with a decimal point throughout the analysis table
+
+**Severity:** ROUGH · **Affects:** the Area Sales Analysis table in all five themes; the property
+page's Bathrooms field · **Found during:** Workstream E measurement (E19)
+**Status:** `open`
+
+`_safe_num` returns `float(val)` and the templates interpolate it raw. Every numeric cell that is
+not currency-formatted therefore carries `.0`:
+
+```
+Living Area   786.0    770.0    940.0    912.0
+Year Built    1949.0   1910.0   1953.0   1952.0
+Bedrooms      2.0      3.0      2.0      3.0
+Bathrooms     1.0      1.0      1.0      1.0
+```
+
+`1949.0` as a year and `2.0` as a bedroom count read as machine output in a document a seller is
+meant to take seriously. Lot Size escapes because it goes through `format_number`; Price/Sq.Ft.
+escapes because it goes through `format_currency`.
+
+The property page has the same thing in one place — `Bathrooms: 1.0` — and there it matters more,
+because `1.5` and `2.5` are real values, so the fix cannot simply be `int()`. A filter that drops
+a trailing `.0` and keeps a genuine half is the shape of it; `compute/price_bands.format_price`
+already does exactly this for currency and is the precedent.
+
+E19 recorded this as unevenly applied — *"Group A formats correctly"*. Group A is the QA script,
+whose own `format_number` differs from production's. **On the production path all five themes are
+affected identically.**
+
+---
+
+### D-126 — four of the five sales charts have no values and no axis
+
+**Severity:** ROUGH · **Affects:** the Area Sales Analysis chart in bold, classic, elegant and
+modern · **Found during:** Workstream E measurement (E22)
+**Status:** `open`
+
+Rendered, the same four comps in each theme:
+
+* **teal** — each bar labelled with its price (`$632k`, `$635k`, `$470k`, `$590k`) above and its
+  month below.
+* **bold, classic, elegant, modern** — month labels only. No value on any bar, no y-axis, no
+  gridline labels, no scale anywhere on the card.
+
+Four bars of differing heights with no quantity attached is decoration. A reader can see that one
+comp sold for less than another and cannot tell whether the gap is $20,000 or $200,000 — and the
+prices are in the table directly underneath, so the chart adds nothing it does not also obscure.
+The bars are not zero-anchored either, which exaggerates the differences that are visible.
+
+E22 named elegant and said `teal_report` gets it right and should be the standard. Measured, that
+holds and the scope is three themes wider. Teal's labels are `.bar .val` at `top:-24px`, dark navy
+on the card, and they are legible (the contrast auditor reports them at 1.00:1 against the bar's
+gradient — a false positive, see D-130).
+
+---
+
+### D-127 — teal labels the subject column `PIQ`
+
+**Severity:** ROUGH · **Affects:** the teal Area Sales Analysis table · **Found during:**
+Workstream E measurement (E18)
+**Status:** `open`
+
+Teal's table heads its first column **`PIQ`**. Bold, classic, elegant and modern all say
+`Subject`. "Property in question" is appraisal shorthand; the document's reader is a homeowner who
+has never seen it. It also sits directly above the row that prints the tax assessment as a sale
+price (D-118), so the one column a seller most needs to understand is the one labelled in jargon.
+
+One word, one template. Recorded separately from D-124 because that entry is about which rows
+exist and this is about what a heading says.
+
+---
+
+### D-128 — the executive summary is two sentences on an otherwise empty page
+
+**Severity:** ROUGH · **Affects:** the `overview` page, in the themes that carry it ·
+**Found during:** Workstream E measurement (E21)
+**Status:** `open`
+
+Measured in the `full` variant, elegant: the page holds a label, a title, a two-line paragraph and
+the agent's contact line, and then **roughly 78% of the page is empty**. `ai_overview.generate_overview`'s output is a short paragraph and the page is a full Letter sheet
+with no other content block.
+
+Not in the default page set, so it reaches a customer only when `selected_pages` includes
+`overview` — which makes it lower priority than it looks in the E register, and does not make it
+acceptable when it does render. Either the page earns its sheet (the key figures alongside the
+prose, which is what the space is for) or the summary moves onto the cover or the property page.
+A blank two-thirds reads as a printing failure.
+
+---
+
+### D-129 — 229 text runs on the property PDFs fail WCAG contrast, and the page number on the aerial page is invisible in four themes
+
+**Severity:** BROKEN · **Affects:** all five property themes · **Found during:** Workstream E
+measurement, first contrast measurement this surface has had
+**Status:** `open`
+
+Measured by pixel, over the ten production renders (five themes × two variants), 2,344 text runs:
+
+| variant | runs | below 4.5:1 | below WCAG threshold | worst |
+|---|---|---|---|---|
+| bare | 1,047 | — | **69** | 1.00:1 |
+| full | 1,297 | — | **160** | 1.00:1 |
+| **total** | **2,344** | **250** | **229** | **1.00:1** |
+
+| theme | runs | failing |
+|---|---|---|
+| bold | 450 | 41 |
+| classic | 448 | 39 |
+| elegant | 450 | **16** |
+| modern | 426 | **91** |
+| teal | 570 | 42 |
+
+229 failing runs in **48 distinct (selector, colour, background) combinations**. WCAG's large-text
+allowance is applied, not ignored.
+
+**Invisible, not merely low — verified by cropping the rendered page and looking:**
+
+| ratio | what | where |
+|---|---|---|
+| **1.00:1** | `div.num` — the page number `03` on the Aerial View page, `#ffffff` on `#ffffff` | bold, classic |
+| **1.00:1** | `div.brand` — the footer line `Classic Collection • TrendyReports` | classic |
+| **1.07:1** | `div.num` — the same page number | teal |
+| **1.11:1** | `div.num` — the same page number | elegant |
+| **1.31:1** | `div.brand` — `Elegant Collection` | elegant |
+
+**This is E15's real mechanism.** E15 filed the aerial page as carrying *no* number. It carries
+one, in white, on white, in four of the five themes — which is why the sixth footer exists in the
+markup and nothing is visible on the page.
+
+**The largest visible groups:**
+
+| ratio | needs | runs | what |
+|---|---|---|---|
+| 1.90:1 | 3.0 | 10 | teal `h2.section-title` — **every page heading in the theme**, `#34d1c3` on white |
+| 2.52:1 | 4.5 | 26 | bold `div.contents-page` and `div.brand`, `#d69649` on white |
+| 2.34–2.56:1 | 4.5 | 29 | modern's entire muted-text role, `#94a3b8` on white and `#f1f5f9` |
+| 2.80:1 | 4.5 | 18 | modern `td` in the Sale Price summary row and `div.comp-card-price`, white on `#ff6b5b` |
+| 3.61:1 | 4.5 | 22 | classic `div.page-header-label` and the Sale Price row, `#4a90a4` both directions |
+| 2.25–3.30:1 | 4.5 | 26 | the market-trends gauge zone labels (`Seller's`, `Balanced`, `Buyer's`), all four themes that have the page |
+
+**On the 653 figure.** The 2026-09-29 market audit reported 653 failing runs on the property
+surface. That was a different corpus — 30 documents, five themes × six brand colours, rendered
+from `measure_pdf_contrast.py`'s own minimal fixture with no market-trends or overview page — and
+measured by the DOM walker, which over-reports here (D-130). **229 is the production-path,
+pixel-verified number for ten documents.** Neither supersedes the other; they count different
+things, and the brand sweep is still owed on this surface.
+
+**Why modern is four times worse than elegant.** Modern's palette leans on `#94a3b8` for every
+secondary string and `#ff6b5b` as a fill behind white text. Both are single token definitions.
+Elegant's 16 are almost all on the market-trends page it shares with the others. This is the
+market surface's D-112 shape again: a small number of role definitions, not a long tail.
+
+---
+
+### D-130 — the contrast auditor over-reports on absolutely-positioned and `pointer-events:none` text
+
+**Severity:** FRAGILE · **Affects:** `scripts/measure_pdf_contrast.py` and the
+`apps/worker/tests/test_pdf_contrast.py` ratchet it feeds · **Found during:** Workstream E
+measurement, cross-checking the property numbers before filing them
+**Status:** `open`
+
+Both the auditor and a pixel-truth pass were run over the same ten renders. On the 1,965 runs both
+identified:
+
+| | |
+|---|---|
+| auditor reports failing, pixel says passing | **22** |
+| pixel reports failing, auditor says passing | **0** |
+
+**As a gate it is sound — it never goes falsely green.** Its counts are inflated by roughly 10% on
+this surface and five selectors in its output are not defects.
+
+**Two mechanisms, both verified by cropping the render:**
+
+1. **The ancestor-fill loop, on a child that escapes its parent's box.** `backdropsFor` expands
+   the `elementsFromPoint` chain with DOM ancestors sitting between consecutive hits — added
+   because `elementsFromPoint` skips `thead`/`tbody`/`tr`. Teal's `.bar .val` is
+   `position:absolute; top:-24px`, so it paints *above* its bar. The hit chain is
+   `[span.val, div.chart, …]`, the loop walks up from `span.val` and finds `.bar` on the way to
+   `div.chart`, and attributes the label to the bar's navy gradient: `#18235c on #18235c`,
+   **1.00:1**. Cropped, the label is dark navy on white and plainly legible. 12 runs
+   (`span.val`, `.bar label`), plus 6 more of the same shape on teal's cover
+   (`div.cover-label`, `h1`).
+
+2. **`pointer-events:none` makes an element invisible to hit-testing.** Bold's
+   `.mt-gauge-marker` sets it, so `elementsFromPoint` never returns `span.mt-gauge-val` and
+   `idx === -1`. The `slice(idx)` guard that deliberately keeps an element's *own* background
+   never fires, and `.mt-gauge-val { background: var(--navy) }` is never seen:
+   `#ffffff on #ffffff`, **1.00:1**. Cropped, it is white on a navy pill. 4 runs.
+
+**This is the fourth time this resolver has produced a confident wrong reading**, after the
+ancestor walk, the `slice(idx+1)` exclusion and the `thead`/`tbody`/`tr` skip — and mechanism 1 is
+a *regression introduced by* the fix for the third. Each fix was correct for the case it was
+written against and wrong for a case it did not have.
+
+**The fix is to stop hit-testing.** Rendering the page a second time with
+`*{color:transparent;-webkit-text-fill-color:transparent}` and sampling the pixel at each text
+rect gives the backdrop directly, whatever painted it — no chain, no ancestors, no assumptions
+about paint order. It found every failure the walker found and 22 fewer that were not there. It
+costs one extra screenshot per document. Its own caveat, stated rather than hidden: blanking text
+also blanks anything deriving from `currentColor`, which nothing in these templates does today.
+
+A secondary finding from the same pass: **206 of 2,344 runs straddle two different backdrops**
+across their own width. Both tools pick one. Neither is wrong about the pixel it sampled and
+neither reports that the run has two.
+
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 
