@@ -19,10 +19,31 @@ where the feed carries `bathsFull`/`bathsHalf` (D-106, open). A third flag,
 `status`, is a dead fallback rather than a defect — the expression reads
 `mls.status` first. Verify every flag; the tool points, it does not conclude.
 
-LIMIT, STATED. It checks against `tests/fixtures/listing_*.json` — captured
-responses, real in shape, but two of them. A key absent from both is unproven
-rather than wrong. `tools/dump_market_snapshot.py` fetches a live page with
-SimplyRETS credentials; pass its output with `--capture` and every row in it
+FIRST RUN AGAINST REAL DATA, 2026-10-01: 24 reads, 0 unacknowledged misreads,
+against 301 listings from a live market. `closeDate`, `closePrice` and
+`daysOnMarket` confirmed reading the paths the feed actually uses.
+
+THREE VERDICTS, AND ONLY TWO OF THEM USED TO FAIL — WHICH IS HOW THAT CLEAN RUN
+COEXISTED WITH AN OPEN DEFECT. `bathrooms` exists at NO path in any payload, so
+it was never `MISREAD`; it was `not in fixtures`, which did not fail the run and
+did not appear in the count. Anyone reading "0 unacknowledged misreads" took it
+as an all-clear on a field that is empty in every report.
+
+Against two bundled fixtures that shrug is correct — absent from two files is
+unproven rather than wrong. Against a `--capture` of hundreds of real rows it is
+not: the feed demonstrably does not send that key, and a read that never
+resolves is a column that is always empty. So with `--capture` the verdict
+becomes `ABSENT FROM CAPTURE` and exits 1, with the same escape hatch as a
+misread: `ACKNOWLEDGED` tolerates a known one WITH ITS REASON RECORDED, and a
+new one fails. `bathrooms` is acknowledged there now, naming D-106 — acknowledged
+is not fixed, and the board is the source of truth for which it is.
+
+LIMIT, STATED. It sweeps `compute/extract.py` and nothing else. The four sites
+D-145 fixed live in `routes/property.py`, `worker/tasks.py`,
+`services/simplyrets.py` and `schemas/property.py`; their guard is the AST test
+in `apps/api/tests/test_close_price_field_path.py`, not this. And without
+`--capture` it checks against two fixtures. `tools/dump_market_snapshot.py`
+writes a raw dump of a live page by default (D-150); pass it here and every row
 joins the sample.
 """
 import argparse, ast, json, sys
@@ -173,6 +194,12 @@ def sweep(path):
 #: one fails. An empty reason is not allowed — the point is that someone
 #: checked.
 ACKNOWLEDGED = {
+    ("bathrooms", "property.bathrooms"):
+        "D-106, OPEN. The feed does not send this key — absent from all 301 rows of the "
+        "2026-10-01 Downey capture, not merely from the two bundled fixtures. The bath count "
+        "lives at `bathsFull`/`bathsHalf`. Listed here so the run stays green while the "
+        "DEFECT ITSELF IS UNFIXED: remove this line when extract.py reads the right keys, and "
+        "the entry on the board is the source of truth for whether that has happened.",
     ("daysOnMarket", "daysOnMarket"):
         "D-105's retained fallback. `mls.daysOnMarket` is read first, and the "
         "top-level read only runs when that returned None, for deployments "
@@ -191,6 +218,9 @@ _parser.add_argument(
 _args = _parser.parse_args()
 
 FIXTURES = load_payloads(_args.capture)
+#: A key absent from two bundled fixtures is unproven; absent from a real
+#: capture of hundreds of rows, it is a finding. The verdict differs.
+HAVE_CAPTURE = _args.capture is not None
 
 TARGET = REPO / "apps/worker/src/worker/compute/extract.py"
 rows = sweep(TARGET)
@@ -203,6 +233,7 @@ print(f"{len(rows)} `.get(\"...\")` reads in {TARGET.relative_to(REPO)}\n")
 print(f"{'line':>4}  {'read as':28s} {'expected path':26s} verdict")
 print("-" * 96)
 problems = []
+absent = []
 skipped = []
 for lineno, recv, key, is_fallback in sorted(rows):
     if recv not in ROW_VARS:
@@ -224,12 +255,32 @@ for lineno, recv, key, is_fallback in sorted(rows):
         else:
             verdicts.append((name, "absent", ""))
     bad = [v for v in verdicts if v[1] == "ELSEWHERE"]
-    state = "MISREAD" if bad else ("ok" if any(v[1] == "ok" for v in verdicts) else "not in fixtures")
-    detail = bad[0][2] if bad else ""
+    # THE THIRD VERDICT USED TO BE A SHRUG, AND THAT IS HOW A CLEAN RUN
+    # COEXISTED WITH AN OPEN DEFECT. `bathrooms` (D-106) exists at NO path in
+    # any payload, so it was never "MISREAD" — it was "not in fixtures", which
+    # did not fail the run and did not appear in the count. A reader skimming
+    # "0 unacknowledged misreads" took that as an all-clear.
+    #
+    # Against two bundled fixtures the shrug is correct: absent from two files
+    # is unproven rather than wrong, and the docstring says so. Against a
+    # `--capture` of hundreds of real rows it is not a shrug any more — the
+    # feed demonstrably does not send that key. So the verdict splits on
+    # whether a capture was supplied, and only the capture-backed one is a
+    # finding.
+    if bad:
+        state, detail = "MISREAD", bad[0][2]
+    elif any(v[1] == "ok" for v in verdicts):
+        state, detail = "ok", ""
+    elif HAVE_CAPTURE:
+        state, detail = "ABSENT FROM CAPTURE", ""
+    else:
+        state, detail = "not in fixtures", ""
     print(f"{lineno:>4}  {recv + '.get(' + repr(key) + ')':28s} {want:26s} {state}"
           + (f"  -> lives at {detail}" if detail else ""))
     if bad:
         problems.append((lineno, recv, key, want, detail))
+    elif state == "ABSENT FROM CAPTURE":
+        absent.append((lineno, recv, key, want))
 
 print()
 new_problems = [x for x in problems if (x[2], x[3]) not in ACKNOWLEDGED]
@@ -239,12 +290,38 @@ for lineno, recv, key, want, detail in known:
     print(f"              {ACKNOWLEDGED[(key, want)]}")
 if known:
     print()
+new_absent = [x for x in absent if (x[2], x[3]) not in ACKNOWLEDGED]
+known_absent = [x for x in absent if (x[2], x[3]) in ACKNOWLEDGED]
+for lineno, recv, key, want in known_absent:
+    print(f"acknowledged  extract.py:{lineno}  {want}  (absent from the capture)")
+    print(f"              {ACKNOWLEDGED[(key, want)]}")
+if known_absent:
+    print()
+
 if new_problems:
     print(f"{len(new_problems)} MISREAD — the key exists in the payload, at a different path:")
     for lineno, recv, key, want, detail in new_problems:
         print(f"  extract.py:{lineno}  reads {want}   payload has {detail}")
+if new_absent:
+    print(f"{len(new_absent)} ABSENT FROM CAPTURE — the key is at no path in "
+          f"{len(FIXTURES)} real rows:")
+    for lineno, recv, key, want in new_absent:
+        print(f"  extract.py:{lineno}  reads {want}   the feed sends no such key")
+    print("  A read that never resolves is a column that is always empty. Either the "
+          "key is\n  wrong or the field is genuinely unavailable — establish which, "
+          "then either fix\n  the path or add it to ACKNOWLEDGED with the reason.")
+if new_problems or new_absent:
     sys.exit(1)
-print("no unacknowledged misreads among keys present in the fixtures")
+if HAVE_CAPTURE:
+    print(f"no unacknowledged misreads and no unacknowledged absences, across "
+          f"{len(FIXTURES)} real rows")
+    if known_absent:
+        print(f"  ({len(known_absent)} read(s) resolve nowhere and are acknowledged "
+              f"above — acknowledged is not fixed.)")
+else:
+    print("no unacknowledged misreads among keys present in the fixtures")
+    print("  (two bundled fixtures only. A key absent from both is UNPROVEN, not "
+          "correct —\n  pass --capture with a real dump to turn that into an answer.)")
 print()
 print(f"{len(skipped)} reads NOT against a raw row (reported, not dropped):")
 for lineno, recv, key in skipped:
