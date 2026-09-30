@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 54 | Real, unfixed |
-| `fixed` | 95 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 53 | Real, unfixed |
+| `fixed` | 96 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **153** | D-001 … D-153, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 15 · ROUGH 22. (Sums to 54, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 14 · ROUGH 22. (Sums to 53, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9052,7 +9052,7 @@ helper, because it will be met again.)*
 
 **Severity:** FRAGILE · **Affects:** `apps/worker/tests/pdf_contrast_baseline.txt` and the
 ratchet that reads it · **Found during:** switching the gate to pixel truth (D-130)
-**Status:** `open`
+**Status:** `fixed` — `fix/d153-tolerance-matching`
 
 The baseline records **(family, selector, foreground, background)** and its header explains why
 that beats keying on a file path: *"a template replacement invalidates every line and the 'may
@@ -9083,65 +9083,70 @@ gradient's samples (available from any run's JSON), and regenerate once.
 
 ---
 
-### RECOMMENDATION — 2026-10-01, `docs/d153-key-stability`. Measured, not fixed.
+### RESOLVED — 2026-10-01. **Status: `fixed`** — `fix/d153-tolerance-matching`
 
-**FIRST, THE TRIGGER IS NOW OBSERVED RATHER THAN INFERRED.** The entry above reasoned it from
-the instrument switch; my own PR flagged that as an inference. Tested directly: elegant's cover
-rendered twice, the second with `padding-top:40px` and `margin-left:60px` on the cover text and
-**no colour changed at all**. Of 11 cover runs, **2 sampled a different backdrop** —
-`#171717` → `#161616`. So a layout nudge does move the key, and the amount it moves it is
-**distance 3** on a sum-of-absolute-RGB-differences scale.
+**THE TRIGGER, OBSERVED END TO END ON A RUN THE GATE RECORDS.** The first pass demonstrated the
+mechanism on text at 17:1, which proves nothing about the gate. Repeated on a **failing** run:
+modern's `div.cover-city`, `#94a3b8` on `#3b4053`, **4.01:1 against a 4.5 threshold** — on the
+baseline. Given `.cover-left { padding-top: 120px }` and no colour change at all, its backdrop
+sampled `#3c4155`. **Distance 4, a new key, and the ratchet would have reported a new pairing on
+a build where nothing about contrast moved.** `span "Report"` moved 2 the same way.
 
-Three was small enough to be worth saying plainly: the failure is not that the colour moves a
-lot, it is that the key is an EXACT hex and any movement at all is a new key.
+**AND THE FIRST RECOMMENDED TOLERANCE WAS WRONG. 48 MERGES TWO BRANDS.**
 
-**THE SPREADS, MEASURED ACROSS THE TEN PRODUCTION RENDERS.** Grouping every run by
-`(document, selector, page)` — so the only thing varying inside a group is where the text sits:
+48 came from grouping the **ten single-brand production renders** and finding a gap between 37
+and 131. The gate's corpus is **sixty documents across six brand colours**, and it contains a
+phenomenon those ten do not. Measured on the corpus the tolerance is actually applied to, the
+closest pairs of *distinct* baseline entries are:
 
-| | groups | spread (sum of |ΔR|+|ΔG|+|ΔB|) |
+| distance | | what the two are |
 |---|---|---|
-| same rule, backdrop varies by position | **21** | 1, 2, 4, 5, 9, 11, 14, 14, 17, 17, 18, 20, 21, 21, 27, 27, 29, 29, **37, 37, 37** |
-| genuinely different backgrounds | **7** | **131**, 277, 312, 383, 585, 601, 614 |
+| **3** | elegant `span` `#57860e` vs `#58880e` | one finding, two points on one gradient |
+| **9** | teal `h2.h` `#3b4569` vs `#3e486c` | same |
+| **18** | elegant `div.num` `#f2faf9` vs `#faf7f2` | mint-tinted page vs cream page |
+| **30** | modern `div.brand` `#f1f5f9` vs `#ffffff` | tinted panel vs page |
+| **41** | bold `div.cover-label` `#0d9488` vs `#0e7490` | **two different brand colours** |
 
-**There is a gap between 37 and 131 and nothing lands in it.** The 37s are alternating table-row
-stripes (`#f0ebe3` against `#faf7f2`); the 131+ are a coloured header band or cell against the
-page, which must stay distinct because the ratio genuinely differs.
+At 48, **14 of 178 entries collapse, including every two-brand pair** — the gate losing exactly
+the distinction six brands are rendered to make. At 12, three collapse, and those three are the
+3-apart and 9-apart pairs, which are one finding sampled twice.
 
-**RECOMMENDED: a tolerance of 48, applied at COMPARISON time, not by rewriting the file.**
+**So there is no gap between two tidy populations, and looking for one was the error.** The
+bound is: above the observed churn (2, 3, 4) with headroom, below the closest pair of backdrops
+that genuinely differ (18). **Twelve.**
 
-Not quantisation into buckets. Snapping each channel to a grid has a boundary problem that
-makes it worse than the disease: two colours 3 apart can straddle a grid line and land in
-different buckets, so the defect it is meant to cure survives at every boundary. Instead leave
-the baseline exactly as it is — four fields, human-readable, colours named — and change the
-`read_baseline` comparison so a finding matches an entry when the family and selector are equal
-and **both colours are within 48**.
+> **THIS IS §0.6'S OWN RULE, BROKEN ONE ENTRY AFTER WRITING IT.** *A derived set is only as
+> complete as the input it was derived from.* 48 was derived from a corpus that does not
+> contain brands and applied to one that does. The rule was about `numeric_leaf_names()`
+> deriving from an empty context; this is the same shape with a different noun, two days later,
+> by the person who wrote it down. The tell was available and I did not look: the number was
+> derived from ten documents and used on sixty.
 
-| | |
-|---|---|
-| **48 because** | comfortably above the largest observed same-rule spread (37) and comfortably below the smallest genuinely-different one (131) — it sits in the empty gap rather than being chosen round |
-| **costs nothing to adopt** | no regeneration, no format change, every existing entry keeps matching, and D-130's diff stays legible as the record of the instrument change |
-| **the risk, stated** | a genuinely new pairing within 48 of an existing one is absorbed silently. Bounded by the evidence above, not eliminated by it |
-| **the failure mode if wrong** | too tight and the churn continues; too loose and two real pairings collide. Both are visible in the regenerate diff, which is the thing a reviewer reads |
+**SHIPPED: tolerance 12, at comparison time, in both directions.**
 
-**AND IT NEEDS APPLYING IN BOTH DIRECTIONS, or it creates the defect it removes.**
-`test_the_baseline_does_not_outlive_what_it_recorded` computes `baseline − failures` and reports
-the remainder as fixed-but-unrecorded. Left on exact equality while the forward check uses a
-tolerance, every entry absorbed by the tolerance would be reported as stale, and regenerating to
-clear that is the one move the file forbids. §0.6 — *a guard asserting A ⇒ B is half a guard*,
-and this is the same pair of directions one layer down.
+* The baseline file is unchanged apart from its header — **no line moved**, confirming the
+  claim that adopting this costs nothing today.
+* `read_baseline` is untouched; `same_entry()` compares. Family and selector match exactly —
+  they are names, not measurements — and only the two colours get the tolerance.
+* **Both directions**, because otherwise it creates the defect it removes:
+  `test_the_baseline_does_not_outlive_what_it_recorded` computes `baseline − failures`, so on
+  exact equality every entry the forward check absorbs would read as fixed, and clearing that
+  means regenerating. `test_both_directions_use_the_tolerance` asserts on the real measurement
+  that no entry is simultaneously matched and reported stale.
+* **The header says so.** Someone reading exact hexes in a year would reasonably assume exact
+  matching, so the file now states the tolerance, the reason, the measured example, and —
+  because this is the question a reviewer will actually have — **"if the gate stays quiet
+  through a layout change, that is deliberate."**
 
-**RE-DERIVE IT, DO NOT INHERIT IT.** `scripts/measure_key_stability.py` runs both
-measurements — `--spreads` for the two populations and the gap between them, `--nudge` for the
-trigger. Both numbers are properties of the templates, so a redesign moves them, and 48 is only
-defensible while the gap stays open. Today it reports **GAP: 94**. The script says so in its
-own output rather than leaving the next person to work out whether the constant still means
-anything.
+**NOT quantisation into buckets.** Snapping each channel to a grid reproduces the defect at
+every grid line: two colours 4 apart can straddle a boundary and land in different buckets. A
+tolerance has no boundaries.
 
-**Do it before the Claude Design handover, not after.** A new template set moves every line, so
-on the first render of the new design a position-keyed baseline reports churn as findings —
-precisely when a reviewer most needs the signal to mean something. **Not shipped here:** this
-is a change to how the gate decides, three days after changing what it measures, and those two
-want separate diffs for the same reason D-130 and D-153 did.
+**Re-derive it, do not inherit it.** `scripts/measure_key_stability.py --nudge` prints the churn
+(the floor) and `--collisions` prints the closest distinct entries in this baseline (the
+ceiling), naming the nearest pair left distinct and telling the reader to check that every
+merged pair really is one finding twice. `--spreads` is kept for the single-brand picture and
+is explicitly **not** the bound — which is the whole of what went wrong the first time.
 
 ---
 
