@@ -146,11 +146,31 @@ def numeric_leaf_names() -> set[str]:
         walk(data)
 
     # The property report too, or its own numeric fields are invisible here and
-    # the guard silently covers half the templates it walks. Its builder fills
-    # every numeric with a default, so an empty input still names them all.
+    # the guard silently covers half the templates it walks.
     prop = PropertyReportBuilder({})
     walk(prop._build_property_context())
     walk(prop._build_stats_context())
+
+    # AND A POPULATED ONE, BECAUSE "AN EMPTY INPUT STILL NAMES THEM ALL" STOPPED
+    # BEING TRUE. That was this block's stated premise and it rested on the
+    # builder defaulting every numeric to 0. D-119 changed that deliberately:
+    # a Low/Medium/High column with no listing behind it now renders `-`
+    # rather than `$0`, so on an EMPTY input `stats.low.price` and its
+    # siblings are strings, `price` drops out of this set, and two real
+    # comprehension findings in `tasks.py` silently stopped being reported.
+    #
+    # Nothing failed. The audit just got quieter, which is the failure mode
+    # this whole file exists to prevent — so the set is derived from a
+    # populated context as well as an empty one, and a field that is only
+    # numeric when there is data to put in it is still named.
+    populated = PropertyReportBuilder({
+        "sitex_data": {"last_sale_price": 369000, "sqft": 786, "bedrooms": 2},
+        "comparables": [{"price": 470000, "sqft": 800, "year_built": 1950},
+                        {"price": 590000, "sqft": 900, "year_built": 1960},
+                        {"price": 635000, "sqft": 1000, "year_built": 1970}],
+    })
+    walk(populated._build_property_context())
+    walk(populated._build_stats_context())
     return names
 
 

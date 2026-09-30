@@ -213,7 +213,11 @@ def test_the_numeric_rows_show_absence_rather_than_zero(producible):
     stats = PropertyReportBuilder(
         {"sitex_data": producible, "comparables": [{"price": 470000}]}
     )._build_stats_context()
-    for slot in ("piq", "low"):
+    # `medium`, not `low`: D-119 fills the Medium column for a single comp and
+    # blanks the other two, so asserting ABSENT on `low` here would pass
+    # because the COLUMN is empty and say nothing about stories or pools —
+    # the same vacuous-pass this file is named after, one level up.
+    for slot in ("piq", "medium"):
         assert stats[slot]["stories"] == ABSENT
         assert stats[slot]["pools"] == ABSENT
 
@@ -225,4 +229,11 @@ def test_a_real_negative_still_reads_as_a_negative():
          "comparables": [{"price": 1, "pool": "Yes"}]}
     )._build_stats_context()
     assert stats["piq"]["pools"] == 0
-    assert stats["low"]["pools"] == 1
+    # D-119: ONE comp fills the Medium column, not Low. The median of a
+    # one-element set is that element; a Low and a High would imply a spread
+    # that does not exist, so those columns are blank. This test is about the
+    # comp's pool value reading as a real negative, not about which column it
+    # lands in — but it asserted on `low` and would now pass vacuously against
+    # `-` if the assertion were loosened instead of moved.
+    assert stats["medium"]["pools"] == 1
+    assert stats["low"]["pools"] == ABSENT and stats["high"]["pools"] == ABSENT
