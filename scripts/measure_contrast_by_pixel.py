@@ -172,6 +172,20 @@ def measure(html_dir: Path):
     return json.loads(out.read_text())
 
 
+def measure_docs(docs):
+    """Same measurement, from `{name: html}` rather than a directory.
+
+    `measure_pdf_contrast.py` builds the corpus — `market_documents()` and
+    `property_documents()` — and hands back a dict. The gate now measures it
+    through this file instead of that one (D-130), so it needs the same entry
+    point. The directory form stays for measuring renders already on disk.
+    """
+    work = Path(tempfile.mkdtemp(prefix="pixel-contrast-docs-"))
+    for name, html in docs.items():
+        (work / f"{name}.html").write_text(html, encoding="utf-8")
+    return measure(work)
+
+
 def score(rows):
     from worker.themes import contrast
     out = []

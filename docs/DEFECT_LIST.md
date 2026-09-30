@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 54 | Real, unfixed |
-| `fixed` | 94 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 95 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **152** | D-001 … D-152, contiguous, no duplicates |
+| **Total** | **153** | D-001 … D-153, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 15 · ROUGH 22. (Sums to 54, the open total.)
 
@@ -7596,6 +7596,39 @@ market surface's D-112 shape again: a small number of role definitions, not a lo
 > colours landing just under 4.5 on the aerial page's slightly-grey background. Fixing those
 > means darkening a brand role, which is this entry's remaining 223 and not E15's.
 >
+> **RE-MEASURED THROUGH THE CORRECTED INSTRUMENT — 2026-10-01, after D-130.** The ten
+> production renders, pixel-sampled: **215 failing runs in 52 combinations, of 2,291 measured.
+> Worst 1.90:1**, so nothing on the surface is invisible any more.
+>
+> | theme | failing |
+> |---|---|
+> | modern | **90** |
+> | teal | 40 |
+> | bold | 38 |
+> | classic | 35 |
+> | elegant | 12 |
+>
+> 215 rather than the 223 that 229 − 6 would predict: the corpus itself moved. D-119 and D-121
+> changed what those pages render — derived contents rows, a count note, blank analysis
+> columns — so 2,291 runs are measured where 2,344 were before. **Both numbers are pixel
+> figures; 229 was already one.** This is a current count, not a correction of a bad one.
+>
+> **AND IT IS FOUR ROLE DEFINITIONS, NOT A GRIND.** 8 of the 52 combinations carry 132 of the
+> 215 runs:
+>
+> | theme | foreground | on | ratio | needs | runs | where |
+> |---|---|---|---|---|---|---|
+> | modern | `#94a3b8` | white / `#f1f5f9` | 2.34–2.56 | 4.5 | **31** | every secondary string |
+> | bold | `#d69649` | white | 2.52 | 4.5 | **27** | `div.brand`, contents pages, cover agent title |
+> | modern | `#c55145` | `#f1f5f9` | 4.13 | 4.5 | **24** | contents numerals, pills |
+> | modern | white | `#ff6b5b` | 2.80 | 4.5 | **18** | comp-card price, Sale Price row |
+> | classic | `#4a90a4` | white *and* reversed | 3.61 | 4.5 | **22** | page-header labels, Sale Price row |
+> | teal | `#34d1c3` | white | 1.90 | 3.0 | **12** | every `h2.section-title`, cover logo |
+>
+> The rest is a tail of fives: `#16a34a` on each theme's off-white in the market-trends change
+> chips, and `#999999`/`#6b7280` muted text. **Handing Claude Design a list of 215 runs would
+> be handing over a grind. It is six values.**
+>
 > **A floor, deliberately outside the ratchet.** `test_no_invisible_text_in_property_reports.py`
 > fails on any run below **1.5:1**, with no baseline and no exceptions. A ratchet can absorb an
 > invisible pairing by regeneration — which is how `03` in white on white survived long enough
@@ -7612,7 +7645,7 @@ market surface's D-112 shape again: a small number of role definitions, not a lo
 **Severity:** FRAGILE · **Affects:** `scripts/measure_pdf_contrast.py` and the
 `apps/worker/tests/test_pdf_contrast.py` ratchet it feeds · **Found during:** Workstream E
 measurement, cross-checking the property numbers before filing them
-**Status:** `open`
+**Status:** `fixed` — `fix/d130-auditor-over-reports`
 
 Both the auditor and a pixel-truth pass were run over the same ten renders. On the 1,965 runs both
 identified:
@@ -7658,6 +7691,35 @@ also blanks anything deriving from `currentColor`, which nothing in these templa
 A secondary finding from the same pass: **206 of 2,344 runs straddle two different backdrops**
 across their own width. Both tools pick one. Neither is wrong about the pixel it sampled and
 neither reports that the run has two.
+
+> **FIXED 2026-10-01 — the gate stops hit-testing.** `test_pdf_contrast.py` now measures through
+> `measure_contrast_by_pixel.py`. `measure_pdf_contrast.py` still *builds* the corpus — 30
+> market and 30 property renders across six brands — and stays in the tree as the comparison
+> that established this, but it is no longer what the build is read through.
+>
+> **THE SWITCH IS NOT THE CLEAN SUBTRACTION IT LOOKED LIKE, AND THE DIFF SAYS SO.**
+>
+> | | walker | pixel |
+> |---|---|---|
+> | runs measured | 10,512 | 9,486 |
+> | failing runs | 660 | **615** |
+> | combinations | 203 | **178** |
+>
+> 88 baseline lines removed, 63 added. Reading the two sets against each other rather than
+> counting the delta: **39 pairs are the same finding with the backdrop resolved to a different
+> shade**, and most of the rest are the same selector over a backdrop further along the *same
+> gradient* — `#6aa312` against `#58880e`, `#c47e09` against `#d4890a`. `elegant`'s cover is
+> `linear-gradient(135deg, var(--burgundy) 0%, var(--burgundy-dark) 100%)`, so "the background"
+> is a different colour at every x. The walker resolves the declared value; the pixel samples
+> what is painted **where the text actually sits**, which is the one a reader sees.
+>
+> So the population barely moved and the KEYS churned. Calling this "22 false positives
+> removed" would have been the tidy story and the wrong one.
+>
+> **That exposes a fragility in the baseline's own design, filed as D-153.** The key includes
+> the exact backdrop hex, which over a gradient means *wherever this run's text happened to
+> sit* — so moving a line of text 20px along elegant's cover rewrites its key and the ratchet
+> reports a new pairing that is not new.
 
 
 ---
@@ -8983,6 +9045,43 @@ regressions were applied and each seen to fail.
 *(`yaml.safe_load` reads a workflow's bare `on:` key as the boolean `True`, a YAML 1.1 truthy
 token, so `d["on"]` raises `KeyError` on every GitHub workflow ever written. Noted in the
 helper, because it will be met again.)*
+
+---
+
+### D-153 — the contrast baseline keys on a sampled backdrop hex, which over a gradient is "wherever the text happened to sit"
+
+**Severity:** FRAGILE · **Affects:** `apps/worker/tests/pdf_contrast_baseline.txt` and the
+ratchet that reads it · **Found during:** switching the gate to pixel truth (D-130)
+**Status:** `open`
+
+The baseline records **(family, selector, foreground, background)** and its header explains why
+that beats keying on a file path: *"a template replacement invalidates every line and the 'may
+only shrink' rule then constrains nothing."* Correct, and it has one assumption in it — that the
+background is a property of the RULE.
+
+Over a gradient it is not. `elegant`'s cover is
+`linear-gradient(135deg, var(--burgundy) 0%, var(--burgundy-dark) 100%)`, so the backdrop is a
+different colour at every x, and a pixel-sampling measurement records the shade **under that
+run's own rect**. Switching instruments in D-130 rewrote 39 keys that way without any finding
+changing, plus a further tail of the same selector over the same gradient at a different point.
+
+**The trigger is ordinary and the failure is the noisy direction.** Move a line of text 20px
+along that cover — a font change, a longer agent name, a padding tweak — and its sampled
+backdrop changes, its key changes, and `test_no_new_unreadable_text_in_the_pdfs` reports a new
+colour pairing that is not new. A reviewer then either investigates a non-defect or regenerates
+the baseline to clear it, and regenerating to clear a new failure is the one thing that file
+says never to do.
+
+**Not fixed here, deliberately.** The obvious remedy is to quantise the backdrop into a bucket
+so nearby shades share a key, and the size of the bucket is a real trade: too coarse and two
+genuinely different backgrounds collide, too fine and nothing changes. It also rewrites every
+line in the file for the second time in one day, which would bury D-130's diff — the evidence
+that the instrument changed. **Both should not land in the same commit.**
+
+**What it would take:** pick a tolerance, defend it against the measured spread of a single
+gradient's samples (available from any run's JSON), and regenerate once. Worth doing before the
+next template rewrite, not before the Claude Design handover — the 215 figure D-129 now carries
+is a count of runs, which this does not affect.
 
 ---
 

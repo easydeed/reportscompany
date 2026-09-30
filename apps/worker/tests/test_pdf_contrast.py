@@ -56,9 +56,45 @@ BASELINE = Path(__file__).parent / "pdf_contrast_baseline.txt"
 REQUIRE = os.environ.get("PDF_CONTRAST_REQUIRE_BROWSER") == "1"
 
 
-def _measurer():
+def _corpus():
+    """The documents. `measure_pdf_contrast.py` still builds them — it is the
+    corpus definition, 30 market and 30 property renders across six brands."""
     spec = importlib.util.spec_from_file_location(
         "_measure_pdf_contrast", ROOT / "scripts/measure_pdf_contrast.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _measurer():
+    """THE MEASUREMENT, AND IT IS NO LONGER THE WALKER — D-130.
+
+    `measure_pdf_contrast.py` resolves "what is painted behind this text"
+    from the `elementsFromPoint` stack expanded with DOM ancestors. Measured
+    against pixel truth over the property surface it produced **22 false
+    1.00:1 readings in 1,965 runs and zero misses**, by two mechanisms: an
+    absolutely-positioned child attributed to a parent whose painted box it
+    has escaped, and `pointer-events:none` hiding an element from hit-testing
+    so its own background is never considered.
+
+    That is the FOURTH confident wrong reading from that resolver, and one of
+    the two was introduced by the fix for the third. The pattern is not a bug
+    to find once: every fix was correct for the case it was written against
+    and wrong for a case it did not have.
+
+    So the gate stops hit-testing. `measure_contrast_by_pixel.py` renders each
+    document twice — once to collect every text run's rect, once with the
+    glyphs blanked — and reads the pixel at each rect. That pixel IS the
+    backdrop, whatever painted it: no chain, no ancestors, no assumption about
+    paint order, nothing to be wrong about. It costs one extra screenshot per
+    document.
+
+    The walker stays in the tree. It is the comparison that established this,
+    and a second opinion is worth keeping — but it is not what the build is
+    read through any more.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "_measure_contrast_by_pixel", ROOT / "scripts/measure_contrast_by_pixel.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -112,8 +148,13 @@ def key(row):
     case — so naming it again would make the entry brittle against a renamed
     fixture without making it more specific.
     """
+    # `fg_hex`/`bg_hex`, not `fg`/`bg`: the pixel measurer reports the raw CSS
+    # colour (`rgb(255, 255, 255)`) and the resolved hex separately, and the
+    # hex is what the baseline has always recorded. A translucent foreground
+    # is flattened over its own backdrop pixel before hexing, which the walker
+    # could not do at all.
     family = row["doc"].rsplit("__", 1)[0]
-    return (family, row["selector"], row["fg"], row["bg"])
+    return (family, row["selector"], row["fg_hex"], row["bg_hex"])
 
 
 def read_baseline():
@@ -164,17 +205,12 @@ def measured(request):
             )
         pytest.skip(f"{why} (set PDF_CONTRAST_REQUIRE_BROWSER=1 to make this a failure)")
 
+    corpus = _corpus()
     docs = {}
-    docs.update(measure.market_documents())
-    docs.update(measure.property_documents())
-    raw, _work = measure.measure(docs)
-    rows = []
-    for doc, payload in raw.items():
-        for e in payload["runs"]:
-            rows.append({**e, "doc": doc,
-                         "ratio": measure.ratio(e["fg"], e["bg"]),
-                         "needs": measure.required(e["size"], e["weight"])})
-    return rows
+    docs.update(corpus.market_documents())
+    docs.update(corpus.property_documents())
+    # `score` attaches fg_hex/bg_hex/ratio/needs; `doc` comes from the JS.
+    return measure.score(measure.measure_docs(docs))
 
 
 def test_no_new_unreadable_text_in_the_pdfs(measured, request):
