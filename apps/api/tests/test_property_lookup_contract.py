@@ -142,3 +142,78 @@ def test_the_consumer_wizard_forwards_them_to_the_request_endpoint():
     body = src[src.index("/request`"):]
     for f in LAST_SALE:
         assert re.search(rf"\b{f}\s*:", body), f"{f} is read but never sent"
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# D-139 · the general question: what ELSE does the consumer path drop?
+# ══════════════════════════════════════════════════════════════════════════
+#
+# D-138 fixed the three fields somebody tripped over. `lot_size` had been
+# missing the same way for longer, which said the projection had been dropping
+# things for a while and nothing noticed. Measured: NINE fields differed
+# between the two paths' rendered property pages — the whole Parcel & Legal
+# block blank on the consumer report, and the whole Tax & Assessment block
+# reading $0.
+#
+# THREE SEPARATE PLACES DROP FIELDS ON ONE PATH, and only the third is free:
+#   1. `PropertySearchResult` — the hand-copied projection (D-138's culprit)
+#   2. `ReportRequestPayload` — the next hop, same failure one step later
+#   3. `tasks.py`'s consumer `report_data` — dropped fields ALREADY STORED
+#      on the row, which is the one that cost nothing and hid the longest
+#
+# The tests below are deliberately at two levels. The model-field diff is
+# cheap and catches a field added to `PropertyData` and forgotten. The
+# RENDER diff is the one that answers Jerry's question permanently: it
+# compares what a reader sees, so it survives a rename, a new block, or a
+# fourth place that drops things.
+
+#: Never carried to the consumer path, and each for a stated reason — not
+#: because nobody got round to it. Anything not here must reach both paths.
+CONSUMER_EXCLUDED = {
+    # D-116: identity is out of the property report entirely, and the
+    # consumer path is the one that made that urgent.
+    "owner_name": "assessor-roll identity (D-116)",
+    "secondary_owner": "as owner_name",
+    # Plumbing, not property facts.
+    "source": "which vendor answered",
+    "confidence": "the lookup's own certainty",
+    "raw_response": "excluded from model_dump by design",
+    "fips": "used to re-query SiteX, never rendered",
+    # Composed by the builder from street/city/state/zip.
+    "full_address": "derived",
+    # SiteX returns these only for a unit within a parcel; the consumer
+    # landing page searches whole addresses.
+    "unit_number": "unit-level, not reachable from the consumer search",
+    "unit_type": "as unit_number",
+    # Renamed on the way through, and asserted present under the new name.
+    "street": "renamed to `address`",
+    "zip_code": "renamed to `zip`",
+}
+
+
+def test_the_projection_carries_every_property_fact_or_says_why_not():
+    """Cheap layer. A field added to `PropertyData` and not carried is a
+    field silently absent from every consumer report."""
+    src = set(PropertyData.model_fields)
+    proj = set(PropertySearchResult.model_fields)
+    renamed = {"street": "address", "zip_code": "zip"}
+    dropped = sorted(f for f in src - proj
+                     if renamed.get(f) not in proj
+                     and f not in CONSUMER_EXCLUDED)
+    assert not dropped, (
+        f"the consumer search drops {dropped}. Either carry them, or add "
+        f"each to CONSUMER_EXCLUDED with the reason it must not travel."
+    )
+
+
+def test_the_exclusion_list_does_not_outlive_the_model():
+    """An entry excusing a field nobody has any more is one nobody rechecks."""
+    stale = sorted(set(CONSUMER_EXCLUDED) - set(PropertyData.model_fields))
+    assert not stale, f"CONSUMER_EXCLUDED names fields PropertyData no longer has: {stale}"
+
+
+def test_the_renamed_fields_really_are_present_under_the_new_name():
+    """`CONSUMER_EXCLUDED` excuses `street` and `zip_code` as renamed. If the
+    rename target were also missing, the excuse would hide a real gap."""
+    proj = set(PropertySearchResult.model_fields)
+    assert {"address", "zip"} <= proj, proj

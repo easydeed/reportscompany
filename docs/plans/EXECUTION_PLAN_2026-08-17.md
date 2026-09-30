@@ -792,6 +792,29 @@ it.**
   a divisor are different decisions; and a fixed accent readable on a theme's navy is not
   readable on an affiliate's brand. **Same value, different consumer, different obligation.**
 
+- **A shape retyped by hand is a place that drops fields, and it never says so.** *Added
+  2026-09-30, from D-138 and D-139.* The consumer CMA path restates `PropertyData` three times —
+  a projection model, a request payload, and a dict literal in the worker. Each is a list of
+  field names somebody wrote out. Nine fields were missing across them: the whole parcel block
+  blank, the whole tax block rendering `$0`. No exception, no log, no type error, on every
+  consumer report ever generated.
+
+  **The tell is that the copy typechecks.** A projection that omits a field is valid code and a
+  valid response; the consumer reads `undefined`, which is indistinguishable from the field
+  legitimately having no value. Optionality is correct there — a house that never sold has no
+  sale price — and that correctness is what makes the omission invisible.
+
+  So: **when a shape is retyped, diff it against its source in a test**, with an explicit
+  exclusion list carrying a reason per field and a staleness check on the list. And where the
+  retyping is a literal rather than a model — the case a field diff cannot see — **diff the
+  rendered output of the two paths instead.** That is the only thing that caught the third
+  place, where every model in the chain agreed and the worker simply did not forward what the
+  row already held.
+
+  Corollary worth stating separately, because it is now three for three: **the path with more
+  retypings is the one carrying the defects.** D-116, D-138 and D-139 all broke the consumer
+  funnel while the agent funnel worked — which is also why each survived review.
+
 - **Two computations agreeing on one input is not a test.** *Added 2026-09-30.* D-118's row
   had to use SiteX's own `PricePerSQFT` rather than deriving one, because theirs is computed
   against the sqft recorded with the sale. The test asserted `piq.price_per_sqft == 469.0` —
