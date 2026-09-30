@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 56 | Real, unfixed |
-| `fixed` | 84 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 89 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **144** | D-001 … D-144, contiguous, no duplicates |
+| **Total** | **149** | D-001 … D-149, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 14 · FRAGILE 15 · ROUGH 22. (Sums to 56, the open total.)
 
@@ -81,6 +81,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > fails if this table disagrees. A board whose own summary can drift is the write-only-record
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
+>
+> **AND THE SECOND READER DISAGREED WITH THE FIRST, on 2026-09-30.** `scripts/derive.py` had its
+> own copy of the parse. Adding D-145…D-149, it reported 149 contiguous entries and `fixed = 89`
+> while the test reported 146 and `fixed = 86`: three of the new entries carried `**Status:**`
+> mid-line, which the test's line-anchored regex requires and the script's did not. The script
+> — whose entire job is to stop this table drifting — said the document was fine. `derive.py` now
+> imports the test's `parse()`, so there is one reader and it is the one CI runs. Two
+> implementations of "how to read this document" is a second answer waiting to be believed.
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
@@ -8250,11 +8258,30 @@ so the fallback fires only when the column is empty. How often that is, is unmea
 
 ---
 
-### D-144 — a closed comp's "sale price" is its list price, because the feed carries no close price
+### D-144 — a closed comp's "sale price" is its list price — and the reason filed here was wrong
 
 **Severity:** WRONG · **Affects:** the comparables cards and the analysis table, every property
 report · **Found during:** the 2026-09-30 probe, splitting D-118's verdict
-**Status:** `open`
+**Status:** `fixed` — `feat/d144-size-the-close-price-gap`. **The symptom was real. The cause
+recorded below was not, and the sizing that was asked for before any fix is what caught it.**
+
+> **CORRECTION, 2026-09-30, before anything was relabelled.** The ticket said to size this with
+> a count against a real market first, because "if no closed listing on this feed carries a sale
+> price, the comps table can never show sale prices and that's a product fact, not a bug." The
+> count came back the other way. `tmp/market_snapshot_downey.json` — a real capture of a real
+> market, 134 listings, 31 of them Closed — reports a **median close price of $810,000** across
+> those 31, and computes escrow days for **31 of 31**, which needs `closeDate` and `contractDate`
+> on every one. The feed carries the sale price. **Our code reads it from a path the feed does
+> not use** — see **D-145**. The probe's "0 of 20" measured our own reach.
+>
+> So the decision the ticket set up — relabel the column *List Price*, or show the list price and
+> state the distinction — **does not arise.** Neither option was taken and the column keeps its
+> name, because the number under it is now the sale price. That is the recommendation: the
+> cheapest correct change to a mislabelled column was to stop mislabelling the data.
+>
+> Three of the five closed rows in the capture sold for something **other** than their asking
+> price ($1,059,000 → $1,100,000; $1,199,000 → $1,140,000). This was never only a labelling
+> problem; it was a different number.
 
 The probe measured `closePrice` present on **0 of 20** closed listings and `closeDate` on
 **0 of 20**. `_extract_price` falls back to `listPrice`, so on this feed **every closed comp's
@@ -8278,9 +8305,176 @@ A label derived from status cannot catch a value that disagrees with its own sta
 3. **Only then:** whether a CMA built on asking prices rather than sale prices is a CMA. That
    is Jerry's, not engineering's.
 
-**Not fixed, because every fix depends on (1).** Relabelling now would be right if the field is
-truly absent and wrong if the probe's sample was unrepresentative — and a column relabelled
-twice is worse than one relabelled once.
+**The three questions above, answered.** (1) is settled: the field is present, and the 0/20 was
+a reading error. (2) does not arise. (3) does not arise — the CMA is built on sale prices, as it
+was always meant to be.
+
+**What the original entry got right, and why it still counted.** "A label derived from status
+cannot catch a value that disagrees with its own status" was correct and is the reason this was
+filed at all. Had the ticket said *relabel it* rather than *size it first*, the column would now
+read "List Price" over a column of sale prices — a second wrong label, shipped on the strength
+of a number nobody checked the provenance of.
+
+---
+
+### D-145 — `closePrice` and `closeDate` are read at the top level, where the feed never puts them
+
+**Severity:** BROKEN · **Affects:** every comparable in every property report, both deployments;
+and the six-month comp window, which was a no-op · **Found during:** sizing D-144
+**Status:** `fixed` — `feat/d144-size-the-close-price-gap`
+
+A SimplyRETS row nests the sale under `sales`: `row["sales"]["closePrice"]`,
+`row["sales"]["closeDate"]`, `row["sales"]["contractDate"]`. Five production reads went to the
+top level or to `mls`, so all five saw `None`:
+
+| site | field | what it did |
+|---|---|---|
+| `apps/api/routes/property.py:797` | `closePrice` | fell through to `listPrice` — the agent comps table |
+| `apps/api/routes/property.py:799,811` | `closePrice`, `closeDate` | `close_price` and `close_date` always null |
+| `apps/worker/tasks.py:2383,2385,2397` | both | the same three, consumer path |
+| `apps/api/services/simplyrets.py:181,182,192` | both | the same three again |
+| `apps/api/schemas/property.py:214,226` | both | `sale_price` fell to `listPrice`, `sold_date` fell to **`listDate`** |
+
+**The window filter is the serious one.** `_closed_within_window` read
+`(lst["mls"] or {})["closeDate"] or lst["closeDate"]` — two paths the feed does not use — and
+keeps a listing with no close date **on purpose**, because an Active listing has not closed. So
+every closed listing looked date-less, every one was kept, and the filter was a no-op. Its own
+docstring says *"THE CLIENT-SIDE PASS IS NOT BELT AND BRACES, IT IS THE ACTUAL GUARANTEE."* The
+guarantee was void from the day it was written, and D-117's derived subtitle has been promising
+a six-month window that nothing in our code enforced. Only `minclosedate` did — the vendor
+parameter the client-side pass exists precisely in order not to depend on.
+
+**THE TESTS AGREED WITH THE CODE AND BOTH DISAGREED WITH THE FEED.** Every fixture in
+`test_comp_close_window.py` was built as `{"mls": {"closeDate": …}}`, and one test,
+`test_the_close_date_is_read_from_both_shapes_the_feed_uses`, asserted that a top-level
+`closeDate` and an `mls.closeDate` must *both* be honoured — reasoning by analogy from D-105,
+where `daysOnMarket` really does live under `mls`. Neither path exists on a closed row. That
+test has been inverted: a date at either invented path now means a listing whose close date we
+did not find, and the fixtures are checked against
+`tests/fixtures/listing_closed_minimal.json`, which is captured rather than written.
+
+This is §0.6's coincidence class in its purest form — **two wrong paths agreeing is not a
+test** — and it is the third instance of the shape after D-105 (`daysOnMarket`) and D-106
+(`bathrooms`). `compute/extract.py` has read `sales.closePrice` correctly since it was written,
+so the repo held both the right path and the wrong one, and the wrong one was in the four files
+that build what a reader sees.
+
+**The guard.** `apps/api/tests/test_close_price_field_path.py` walks the AST of all four files
+and fails on any read of `closePrice`/`closeDate`/`contractDate` off anything that is not the
+`sales` object. Source-level and not behavioural because two of the four build their dict inline
+inside a 350-line route with nothing importable to call — the same wall D-140 hit. Three of the
+nine tests in that file were each seen to fail against a reverted line.
+
+**Also removed: `sold_date` falling back to `listDate`.** A comp that has not sold has no sold
+date, and `""` is the honest answer. Same rule as D-137, one field over.
+
+**Noted, not filed.** `normalize_comparable` / `normalize_comparables` in
+`apps/api/schemas/property.py` are exported and have **no production caller** — D-135's family.
+Fixed here rather than deleted because deleting an exported helper is a separate decision.
+
+---
+
+### D-146 — the two deployments disagreed on whether a closed comp shows its sale price or its asking price
+
+**Severity:** WRONG · **Affects:** agent reports vs consumer reports on the same address
+· **Found during:** sizing D-144
+**Status:** `fixed` — `feat/d144-size-the-close-price-gap`
+
+```
+apps/api/routes/property.py:797   "price": listing.get("listPrice") or listing.get("closePrice")   # agent: LIST first
+apps/worker/tasks.py:2383         "price": listing.get("closePrice") or listing.get("listPrice")   # consumer: CLOSE first
+```
+
+Opposite precedence, in two hand-copied literals, under a comment in the worker that says
+*"Normalize into EXACT same dict format as the working API endpoint."* The sixth agent/consumer
+divergence, and the first where the **consumer** side was the correct one.
+
+**It was invisible, and D-145 is why.** While `closePrice` read as `None` on both paths, the two
+expressions returned the same value for every input in existence. A divergence that cannot be
+observed is still a divergence — it was one field-path fix away from becoming two different
+numbers on two reports for the same house. Unified on close-price-first, which is correct for a
+closed comp: what it sold for, not what it asked.
+
+Covered by `test_a_closed_comp_reports_what_it_sold_for`, which drives the real route with a
+listing that sold for **more** than its asking price, so a fallback shows up as a wrong number
+rather than as a coincidence — and by `test_an_active_comp_still_reports_its_asking_price`, so
+the fix cannot pass by always reading `sales`.
+
+---
+
+### D-147 — `apps/api` did not parse on the Python version the release gate pins
+
+**Severity:** BROKEN · **Affects:** the entire API test suite, and any 3.11 deployment
+· **Found during:** trying to run the comps tests
+**Status:** `fixed` — `feat/d144-size-the-close-price-gap`
+
+`services/email.py` had `\u2019` inside the *expression* part of an f-string. That is a
+`SyntaxError` before Python 3.12 and legal from 3.12 on. `api/main.py` imports
+`routes/reports.py` imports `services/email.py`, so **`from api.main import app` raised
+`SyntaxError` and every test module that imports the app was uncollectable.**
+
+`backend-tests.yml` runs on **3.12** and was green. `release-check.yml` pins **3.11** — and is
+`workflow_dispatch` only, so nobody had ever run it. The gate that would have caught this is the
+one that never runs, and the gate that runs cannot see it.
+
+`apps/api/tests/test_sources_parse.py` compiles every file under `apps/api/src`,
+`apps/worker/src`, `scripts` and `tools` on whichever interpreter is executing. It takes
+milliseconds, holds no opinion about which Python version is right, and fails on the one whose
+opinion matters at that moment. Seen to fail against the reverted line.
+
+**Still open, deliberately not fixed here:** `release-check.yml` pins 3.11 while
+`backend-tests.yml` pins 3.12. One of those is wrong about what production runs, and picking
+which is not an engineering-only call.
+
+---
+
+### D-148 — two welcome emails printed the literal text `{company}`
+
+**Severity:** WRONG · **Affects:** every title rep who accepted an invite · **Found during:**
+fixing D-147, in the same three lines
+**Status:** `fixed` — `feat/d144-size-the-close-price-gap`
+
+`send_rep_welcome_email` builds its body as an f-string whose `{_step_row(...)}` calls take plain
+string literals as arguments. A `{company}` inside one of those literals is not in the outer
+f-string's expression scope — it is ordinary text. So the email told reps their agents' reports
+would carry "**{company}**'s branding", twice.
+
+Found because the illegal escape sequence that caused D-147 was on the same three lines; reading
+them to fix the syntax is what surfaced the braces. `send_company_admin_welcome_email` has the
+same shape and was checked — its step rows carry no placeholder.
+
+`test_welcome_email_interpolates.py` asserts on the **rendered HTML**, not the source, because
+the defect is that a brace reached the reader. Both branches are tested: a company name set, and
+the `"your company"` fallback — a placeholder defect that only shows with a value set is half
+tested. Seen to fail against the reverted line.
+
+---
+
+### D-149 — the close-to-list ratio reads 135.2% on a real market
+
+**Severity:** WRONG · **Affects:** market reports and the AI narrative, which quotes the figure
+in a sentence · **Found during:** reading the Downey capture for D-144's sizing
+**Status:** `open`
+
+`tmp/market_snapshot_downey.json` reports `close_to_list_ratio: 135.2` over 31 closed listings.
+A market where homes sell for 35% over asking is not what that number is describing.
+
+The computation is an **unweighted mean of per-listing ratios** — `avg(close/list*100)` — and it
+is the same shape in the product, not only in the capture tool:
+`compute/extract.py:117` → `compute/calc.py:39`, and again at `report_builders.py:170,697`. So
+this figure ships.
+
+**What is known and what is not.** The five closed rows in the capture's sample average ≈99.8%,
+so the outlier is among the other 26 and the capture does not carry them. The cause is therefore
+**not established** — an unweighted mean has no defence against one bad row, and a plausible bad
+row is visible in the same sample: a listing at `list_price: 3200`, `close_price: 3200`, which
+is a **rent**, counted as a closed sale. That would also be polluting `median_close_price` and
+`avg_ppsf`.
+
+**Needs, in order:** (1) a capture that keeps every closed row rather than five, so the outlier
+can be named; (2) a decision on whether a mean or a median is the right statistic here; (3)
+whether lease listings belong in a sale-price aggregate at all. Not fixed, because (1) has to
+come before anyone chooses between (2) and (3) — the same discipline that turned D-144 around.
 
 ---
 
@@ -8297,6 +8491,18 @@ the probe reported them.**
 | **D-081** | **CONFIRMED.** `count=true` works and respects filters: **125 for `postalCodes=92503` against 70,519 feed-wide.** Months-of-supply is one cheap request |
 | **D-113** | **CONFIRMED at the window the chart uses: 244,158 closings in 365 days** |
 | **decision 01** | **13 requests, monotone, differences cleanly. §7.3 is affordable** |
+
+> **D-118's 3b result was wrong, and the table above is left as the probe reported it.** The row
+> is not in the table because 3b's verdict was recorded on the entry rather than here, but it
+> belongs with the rest of the trip: the probe counted `closePrice` at `r["closePrice"]` and
+> reported **0 of 20**. The feed writes it at `r["sales"]["closePrice"]`. The subject half of
+> that verdict stands — SiteX answers the subject's last sale and nothing here changes it. The
+> comps half was the opposite of true. Section 3b now counts **every** location separately and
+> prints where each field was found, and "absent" means absent from all of them. See **D-145**.
+>
+> A probe that looks in one place and reports a count is indistinguishable from a probe that
+> looks in the right place and finds nothing — and those two results lead to opposite product
+> decisions. This one did: D-144 was filed on it.
 
 **The canary worked on 7 of 12 — and what it found is worse than a gap.** Every misspelling
 returned the **whole feed, silently**, including lowercase `postalcodes`. A mistyped filter does

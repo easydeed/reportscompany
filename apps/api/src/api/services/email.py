@@ -718,7 +718,7 @@ def send_company_admin_welcome_email(to_email: str, first_name: str, company_nam
                    "Upload your company logo and pick brand colors. These cascade to all reps and agents, so every report generated under your organization carries your identity.",
                    "/app/company/branding", "Set Up Branding")}
         {_step_row(2, "Invite Your Title Reps",
-                   "Each rep manages their own book of agents. Add reps and they\u2019ll get their own dashboard to recruit and manage agents.",
+                   "Each rep manages their own book of agents. Add reps and they’ll get their own dashboard to recruit and manage agents.",
                    "/app/company/reps", "Invite Reps")}
         {_step_row(3, "Monitor Your Team",
                    "See all reps, all agents, and all reports from one dashboard. Track top performers and report volume across your entire organization.",
@@ -747,13 +747,13 @@ def send_rep_welcome_email(to_email: str, first_name: str, company_name: str) ->
       </p>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
         {_step_row(1, "Complete Your Profile",
-                   "Add your photo, phone number, and license info. This appears on every report your agents generate, alongside {company}\u2019s branding.",
+                   f"Add your photo, phone number, and license info. This appears on every report your agents generate, alongside {company}’s branding.",
                    "/app/settings/profile", "Complete Profile")}
         {_step_row(2, "Invite Your Agents",
                    "Add agents one at a time or bulk-import a CSV. Each agent gets a trial account and can start generating reports immediately.",
                    "/app/affiliate", "Invite Agents")}
         {_step_row(3, "Watch Your Network Grow",
-                   "Your agents will generate branded reports carrying <strong>{company}</strong>\u2019s branding and your contact info. Track their activity from your affiliate dashboard.",
+                   f"Your agents will generate branded reports carrying <strong>{company}</strong>’s branding and your contact info. Track their activity from your affiliate dashboard.",
                    "/app/affiliate", "View Dashboard", last=True)}
       </table>
       <p style="margin:24px 0 0;font-size:13px;color:#9ca3af;line-height:1.6;">

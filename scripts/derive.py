@@ -1,25 +1,38 @@
-import re, sys, collections
-src = open("docs/DEFECT_LIST.md").read()
-entries = re.findall(r"^### (D-\d{3}) — (.*)$", src, re.M)
-blocks = re.split(r"^### (?=D-\d{3} —)", src, flags=re.M)
-status = {}
-sev = {}
-for b in blocks[1:]:
-    m = re.match(r"(D-\d{3}) —", b)
-    if not m: continue
-    did = m.group(1)
-    s = re.search(r"\*\*Status:\*\*\s*`([a-z-]+)`", b)
-    v = re.search(r"\*\*Severity:\*\*\s*([A-Z-]+)", b)
-    status[did] = s.group(1) if s else "MISSING"
-    sev[did] = v.group(1) if v else "MISSING"
-ids = sorted(status)
-c = collections.Counter(status.values())
-print("total", len(ids), "first", ids[0], "last", ids[-1])
+#!/usr/bin/env python3
+"""Re-derive DEFECT_LIST.md's summary table by parsing the entries.
+
+    python3 scripts/derive.py
+
+WHY THIS FILE NO LONGER HAS ITS OWN PARSER. It used to, and on 2026-09-30 the
+two disagreed: this script reported 149 contiguous entries with `fixed = 89`
+while `tests/test_defect_list_counts.py` saw 146 and `fixed = 86`. Three
+entries had their `**Status:**` mid-line rather than at the start of one, which
+the test's line-anchored regex requires and this script's did not. The script
+said the document was fine; the test said it was not; the test was right.
+
+A second implementation of "how to read this document" is a second answer
+waiting to be believed — and this is the script whose whole job is to stop the
+summary drifting from the entries. So it imports the test's `parse()` and there
+is exactly one reader.
+"""
+import collections
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tests.test_defect_list_counts import parse  # noqa: E402
+
+board = parse()
+ids = sorted(board)
 nums = [int(i[2:]) for i in ids]
-missing = [n for n in range(nums[0], nums[-1]+1) if n not in nums]
-dupes = [i for i,n in collections.Counter(ids).items() if n>1]
-print("missing", missing, "dupes", dupes)
-for k in ("recorded","open","fixed","closed-not-live","MISSING"):
-    print(f"  {k}: {c.get(k,0)}")
-opensev = collections.Counter(sev[i] for i in ids if status[i]=="open")
-print("open by severity:", dict(opensev), "sum", sum(opensev.values()))
+missing = [n for n in range(nums[0], nums[-1] + 1) if n not in nums]
+
+print(f"total {len(ids)}  first {ids[0]}  last {ids[-1]}")
+print(f"missing {missing}  dupes {[i for i, n in collections.Counter(ids).items() if n > 1]}")
+
+counts = collections.Counter(status for status, _ in board.values())
+for k in ("recorded", "open", "fixed", "closed-not-live"):
+    print(f"  {k}: {counts.get(k, 0)}")
+
+opensev = collections.Counter(sev for status, sev in board.values() if status == "open")
+print(f"open by severity: {dict(opensev)}  sum {sum(opensev.values())}")

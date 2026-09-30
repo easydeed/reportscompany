@@ -179,7 +179,13 @@ def test_a_search_that_includes_active_listings_sends_no_close_window(status, mo
 # ── the client-side pass, which is the actual guarantee ────────────────────
 
 def _closed_listing(date):
-    return {"mlsId": date, "mls": {"closeDate": date}}
+    # `sales.closeDate`. Every fixture in this file used to say
+    # `mls.closeDate`, and the code under test used to read `mls.closeDate`
+    # first — so the filter and its tests agreed with each other and both
+    # disagreed with the feed, which nests the field under `sales` (D-145).
+    # Two wrong paths agreeing is not a test. Checked against
+    # `tests/fixtures/listing_closed_minimal.json`, which is captured.
+    return {"mlsId": date, "sales": {"closeDate": date}}
 
 
 def test_a_sale_outside_the_window_is_dropped_even_if_the_vendor_returns_it():
@@ -196,20 +202,32 @@ def test_a_listing_with_no_close_date_is_kept():
     assert _closed_within_window([active], COMP_CLOSE_WINDOW_DAYS) == [active]
 
 
-def test_the_close_date_is_read_from_both_shapes_the_feed_uses():
-    """D-105: `daysOnMarket` was read at the top level where the feed puts it
-    under `mls`. The same trap applies to `closeDate`."""
+def test_the_close_date_is_read_from_the_one_place_the_feed_writes_it():
+    """The replacement for a test that asserted the opposite and was wrong.
+
+    It used to require that `mls.closeDate` and a top-level `closeDate` were
+    BOTH honoured, reasoning from D-105 that the feed might use either. It
+    uses neither: `tests/fixtures/listing_closed_minimal.json` and a 134-row
+    capture of the Downey market both carry `sales.closeDate` and nothing
+    else. Honouring the two invented paths is what let the real one go
+    unread, so the assertion is inverted — a date at either of them is a
+    listing whose close date we did not find, and a listing with no close
+    date is kept.
+    """
     old = _closed_since(COMP_CLOSE_WINDOW_DAYS + 30)
-    assert _closed_within_window([{"mls": {"closeDate": old}}], COMP_CLOSE_WINDOW_DAYS) == []
-    assert _closed_within_window([{"closeDate": old}], COMP_CLOSE_WINDOW_DAYS) == []
+    assert _closed_within_window([{"sales": {"closeDate": old}}], COMP_CLOSE_WINDOW_DAYS) == []
+    for invented in ({"mls": {"closeDate": old}}, {"closeDate": old}):
+        assert _closed_within_window([invented], COMP_CLOSE_WINDOW_DAYS) == [invented], (
+            "a path the feed does not use was treated as a close date"
+        )
 
 
 def test_the_endpoint_drops_an_out_of_window_sale_the_vendor_returned(mock_auth):
     """The two halves together, through the real route."""
-    fresh = {"mlsId": "NEW", "mls": {"closeDate": _closed_since(10)},
+    fresh = {"mlsId": "NEW", "sales": {"closeDate": _closed_since(10)},
              "property": {"type": "RES"}, "address": {"full": "1 Fresh St"},
              "geo": {"lat": 34.1008, "lng": -117.7678}}
-    stale = {"mlsId": "OLD", "mls": {"closeDate": _closed_since(4 * 365)},
+    stale = {"mlsId": "OLD", "sales": {"closeDate": _closed_since(4 * 365)},
              "property": {"type": "RES"}, "address": {"full": "2 Stale St"},
              "geo": {"lat": 34.1008, "lng": -117.7678}}
     _, body = _call("Closed", [fresh, stale])
@@ -247,7 +265,7 @@ def test_the_ladder_widens_in_response_to_the_window(mock_auth):
     subtype and radius. **Not one of them widens time.** So the window is a
     hard floor the ladder cannot climb past — see D-132.
     """
-    stale = {"mlsId": "OLD", "mls": {"closeDate": _closed_since(4 * 365)},
+    stale = {"mlsId": "OLD", "sales": {"closeDate": _closed_since(4 * 365)},
              "property": {"type": "RES"}, "address": {"full": "2 Stale St"},
              "geo": {"lat": 34.1008, "lng": -117.7678}}
     sent, body = _call("Closed", [stale] * 20)
@@ -273,7 +291,11 @@ from api.routes.property import (  # noqa: E402
 
 
 def _closed_res(mls_id, days_ago):
-    return {"mlsId": mls_id, "mls": {"closeDate": _closed_since(days_ago)},
+    # `sales.closeDate` — see `_closed_listing`. These rows must actually
+    # survive the window filter for the ladder tests below to mean anything;
+    # under `mls` they survived only because the filter could not see a date
+    # on them at all.
+    return {"mlsId": mls_id, "sales": {"closeDate": _closed_since(days_ago)},
             "property": {"type": "RES"}, "address": {"full": f"{mls_id} Any St"},
             "geo": {"lat": 34.1008, "lng": -117.7678}}
 
@@ -352,3 +374,51 @@ def test_an_active_search_is_unaffected_by_the_widening(mock_auth):
     """No close-date window applies, so no level may invent one."""
     sent, _ = _call("Active")
     assert all("minclosedate" not in p for p in sent)
+
+
+# ── D-145/D-146 · what the comps table prints for a closed sale ────────────
+
+def test_a_closed_comp_reports_what_it_sold_for(mock_auth):
+    """The number in the table, through the real route.
+
+    The comp dict is built by a literal inside `get_comparables`, so there is
+    nothing importable to call and the source-level guard in
+    `test_close_price_field_path.py` cannot see precedence. This can: the
+    listing sells for MORE than it asked, so a fallback to `listPrice` shows
+    up as the wrong number rather than as a coincidence.
+    """
+    sold = {
+        "mlsId": "SOLD1",
+        "listPrice": 1150000,
+        "sales": {"closeDate": _closed_since(20), "closePrice": 1175000},
+        "property": {"type": "RES"},
+        "address": {"full": "3 Sold St"},
+        "geo": {"lat": 34.1008, "lng": -117.7678},
+    }
+    _, body = _call("Closed", [sold])
+    comp = next(c for c in body["comparables"] if c["address"] == "3 Sold St")
+    assert comp["close_price"] == 1175000, "the sale price never reached the table"
+    assert comp["close_date"], "the sale date never reached the table"
+    assert comp["price"] == 1175000, (
+        f"the comps table printed {comp['price']} for a listing that asked "
+        f"1150000 and sold for 1175000 — the asking price, under a heading "
+        f"that says Sale Price (D-146)"
+    )
+
+
+def test_an_active_comp_still_reports_its_asking_price(mock_auth):
+    """The other direction, so the fix cannot pass by always reading `sales`.
+
+    An active listing has no `sales` object at all. `price` must fall back.
+    """
+    active = {
+        "mlsId": "ACT1",
+        "listPrice": 869900,
+        "property": {"type": "RES"},
+        "address": {"full": "4 Active Ave"},
+        "geo": {"lat": 34.1008, "lng": -117.7678},
+    }
+    _, body = _call("Active", [active])
+    comp = next(c for c in body["comparables"] if c["address"] == "4 Active Ave")
+    assert comp["price"] == 869900
+    assert comp["close_price"] is None

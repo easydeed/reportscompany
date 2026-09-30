@@ -208,10 +208,21 @@ def normalize_comparable(raw: dict) -> dict:
     if not zip_code and isinstance(raw.get("address"), dict):
         zip_code = raw.get("address", {}).get("postalCode", "")
     
-    # Price fields
+    # Price fields.
+    #
+    # D-145: `closePrice` was read at the top level, where a SimplyRETS row
+    # never carries it — the feed nests it under `sales`. So for a raw row the
+    # chain fell through to `listPrice` every time and a closed comp's ASKING
+    # price was returned as its SALE price.
+    #
+    # The `listPrice` tail is kept because this function also normalises
+    # already-flat dicts from SiteX and the wizard, where `price` or
+    # `listPrice` is the only number there is. It is the last resort, after
+    # the real sale price has been looked for in both shapes.
+    sales = raw.get("sales") or {}
     sale_price = _parse_float(
         raw.get("sale_price") or 
-        raw.get("closePrice") or 
+        sales.get("closePrice") or 
         raw.get("price") or 
         raw.get("listPrice") or
         0
@@ -220,11 +231,14 @@ def normalize_comparable(raw: dict) -> dict:
     list_price = _parse_float(raw.get("list_price") or raw.get("listPrice"))
     
     # Date fields
+    # `listDate` was the last branch here: a listing's LIST date returned as
+    # its SOLD date, which is the same defect as the price one line up wearing
+    # a different label. A comp that has not sold has no sold date, and "" is
+    # the honest answer — D-137's rule, one field over.
     sold_date = (
         raw.get("sold_date") or 
         raw.get("sale_date") or 
-        raw.get("closeDate") or
-        raw.get("listDate") or
+        sales.get("closeDate") or
         ""
     )
     

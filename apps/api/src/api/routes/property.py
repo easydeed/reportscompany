@@ -271,7 +271,14 @@ def _closed_within_window(listings: List[Dict], days: int) -> List[Dict]:
     cutoff = (datetime.utcnow().date() - timedelta(days=days)).isoformat()
     kept = []
     for lst in listings:
-        closed = (lst.get("mls") or {}).get("closeDate") or lst.get("closeDate")
+        # `sales.closeDate`, and ONLY there. The two paths this read used to
+        # try — `mls.closeDate` and the top level — are both absent from every
+        # captured response and from the real Downey market, so every closed
+        # listing looked date-less, so every one was kept, so the guarantee
+        # this function's docstring claims was a no-op (D-145). The removed
+        # fallbacks were not defence in depth; they were what made the wrong
+        # read look covered.
+        closed = (lst.get("sales") or {}).get("closeDate")
         if not closed:
             kept.append(lst)
             continue
@@ -787,6 +794,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             address_obj = listing.get("address") or {}
             geo = listing.get("geo") or {}
             mls_obj = listing.get("mls") or {}
+            sales = listing.get("sales") or {}
             
             comp = {
                 "mls_id": str(listing.get("mlsId") or ""),
@@ -794,9 +802,14 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                 "city": address_obj.get("city") or "",
                 "state": address_obj.get("state") or "",
                 "zip_code": address_obj.get("postalCode") or "",
-                "price": listing.get("listPrice") or listing.get("closePrice") or 0,
+                # Close price FIRST. A closed comp's number is what it sold
+                # for; the asking price is history. This path had the
+                # precedence the other way round and the worker's copy had it
+                # this way (D-146) — a divergence that was invisible while
+                # `closePrice` read as None on both.
+                "price": sales.get("closePrice") or listing.get("listPrice") or 0,
                 "list_price": listing.get("listPrice"),
-                "close_price": listing.get("closePrice"),
+                "close_price": sales.get("closePrice"),
                 "bedrooms": prop.get("bedrooms") or 0,
                 "bathrooms": prop.get("bathsFull") or 0,
                 "sqft": prop.get("area") or 0,
@@ -808,7 +821,7 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                 "dom": mls_obj.get("daysOnMarket"),
                 "days_on_market": mls_obj.get("daysOnMarket"),
                 "list_date": listing.get("listDate"),
-                "close_date": listing.get("closeDate"),
+                "close_date": sales.get("closeDate"),
                 "lat": geo.get("lat"),
                 "lng": geo.get("lng"),
                 "distance_miles": listing.get("_distance_miles"),

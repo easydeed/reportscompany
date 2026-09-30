@@ -2368,6 +2368,7 @@ def process_consumer_report(self, report_id: str):
                         addr_obj = listing.get("address") or {}
                         geo = listing.get("geo") or {}
                         mls_obj = listing.get("mls") or {}
+                        sales = listing.get("sales") or {}
                         photos = listing.get("photos") or []
 
                         dist = None
@@ -2380,9 +2381,13 @@ def process_consumer_report(self, report_id: str):
                             "city": addr_obj.get("city") or "",
                             "state": addr_obj.get("state") or "",
                             "zip_code": addr_obj.get("postalCode") or "",
-                            "price": listing.get("closePrice") or listing.get("listPrice") or 0,
+                            # `sales.closePrice`, not the top level (D-145).
+                            # The precedence here was always right; the path
+                            # was not, so the fallback to listPrice fired on
+                            # every closed comp.
+                            "price": sales.get("closePrice") or listing.get("listPrice") or 0,
                             "list_price": listing.get("listPrice"),
-                            "close_price": listing.get("closePrice"),
+                            "close_price": sales.get("closePrice"),
                             "bedrooms": prop_info.get("bedrooms") or 0,
                             "bathrooms": prop_info.get("bathsFull") or 0,
                             "sqft": prop_info.get("area") or 0,
@@ -2394,7 +2399,7 @@ def process_consumer_report(self, report_id: str):
                             "dom": mls_obj.get("daysOnMarket"),
                             "days_on_market": mls_obj.get("daysOnMarket"),
                             "list_date": listing.get("listDate"),
-                            "close_date": listing.get("closeDate"),
+                            "close_date": sales.get("closeDate"),
                             "lat": geo.get("lat"),
                             "lng": geo.get("lng"),
                             "distance_miles": dist,
