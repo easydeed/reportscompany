@@ -593,6 +593,20 @@ def main():
         # "last sale" row can be a standard part of the page or has to be
         # conditional. Both are printed.
         print("3b. Does a closed listing carry closePrice and closeDate? (D-118)")
+        #
+        # THIS SECTION GAVE A WRONG ANSWER ONCE. It counted `r["closePrice"]`
+        # at the top level, where a SimplyRETS row never carries it, and
+        # reported 0 of 20 — which D-144 was then filed on. The field lives at
+        # `r["sales"]["closePrice"]`; `compute/extract.py` has read it there
+        # since it was written, and a 134-row capture of the Downey market
+        # carries it on every closed listing. 0/20 measured this probe's
+        # reach, not the feed's contents.
+        #
+        # So every location is counted separately and printed separately, and
+        # "absent" now means absent from all of them. A probe that looks in
+        # one place and reports a count is indistinguishable from a probe that
+        # looks in the right place and finds nothing — and those two results
+        # lead to opposite product decisions.
         sample = _get(auth, "status=Closed&limit=20", "  status=Closed&limit=20        ")
         if not sample or not sample[0]:
             verdicts["D-118"] = (
@@ -601,38 +615,51 @@ def main():
             )
         else:
             rows = sample[0]
-            with_price = sum(1 for r in rows if r.get("closePrice"))
-            with_date = sum(1 for r in rows if (r.get("mls") or {}).get("closeDate")
-                            or r.get("closeDate"))
-            # D-105's lesson: the field the product wants may be nested where the
-            # product does not look. Report WHERE it was found, not just whether.
-            top_level = sum(1 for r in rows if r.get("closeDate"))
-            under_mls = sum(1 for r in rows if (r.get("mls") or {}).get("closeDate"))
-            print(f"  closePrice present on {with_price}/{len(rows)}")
-            print(f"  closeDate  present on {with_date}/{len(rows)} "
-                  f"(top level {top_level}, under `mls` {under_mls})")
+
+            def _where(key):
+                """How many rows carry `key`, at each place it might live."""
+                return {
+                    "sales": sum(1 for r in rows if (r.get("sales") or {}).get(key)),
+                    "top level": sum(1 for r in rows if r.get(key)),
+                    "mls": sum(1 for r in rows if (r.get("mls") or {}).get(key)),
+                }
+
+            price_at = _where("closePrice")
+            date_at = _where("closeDate")
+            with_price = max(price_at.values())
+            with_date = max(date_at.values())
+
+            def _fmt(at):
+                return ", ".join(f"{k} {v}/{len(rows)}" for k, v in at.items())
+
+            print(f"  closePrice — {_fmt(price_at)}")
+            print(f"  closeDate  — {_fmt(date_at)}")
+            if price_at["sales"] and not price_at["top level"]:
+                print("  (as expected: nested under `sales`, absent from the top "
+                      "level. Any code reading `listing['closePrice']` sees None.)")
+
             if with_price and with_date:
                 verdicts["D-118"] = (
-                    f"FIELD CONFIRMED — closePrice on {with_price}/{len(rows)} and "
-                    f"closeDate on {with_date}/{len(rows)} closed listings "
-                    f"(top level {top_level}, under `mls` {under_mls}). This says "
-                    f"the MLS carries a sale price and date; it does NOT say the "
-                    f"subject of any given report will be in it. Coverage is the "
-                    f"open question and only a real address list answers it."
+                    f"FIELD CONFIRMED — closePrice {_fmt(price_at)}; "
+                    f"closeDate {_fmt(date_at)}. This says the MLS carries a "
+                    f"sale price and date; it does NOT say the subject of any "
+                    f"given report will be in it. Coverage is the open "
+                    f"question and only a real address list answers it."
                 )
             else:
                 verdicts["D-118"] = (
-                    f"SUBJECT UNAFFECTED, COMPS HAVE NO SOURCE — closePrice on "
-                    f"{with_price}/{len(rows)}, closeDate on {with_date}/"
-                    f"{len(rows)}. Two conclusions, and conflating them is how "
-                    f"this verdict was first written wrong:\n"
-                    f"    * THE SUBJECT's last-sale row does not come from here. "
-                    f"SiteX answers it from SaleLoanInfo and it has shipped. This "
-                    f"result changes nothing about it.\n"
-                    f"    * NO COMP can carry a sale price or date from this feed, "
-                    f"because the feed does not supply them. That is not "
-                    f"sparseness to work around, it is the absence of a source, "
-                    f"and no fallback can invent one."
+                    f"ABSENT FROM EVERY LOCATION CHECKED — closePrice "
+                    f"{_fmt(price_at)}; closeDate {_fmt(date_at)}. Before "
+                    f"acting on this, note that the first version of this "
+                    f"check looked only at the top level and was wrong. If "
+                    f"these are all zero, dump one row and read its keys "
+                    f"rather than concluding the feed has no sale prices:\n"
+                    f"    * THE SUBJECT's last-sale row does not come from "
+                    f"here. SiteX answers it from SaleLoanInfo and it has "
+                    f"shipped. This result changes nothing about it.\n"
+                    f"    * A comp's sale price would have no source on this "
+                    f"feed. That is the absence of a source, not sparseness "
+                    f"to work around — but only once the keys have been read."
                 )
         print()
 

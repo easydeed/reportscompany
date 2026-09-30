@@ -168,6 +168,7 @@ def normalize_listing(listing: Dict) -> Dict:
     address = listing.get("address", {})
     geo = listing.get("geo", {})
     mls = listing.get("mls", {})
+    sales = listing.get("sales") or {}
     photos = listing.get("photos", [])
     
     return {
@@ -178,8 +179,9 @@ def normalize_listing(listing: Dict) -> Dict:
         "state": address.get("state", ""),
         "zip_code": address.get("postalCode", ""),
         "list_price": listing.get("listPrice"),
-        "close_price": listing.get("closePrice"),
-        "price": listing.get("closePrice") or listing.get("listPrice") or 0,
+        # D-145: the feed nests these under `sales`.
+        "close_price": sales.get("closePrice"),
+        "price": sales.get("closePrice") or listing.get("listPrice") or 0,
         "status": mls.get("status", ""),
         "bedrooms": prop.get("bedrooms"),
         "bathrooms": prop.get("bathsFull"),
@@ -189,7 +191,7 @@ def normalize_listing(listing: Dict) -> Dict:
         "dom": mls.get("daysOnMarket"),
         "days_on_market": mls.get("daysOnMarket"),
         "list_date": listing.get("listDate"),
-        "close_date": listing.get("closeDate"),
+        "close_date": sales.get("closeDate"),
         "photo_url": photos[0] if photos else None,
         "photos": photos,
         "lat": geo.get("lat"),
