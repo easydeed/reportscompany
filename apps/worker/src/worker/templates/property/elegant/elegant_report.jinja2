@@ -224,6 +224,27 @@
 </head>
 <body>
   {% set _pages = page_set | default(["cover","overview","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
+{#- D-121. ONE TITLE PER PAGE, READ BY BOTH THE PAGE AND THE CONTENTS ROW.
+      The contents used to carry its own labels, and they had drifted: this
+      theme's contents said "Aerial Property View" over a page headed "Aerial
+      View", and "Estimated Value Range" over "Range of Sales". Every page
+      heading below now renders `_titles[key]`, so a contents entry and the
+      page it points at cannot say different things.
+
+      `_nums` and `_toc` come from `paginate()` (property_builder.py), computed
+      after the conditional pages are dropped. `_nums` empty — a bare render
+      with no builder — prints no page number rather than a wrong one. -#}
+  {% set _titles = {
+       "overview": "Property Overview",
+       "aerial": "Aerial View",
+       "property": "Property Information",
+       "analysis": "Area Sales Analysis",
+       "market_trends": "Market Trends",
+       "comparables": "Sales Comparables",
+       "range": "Range of Sales"
+     } %}
+  {% set _nums = page_numbers | default({}) %}
+  {% set _toc = contents_keys | default([]) %}
   <div class="sheet">
     {% if "cover" in _pages %}
     <!-- PAGE 1: COVER -->
@@ -261,7 +282,7 @@
     <section class="page page-overview">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Executive Summary</div><h2 class="property-title">Property Overview</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Executive Summary</div><h2 class="property-title">{{ _titles.overview }}</h2><div class="gold-rule"></div></div>
       <div class="page-content" style="padding:0; padding-top:14px;">
         <div class="overview-body">
           {% for para in overview_text.split('\n\n') %}
@@ -295,24 +316,26 @@
         <div class="gold-rule"></div>
       </div>
       <div class="contents-list">
-        {% if "overview" in _pages and overview_text %}
-        <div class="contents-item"><div class="contents-num">01</div><div class="contents-text">Executive Summary</div><div class="contents-dots"></div><div class="contents-page">02</div></div>
-        {% endif %}
-        <div class="contents-item"><div class="contents-num">02</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
-        <div class="contents-item"><div class="contents-num">03</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">04</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">05</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
-        <div class="contents-item"><div class="contents-num">06</div><div class="contents-text">Comparable Sales</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
-        <div class="contents-item"><div class="contents-num">07</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">09</div></div>
+        {# D-121: derived from the page set, not written out. These rows were
+           literals — number, label and page — so the contents advertised
+           Market Trends at page 07 of reports containing no Market Trends
+           page, and the numbers disagreed with the footers on the pages
+           themselves. `contents_keys` and `page_numbers` come from
+           `paginate()` in property_builder.py, computed AFTER the
+           conditional pages are dropped, and those footers read the same
+           map. They cannot disagree now. #}
+        {% for _k in _toc %}
+        <div class="contents-item"><div class="contents-num">{{ loop.index }}</div><div class="contents-text">{{ _titles[_k] }}</div><div class="contents-dots"></div><div class="contents-page">{% if _nums.get(_k) %}{{ "%02d" | format(_nums[_k]) }}{% endif %}</div></div>
+        {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">03</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
     {% if "aerial" in _pages %}
     <!-- PAGE 3: AERIAL -->
     <section class="page aerial">
-      <div class="aerial-header"><div class="aerial-label">Location Overview</div><h2 class="aerial-title">Aerial View</h2></div>
+      <div class="aerial-header"><div class="aerial-label">Location Overview</div><h2 class="aerial-title">{{ _titles.aerial }}</h2></div>
       <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
         {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="Aerial map" />{% endif %}
       </div>
@@ -322,7 +345,7 @@
           <div class="aerial-card"><h3>Quarter-Mile Radius</h3><p>Properties within this radius provide the most accurate comparables, sharing similar neighborhood characteristics and market dynamics.</p></div>
         </div>
       </div>
-      <div class="page-footer" style="border:none;"><div class="brand" style="color:var(--gold-light);"><span class="diamond"></span> Elegant Collection</div><div class="num" style="color:#fff;">03</div></div>
+      <div class="page-footer" style="border:none;"><div class="brand" style="color:var(--gold-light);"><span class="diamond"></span> Elegant Collection</div><div class="num" style="color:#fff;">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -331,7 +354,7 @@
     <section class="page property">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Property Overview</div><h2 class="property-title">Property Information</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Property Overview</div><h2 class="property-title">{{ _titles.property }}</h2><div class="gold-rule"></div></div>
       <div class="property-section">
         <div class="property-section-header"><span class="diamond"></span><div class="property-section-title">Parcel & Legal Information</div></div>
         <div class="property-grid">
@@ -376,7 +399,7 @@
           </table>
         </div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">04</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("property") %}{{ "%02d" | format(_nums["property"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -385,7 +408,7 @@
     <section class="page analysis">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">Area Sales Analysis</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">{{ _titles.analysis }}</h2><div class="gold-rule"></div></div>
       <div class="analysis-chart">
         <div class="chart-bars">
           {% for comp in comparables[:4] %}
@@ -406,7 +429,7 @@
         </tbody>
         <tfoot><tr><td>{{ comps_window.price_row }}</td><td>{{ stats.piq.price_display }}</td><td>{{ stats.low.price_display }}</td><td>{{ stats.medium.price_display }}</td><td>{{ stats.high.price_display }}</td></tr></tfoot>
       </table>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">05</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("analysis") %}{{ "%02d" | format(_nums["analysis"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -415,7 +438,7 @@
     <section class="page page-market-trends">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">Market Trends</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Market Intelligence</div><h2 class="property-title">{{ _titles.market_trends }}</h2><div class="gold-rule"></div></div>
       <div class="page-content">
         {%- set _mt_subtitle = (market_trends.city ~ ' - ' if market_trends.city else '') ~ (market_trends.period_label | default('')) -%}
         <div class="mt-header">
@@ -507,7 +530,7 @@
           <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
         </div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">06</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("market_trends") %}{{ "%02d" | format(_nums["market_trends"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -516,7 +539,7 @@
     <section class="page comparables">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Recent Transactions</div><h2 class="property-title">Sales Comparables</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Recent Transactions</div><h2 class="property-title">{{ _titles.comparables }}</h2><div class="gold-rule"></div></div>
       <div class="comp-grid">
         {% for comp in comparables[:4] %}
         <div class="comp-card">
@@ -535,7 +558,7 @@
         </div>
         {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">07</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("comparables") %}{{ "%02d" | format(_nums["comparables"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -544,7 +567,7 @@
     <section class="page range">
       <div class="corner-flourish tl"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
       <div class="corner-flourish br"><span class="corner-flourish-line-h"></span><span class="corner-flourish-line-v"></span></div>
-      <div class="property-header"><div class="property-label">Valuation Summary</div><h2 class="property-title">Range of Sales</h2><div class="gold-rule"></div></div>
+      <div class="property-header"><div class="property-label">Valuation Summary</div><h2 class="property-title">{{ _titles.range }}</h2><div class="gold-rule"></div></div>
       <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
       <div class="range-stats">
         <div class="range-stat"><div class="range-stat-num">{{ '%02d' | format(stats.total_comps | default(0)) }}</div><div class="range-stat-label">Total Comps</div></div>
@@ -557,7 +580,7 @@
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
       <p class="range-note">{{ comps_window.note }}</p>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">08</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("range") %}{{ "%02d" | format(_nums["range"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 

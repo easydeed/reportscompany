@@ -48,11 +48,12 @@ from typing import Any, Dict, List, Optional
 #: suit this reader — but they were additions and were never a reason to
 #: exclude the analysis.
 #:
-#: `contents` is still OUT, and deliberately: its block is hardcoded and
-#: unguarded (D-121), so it would list pages this set does not contain and
-#: number them wrongly. **PUT `contents` BACK HERE WHEN D-121 IS FIXED** —
-#: this set is the reason it was left out, so this is where the reminder
-#: belongs.
+#: `contents` RESTORED 2026-10-01, D-121 fixed. It was held out because the
+#: block was hardcoded and unguarded — it would have listed pages this set
+#: does not contain and numbered them wrongly, and this set is exactly where
+#: that shows, since it differs from the default on four pages. The rows are
+#: now derived from the page set and the numbers counted at render time, so
+#: the contents of a consumer report describes a consumer report.
 #:
 #: BEWARE: `market_trends` needs a live SimplyRETS fetch and `overview` needs
 #: an OpenAI key, and `render_html` drops either without a word when its data
@@ -60,7 +61,7 @@ from typing import Any, Dict, List, Optional
 #: six pages when both services answer, four when neither does. `analysis`
 #: renders unconditionally, which is half of why it belongs here.
 CONSUMER_PAGES = [
-    "cover", "aerial", "property", "analysis",
+    "cover", "contents", "aerial", "property", "analysis",
     "comparables", "range",
     "market_trends", "overview",
 ]

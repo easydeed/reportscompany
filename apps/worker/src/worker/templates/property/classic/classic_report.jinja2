@@ -518,6 +518,27 @@
 </head>
 <body>
   {% set _pages = page_set | default(["cover","overview","contents","aerial","property","analysis","comparables","range","market_trends"]) %}
+{#- D-121. ONE TITLE PER PAGE, READ BY BOTH THE PAGE AND THE CONTENTS ROW.
+      The contents used to carry its own labels, and they had drifted: this
+      theme's contents said "Aerial Property View" over a page headed "Aerial
+      View", and "Estimated Value Range" over "Range of Sales". Every page
+      heading below now renders `_titles[key]`, so a contents entry and the
+      page it points at cannot say different things.
+
+      `_nums` and `_toc` come from `paginate()` (property_builder.py), computed
+      after the conditional pages are dropped. `_nums` empty — a bare render
+      with no builder — prints no page number rather than a wrong one. -#}
+  {% set _titles = {
+       "overview": "Property Overview",
+       "aerial": "Aerial View",
+       "property": "Property Information",
+       "analysis": "Area Sales Analysis",
+       "market_trends": "Market Trends",
+       "comparables": "Sales Comparables",
+       "range": "Range of Sales"
+     } %}
+  {% set _nums = page_numbers | default({}) %}
+  {% set _toc = contents_keys | default([]) %}
   <div class="sheet">
 
     {% if "cover" in _pages %}
@@ -573,7 +594,7 @@
     <section class="page page-overview" style="background: var(--warm-white); padding: var(--pad);">
       <div class="page-header">
         <div class="page-header-label">Executive Summary</div>
-        <h2 class="page-header-title">Property Overview</h2>
+        <h2 class="page-header-title">{{ _titles.overview }}</h2>
       </div>
       <div class="page-content" style="padding:0;">
         <div class="overview-body">
@@ -605,17 +626,19 @@
         <h2 class="page-header-title">Table of Contents</h2>
       </div>
       <div class="contents-list">
-        {% if "overview" in _pages and overview_text %}
-        <div class="contents-item"><div class="contents-num">1</div><div class="contents-text">Executive Summary</div><div class="contents-dots"></div><div class="contents-page">02</div></div>
-        {% endif %}
-        <div class="contents-item"><div class="contents-num">2</div><div class="contents-text">Aerial Property View</div><div class="contents-dots"></div><div class="contents-page">04</div></div>
-        <div class="contents-item"><div class="contents-num">3</div><div class="contents-text">Property Information</div><div class="contents-dots"></div><div class="contents-page">05</div></div>
-        <div class="contents-item"><div class="contents-num">4</div><div class="contents-text">Area Sales Analysis</div><div class="contents-dots"></div><div class="contents-page">06</div></div>
-        <div class="contents-item"><div class="contents-num">5</div><div class="contents-text">Market Trends</div><div class="contents-dots"></div><div class="contents-page">07</div></div>
-        <div class="contents-item"><div class="contents-num">6</div><div class="contents-text">Sales Comparables</div><div class="contents-dots"></div><div class="contents-page">08</div></div>
-        <div class="contents-item"><div class="contents-num">7</div><div class="contents-text">Estimated Value Range</div><div class="contents-dots"></div><div class="contents-page">09</div></div>
+        {# D-121: derived from the page set, not written out. These rows were
+           literals — number, label and page — so the contents advertised
+           Market Trends at page 07 of reports containing no Market Trends
+           page, and the numbers disagreed with the footers on the pages
+           themselves. `contents_keys` and `page_numbers` come from
+           `paginate()` in property_builder.py, computed AFTER the
+           conditional pages are dropped, and those footers read the same
+           map. They cannot disagree now. #}
+        {% for _k in _toc %}
+        <div class="contents-item"><div class="contents-num">{{ loop.index }}</div><div class="contents-text">{{ _titles[_k] }}</div><div class="contents-dots"></div><div class="contents-page">{% if _nums.get(_k) %}{{ "%02d" | format(_nums[_k]) }}{% endif %}</div></div>
+        {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">03</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -624,7 +647,7 @@
     <section class="page aerial">
       <div class="aerial-header">
         <div class="page-header-label">Location Overview</div>
-        <h2 class="page-header-title">Aerial View</h2>
+        <h2 class="page-header-title">{{ _titles.aerial }}</h2>
       </div>
       <div class="aerial-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}>
         <div class="aerial-map-overlay">
@@ -640,7 +663,7 @@
           </div>
         </div>
       </div>
-      <div class="page-footer" style="border-color: rgba(255,255,255,.2);"><div class="brand" style="color:#fff;">Classic Collection • TrendyReports</div><div class="num" style="color:#fff;">03</div></div>
+      <div class="page-footer" style="border-color: rgba(255,255,255,.2);"><div class="brand" style="color:#fff;">Classic Collection • TrendyReports</div><div class="num" style="color:#fff;">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -649,7 +672,7 @@
     <section class="page property">
       <div class="page-header">
         <div class="page-header-label">Property Overview</div>
-        <h2 class="page-header-title">Property Information</h2>
+        <h2 class="page-header-title">{{ _titles.property }}</h2>
       </div>
       <div class="property-two-col">
         <div>
@@ -687,7 +710,7 @@
           </div>
         </div>
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">04</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">{% if _nums.get("property") %}{{ "%02d" | format(_nums["property"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -696,7 +719,7 @@
     <section class="page analysis">
       <div class="page-header">
         <div class="page-header-label">Market Intelligence</div>
-        <h2 class="page-header-title">Area Sales Analysis</h2>
+        <h2 class="page-header-title">{{ _titles.analysis }}</h2>
       </div>
       <div class="analysis-chart">
         <div class="chart-title">Recent Comparable Sales Activity</div>
@@ -726,7 +749,7 @@
           <tr><td>{{ comps_window.price_row }}</td><td>{{ stats.piq.price_display }}</td><td>{{ stats.low.price_display }}</td><td>{{ stats.medium.price_display }}</td><td>{{ stats.high.price_display }}</td></tr>
         </tfoot>
       </table>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">05</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">{% if _nums.get("analysis") %}{{ "%02d" | format(_nums["analysis"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -735,7 +758,7 @@
     <section class="page page-market-trends" style="background: var(--warm-white); padding: var(--pad);">
       <div class="page-header">
         <div class="page-header-label">Market Intelligence</div>
-        <h2 class="page-header-title">Market Trends</h2>
+        <h2 class="page-header-title">{{ _titles.market_trends }}</h2>
       </div>
       <div class="page-content" style="padding-left:0; padding-right:0;">
         {%- set _mt_subtitle = (market_trends.city ~ ' - ' if market_trends.city else '') ~ (market_trends.period_label | default('')) -%}
@@ -828,7 +851,7 @@
           <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
         </div>
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">06</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">{% if _nums.get("market_trends") %}{{ "%02d" | format(_nums["market_trends"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -837,7 +860,7 @@
     <section class="page comparables">
       <div class="page-header">
         <div class="page-header-label">Recent Transactions</div>
-        <h2 class="page-header-title">Sales Comparables</h2>
+        <h2 class="page-header-title">{{ _titles.comparables }}</h2>
       </div>
       <div class="comp-grid">
         {% for comp in comparables[:4] %}
@@ -860,7 +883,7 @@
         </div>
         {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">07</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">{% if _nums.get("comparables") %}{{ "%02d" | format(_nums["comparables"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -869,7 +892,7 @@
     <section class="page range">
       <div class="page-header">
         <div class="page-header-label">Valuation Summary</div>
-        <h2 class="page-header-title">Range of Sales</h2>
+        <h2 class="page-header-title">{{ _titles.range }}</h2>
       </div>
       <div class="range-map" {% if images.aerial_map %}style="background-image: url('{{ images.aerial_map }}'); background-size: cover; background-position: center;"{% endif %}></div>
       <div class="range-stats">
@@ -889,7 +912,7 @@
         </div>
         <p class="range-note">{{ comps_window.note }}</p>
       </div>
-      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">08</div></div>
+      <div class="page-footer"><div class="brand">Classic Collection • TrendyReports</div><div class="num">{% if _nums.get("range") %}{{ "%02d" | format(_nums["range"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 

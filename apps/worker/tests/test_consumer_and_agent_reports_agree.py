@@ -306,24 +306,44 @@ def test_both_paths_render_the_same_analysis_table():
     assert rows(agent) == rows(consumer)
 
 
-def test_contents_stays_out_until_d121():
-    """Its block is hardcoded and unguarded, so it would list pages this set
-    does not contain and number them wrongly. When D-121 lands, `contents`
-    comes back into CONSUMER_PAGES — the reminder is on the entry and in the
-    constant's own comment."""
-    assert "contents" not in CONSUMER_PAGES
+def test_contents_is_back_and_describes_a_consumer_report():
+    """D-121 landed 2026-10-01; this asserted its absence until then.
+
+    The consumer set is where a hardcoded contents page shows worst — it
+    differs from the default on four pages, so every literal row would have
+    been wrong. Now that the rows come from the page set, the check is that
+    the contents of a consumer report describes THIS report: no `property`
+    row in a set that has one, no `Area Sales Analysis` row pointing at the
+    comparables page.
+    """
+    assert "contents" in CONSUMER_PAGES
+    html = _render(consumer_report_data())
+    labels = re.findall(r'class="(?:contents-text|name)">\s*([^<]*?)\s*<', html)
+    assert labels, "the contents page rendered no rows"
+    # Every label must be a heading that exists in this document.
+    headings = {h.strip().upper() for h in re.findall(
+        r'class="(?:page-header-title|property-title|section-title|aerial-title|h)"'
+        r'[^>]*>\s*([^<]*?)\s*<', html)}
+    missing = [l for l in labels if l.upper() not in headings]
+    assert not missing, (
+        f"the consumer contents advertises {missing}; this document is headed "
+        f"{sorted(headings)}"
+    )
 
 
+#: SEVEN / EIGHT / NINE since D-121 restored `contents` to the consumer set
+#: (2026-10-01). It was six / seven / eight while the contents page was held
+#: out because its rows were hardcoded.
 @pytest.mark.parametrize("supply_trends,supply_overview,expected_sections", [
-    (False, False, 6),
-    (True,  False, 7),
-    (True,  True,  8),
+    (False, False, 7),
+    (True,  False, 8),
+    (True,  True,  9),
 ])
 def test_the_page_set_is_a_maximum_not_a_guarantee(
         supply_trends, supply_overview, expected_sections):
     """D-142. `market_trends` needs a live SimplyRETS fetch and `overview` an
     OpenAI key; `render_html` drops either without a word. So the consumer
-    report is six pages when neither answers and eight when both do — and
+    report is seven pages when neither answers and nine when both do — and
     `analysis` renders unconditionally, which is half of why it belongs in
     the set.
 

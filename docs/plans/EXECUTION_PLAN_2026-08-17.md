@@ -948,6 +948,44 @@ it.**
   `scripts/render_property_production.py` exists so the next person re-checks in one command
   instead of trusting this one.
 
+- **A guard asserting A ⇒ B is half a guard whenever B ⇒ A is also a claim you want to hold.**
+  *Added 2026-10-01, after finding the same hole twice in one week, both times by accident
+  during regression testing rather than by recall.*
+
+  A check that compares a description against a reality has **two** failure modes, and one
+  assertion covers one of them:
+
+  | | the check catches | the check is silent on |
+  |---|---|---|
+  | docs table vs CI workflows (D-152) | a filter path the row omits | **a path the row claims that the filter does not carry** |
+  | field-path sweep vs payload (D-106) | a key read at the wrong path | **a key read at no path that exists** |
+
+  In both cases the silent direction is the one that *overclaims* — the document or the code
+  asserting coverage that is not there — which is the direction that costs, because nobody
+  goes looking for a capability they have been told they have.
+
+  **Record how both were found, because it is the honest part.** The CI one: a stray
+  `git checkout` during regression testing reverted a `tools/**` addition while the docs row
+  still advertised it, and all seven tests stayed green. **The one-directional version would
+  have shipped**, and would have read as a guard for as long as anybody looked at it. The
+  sweep one: `bathrooms` exists at no path in any payload, so the verdict was
+  *"not in fixtures"* — the tool declining to judge — which did not fail the run and did not
+  appear in the count, so *"0 unacknowledged misreads"* was true and silent about the one
+  defect it was taken to clear.
+
+  This is the same family as **"a check that reports damage after committing it is
+  decoration"** above, one step subtler: the check *can* fail, it simply cannot fail in the
+  direction you were not thinking about when you wrote it. And it is the same family as the
+  substring rule in its honesty: **not preventable prospectively.** At the moment of writing
+  `assert every_filter_path_is_in_the_row`, that sentence IS the intent; the converse is not
+  absent from the code so much as absent from the thought.
+
+  So the habit is mechanical rather than attentive. **When a test compares two representations
+  of one thing, write down both set differences before writing either assertion** — `A - B`
+  and `B - A` — and say out loud what each one means. If only one of them has a meaning, say
+  so in the test and move on. If both do, both are assertions. The tell is any comparison
+  whose natural English is "X matches Y": *matches* is symmetric and the code almost never is.
+
 ---
 
 ## Phase 0 — Security & Tooling

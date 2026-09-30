@@ -568,6 +568,47 @@ TEMPLATES_DIR = Path(__file__).parent / "templates" / "property"
 
 # Theme template paths (relative to templates/property/)
 # v3.0: Standalone self-contained templates (unique cover + CSS per theme)
+#: THE ORDER PAGES APPEAR IN THE DOCUMENT, which is fixed by the templates and
+#: is NOT the order of `page_set`. A caller can pass `selected_pages` in any
+#: order and the rendered sequence does not change — every theme renders these
+#: sections in this sequence, each wrapped in `{% if "<key>" in _pages %}`. So
+#: page numbers are this list filtered by what renders, never `page_set`
+#: enumerated.
+PAGE_ORDER = [
+    "cover", "overview", "contents", "aerial", "property",
+    "analysis", "market_trends", "comparables", "range",
+]
+
+#: Not listed on the contents page: the cover (the reader is holding it) and
+#: the contents page itself.
+CONTENTS_OMITS = ("cover", "contents")
+
+
+def paginate(page_set):
+    """`(page_numbers, contents_keys)` for one report's final page set. (D-121)
+
+    THE CONTENTS PAGE AND THE PAGE FOOTERS WERE BOTH HARDCODED, AND DISAGREED
+    WITH EACH OTHER AND WITH THE DOCUMENT. Every theme printed `03` on both
+    the overview page and the aerial page; contents claimed Market Trends at
+    page 07 in reports that contain no Market Trends page; the literals skip
+    `03` even when nothing is dropped. Three symptoms, one cause — two
+    independent hand-maintained copies of a number that is a property of the
+    render.
+
+    Both now come from here, so they cannot drift from each other: a theme
+    reads `page_numbers[key]` for its footer and loops `contents_keys` for its
+    contents rows. The number is the physical sheet index, 1-based and
+    counting the cover, because that is what a reader turning to page 7 is
+    counting.
+
+    `page_set` is membership, not sequence — see `PAGE_ORDER`.
+    """
+    rendered = [key for key in PAGE_ORDER if key in page_set]
+    page_numbers = {key: n for n, key in enumerate(rendered, start=1)}
+    contents_keys = [k for k in rendered if k not in CONTENTS_OMITS]
+    return page_numbers, contents_keys
+
+
 THEME_TEMPLATES = {
     "teal": "teal/teal_report.jinja2",
     "bold": "bold/bold_report.jinja2",
@@ -1830,7 +1871,17 @@ class PropertyReportBuilder:
 
         context["overview_text"] = overview_text or ""
 
+        # D-121: AFTER both conditional drops, never before. `market_trends`
+        # and `overview` are removed above when their data did not arrive, and
+        # a number computed before that is a number for a document that is not
+        # the one being rendered — which is exactly how the hardcoded literals
+        # came to claim Market Trends at page 07 of a report without one.
+        page_numbers, contents_keys = paginate(page_set)
+        context["page_numbers"] = page_numbers
+        context["contents_keys"] = contents_keys
+
         logger.info("Final page_set: %s", page_set)
+        logger.info("Pagination: %s", page_numbers)
         logger.info("Context comparables: %d, price_low: %s, price_high: %s",
             len(context.get("comparables", [])),
             context.get("stats", {}).get("price_low"),
