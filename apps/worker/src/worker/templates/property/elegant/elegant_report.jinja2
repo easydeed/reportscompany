@@ -345,7 +345,8 @@
           <div class="aerial-card"><h3>Quarter-Mile Radius</h3><p>Properties within this radius provide the most accurate comparables, sharing similar neighborhood characteristics and market dynamics.</p></div>
         </div>
       </div>
-      <div class="page-footer" style="border:none;"><div class="brand" style="color:var(--gold-light);"><span class="diamond"></span> Elegant Collection</div><div class="num" style="color:#fff;">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
+            {# E15/D-129: NO `color:#fff` HERE. This footer sits on the page's light background, not on the dark band above it — measured 1.11:1 and 1.31:1 on #f3f3f3 by reading the rendered pixel. The theme's own `.page-footer` colours are the legible ones. #}
+      <div class="page-footer" style="border:none;"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
