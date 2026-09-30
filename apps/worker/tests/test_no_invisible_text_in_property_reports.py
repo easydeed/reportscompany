@@ -123,8 +123,13 @@ def test_the_measurement_looked_at_something(measured):
 
 def test_no_text_is_invisible(measured):
     """THE FLOOR. No baseline, no exceptions, no ratchet."""
+    # D-154: a run whose glyphs are painted by a gradient clipped to the text
+    # is not measured, it is declined — its `ratio` is computed from a `color`
+    # the reader never sees. Including it here would be a floor built on a
+    # number that means nothing.
     invisible = sorted(
-        (r for r in measured if r["ratio"] < INVISIBLE),
+        (r for r in measured
+         if r["ratio"] < INVISIBLE and not r.get("unmeasurable")),
         key=lambda r: r["ratio"])
     assert not invisible, (
         f"{len(invisible)} text run(s) below {INVISIBLE}:1 — not low-contrast, "
@@ -146,7 +151,7 @@ def test_every_page_number_is_legible(measured):
     bad = sorted(
         (r for r in measured
          if r["selector"].endswith("div.num") and r["text"].strip().isdigit()
-         and r["ratio"] < r["needs"]),
+         and r["ratio"] < r["needs"] and not r.get("unmeasurable")),
         key=lambda r: r["ratio"])
     assert not bad, (
         f"{len(bad)} page number(s) below their threshold:\n  " + "\n  ".join(

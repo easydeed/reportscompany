@@ -323,7 +323,8 @@ def test_no_new_unreadable_text_in_the_pdfs(measured, request):
     regenerated only after something has been FIXED, and its diff is what a
     reviewer reads — the same contract as golden/themes.json.
     """
-    fails = [r for r in measured if r["ratio"] < r["needs"]]
+    fails = [r for r in measured
+             if r["ratio"] < r["needs"] and not r["unmeasurable"]]
     found = {key(r) for r in fails}
     baseline = read_baseline()
 
@@ -364,7 +365,8 @@ def test_the_baseline_does_not_outlive_what_it_recorded(measured):
     # check absorbs would read as "no longer fails" here, and clearing that
     # means regenerating — the one move this file forbids. §0.6, *a guard
     # asserting A implies B is half a guard*.
-    fails = {key(r) for r in measured if r["ratio"] < r["needs"]}
+    fails = {key(r) for r in measured
+             if r["ratio"] < r["needs"] and not r["unmeasurable"]}
     stale = stale_entries(fails, read_baseline())
     assert not stale, (
         f"{len(stale)} baseline entries no longer fail — something was fixed. "
@@ -492,3 +494,55 @@ def test_the_reverse_check_still_reports_a_genuinely_fixed_entry():
     assert stale_entries(set(), baseline) == sorted(baseline)
     far = {("property__modern", "div.cover-city", "#94a3b8", "#ffffff")}
     assert stale_entries(far, baseline) == sorted(baseline)
+
+
+# ── D-154 · text this method cannot read ───────────────────────────────────
+
+#: Elements whose glyphs are painted by a gradient clipped to the text rather
+#: than by `color`. Enumerated across the whole corpus, not guessed:
+#: `scripts/find_unmeasurable_text.py` reports one — modern's cover title,
+#: once per brand.
+#:
+#: A COUNT, BECAUSE A BLIND SPOT NOBODY CAN SEE THE SIZE OF IS THE THING THIS
+#: REPO KEEPS FILING. One known element is a footnote on the 215. Several
+#: would be an asterisk on it, and the difference must not arrive silently.
+EXPECTED_DECLINED = 1
+
+
+def test_the_measurer_declines_what_it_cannot_read(measured):
+    """`background-clip: text` with `-webkit-text-fill-color: transparent`.
+
+    The measurement blanks glyphs with that same property, so for such an
+    element blanking changes nothing: the "backdrop" sample returns the
+    element's own gradient, and `color` is not what the reader sees either.
+    Both halves are wrong, and quietly.
+
+    It was reported as `#ffffff on #ff786a`, 2.58:1 — a FAILURE, and on this
+    baseline. The real thing is a coral gradient on a dark navy cover:
+    4.47:1 at the worst pair of stops against a 3.0 threshold for text that
+    size. So the gate was carrying a false failure it could never clear.
+    """
+    declined = {(r["doc"].rsplit("__", 1)[0], r["selector"]) 
+                for r in measured if r["unmeasurable"]}
+    assert len(declined) == EXPECTED_DECLINED, (
+        f"{len(declined)} distinct element(s) cannot be measured, expected "
+        f"{EXPECTED_DECLINED}: {sorted(declined)}\n"
+        f"A new one means a template added gradient text. Read it with "
+        f"scripts/find_unmeasurable_text.py, work out its real contrast by "
+        f"hand, and update this count — do not let the corpus grow a blind "
+        f"spot silently."
+    )
+
+
+def test_a_declined_run_is_not_counted_as_a_failure(measured):
+    """The point of declining. A number that means nothing is worse than an
+    absence, and worse still when it sits on a ratchet as a line nobody can
+    ever clear."""
+    declined = [r for r in measured if r["unmeasurable"]]
+    assert declined, "nothing was declined; this test proves nothing today"
+    fails = {key(r) for r in measured
+             if r["ratio"] < r["needs"] and not r["unmeasurable"]}
+    for r in declined:
+        assert key(r) not in fails, (
+            f"{key(r)} was declined and still counted as a failure"
+        )
