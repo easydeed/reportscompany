@@ -50,7 +50,7 @@ import measure_contrast_by_pixel as pixel  # noqa: E402
 #:
 #: IT WAS 48 AND 48 WAS WRONG. That number came from `--spreads` below, which
 #: measures the TEN SINGLE-BRAND production renders. The gate's corpus is
-#: sixty documents across SIX brand colours, and two of those brands are 41
+#: ninety documents across SIX brand colours, and two of those brands are 41
 #: apart — so 48 merged them, losing the distinction six brands are rendered
 #: to make. `--collisions` measures the corpus the tolerance is applied to,
 #: which is the one that decides the ceiling. `--spreads` is kept because it

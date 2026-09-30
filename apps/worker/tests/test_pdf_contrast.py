@@ -58,7 +58,10 @@ REQUIRE = os.environ.get("PDF_CONTRAST_REQUIRE_BROWSER") == "1"
 
 def _corpus():
     """The documents. `measure_pdf_contrast.py` still builds them — it is the
-    corpus definition, 30 market and 30 property renders across six brands."""
+    corpus definition: 90 documents — 60 market (10 report types x 6 brands)
+    and 30 property (5 themes x 6 brands). Counted, not remembered: this was
+    written as "30 market and 30 property" and carried wrong through two
+    entries before anyone ran `len()` on it."""
     spec = importlib.util.spec_from_file_location(
         "_measure_pdf_contrast", ROOT / "scripts/measure_pdf_contrast.py")
     module = importlib.util.module_from_spec(spec)
@@ -171,7 +174,7 @@ def key(row):
 #: TWELVE, AND THE FIRST ANSWER WAS 48, WHICH WAS WRONG.
 #:
 #: 48 came from grouping the TEN SINGLE-BRAND production renders and finding a
-#: gap between 37 and 131. Then it was applied to THIS corpus — sixty
+#: gap between 37 and 131. Then it was applied to THIS corpus — ninety
 #: documents across SIX brand colours — which contains a phenomenon those ten
 #: do not. Measured here, the closest pairs of distinct baseline entries are:
 #:
@@ -546,3 +549,28 @@ def test_a_declined_run_is_not_counted_as_a_failure(measured):
         assert key(r) not in fails, (
             f"{key(r)} was declined and still counted as a failure"
         )
+
+
+def test_the_corpus_is_the_size_the_documentation_says():
+    """90 documents, and the number is asserted because it was wrong twice.
+
+    "30 market and 30 property" was written from memory into this file's own
+    docstring and carried through D-130's and D-153's entries before anyone
+    ran `len()`. It is 60 market — ten report types across six brands — and
+    30 property. D-153's argument turns on how big this corpus is and what is
+    in it that the ten production renders are not, so an entry making a point
+    about derivation-input mismatch misstating the application input is the
+    same error one layer out.
+
+    Asserted on the composition, not just the total: a change that swapped a
+    report type for a theme would keep 90 and change what the corpus covers.
+    """
+    corpus = _corpus()
+    market, prop = corpus.market_documents(), corpus.property_documents()
+    brands = {b for b, _ in corpus.BRANDS}
+    assert len(brands) == 6, f"{len(brands)} brands, documented as 6"
+    assert len(market) == 60, f"{len(market)} market documents, documented as 60"
+    assert len(prop) == 30, f"{len(prop)} property documents, documented as 30"
+    assert len(market) + len(prop) == 90
+    assert len({k.rsplit("__", 1)[0] for k in market}) == 10, "10 report types"
+    assert len({k.rsplit("__", 1)[0] for k in prop}) == 5, "5 themes"

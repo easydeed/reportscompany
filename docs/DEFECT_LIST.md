@@ -7698,9 +7698,11 @@ across their own width. Both tools pick one. Neither is wrong about the pixel it
 neither reports that the run has two.
 
 > **FIXED 2026-10-01 — the gate stops hit-testing.** `test_pdf_contrast.py` now measures through
-> `measure_contrast_by_pixel.py`. `measure_pdf_contrast.py` still *builds* the corpus — 30
-> market and 30 property renders across six brands — and stays in the tree as the comparison
-> that established this, but it is no longer what the build is read through.
+> `measure_contrast_by_pixel.py`. `measure_pdf_contrast.py` still *builds* the corpus — **90
+> documents: 60 market (10 report types × 6 brands) and 30 property (5 themes × 6)** — and
+> stays in the tree as the comparison that established this, but it is no longer what the
+> build is read through. *(This said "30 market and 30 property" until 2026-10-01. Written from
+> memory; corrected by counting.)*
 >
 > **THE SWITCH IS NOT THE CLEAN SUBTRACTION IT LOOKED LIKE, AND THE DIFF SAYS SO.**
 >
@@ -9100,7 +9102,8 @@ a build where nothing about contrast moved.** `span "Report"` moved 2 the same w
 **AND THE FIRST RECOMMENDED TOLERANCE WAS WRONG. 48 MERGES TWO BRANDS.**
 
 48 came from grouping the **ten single-brand production renders** and finding a gap between 37
-and 131. The gate's corpus is **sixty documents across six brand colours**, and it contains a
+and 131. The gate's corpus is **ninety documents across six brand colours** — 60 market (10
+report types x 6) and 30 property (5 themes x 6) — and it contains a
 phenomenon those ten do not. Measured on the corpus the tolerance is actually applied to, the
 closest pairs of *distinct* baseline entries are:
 
@@ -9125,7 +9128,15 @@ that genuinely differ (18). **Twelve.**
 > contain brands and applied to one that does. The rule was about `numeric_leaf_names()`
 > deriving from an empty context; this is the same shape with a different noun, two days later,
 > by the person who wrote it down. The tell was available and I did not look: the number was
-> derived from ten documents and used on sixty.
+> derived from ten documents and used on ninety.
+>
+> **AND THIS ENTRY ITSELF SAID "SIXTY" UNTIL 2026-10-01.** An entry whose whole argument is
+> *the derivation input did not contain what the application input contains* has no business
+> misstating the application input. The corpus is 90 — 60 market (10 report types × 6 brands)
+> and 30 property (5 themes × 6). Counted with `len()`, which nobody had done; "30 market and
+> 30 property" was written from memory in D-130 and carried through two entries. **The
+> conclusion and the shape of the error are unchanged** — 48 still merges two brands, 12 is
+> still right — but the same standard applied to the walker's 653 applies here.
 
 **SHIPPED: tolerance 12, at comparison time, in both directions.**
 

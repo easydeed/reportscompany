@@ -26,7 +26,7 @@ THE WALKER HAD THE SAME BLIND SPOT FOR A DIFFERENT REASON — it resolved a
 declared `color` too — so switching instruments (D-130) did not fix it and
 could not have.
 
-WHAT THIS COUNTS. Every element in the gate's own sixty-document corpus
+WHAT THIS COUNTS. Every element in the gate's own ninety-document corpus
 whose computed style says the glyphs are not painted by `color`. Run it
 after any template change that adds gradient text: one known blind spot is a
 footnote on the 215, several would be an asterisk on it.
