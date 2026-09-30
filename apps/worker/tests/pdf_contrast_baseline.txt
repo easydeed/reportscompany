@@ -8,6 +8,23 @@
 # replacement template set inherits the entries whose selectors it reuses
 # and earns a failure for every new pairing it introduces.
 #
+# THE COLOURS ARE MATCHED WITH A TOLERANCE, NOT BY EQUALITY (D-153). The
+# hexes below are exact and will not look like they are compared loosely;
+# they are. Two colours within 12 (sum of |dR|+|dG|+|dB|) are the
+# same entry, in BOTH directions — a new finding matches an old line, and
+# an old line is only stale when nothing within tolerance still fails.
+#
+# Because the backdrop is sampled from the rendered pixel, over a gradient
+# it is 'wherever this run's text happened to sit'. Moving a line of text
+# changes it by a few units and an exact key would report a new pairing on
+# a build where no colour changed. Measured: modern's div.cover-city went
+# #3b4053 -> #3c4155 on a padding change alone.
+#
+# SO: IF THE GATE STAYS QUIET THROUGH A LAYOUT CHANGE, THAT IS DELIBERATE.
+# Re-derive the tolerance with scripts/measure_key_stability.py rather than
+# trusting it; it is only defensible while the two measured populations
+# stay separated, and a redesign moves them.
+#
 # Regenerate after FIXING something (never to clear a new failure):
 #     python3 -m pytest apps/worker/tests/test_pdf_contrast.py --regen-contrast-baseline
 #

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """How far does a contrast baseline key move when only the layout moves? (D-153)
 
-    python3 scripts/measure_key_stability.py            # both measurements
-    python3 scripts/measure_key_stability.py --spreads  # just the corpus spreads
-    python3 scripts/measure_key_stability.py --nudge    # just the layout nudge
+    python3 scripts/measure_key_stability.py               # all three
+    python3 scripts/measure_key_stability.py --nudge       # the churn (the floor)
+    python3 scripts/measure_key_stability.py --collisions  # the bound (the ceiling)
+    python3 scripts/measure_key_stability.py --spreads     # single-brand spreads
 
 WHY THIS IS A SCRIPT. D-153 recommends comparing baseline entries with a
 TOLERANCE rather than by exact equality, and recommends 48. That number is
@@ -45,8 +46,16 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import measure_contrast_by_pixel as pixel  # noqa: E402
 
-#: The recommendation on D-153. Re-derive it, do not trust it.
-RECOMMENDED_TOLERANCE = 48
+#: The tolerance in `test_pdf_contrast.py`. Re-derive it, do not trust it.
+#:
+#: IT WAS 48 AND 48 WAS WRONG. That number came from `--spreads` below, which
+#: measures the TEN SINGLE-BRAND production renders. The gate's corpus is
+#: sixty documents across SIX brand colours, and two of those brands are 41
+#: apart — so 48 merged them, losing the distinction six brands are rendered
+#: to make. `--collisions` measures the corpus the tolerance is applied to,
+#: which is the one that decides the ceiling. `--spreads` is kept because it
+#: is still the clearest picture of position noise; it is just not the bound.
+RECOMMENDED_TOLERANCE = 12
 
 
 def _rgb(h):
@@ -143,21 +152,68 @@ def nudge():
     return 0
 
 
+def collisions():
+    """The ceiling: how close do two DISTINCT baseline entries get?
+
+    This is the measurement that matters, and the one the first
+    recommendation skipped. A tolerance merges any two entries closer than
+    itself, so the smallest distance between two entries that genuinely
+    differ is the hard ceiling — and on this corpus that is two brand
+    colours, not two shades of one gradient.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_pdf_contrast", REPO / "apps/worker/tests/test_pdf_contrast.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    entries = sorted(mod.read_baseline())
+    pairs = []
+    for i, x in enumerate(entries):
+        for y in entries[i + 1:]:
+            if x[0] == y[0] and x[1] == y[1]:
+                pairs.append((max(distance(x[2], y[2]), distance(x[3], y[3])), x, y))
+    pairs.sort()
+
+    print(f"{len(entries)} baseline entries, {len(pairs)} pairs sharing family+selector\n")
+    print("closest 12 — a tolerance at or above any of these merges that pair:\n")
+    for dist, x, y in pairs[:12]:
+        print(f"  {dist:4d}  {x[0]:18s} {x[1][:22]:22s} {x[3]}  vs  {y[3]}")
+
+    t = RECOMMENDED_TOLERANCE
+    merged = {y for dist, x, y in pairs if dist <= t}
+    print(f"\n  at tolerance {t}: {len(merged)} of {len(entries)} entries merge into another")
+    for dist, x, y in pairs:
+        if dist > t:
+            print(f"  nearest pair LEFT DISTINCT: {dist} — {x[0]} {x[1]} "
+                  f"{x[3]} vs {y[3]}")
+            break
+    print("\n  Every merged pair should be ONE FINDING SAMPLED TWICE. Read them.")
+    print("  If any is two different colours the design uses on purpose — two")
+    print("  brands, a panel against a page — the tolerance is too high.")
+    return 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--spreads", action="store_true")
     ap.add_argument("--nudge", action="store_true")
+    ap.add_argument("--collisions", action="store_true")
     args = ap.parse_args()
-    both = not (args.spreads or args.nudge)
+    all_ = not (args.spreads or args.nudge or args.collisions)
     rc = 0
-    if args.spreads or both:
-        print("── SPREADS " + "─" * 62)
-        rc |= spreads()
-        print()
-    if args.nudge or both:
-        print("── NUDGE " + "─" * 64)
+    if args.nudge or all_:
+        print("── NUDGE · the churn, which sets the floor " + "─" * 31)
         rc |= nudge()
+        print()
+    if args.collisions or all_:
+        print("── COLLISIONS · the corpus, which sets the ceiling " + "─" * 23)
+        rc |= collisions()
+        print()
+    if args.spreads or all_:
+        print("── SPREADS · position noise on the single-brand renders " + "─" * 18)
+        rc |= spreads()
     return rc
 
 
