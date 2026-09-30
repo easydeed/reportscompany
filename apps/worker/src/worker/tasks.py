@@ -2508,75 +2508,35 @@ def process_consumer_report(self, report_id: str):
                         website_url = ""
                         job_title = license_number = agent_photo = company_name = agent_email_addr = ""
 
-                    report_data_for_pdf = {
-                        "report_type": "seller",
-                        "theme": default_theme_id or 4,
-                        "accent_color": secondary_color or primary_color or "#34d1c3",
-                        "property_address": prop_address,
-                        "property_city": prop_city,
-                        "property_state": prop_state,
-                        "property_zip": prop_zip,
-                        "owner_name": property_data.get("owner_name", ""),
-                        # D-139. These four are STORED on consumer_reports and
-                        # were simply never forwarded, so the consumer
-                        # report's Parcel & Legal block rendered blank while
-                        # the data sat in the row. Three separate places drop
-                        # fields on this one path — the projection, the
-                        # request payload, and here — and only the last costs
-                        # nothing to fix.
-                        "apn": property_data.get("apn", ""),
-                        "property_county": property_data.get("county", ""),
-                        "legal_description": property_data.get("legal_description", ""),
-                        "property_type": property_data.get("property_type", ""),
-                        "sitex_data": {
-                            "latitude": property_data.get("latitude"),
-                            "longitude": property_data.get("longitude"),
-                            "bedrooms": property_data.get("bedrooms"),
-                            "bathrooms": property_data.get("bathrooms"),
-                            "sqft": property_data.get("sqft"),
-                            "lot_size": property_data.get("lot_size"),
-                            "year_built": property_data.get("year_built"),
-                            # D-139. Was a hardcoded 0, which renders "$0" —
-                            # a number, not a gap. The whole tax family was
-                            # absent, so the consumer report's Tax &
-                            # Assessment block read $0 / $0 / $0 / -.
-                            "assessed_value": property_data.get("assessed_value"),
-                            "land_value": property_data.get("land_value"),
-                            "improvement_value": property_data.get("improvement_value"),
-                            "tax_amount": property_data.get("tax_amount"),
-                            "tax_year": property_data.get("tax_year"),
-                            "owner_name": property_data.get("owner_name", ""),
-                            # D-118. The consumer path is the one that reaches
-                            # a stranger, so it gets the same figure the agent
-                            # path does — or None, never a substitute.
-                            "last_sale_price": property_data.get("last_sale_price"),
-                            "last_sale_date": property_data.get("last_sale_date"),
-                            "last_sale_price_per_sqft":
-                                property_data.get("last_sale_price_per_sqft"),
-                        },
-                        "comparables": comparables[:6],
-                        "agent": {
-                            "name": agent_name,
-                            "title": job_title or "Real Estate Agent",
-                            "phone": agent_phone or "",
-                            "email": agent_email_addr or "",
-                            "license_number": license_number or "",
-                            "photo_url": agent_photo or "",
-                            "company_name": company_name or account_name or "",
-                            "logo_url": brand_logo or "",
-                        },
-                        "branding": {
-                            "display_name": account_name or "",
-                            "logo_url": brand_logo or "",
-                            "primary_color": primary_color or "#1B365D",
-                            "accent_color": secondary_color or "#B8860B",
-                        },
-                        "selected_pages": [
-                            "cover", "aerial", "property",
-                            "comparables", "range",
-                            "market_trends", "overview",
-                        ],
-                    }
+                    # D-140. This dict used to be a literal here. It is the
+                    # third and worst place the consumer path drops fields
+                    # (D-139) — the one that discarded data already stored on
+                    # the row — and the gate that catches that could not
+                    # import a literal, so it MIRRORED it. A gate that goes
+                    # quiet when someone edits what it guards is worse than
+                    # no gate, because it reports green.
+                    from .consumer_report_data import build_consumer_report_data
+
+                    report_data_for_pdf = build_consumer_report_data(
+                        property_data=property_data,
+                        prop_address=prop_address,
+                        prop_city=prop_city,
+                        prop_state=prop_state,
+                        prop_zip=prop_zip,
+                        comparables=comparables,
+                        theme_id=default_theme_id,
+                        primary_color=primary_color,
+                        secondary_color=secondary_color,
+                        brand_logo=brand_logo,
+                        account_name=account_name,
+                        agent_name=agent_name,
+                        agent_phone=agent_phone,
+                        agent_email=agent_email_addr,
+                        job_title=job_title,
+                        license_number=license_number,
+                        agent_photo=agent_photo,
+                        company_name=company_name,
+                    )
 
                     from .property_builder import PropertyReportBuilder
                     builder = PropertyReportBuilder(report_data_for_pdf)
