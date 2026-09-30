@@ -2517,6 +2517,17 @@ def process_consumer_report(self, report_id: str):
                         "property_state": prop_state,
                         "property_zip": prop_zip,
                         "owner_name": property_data.get("owner_name", ""),
+                        # D-139. These four are STORED on consumer_reports and
+                        # were simply never forwarded, so the consumer
+                        # report's Parcel & Legal block rendered blank while
+                        # the data sat in the row. Three separate places drop
+                        # fields on this one path — the projection, the
+                        # request payload, and here — and only the last costs
+                        # nothing to fix.
+                        "apn": property_data.get("apn", ""),
+                        "property_county": property_data.get("county", ""),
+                        "legal_description": property_data.get("legal_description", ""),
+                        "property_type": property_data.get("property_type", ""),
                         "sitex_data": {
                             "latitude": property_data.get("latitude"),
                             "longitude": property_data.get("longitude"),
@@ -2525,7 +2536,15 @@ def process_consumer_report(self, report_id: str):
                             "sqft": property_data.get("sqft"),
                             "lot_size": property_data.get("lot_size"),
                             "year_built": property_data.get("year_built"),
-                            "assessed_value": 0,
+                            # D-139. Was a hardcoded 0, which renders "$0" —
+                            # a number, not a gap. The whole tax family was
+                            # absent, so the consumer report's Tax &
+                            # Assessment block read $0 / $0 / $0 / -.
+                            "assessed_value": property_data.get("assessed_value"),
+                            "land_value": property_data.get("land_value"),
+                            "improvement_value": property_data.get("improvement_value"),
+                            "tax_amount": property_data.get("tax_amount"),
+                            "tax_year": property_data.get("tax_year"),
                             "owner_name": property_data.get("owner_name", ""),
                             # D-118. The consumer path is the one that reaches
                             # a stranger, so it gets the same figure the agent

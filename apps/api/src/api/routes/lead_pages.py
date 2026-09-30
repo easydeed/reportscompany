@@ -70,6 +70,18 @@ class PropertySearchResult(BaseModel):
     longitude: Optional[float] = None
     property_type: Optional[str] = None
     lot_size: Optional[int] = None
+    # D-139. Measured after D-138: the whole parcel and tax family was
+    # missing too, so the consumer report's Parcel & Legal block rendered
+    # blank and its Tax & Assessment block rendered $0 — on every consumer
+    # report ever generated. `lot_size` and the last-sale fields were not the
+    # exceptions; they were the two somebody happened to trip over.
+    county: Optional[str] = None
+    legal_description: Optional[str] = None
+    assessed_value: Optional[int] = None
+    land_value: Optional[int] = None
+    improvement_value: Optional[int] = None
+    tax_amount: Optional[float] = None
+    tax_year: Optional[int] = None
     # D-118. This is a HAND-COPIED projection of PropertyData, so a field
     # added there does not appear here — it is silently dropped, the consumer
     # wizard reads `undefined`, and the report's price row falls back to N/A
@@ -110,6 +122,16 @@ class ReportRequestPayload(BaseModel):
     last_sale_price: Optional[int] = None
     last_sale_date: Optional[str] = None
     last_sale_price_per_sqft: Optional[float] = None
+    # D-139, the same set the projection now returns. A field the search
+    # returns and this rejects is dropped one hop later and looks identical
+    # from the report.
+    county: Optional[str] = None
+    legal_description: Optional[str] = None
+    assessed_value: Optional[int] = None
+    land_value: Optional[int] = None
+    improvement_value: Optional[int] = None
+    tax_amount: Optional[float] = None
+    tax_year: Optional[int] = None
 
     @field_validator('phone')
     @classmethod
@@ -254,6 +276,13 @@ async def search_property(
             longitude=property_data.longitude,
             property_type=property_data.property_type or None,
             lot_size=property_data.lot_size,
+            county=property_data.county or None,
+            legal_description=property_data.legal_description or None,
+            assessed_value=property_data.assessed_value,
+            land_value=property_data.land_value,
+            improvement_value=property_data.improvement_value,
+            tax_amount=property_data.tax_amount,
+            tax_year=property_data.tax_year,
             last_sale_price=property_data.last_sale_price,
             last_sale_date=property_data.last_sale_date,
             last_sale_price_per_sqft=property_data.last_sale_price_per_sqft,
@@ -334,6 +363,13 @@ async def request_report(
             "last_sale_price": payload.last_sale_price,
             "last_sale_date": payload.last_sale_date,
             "last_sale_price_per_sqft": payload.last_sale_price_per_sqft,
+            "county": payload.county,
+            "legal_description": payload.legal_description,
+            "assessed_value": payload.assessed_value,
+            "land_value": payload.land_value,
+            "improvement_value": payload.improvement_value,
+            "tax_amount": payload.tax_amount,
+            "tax_year": payload.tax_year,
         }
         property_data = {k: v for k, v in property_data.items() if v is not None}
         

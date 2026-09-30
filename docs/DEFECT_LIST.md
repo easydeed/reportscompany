@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 55 | Real, unfixed |
-| `fixed` | 79 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 80 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **138** | D-001 … D-138, contiguous, no duplicates |
+| **Total** | **139** | D-001 … D-139, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 14 · ROUGH 21. (Sums to 55, the open total.)
 
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -7793,6 +7793,14 @@ nobody thought of as a producer.
 their address into a landing page and has no agent to notice the report is thinner than it should
 be. The agent path worked, which is exactly how it would have survived review.
 
+**THIRD TIME THE CONSUMER PATH HAS CARRIED A DEFECT THE AGENT PATH DID NOT** — D-116 (owner
+identity), this, and D-139. After three it is a property of the path rather than a coincidence,
+and the property is in its construction: **the agent path hands `PropertyData` almost straight
+through, while the consumer path retypes the shape three times** — a hand-copied projection, a
+request payload, and a dict literal in the worker. Every retyping is a place to forget a field,
+none of them errors when it does, and the path has no agent in the loop to notice the report
+came out thin. Any future work on this funnel should assume it drops things until measured.
+
 **Fixed:** `PropertySearchResult` gains the three fields and `lot_size`, which was missing for the
 same reason and which `ReportRequestPayload` had been accepting from nobody.
 
@@ -7819,6 +7827,75 @@ no producer, accruing the same way, by looking deliberate. Removed. The probe re
 name, `raw_response` still holds the value, and it is one line to add back on the day something
 wants it. `test_every_last_sale_field_on_the_model_reaches_a_consumer` now fails in **both**
 directions for this family.
+
+---
+
+### D-139 — nine more fields missing from every consumer report, in three separate places
+
+**Severity:** WRONG · **Affects:** every CMA delivered through the landing-page funnel ·
+**Found during:** Jerry's follow-up to D-138 — *"you fixed the one you tripped over; the gate you
+just built can answer the general question in one run"*
+**Status:** `fixed` — `fix/cma-projection-gaps`
+
+It could, and the answer is nine.
+
+D-138 fixed three fields. `lot_size` had been missing the same way for longer, which said the
+projection had been dropping things for a while and nothing noticed. Rendering both paths'
+property pages from one fully-populated SiteX lookup and diffing them:
+
+| field | agent report | consumer report |
+|---|---|---|
+| `county` | LOS ANGELES | *(blank)* |
+| `apn` | 8381-021-001 | *(blank)* |
+| `legal_description` | LOT 44 TR#6654 | *(blank)* |
+| `property_type` | Single Family Residential | *(blank)* |
+| `assessed_value` | $428,248 | **$0** |
+| `land_value` | $337,378 | **$0** |
+| `improvement_value` | $90,870 | **$0** |
+| `tax_amount` | $5,198 | **$0** |
+| `tax_year` | 2024 | – |
+
+**The consumer report's entire Parcel & Legal block rendered blank and its entire Tax &
+Assessment block rendered `$0`** — and `$0` is a number, not a gap, so it reads as an assessed
+value of nothing rather than as data we do not have. On every consumer report ever generated.
+
+**THREE SEPARATE PLACES DROP FIELDS ON ONE PATH, and only the third costs nothing.**
+
+1. **`PropertySearchResult`** — the hand-copied projection. D-138's culprit, and it was missing
+   the whole parcel and tax family too.
+2. **`ReportRequestPayload`** — the next hop. A field the search returns and the request rejects
+   is dropped one step later and looks identical from the report.
+3. **`tasks.py`'s consumer branch** — builds its own `report_data` and its own `sitex_data`
+   literal. `apn`, `county`, `legal_description` and `property_type` were **already stored on
+   `consumer_reports.property_data`** and simply never forwarded. This one was free to fix and
+   hid the longest, because every model in the chain agreed.
+
+`"assessed_value": 0` was a hardcoded literal in that third place.
+
+**Gated at two levels, deliberately.**
+
+* `test_property_lookup_contract.py` diffs `PropertyData` against the projection, with a
+  `CONSUMER_EXCLUDED` list that names a reason per field and a staleness test. Cheap; catches a
+  field added to the model and forgotten.
+* `apps/worker/tests/test_consumer_and_agent_reports_agree.py` builds both `report_data` dicts
+  the way the two producers build them, runs the **real builder**, and requires the property
+  contexts to match. This is what answers the general question permanently: it measures what a
+  reader sees, so it survives a rename, a new block, or a **fourth** place that drops things —
+  which the model diff cannot, and which is exactly how place 3 stayed hidden.
+
+**A guard that caught its own fixture.** `test_every_field_that_should_travel_is_populated`
+failed on its first run: six fields were blank in the fixture, so the parity test would have
+compared two absences and passed. Five of the six are deliberate (identity, plumbing), and the
+test now names them. §0.6's coincidence rule, one day old, catching the author of the rule.
+
+**Not carried, each for a stated reason:** `owner_name` and `secondary_owner` (D-116 — and the
+consumer path is the one that made that urgent), `fips` (a re-query key, never rendered),
+`full_address` (derived), `unit_number`/`unit_type` (not reachable from the consumer address
+search), `source`/`confidence`/`raw_response` (plumbing). Widening this path is exactly when an
+owner name gets added back by reflex, so both gates assert its absence.
+
+Four regressions applied and each seen to fail: a field dropped from the projection, the worker
+ceasing to forward a stored field, the hardcoded `0` returning, and an owner name reappearing.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 

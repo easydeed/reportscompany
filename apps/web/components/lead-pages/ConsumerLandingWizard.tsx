@@ -32,6 +32,16 @@ interface Property {
   sqft?: number;
   year_built?: number;
   lot_size?: number;
+  // D-139: the parcel and tax family, absent from this path since it was
+  // written. The consumer report's Parcel & Legal block rendered blank and
+  // its Tax & Assessment block rendered $0.
+  county?: string;
+  legal_description?: string;
+  assessed_value?: number;
+  land_value?: number;
+  improvement_value?: number;
+  tax_amount?: number;
+  tax_year?: number;
   // D-118: carried from the property search so the consumer's report shows
   // the same last-sale figure the agent's does.
   last_sale_price?: number;
@@ -273,6 +283,13 @@ export function ConsumerLandingWizard({ agentCode, themeColor, agentName }: Prop
           sqft: selectedProperty!.sqft,
           year_built: selectedProperty!.year_built,
           lot_size: selectedProperty!.lot_size,
+          county: selectedProperty!.county,
+          legal_description: selectedProperty!.legal_description,
+          assessed_value: selectedProperty!.assessed_value,
+          land_value: selectedProperty!.land_value,
+          improvement_value: selectedProperty!.improvement_value,
+          tax_amount: selectedProperty!.tax_amount,
+          tax_year: selectedProperty!.tax_year,
           last_sale_price: selectedProperty!.last_sale_price,
           last_sale_date: selectedProperty!.last_sale_date,
           last_sale_price_per_sqft: selectedProperty!.last_sale_price_per_sqft,
