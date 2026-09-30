@@ -88,7 +88,14 @@ def test_the_last_sale_is_read_from_sale_loan_info(client):
     assert data.last_sale_price == 369000
     assert data.last_sale_date == "2015-12-23"
     assert data.last_sale_price_per_sqft == 469.0
-    assert data.last_sale_document == "15-1611995"
+
+
+def test_the_document_number_is_not_parsed():
+    """D-138. It was, for one commit. Nothing displayed it and nothing asked
+    for it — a parsed field with no consumer is the mirror of D-135's read
+    with no producer, and it accrues the same debt by looking deliberate."""
+    assert not any(f for f in PropertyData.model_fields if "document" in f), \
+        PropertyData.model_fields.keys()
 
 
 def test_no_name_from_the_sale_block_reaches_property_data(client):

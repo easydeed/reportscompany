@@ -792,6 +792,31 @@ it.**
   a divisor are different decisions; and a fixed accent readable on a theme's navy is not
   readable on an affiliate's brand. **Same value, different consumer, different obligation.**
 
+- **Two computations agreeing on one input is not a test.** *Added 2026-09-30.* D-118's row
+  had to use SiteX's own `PricePerSQFT` rather than deriving one, because theirs is computed
+  against the sqft recorded with the sale. The test asserted `piq.price_per_sqft == 469.0` —
+  and `369000 / 786` also rounds to `469`. Replacing the vendor value with a derived one left
+  the suite **green**: the assertion could not tell apart the two sources it existed to
+  distinguish.
+
+  The remedy is a case where the two **must** diverge, and it generalises well past ratios.
+  Any test of *which* of two paths produced a value needs an input on which they disagree:
+  a cache versus its source, a fallback versus its primary, a client-side filter versus the
+  vendor's, a rounded figure versus an exact one. **Pick the fixture so that the wrong answer
+  is a different number**, or the test only proves both paths can reach the right one.
+
+  Sibling of the applied-regression rule. Applying the regression is what exposed this —
+  the test passed with the defect installed, which is the only way to learn that an assertion
+  cannot discriminate.
+
+- **A parsed field with no consumer is the mirror of a read with no producer.** *Added
+  2026-09-30, from D-138.* `last_sale_document` was parsed for one commit because the probe
+  returned it and it looked useful. Nothing displayed it and nothing had asked. It is the same
+  debt as D-135's nineteen reads, accruing the same way — by looking deliberate — and the same
+  question answers both: **what consumes this, and when.** Delete it; the key name is recorded
+  in the probe and the value is still in `raw_response`, so it costs one line to restore on the
+  day something wants it.
+
 - **A value you cannot account for is a question, not a verdict.**
   *Added 2026-09-30.* The Workstream E measurement found `$369,000` as the subject's sale price
   in Group A of the six reviewed PDFs, could not reconcile it with anything the code produces,
