@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 55 | Real, unfixed |
+| `open` | 56 | Real, unfixed |
 | `fixed` | 81 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **140** | D-001 … D-140, contiguous, no duplicates |
+| **Total** | **141** | D-001 … D-141, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 14 · ROUGH 21. (Sums to 55, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 16 · FRAGILE 14 · ROUGH 21. (Sums to 56, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -7959,6 +7959,98 @@ a filename as the selector — and `docs/TEST_DURABILITY.md`'s point exactly.
 
 Four regressions applied and each seen to fail, the first being the one that was impossible
 before: **dropping a field from the production builder alone**, with no edit to the test.
+
+---
+
+### D-141 — the consumer CMA has no Area Sales Analysis, and nothing decided that
+
+**Severity:** WRONG · **Affects:** every CMA delivered through the landing-page funnel ·
+**Found during:** D-140's extraction, which put the page set somewhere it could be read ·
+**Status:** `open` — **investigated and not changed, pending Jerry**
+
+`CONSUMER_PAGES` is not the agent default. It drops `contents` and **`analysis`**, and adds
+`market_trends` and `overview`.
+
+---
+
+**1 · Was it decided, or did it accrete?**
+
+**It accreted.** `git log -S` on every distinguishing string — `"selected_pages"`,
+`market_trends", "overview` — in `tasks.py` returns exactly two commits: D-140's extraction
+yesterday, and **`4bcb3d2`**. That is commit **182 of 182**, the squashed base, dated 2026-05-18,
+and its message is entirely about *"show 1 row of cards on Market Snapshot page 1"* — nine
+paragraphs about `.force-new-page` and gallery rows, with no mention of the consumer CMA or its
+pages.
+
+Same method and same answer as the `[:4]` slice: **traces to the squashed base with no recorded
+intent.** Nobody chose this; it arrived.
+
+---
+
+**2 · What the consumer report actually lacks.** Both paths rendered from one identical SiteX
+lookup and four identical comps:
+
+| | agent | consumer |
+|---|---|---|
+| `<section>` elements | **7** | **5** |
+| rendered page titles | Property Information · **Area Sales Analysis** · Sales Comparables · Range of Sales | Property Information · Sales Comparables · Range of Sales |
+| the comps comparison table | ✓ | **✗** |
+| the sales chart | ✓ | **✗** |
+| **the last-sale figure ($369,000 · Dec 2015)** | ✓ | **✗** |
+
+**Nothing else carries it.** Sales Comparables shows four cards — four *other* houses' prices.
+Range of Sales shows `$470k – $635k` and four averages. **Neither ever places the subject
+property against the comps.** The Subject column, the price-per-sqft comparison and the sale
+price row all live on the page that is missing, so a homeowner who asked what their house is
+worth receives a document showing four neighbours' sale prices and a band, and nothing that says
+*and here is yours*.
+
+It also means **D-118's fix does not reach this path at all.** The last-sale figure was wired
+through the projection, the payload, the row and the builder (D-138, D-139, D-140) — and then
+lands on a page the consumer report does not print.
+
+*A false positive worth recording:* grepping the HTML for `"AREA SALES ANALYSIS"` returns a hit
+on the consumer render. It is inside a `<style>` block — a CSS selector name, not content. The
+`<section>` count and the rendered `section-title` list are the honest measures. §0.6's substring
+rule, caught during this investigation rather than after it.
+
+---
+
+**3 · Are `market_trends` and `overview` better for that reader?**
+
+**They are both conditional, and the page they replaced is not.** Measured:
+
+| supplied | sections | pages |
+|---|---|---|
+| nothing | **5** | Property Information · Sales Comparables · Range of Sales |
+| `market_trends_data` | 6 | + Market Trends |
+| both | 7 | + Property Overview |
+
+`market_trends` needs a live SimplyRETS fetch and `overview` needs an OpenAI key; `render_html`
+silently drops either when its data does not arrive. So the consumer report traded **one page
+that always renders** for **two that may not** — and in an environment without both services it
+is a five-page document.
+
+On the merits the two additions are defensible for that reader: a market gauge and a plain-English
+summary suit a homeowner better than a specification table. **But they are additions, and the
+analysis page was not theirs to displace.** Nothing about including them required excluding it.
+
+---
+
+**VERDICT: a defect, and the fifth way the consumer path is thinner than the agent one** —
+after D-116 (owner identity), D-138 (last-sale fields), D-139 (nine parcel and tax fields) and
+D-140 (the gate that could not see any of it).
+
+**Recommendation, not built:** add `analysis` back to `CONSUMER_PAGES`, keeping `market_trends`
+and `overview`. It is a one-line change to a now-shared constant and it restores the table the
+document exists to provide. Two things to weigh first: whether `contents` should return as well
+(it is unguarded and mis-numbered — D-121 — so adding it before that is fixed would ship a
+contents page listing pages this set does not contain), and that the consumer report would then
+be eight pages rather than five.
+
+*Incidentally visible in the render:* the consumer report's footers read `04` then `07` on
+consecutive pages. That is D-121's hardcoded numbering, wrong here for the same reason it is
+wrong everywhere, and more obviously so on a path whose page set differs.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 
