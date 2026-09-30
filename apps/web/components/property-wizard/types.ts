@@ -24,6 +24,12 @@ export interface PropertyData {
   legal_description?: string;
   unit_number?: string;
   unit_type?: string;
+  // Last recorded sale, from SiteX's SaleLoanInfo (D-118). Optional because
+  // a property that has never transferred has none, and because reports
+  // created before the parser read it will not carry them.
+  last_sale_price?: number;
+  last_sale_date?: string;            // ISO YYYY-MM-DD
+  last_sale_price_per_sqft?: number;
 }
 
 export interface Comparable {

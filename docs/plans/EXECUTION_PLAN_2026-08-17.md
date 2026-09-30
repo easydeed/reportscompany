@@ -792,6 +792,23 @@ it.**
   a divisor are different decisions; and a fixed accent readable on a theme's navy is not
   readable on an affiliate's brand. **Same value, different consumer, different obligation.**
 
+- **A value you cannot account for is a question, not a verdict.**
+  *Added 2026-09-30.* The Workstream E measurement found `$369,000` as the subject's sale price
+  in Group A of the six reviewed PDFs, could not reconcile it with anything the code produces,
+  and filed it among the QA script's invented literals. It was not invented. It is the real
+  last recorded sale, `SaleLoanInfo.SalesPrice`, which SiteX has returned on every lookup since
+  the integration was written and `_parse_response` never read. **Group A was not wrong — it was
+  reading something production stopped reading.**
+
+  The measurement was right to distrust the artefact and wrong to conclude from that distrust.
+  "I cannot account for this" and "this is fabricated" are different findings, and the first
+  one's correct next step is to go looking. Here the cost of not looking was three weeks of a
+  Prop 13 assessment printed where a real sale price was available the whole time.
+
+  Applies to any unexplained value in a render, a log or a fixture: **write it down as an open
+  question with the number in it.** A number nobody can source is the most likely place a
+  producer has quietly stopped running — which is D-113, and D-133, and this.
+
 - **A fixture shaped like production is not the same as one production can produce.**
   *Added 2026-09-30.* The Workstream E measurement replaced a QA script's invented context with
   a production-*shaped* `report_data` and rendered through the real builder — which was the

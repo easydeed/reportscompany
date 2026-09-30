@@ -54,6 +54,10 @@ SITEX = {
     "tax_amount": 5198, "tax_year": 2024, "census_tract": "4089.00",
     # Carried so test_no_owner_identity_in_property_report can prove they do
     # NOT render. A fixture that omits the field cannot test its absence.
+    # D-118: SiteX's SaleLoanInfo, exact keys and values confirmed by the
+    # probe against production. $369,000 on 2015-12-23.
+    "last_sale_price": 369000, "last_sale_date": "2015-12-23",
+    "last_sale_price_per_sqft": 469.0,
     "secondary_owner": "MENDOZA YESSICA S",
     "mailing_address": "742 Evergreen Terrace, Springfield, CA 90210",
 }
@@ -183,14 +187,68 @@ def test_the_subject_price_is_not_the_county_assessment(theme, builders):
         "the subject's price in the Sale Price row is the Prop 13 assessed "
         f"value ({SITEX['assessed_value']}), printed beside real closed sales"
     )
+    assert piq["price"] == SITEX["last_sale_price"], (
+        "the row shows the last RECORDED SALE, which SiteX carries in "
+        "SaleLoanInfo and the parser now reads"
+    )
+    assert piq["price_per_sqft"] == SITEX["last_sale_price_per_sqft"]
+
+
+def test_sitex_s_own_ratio_is_used_where_it_differs_from_a_derived_one():
+    """The fixture's 369000/786 rounds to 469, which is also SiteX's figure —
+    so asserting equality against the fixture proves nothing about WHICH was
+    used. Measured: replacing the vendor value with a derived one left the
+    suite green. This case separates them.
+
+    They diverge in practice because SiteX computes against the sqft recorded
+    with the SALE, which differs from PropertyCharacteristics after an
+    addition. A row that disagrees with itself is worse than one slightly
+    stale.
+    """
+    data = report_data("teal")
+    data["sitex_data"] = {**SITEX, "last_sale_price_per_sqft": 527.1}
+    piq = PropertyReportBuilder(data)._build_stats_context()["piq"]
+    assert piq["price_per_sqft"] == 527.1, (
+        "the derived 369000/786 = 469 was used instead of SiteX's 527.1"
+    )
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_with_no_recorded_sale_the_cell_is_empty_not_zero(theme):
+    """A property that has never transferred, or one whose report predates
+    the parser reading the block."""
+    data = report_data(theme)
+    data["sitex_data"] = {k: v for k, v in SITEX.items()
+                          if not k.startswith("last_sale")}
+    piq = PropertyReportBuilder(data)._build_stats_context()["piq"]
     assert piq["price"] is None, (
-        "with no last-sale figure the cell must be empty, not zero — "
-        "`format_currency(0)` renders '$0', which is a price"
+        "zero is a price — `format_currency(0)` renders '$0'"
     )
-    assert piq["price_per_sqft"] is None, (
-        "price-per-sqft derived from an absent price is the same wrong number "
-        "divided by area"
+    assert piq["price_per_sqft"] is None
+    assert piq["price_display"] == "N/A"
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_the_sale_is_shown_with_its_date(theme, renders):
+    """A 2015 sale presented bare reads as a current valuation sitting 25%
+    below four recent comps — the same anchoring harm the assessment did, with
+    a true number. D-118."""
+    html = renders[theme]
+    assert "$369,000" in html
+    assert "Dec 2015" in html, f"{theme} prints the figure without its date"
+    row = [l for l in analysis_table(html).split("</tr>") if "369,000" in l]
+    assert row and "Dec 2015" in row[0], (
+        f"{theme} has the date somewhere, but not in the price row"
     )
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_the_comps_cells_carry_no_date(theme, renders):
+    """Their dates are already a column on the Sales Comparables page, and
+    four more in this row would crowd out the price spread it exists to show."""
+    row = [l for l in analysis_table(renders[theme]).split("</tr>")
+           if "369,000" in l][0]
+    assert row.count("\u00b7") <= 1 and row.count("&middot;") == 0
 
 
 @pytest.mark.parametrize("theme", THEMES)
@@ -205,18 +263,19 @@ def test_the_assessment_appears_only_under_its_own_label(theme, renders):
 
 
 @pytest.mark.parametrize("theme", THEMES)
-def test_an_estimated_value_would_still_reach_the_row(theme):
-    """The removal must not have severed the row from its real source.
-
-    Nothing writes `estimated_value` today (D-133), so without this the
-    subject cell would be permanently empty for a reason nobody could see,
-    and a later fix to the producer would look broken.
-    """
+def test_a_computed_estimate_outranks_a_ten_year_old_sale(theme):
+    """`estimated_value` is written by nothing today and D-134 will decide
+    what computes it. When it does, a current estimate should beat a 2015
+    sale — and its ratio must be DERIVED, because SiteX's PricePerSQFT
+    belongs to SiteX's price, not to ours."""
     data = report_data(theme)
     data["sitex_data"] = {**SITEX, "estimated_value": 700000}
     piq = PropertyReportBuilder(data)._build_stats_context()["piq"]
     assert piq["price"] == 700000
-    assert piq["price_per_sqft"] == 890  # 700000 / 786
+    assert piq["price_per_sqft"] == 890            # 700000 / 786, not 469
+    assert "Dec 2015" not in piq["price_display"], (
+        "an estimate we computed must not be dated with SiteX's sale"
+    )
 
 
 @pytest.mark.parametrize("theme", THEMES)

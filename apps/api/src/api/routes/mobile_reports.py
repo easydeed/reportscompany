@@ -183,7 +183,15 @@ async def get_report_data(
         property_type=property_data.get("property_type"),
         latitude=property_data.get("latitude"),
         longitude=property_data.get("longitude"),
-        tax_assessed_value=property_data.get("tax_assessed_value"),
+        # D-133/D-135: `tax_assessed_value` was read and `assessed_value`
+        # written — a naming mismatch, so this returned null since the
+        # endpoint was written. Both spellings accepted; the one the producer
+        # uses is second so a future rename does not silently win.
+        tax_assessed_value=(property_data.get("tax_assessed_value")
+                            or property_data.get("assessed_value")),
+        # D-118: SiteX carries these in SaleLoanInfo and the parser now reads
+        # them. Until this branch nothing wrote either, so this endpoint has
+        # returned null for both since it was written.
         last_sale_date=property_data.get("last_sale_date"),
         last_sale_price=property_data.get("last_sale_price")
     )

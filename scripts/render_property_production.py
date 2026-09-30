@@ -22,6 +22,7 @@ context__<variant>.json, the built context, because several E tickets are
 about values rather than layout.
 """
 import json, os, sys
+from datetime import date, timedelta
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -43,23 +44,35 @@ SITEX = {
     "zoning": "LVPR4.5D*", "pool": "None", "garage": "1", "fireplace": "No",
     "assessed_value": 428248, "land_value": 337378, "improvement_value": 90870,
     "tax_amount": 5198, "tax_year": 2024, "percent_improved": 21,
+    # D-118: SiteX's SaleLoanInfo, exact keys confirmed by the probe.
+    "last_sale_price": 369000, "last_sale_date": "2015-12-23",
+    "last_sale_price_per_sqft": 469.0,
     "secondary_owner": "MENDOZA YESSICA S",
     "mailing_address": "1358 5th St, La Verne, CA 91750",
     "census_tract": "4089.00", "county": "LOS ANGELES",
     "total_rooms": 5, "use_code": "SFR", "tax_status": "Current",
 }
 # Comparables shaped as fetch_comparables() stores them (SimplyRETS-derived).
+#
+# Close dates are RELATIVE. Written absolute, this fixture quietly aged past
+# the six-month comp window as the calendar moved and the renders started
+# claiming a twelve-month search (D-132). A reproduction tool that drifts with
+# the date reproduces a different thing each week.
+def _days_ago(n: int) -> str:
+    return (date.today() - timedelta(days=n)).isoformat()
+
+
 COMPS = [
-    {"address": "1889 Bonita Ave, La Verne", "price": 631500, "close_date": "2026-05-10",
+    {"address": "1889 Bonita Ave, La Verne", "price": 631500, "close_date": _days_ago(40),
      "sqft": 940, "bedrooms": 2, "bathrooms": 1, "year_built": 1953, "lot_size": 7446,
      "distance": 0.58, "status": "Closed", "days_on_market": 12},
-    {"address": "1507 2nd St, La Verne", "price": 635000, "close_date": "2026-03-15",
+    {"address": "1507 2nd St, La Verne", "price": 635000, "close_date": _days_ago(150),
      "sqft": 912, "bedrooms": 3, "bathrooms": 1, "year_built": 1952, "lot_size": 6261,
      "distance": 0.54, "status": "Closed", "days_on_market": 21},
-    {"address": "1845 Walnut St, La Verne", "price": 470000, "close_date": "2026-04-25",
+    {"address": "1845 Walnut St, La Verne", "price": 470000, "close_date": _days_ago(95),
      "sqft": 770, "bedrooms": 3, "bathrooms": 1, "year_built": 1910, "lot_size": 4917,
      "distance": 0.24, "status": "Closed", "days_on_market": 34},
-    {"address": "1848 1st St, La Verne", "price": 590000, "close_date": "2026-04-08",
+    {"address": "1848 1st St, La Verne", "price": 590000, "close_date": _days_ago(112),
      "sqft": 698, "bedrooms": 1, "bathrooms": 1, "year_built": 1950, "lot_size": 5500,
      "distance": 0.30, "status": "Closed", "days_on_market": 8},
 ]

@@ -109,6 +109,12 @@ function mapSiteX(d: Record<string, any>, fallback: string): PropertyData {
     legal_description: d.legal_description,
     unit_number: d.unit_number || "",
     unit_type: d.unit_type || "",
+    // `?? undefined`, never `|| 0`: a missing sale must stay missing. `0`
+    // would render as "$0" in the subject's price row, which is D-118 again
+    // with a different wrong number.
+    last_sale_price: d.last_sale_price ?? undefined,
+    last_sale_date: d.last_sale_date ?? undefined,
+    last_sale_price_per_sqft: d.last_sale_price_per_sqft ?? undefined,
   };
 }
 

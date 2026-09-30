@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 56 | Real, unfixed |
-| `fixed` | 77 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 55 | Real, unfixed |
+| `fixed` | 78 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **137** | D-001 … D-137, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 16 · FRAGILE 14 · ROUGH 21. (Sums to 56, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 14 · ROUGH 21. (Sums to 55, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -6902,6 +6902,65 @@ and calling asking prices sale prices.
 
 ---
 
+**RESOLVED 2026-09-30 — the probe came back and SiteX had it all along.**
+
+`Feed.PropertyProfile.SaleLoanInfo`, exact keys from production:
+
+```
+TransferDate    20151223      (a YYYYMMDD int, not a date string)
+SalesPrice      369000
+PricePerSQFT    469.0
+DocumentNumber  15-1611995
+```
+
+**The subject sold for $369,000 in December 2015, and that figure has been sitting in
+`raw_response` on every property report ever generated, unread**, while the page printed the
+assessment. A twenty-line parsing ticket, as hoped.
+
+**It closes the $369,000 mystery.** That number appeared in Group A of the six reviewed PDFs and
+nobody could account for it — the Workstream E measurement listed it among the QA script's
+invented literals. It was not invented. It is the real last sale price, reaching the page by a
+path the current parser stopped taking. **Group A was not wrong; it was reading something
+production stopped reading.** One more turn of §0.6's rule about artefacts: a figure you cannot
+account for is a question, not a verdict.
+
+**What was built.**
+
+| | |
+|---|---|
+| `PropertyData` | `last_sale_price`, `last_sale_date`, `last_sale_price_per_sqft`, `last_sale_document` |
+| `_parse_response` | reads `SaleLoanInfo`; `SellerName`, `LenderName` and `TitleCompany` deliberately not parsed — person and counterparty names, out for D-116's reason |
+| `_sitex_date` | `20151223` → `"2015-12-23"`. **`0` → `None`, not 1970** |
+| `_build_stats_context` | the row shows the recorded sale; `estimated_value` still ranks first, for D-134 |
+| `price_display` | `$369,000 · Dec 2015` |
+| the wizard, lead capture, the consumer task | all three carry the fields, or the two paths disagree — D-135's `land_value`/`$0` split recreated |
+| `mobile_reports` | the same two fields, plus `tax_assessed_value or assessed_value` |
+
+**The date carries because the figure alone would repeat the assessment's harm.** A 2015 sale
+printed bare sits 25% below four recent comps and reads as a current valuation. True number,
+wrong question answered — which is what the assessment was.
+
+**SiteX's `PricePerSQFT` is used, not derived.** Theirs is computed against the sqft recorded
+with the sale, which differs from `PropertyCharacteristics` after an addition, and a row that
+disagrees with itself is worse than one slightly stale. An `estimated_value` we compute gets a
+derived ratio instead, because SiteX's belongs to SiteX's price.
+
+**Two of five regressions were NOT caught, and both were my tests.**
+
+* Deriving the ratio instead of using SiteX's left the suite green, because the fixture's
+  `369000 / 786` rounds to `469` — SiteX's own figure. The assertion could not tell which was
+  used. A case where they diverge now exists and fails.
+* Removing `_sitex_date`'s range check left the suite green too, and **that one is correct**:
+  measured, `date()` already rejects `0`, `-20151223`, `201512`, `2015`, `99999999`,
+  `10000000` and `2015122300`, because floor division sends each to an impossible year, month or
+  day. The guard is documentation, not mechanism, and the comment now says so — a guard whose
+  removal changes nothing is otherwise assumed load-bearing by whoever finds it.
+
+The three that were caught: parsing `SellerName` into the model, dropping the date from the
+cell, and letting a computed estimate inherit SiteX's ratio and date.
+
+---
+
 ### D-119 — the Area Sales Analysis table shows three comps; the chart beside it shows four
 
 **Severity:** WRONG · **Affects:** the Area Sales Analysis page in all five themes ·
@@ -7494,7 +7553,7 @@ in the fixture.
 
 **Severity:** WRONG · **Affects:** the mobile report detail endpoint ·
 **Found during:** D-118's investigation
-**Status:** `open`
+**Status:** `fixed` — `feat/d118-last-sale-from-sitex`
 
 `routes/mobile_reports.py:187-188` builds its `PropertyData` response with:
 
@@ -7524,6 +7583,17 @@ writes this, and when"**.
 **Do not fix by populating it.** Whether a last-sale figure can be sourced at all is D-118's open
 question. This entry exists so that when it is answered, the mobile endpoint is not forgotten —
 it is the second consumer, and only the PDF was being looked at.
+
+---
+
+**FIXED 2026-09-30, in the same branch as D-118, which is the point of the paragraph above.**
+SiteX carries the sale; the parser now reads it; `lead_pages` and `tasks.py` write both keys into
+`property_data`, and the endpoint returns them. `tax_assessed_value` reads both spellings, with
+the producer's (`assessed_value`) second so a future rename cannot silently win.
+
+**The D-135 baseline caught the fix before this entry was written** — it failed with *"no longer
+orphaned"* on all three, which is the direction a ratchet usually lacks. The mobile surface's
+baseline is now empty.
 
 ---
 
