@@ -79,7 +79,21 @@ def test_the_replacement_is_actually_present():
     found = [p for p in TEMPLATES if EXPECTED_DEFAULT in p.read_text()]
     assert found, f"no template supplies the {EXPECTED_DEFAULT!r} default"
     assert EXPECTED_DEFAULT in (WORKER_SRC / "property_builder.py").read_text()
-    assert EXPECTED_DEFAULT in (WORKER_SRC / "tasks.py").read_text()
+
+    # NOT `tasks.py` by name. This asserted the string was in that file until
+    # D-140 moved the consumer branch's `report_data` into
+    # `consumer_report_data.py` — a refactor that changed nothing about the
+    # default and broke the test anyway. A guard pinned to a FILE PATH fails
+    # on a move and passes on a deletion elsewhere; what it should assert is
+    # that the default exists somewhere on the path that builds a report.
+    # docs/TEST_DURABILITY.md, and §0.6's accidental-selector rule with a
+    # filename as the selector.
+    modules = [f for f in WORKER_SRC.rglob("*.py")
+               if EXPECTED_DEFAULT in f.read_text(encoding="utf-8")]
+    assert modules, (
+        f"no module under {WORKER_SRC.name}/ supplies the "
+        f"{EXPECTED_DEFAULT!r} default for a report's agent title"
+    )
 
 
 # ── the None leak, by render ────────────────────────────────────────────────

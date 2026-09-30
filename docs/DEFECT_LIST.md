@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 55 | Real, unfixed |
-| `fixed` | 80 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 81 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **139** | D-001 … D-139, contiguous, no duplicates |
+| **Total** | **140** | D-001 … D-140, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 15 · FRAGILE 14 · ROUGH 21. (Sums to 55, the open total.)
 
@@ -82,7 +82,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > problem one level down — and the fix is the same one this file keeps arriving at, which is to
 > make the property structural instead of somebody's diligence.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -7896,6 +7896,69 @@ owner name gets added back by reflex, so both gates assert its absence.
 
 Four regressions applied and each seen to fail: a field dropped from the projection, the worker
 ceasing to forward a stored field, the hardcoded `0` returning, and an owner name reappearing.
+
+**EXISTING CONSUMER REPORTS ARE NOT BACKFILLED, and probably should not be.** The nine fields
+were never *stored* on the old rows — `lead_pages` did not accept them, so
+`consumer_reports.property_data` has no record of them. Regenerating an old report therefore
+recovers nothing; it re-renders the same thin data. Filling them in would mean re-running SiteX
+for historical rows, which is a paid lookup per row against addresses whose reports have already
+been delivered, to improve a document nobody is going to read again. Recorded as a decision
+rather than an omission: **new reports are correct from this change forward, old ones stay as
+they were sent.**
+
+---
+
+### D-140 — the gate for D-139's worst site mirrored the code instead of importing it
+
+**Severity:** FRAGILE · **Affects:** `test_consumer_and_agent_reports_agree.py`, and therefore
+everything it was written to protect · **Found during:** D-139, flagged in its own PR
+**Status:** `fixed` — `refactor/consumer-report-data-shared`
+
+D-139's third and worst site was a `report_data` **dict literal** ~350 lines inside a Celery
+task: fields already stored on `consumer_reports.property_data` and never forwarded. The gate
+written to catch it could not import a literal, so it **restated** it.
+
+A gate that goes quiet when somebody edits the thing it guards is worse than no gate, **because
+it reports green.** D-139's own regression run only failed because both copies were changed by
+hand — which is not a property a gate can rely on.
+
+**Extracted:** `worker/consumer_report_data.build_consumer_report_data`. The task calls it; the
+gate imports it. A field dropped from the one definition now fails the gate by construction.
+
+**The DB access was not woven through the literal**, which is why this stayed the size of one
+ticket. Every input was a local the task already held — `property_data` fetched above, the brand
+row unpacked above, the comparables computed above. Nothing had to move; the function is pure and
+its arguments are keyword-only, so a mis-ordering is impossible.
+
+**Fifteen flat parameters, deliberately.** Grouping them into `brand` and `agent` dicts at the
+call site would read better and would hand the caller two more shapes to assemble by hand —
+which is the defect this path has now produced three times.
+
+**PROVEN EQUIVALENT, not assumed.** The pre-refactor literal was extracted from
+`git show HEAD:…tasks.py` into a callable and run against the new function on **300 randomised
+inputs** — every key distinct per trial so two fields cannot agree by coincidence, and every
+third trial dropping random keys to exercise each `.get` default. 300/300 identical.
+
+**AND THE EXTRACTION IMMEDIATELY FOUND A HOLE IN THE GATE.** With the consumer side coming from
+the real builder, four fields diverged: `property_address`, `property_city`, `property_state`,
+`property_zip`. They are top-level columns on `property_reports`, not part of `sitex_data`, and
+the *agent* fixture had never supplied them. The mirrored consumer fixture had not either, so
+**the parity test had been comparing two blanks and passing.**
+
+That is the coincidence rule again, and the fixture guard written for it missed this because it
+checked `LOOKUP` — the *source* — and these four never travel through `LOOKUP` at all.
+`test_neither_path_s_property_page_is_blank_where_they_agree` now asserts non-emptiness on the
+rendered context, which is one level below where the first guard was looking.
+
+**A second thing the refactor broke, and it should have.** `test_agent_title_default` asserted
+`"Real Estate Agent"` appears in **`tasks.py`**, by filename. Moving the default to another
+module changed nothing about the default and failed the test. A guard pinned to a file path
+fails on a move and passes on a deletion elsewhere; it now searches every module under
+`src/worker/` for the default and asserts one supplies it. §0.6's accidental-selector rule with
+a filename as the selector — and `docs/TEST_DURABILITY.md`'s point exactly.
+
+Four regressions applied and each seen to fail, the first being the one that was impossible
+before: **dropping a field from the production builder alone**, with no edit to the test.
 
 ## ONE CREDENTIAL TRIP SETTLES THREE THINGS
 

@@ -792,6 +792,28 @@ it.**
   a divisor are different decisions; and a fixed accent readable on a theme's navy is not
   readable on an affiliate's brand. **Same value, different consumer, different obligation.**
 
+- **A gate that mirrors the code instead of importing it reports green while guarding
+  nothing.** *Added 2026-09-30, from D-140.* The parity test for D-139's worst site restated
+  `tasks.py`'s `report_data` literal, because the literal lived inside a Celery task with
+  nothing importable. Editing the task without editing the test would have left the gate
+  passing. D-139's own regression run only failed because both copies were changed by hand,
+  which is not a property a gate can rely on.
+
+  **If the thing under guard cannot be imported, that is the finding** — extract it, and check
+  first whether the extraction is actually hard. Here the DB access surrounded the literal
+  rather than running through it, so every input was already a local and the function came out
+  pure. The ticket was small because the shape was; assuming otherwise is how a mirror gets
+  written instead.
+
+  Prove a refactor equivalent rather than asserting it: the pre-change literal came out of
+  `git show HEAD:…` into a callable and ran against the new function on 300 randomised inputs,
+  every value distinct so no two fields could agree by coincidence.
+
+  **Expect the extraction to find something.** Feeding the gate the real producer immediately
+  exposed four fields both fixtures had left blank, which the parity test had been comparing
+  as equal — and a sibling test pinned to `tasks.py` **by filename**, which a legitimate move
+  broke while changing nothing about the value it guards.
+
 - **A shape retyped by hand is a place that drops fields, and it never says so.** *Added
   2026-09-30, from D-138 and D-139.* The consumer CMA path restates `PropertyData` three times —
   a projection model, a request payload, and a dict literal in the worker. Each is a list of

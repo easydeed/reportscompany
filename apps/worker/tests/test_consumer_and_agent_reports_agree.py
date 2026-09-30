@@ -61,8 +61,22 @@ LOOKUP = PropertyData(
 
 
 def agent_report_data():
-    """The wizard's payload, as `routes/property.create_report` stores it."""
+    """The wizard's payload, as `routes/property.create_report` stores it and
+    `fetch_report_with_joins` returns it.
+
+    The four address fields are top-level columns on `property_reports`, NOT
+    part of `sitex_data` — `_build_property_context` reads them from
+    `report_data`. They were missing from this fixture until D-140, and the
+    mirrored consumer fixture was missing them too, so the parity test
+    compared two blanks and passed. Exactly the coincidence
+    `test_every_field_that_should_travel_is_populated` was written to
+    prevent, one level up from where that test was looking.
+    """
     return {
+        "property_address": LOOKUP["street"],
+        "property_city": LOOKUP["city"],
+        "property_state": LOOKUP["state"],
+        "property_zip": LOOKUP["zip_code"],
         "sitex_data": LOOKUP,
         "apn": LOOKUP["apn"],
         "property_county": LOOKUP["county"],
@@ -82,29 +96,32 @@ def consumer_property_data():
 
 
 def consumer_report_data():
-    """`report_data`, as `tasks.py`'s consumer branch builds it."""
+    """`report_data`, as `tasks.py`'s consumer branch builds it.
+
+    IMPORTED, NOT MIRRORED — D-140, and the whole point of the extraction.
+
+    This function used to restate `tasks.py`'s dict literal, because the
+    literal lived ~350 lines inside a Celery task and there was nothing to
+    import. That made the gate silent on the one failure it exists to catch:
+    editing the task without editing the test left it green, guarding
+    nothing. The R2 regression for D-139 only failed because both copies were
+    changed by hand, which is not a property a gate can rely on.
+
+    `build_consumer_report_data` is now the single definition. A field
+    dropped from it fails here by construction.
+    """
+    from worker.consumer_report_data import build_consumer_report_data
+
     pd = consumer_property_data()
-    return {
-        "apn": pd.get("apn", ""),
-        "property_county": pd.get("county", ""),
-        "legal_description": pd.get("legal_description", ""),
-        "property_type": pd.get("property_type", ""),
-        "sitex_data": {
-            "latitude": pd.get("latitude"), "longitude": pd.get("longitude"),
-            "bedrooms": pd.get("bedrooms"), "bathrooms": pd.get("bathrooms"),
-            "sqft": pd.get("sqft"), "lot_size": pd.get("lot_size"),
-            "year_built": pd.get("year_built"),
-            "assessed_value": pd.get("assessed_value"),
-            "land_value": pd.get("land_value"),
-            "improvement_value": pd.get("improvement_value"),
-            "tax_amount": pd.get("tax_amount"),
-            "tax_year": pd.get("tax_year"),
-            "owner_name": "",
-            "last_sale_price": pd.get("last_sale_price"),
-            "last_sale_date": pd.get("last_sale_date"),
-            "last_sale_price_per_sqft": pd.get("last_sale_price_per_sqft"),
-        },
-    }
+    return build_consumer_report_data(
+        property_data=pd,
+        prop_address=LOOKUP["street"],
+        prop_city=LOOKUP["city"],
+        prop_state=LOOKUP["state"],
+        prop_zip=LOOKUP["zip_code"],
+        comparables=[],
+        agent_name="Zoe Noelle",
+    )
 
 
 def test_the_two_paths_render_the_same_property_page():
@@ -153,6 +170,37 @@ def test_every_field_that_should_travel_is_populated_in_the_fixture():
                    if v in (None, "", 0) and k not in MUST_NOT_TRAVEL)
     assert not blank, (
         f"these would compare equal by being absent on both sides: {blank}"
+    )
+
+
+def test_neither_path_s_property_page_is_blank_where_they_agree():
+    """The guard the fixture guard was missing.
+
+    `test_every_field_that_should_travel_is_populated` checks LOOKUP, the
+    SOURCE. It cannot see a field that both `report_data` dicts fail to
+    supply — which is what happened to the four address columns: they live on
+    `property_reports`, not in `sitex_data`, so LOOKUP being complete said
+    nothing about them. Both sides rendered blank, the parity test compared
+    two absences, and it passed.
+
+    So: assert agreement AND non-emptiness, on every field the report shows.
+    """
+    agent = PropertyReportBuilder(agent_report_data())._build_property_context()
+    rendered_blank = sorted(
+        f for f, v in agent.items()
+        if v in (None, "", 0, "-") and f not in MUST_NOT_TRAVEL
+        # Genuinely absent from SiteX for this subject — D-135's nineteen.
+        # Listed so the ones that are supposed to be there stay checked.
+        and f not in {"pool", "zoning", "garage", "fireplace", "census_tract",
+                      "housing_tract", "lot_number", "page_grid",
+                      "partial_bath", "percent_improved", "tax_status",
+                      "tax_rate_area", "total_rooms", "num_units", "units",
+                      "use_code", "notes", "mailing_address", "improvement_pct",
+                      "latitude", "longitude"}
+    )
+    assert not rendered_blank, (
+        f"these render blank on BOTH paths, so the parity test above cannot "
+        f"tell 'both carry it' from 'neither does': {rendered_blank}"
     )
 
 
