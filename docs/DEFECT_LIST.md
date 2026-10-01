@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 52 | Real, unfixed |
+| `open` | 53 | Real, unfixed |
 | `fixed` | 102 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **158** | D-001 … D-158, contiguous, no duplicates |
+| **Total** | **159** | D-001 … D-159, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 22. (Sums to 52, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 14 · ROUGH 22. (Sums to 53, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9452,6 +9452,74 @@ thing under test cannot fail" has a mirror image that this is: a test that write
 value down by hand cannot say *why* it failed. And the clock is an input like any other — a
 test that takes one from the ambient environment while its fixture takes another is not
 testing the thing it names.
+
+---
+
+### D-159 — the report says every comparable is on the page, and shows four of fifteen
+
+**Severity:** WRONG · **Affects:** every property report, both paths, all five themes ·
+**Found during:** sizing Jerry's "one set of N, shown in full" before building it
+**Status:** `open`
+
+The analysis page prints:
+
+> *"Low, median and high of **15** comparable sales. The table summarises the spread; **every
+> one of the 15 appears on the Sales Comparables page**."*
+
+Four appear. **Eleven do not.** Measured in the rendered document, agent path, fifteen comps
+supplied, all five themes:
+
+| theme | comp addresses rendered | the note's claim | `Total Comps` badge |
+|---|---|---|---|
+| bold | 4 | 15 | — |
+| classic | 4 | 15 | — |
+| elegant | 4 | 15 | — |
+| modern | 4 | 15 | — |
+| teal | 4 | 15 | **15** |
+
+**AND THE RANGE IS DRAWN OVER THE ELEVEN THE READER CANNOT SEE.** Same render: the range page
+reads **$500k – $850k**; the four visible cards are **$500,000, $525,000, $550,000, $575,000**.
+A seller can check **$75,000 of a $350,000 spread — 21%** — and the entire upper half of the
+range has no evidence anywhere in the document. The page whose only purpose is letting a seller
+check the range against the comparables shows them a fifth of it.
+
+**WHY IT IS NOT A LAYOUT BUG.** The layout is the cause; the false sentence is the defect. The
+comp card is 1.8in of map plus a body; four fill the page with 101px to spare and a fifth needs
+~330px (measured in Chromium, not estimated). So `[:4]` is page capacity, **discovered rather
+than chosen** — and nothing told the prose that computes the note about it.
+
+**EIGHT CAPS, AND NOT ONE OF THEM KNOWS ABOUT THE OTHERS.**
+
+| stage | cap | file |
+|---|---|---|
+| API ladder → SimplyRETS | `payload.limit * 4` = 60 | `routes/property.py:728` |
+| API response | `payload.limit`, default **15**, max 50 | `routes/property.py:792` |
+| worker consumer ladder | `limit=25`, break at ≥3 | `tasks.py:2385` |
+| worker normalisation | `raw_comps[:15]` | `tasks.py:2393` |
+| consumer builder | `comparables[:6]` | `consumer_report_data.py:151` |
+| cards context | `raw_comps[:6]` — *"Max 6 (3 rows of 2)"* | `property_builder.py:1054` |
+| **every template loop** | **`[:4]`**, 24 of them across five themes | all `*_report.jinja2` |
+| analysis table, range, `total_comps` | **no cap at all** | `_build_stats_context` |
+
+The `[:6]` in the cards context is dead: the templates take four of the six. The comment beside
+it says "3 rows of 2", which is a layout that has not existed for as long as the templates have
+said `[:4]`.
+
+**THE CONSUMER PATH IS THINNER AGAIN, FOR THE FIFTH TIME.** `consumer_report_data` forwards
+`comparables[:6]`, so a consumer report drops nine of the fifteen the ladder found before the
+builder ever sees them — and its note then claims *"every one of the 6"* while showing four.
+D-138, D-139, D-140 and D-141 were the first four; this is the fifth, and like those four it is
+a cap nobody recorded a reason for.
+
+**PROVENANCE: NOBODY CHOSE 15 OR 6.** `git log -S "default=15"` and `git log -S "Max 6
+comparables"` both land on commit **202 of 202**, the squashed base, whose message is about
+Market Snapshot gallery rows. Same trace as D-141, same answer: the numbers were never decided,
+they were inherited.
+
+**It predates the ticket and the ticket's fix closes it.** Filed now, separately and before the
+build, because a defect that disappears as a side effect of a feature is a defect that never
+gets recorded — and this one is a false statement printed to a seller, which is the part worth
+remembering happened.
 
 ---
 
