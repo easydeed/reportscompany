@@ -1039,6 +1039,42 @@ it.**
   contains, side by side, before trusting the number.** Where they differ, the number is
   unproven.
 
+- **THE CLOCK IS AN INPUT. A TEST THAT TAKES ONE FROM ITS FIXTURE AND ANOTHER FROM THE
+  ENVIRONMENT IS TESTING NEITHER.** *Added 2026-10-01.* D-158. `test_monthly_trend.py` set
+  `TODAY = date(2026, 9, 24)` and built twelve months of fixture rows back from it. Its pure
+  tests passed that date in as `today=`, so those were deterministic. Its **render** tests went
+  through `MarketReportBuilder`, which calls `median_series(history)` with no `today=` and
+  therefore buckets against `date.today()`. Two clocks, one file.
+
+  It was green on 30 September and red on 1 October with nothing merged in between that touches
+  the chart. The oldest fixture month fell out of the trailing twelve the builder computes,
+  eight rows stopped being counted, and the suite failed. **Nothing was wrong with the
+  product.** The test had been counting on the calendar not moving, and it held for exactly as
+  long as the fixture's window happened to contain the day the suite ran.
+
+  The general form is the ambient-input one: the clock, the locale, the timezone, the working
+  directory, the environment variable the fixture does not set. Each is read from the
+  environment by the code under test and written down by hand in the fixture, and a test that
+  does both is asserting that those two happen to agree today. **Either inject it into the code
+  under test or take it from the environment in the fixture — one clock, not two.** Freezing it
+  is the better answer only when the code already accepts an injected one; adding that
+  parameter *for a test* is product surface bought with a test's convenience.
+
+- **A TEST THAT WRITES ITS EXPECTED VALUE DOWN BY HAND CANNOT SAY WHY IT FAILED.** *Added
+  2026-10-01.* The mirror image of the older rule, and the second half of D-158. "A test that
+  reads its expected value from the thing under test cannot fail" — so write it down. But the
+  assertion in D-158 was `assert "96 sales" in html`, where 96 is 12 × 8, a property of the
+  **fixture**. When it broke it reported *the note is wrong*, which was the opposite of what
+  happened: the note was right and eight sales had gone missing before it reached the note.
+  Half an hour went into the wrong half of the pipeline.
+
+  The distinction is not "literal versus derived" — it is **which side you derive from.**
+  Derive the expectation from the INPUT and it both survives a fixture change and names the
+  real failure (`f"{len(rows):,} sales"` says *rows were dropped*). Derive it from the CODE
+  UNDER TEST and it cannot fail. Writing it down by hand is the third option and it is only
+  right for things that are genuinely constants of the decision — a threshold somebody chose,
+  the shape of the fixture itself — not for arithmetic over the input.
+
 ---
 
 ## Phase 0 — Security & Tooling

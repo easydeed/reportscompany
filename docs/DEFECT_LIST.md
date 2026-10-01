@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 52 | Real, unfixed |
-| `fixed` | 101 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 102 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **157** | D-001 … D-157, contiguous, no duplicates |
+| **Total** | **158** | D-001 … D-158, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 22. (Sums to 52, the open total.)
 
@@ -9395,6 +9395,63 @@ structural test stayed green and two render tests fired.
 to fail:** the condition dropped, the row moved into the `{% else %}`, the condition inverted
 (render tests only), the block deleted from one theme, and `mailing_address` restored *inside*
 the agent gate — the one a gatedness-only test would wave through.
+
+---
+
+### D-158 — a test with two clocks in it, which the calendar failed for us
+
+**Severity:** FRAGILE · **Affects:** `test_monthly_trend.py`, no production path ·
+**Found during:** merging #133 and #134, when `main` went red on its own
+**Status:** `fixed` — `fix/trend-test-two-clocks`
+
+`main` was green on 2026-09-30 and red on 2026-10-01 with nothing merged in between that
+touches the chart. Neither PR caused it. The date did.
+
+```python
+TODAY = date(2026, 9, 24)                 # the fixture's clock
+...
+MarketReportBuilder(data).render_html()   # -> median_series(history)  -> date.today()
+```
+
+The pure-series tests inject `today=TODAY` and are deterministic. The RENDER tests go through
+`MarketReportBuilder`, which calls `median_series(history)` with no `today=`, so it buckets
+against the real clock. Two clocks, one file. On 1 October the oldest of the twelve fixture
+months fell outside the trailing-twelve the builder computes, eight rows stopped being counted,
+and `assert "96 sales" in html` failed.
+
+**Nothing was wrong with the product.** The builder reading the real date is correct. The test
+had been counting on the calendar not moving, and it had held for as long as the fixture's
+window happened to contain the day the suite ran.
+
+**TWO SEPARATE DEFECTS, AND THE SECOND IS THE ONE WORTH THE ENTRY.**
+
+1. *Two clocks.* Fixed by having one: `TODAY = date.today()`, so the fixture is built from the
+   same `today` the code under test will use. The alternative — freezing the clock — needs the
+   builder to accept an injected date, which is product surface added for a test.
+2. *The expected value was a literal.* `96` is 12 × 8, a property OF THE FIXTURE, written as a
+   constant. When it failed it reported "the note is wrong", which is the opposite of what had
+   happened: the note was right and eight sales had gone missing before it. Now
+   `assert f"{len(rows):,} sales" in html` — derived from the input, not from the code under
+   test, and it names the real failure. The literal 96 survives as an assertion on the
+   fixture's own shape, which is where it was always true.
+
+`test_the_window_ends_on_this_month_and_is_twelve_long` asserted `"Sep"` / 2026 and `"Oct"` /
+2025 — correct on the day it was written and no day after. The window's shape is "ends this
+month, twelve long"; the month names asserted the calendar. Both ends are now computed.
+
+**Swept for others:** `test_closed_history_fetch.py` holds two frozen dates and
+`test_cache_key_stability.py` one, and all three inject `today=` into a pure function. One
+clock each, deterministic forever. `test_monthly_trend.py` was the only file rendering
+frozen-date fixtures through a live-clock path.
+
+**Regression applied and seen to fail:** `TODAY` re-frozen to `date(2026, 9, 24)` — one test
+fails, naming the missing rows rather than the note.
+
+**§0.6, an instance of each of two rules.** "A test that reads its expected value from the
+thing under test cannot fail" has a mirror image that this is: a test that writes its expected
+value down by hand cannot say *why* it failed. And the clock is an input like any other — a
+test that takes one from the ambient environment while its fixture takes another is not
+testing the thing it names.
 
 ---
 
