@@ -576,11 +576,51 @@ TEMPLATES_DIR = Path(__file__).parent / "templates" / "property"
 #: enumerated.
 PAGE_ORDER = [
     "cover", "overview", "contents", "aerial", "property",
-    "analysis", "market_trends", "comparables", "range",
+    "analysis", "market_trends", "comparables", "comparables_all", "range",
 ]
+
+#: THE COMPARABLE SET. ONE NUMBER, ONE PLACE (D-159).
+#:
+#: Before this there were eight caps and none of them knew about the others:
+#: 60 and 15 in the API, 25 and 15 in the worker, 6 in the consumer builder, 6
+#: in the cards context, `[:4]` in twenty-four template loops, and no cap at
+#: all on the analysis table, the range and `total_comps`. The document said
+#: "every one of the 15 appears on the Sales Comparables page" and showed
+#: four, in every theme, with the range drawn over the eleven the reader could
+#: not see.
+#:
+#: Everything downstream of the ladder now derives from this. `apps/api` is a
+#: separate deployment and cannot import it, so `ComparablesRequest.limit`
+#: carries the same number and `test_one_comp_set.py` asserts the two agree by
+#: parsing both files — a cross-deployment constant has no other way to be one
+#: number.
+#:
+#: 15 rather than another number because it is what the API already defaulted
+#: to, so this changes no search. It was never chosen — `git log -S` puts it
+#: in commit 202 of 202, the squashed base — but it is in production and
+#: changing what the ladder returns is a different decision from making the
+#: document honest about what it returned.
+COMP_SET_MAX = 15
+
+#: How many comp cards fit on the Sales Comparables page. MEASURED, NOT
+#: CHOSEN: the card is 1.8in of map plus a body, four fill the page with 101px
+#: to spare, and a fifth needs about 330px. Measured in Chromium at the real
+#: page size rather than estimated.
+#:
+#: This is why `[:4]` was in every template and why nothing told the prose
+#: that computes the analysis note about it. The rest of the set is not
+#: dropped now — it carries over to `comparables_all`, which is a list and
+#: fits fifteen on one page with 189px to spare at larger type than the
+#: cards' own stat grid.
+CARDS_PER_COMPARABLES_PAGE = 4
 
 #: Not listed on the contents page: the cover (the reader is holding it) and
 #: the contents page itself.
+#:
+#: `comparables_all` IS listed, deliberately. It is a page of the document a
+#: reader may want to turn to — it is the evidence behind the range — and
+#: omitting it from the contents would be the same omission D-159 is about,
+#: one level up.
 CONTENTS_OMITS = ("cover", "contents")
 
 
@@ -1051,7 +1091,12 @@ class PropertyReportBuilder:
         logger.info("_build_comparables_context: %d raw comps received", len(raw_comps))
 
         comparables = []
-        for comp in raw_comps[:6]:  # Max 6 comparables (3 rows of 2)
+        # D-159: was `[:6]`, with a comment saying "3 rows of 2" — a layout
+        # that had not existed for as long as the templates had said `[:4]`,
+        # so the cap was dead and the four the reader saw were chosen by the
+        # templates. The whole set is built now; the SPLIT across pages is the
+        # templates' business, the SIZE of the set is this constant's.
+        for comp in raw_comps[:COMP_SET_MAX]:
             # Handle field name variations from different sources
             # Frontend: lat/lng, Backend: latitude/longitude
             latitude = comp.get("latitude") or comp.get("lat")
@@ -1907,6 +1952,11 @@ class PropertyReportBuilder:
             # last five (D-138…D-141) were all accidental convergence, so this
             # one is asserted on the rendered output rather than trusted.
             "audience": self.report_data.get("audience") or "agent",
+
+            # D-159: the templates hold no comp-count literal any more. The
+            # cards page takes this many and `comparables_all` takes the rest,
+            # so the two cannot disagree about where the split is.
+            "cards_per_comparables_page": CARDS_PER_COMPARABLES_PAGE,
             "prepared_for": (self.report_data.get("prepared_for") or "").strip(),
 
             # Market trends data (None when page was dropped)
@@ -1963,6 +2013,23 @@ class PropertyReportBuilder:
             logger.info("ai_overview: page removed from page_set (no API key or generation failed)")
 
         context["overview_text"] = overview_text or ""
+
+        # ── The comparables continuation page (D-159) ─────────────────────
+        # ADDED here, beside the two conditional drops and before `paginate`,
+        # for the same reason they are here: the page set must be final before
+        # a page number is computed from it. A report with four comps or fewer
+        # does not get the page, because the cards already are the whole set.
+        #
+        # The DECISION lives here and only here. The templates render the page
+        # when it is in the set and do not ask how many comps there are — one
+        # place deciding, which is the whole of what D-159 was about.
+        _comps = context.get("comparables") or []
+        if "comparables" in page_set and len(_comps) > CARDS_PER_COMPARABLES_PAGE:
+            page_set = page_set + ["comparables_all"]
+            context["page_set"] = page_set
+            logger.info(
+                "comparables_all: page ADDED — %d comps, %d fit on the cards page",
+                len(_comps), CARDS_PER_COMPARABLES_PAGE)
 
         # D-121: AFTER both conditional drops, never before. `market_trends`
         # and `overview` are removed above when their data did not arrive, and

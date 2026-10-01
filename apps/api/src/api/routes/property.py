@@ -302,6 +302,12 @@ class ComparablesRequest(BaseModel):
     radius_miles: float = Field(default=1.0, ge=0.1, le=10.0, description="Search radius in miles")
     sqft_variance: float = Field(default=0.20, ge=0.0, le=0.50, description="SQFT +/- variance (0.20 = 20%). 0 = no sqft filter.")
     status: Literal["Closed", "Active", "All"] = "Active"
+    #: D-159. THE SAME NUMBER AS `worker.property_builder.COMP_SET_MAX`, and
+    #: the two are asserted equal by `tests/test_one_comp_set.py`, which parses
+    #: both files. `apps/api` and `apps/worker` are separate deployments and
+    #: neither can import the other, so a cross-deployment constant has no way
+    #: to be one number except a test that reads both and fails when they
+    #: drift. Change one and the test names the other.
     limit: int = Field(default=15, ge=1, le=50)
 
 

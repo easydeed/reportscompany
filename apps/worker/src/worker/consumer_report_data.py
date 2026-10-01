@@ -60,6 +60,12 @@ from typing import Any, Dict, List, Optional
 #: does not arrive (D-142). So this list is the MAXIMUM, not the guarantee —
 #: six pages when both services answer, four when neither does. `analysis`
 #: renders unconditionally, which is half of why it belongs here.
+#:
+#: `comparables_all` is NOT listed here, and that is not an omission: the
+#: builder adds it when the set is larger than the cards page holds, the same
+#: way it REMOVES `market_trends` and `overview` when their data does not
+#: arrive. A page whose presence depends on the data belongs to the builder,
+#: not to a page list written before the data exists (D-159).
 CONSUMER_PAGES = [
     "cover", "contents", "aerial", "property", "analysis",
     "comparables", "range",
@@ -148,7 +154,18 @@ def build_consumer_report_data(
             "last_sale_date": property_data.get("last_sale_date"),
             "last_sale_price_per_sqft": property_data.get("last_sale_price_per_sqft"),
         },
-        "comparables": comparables[:6],
+        # D-159: WAS `comparables[:6]`, and that was the FIFTH time this path
+        # was found thinner than the agent path — D-138, D-139, D-140 and
+        # D-141 were the first four, all accidental, all within a month. Nine
+        # of the fifteen the ladder found were dropped here, before the
+        # builder saw them, and the report's own note then claimed "every one
+        # of the 6" while showing four.
+        #
+        # No cap. The set is sized once, in `property_builder.COMP_SET_MAX`,
+        # and a second cap here would be a deliberate divergence — which this
+        # path is allowed exactly one of (D-157, the owner of record), and
+        # that one has a reason written down. This had none.
+        "comparables": list(comparables),
         "agent": {
             "name": agent_name,
             "title": job_title or "Real Estate Agent",

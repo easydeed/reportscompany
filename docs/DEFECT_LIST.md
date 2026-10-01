@@ -61,11 +61,11 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 53 | Real, unfixed |
-| `fixed` | 102 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 103 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **159** | D-001 … D-159, contiguous, no duplicates |
+| **Total** | **160** | D-001 … D-160, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 14 · ROUGH 22. (Sums to 53, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 23. (Sums to 53, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9459,7 +9459,7 @@ testing the thing it names.
 
 **Severity:** WRONG · **Affects:** every property report, both paths, all five themes ·
 **Found during:** sizing Jerry's "one set of N, shown in full" before building it
-**Status:** `open`
+**Status:** `fixed` — `fix/one-comp-set`
 
 The analysis page prints:
 
@@ -9516,10 +9516,93 @@ comparables"` both land on commit **202 of 202**, the squashed base, whose messa
 Market Snapshot gallery rows. Same trace as D-141, same answer: the numbers were never decided,
 they were inherited.
 
-**It predates the ticket and the ticket's fix closes it.** Filed now, separately and before the
-build, because a defect that disappears as a side effect of a feature is a defect that never
-gets recorded — and this one is a false statement printed to a seller, which is the part worth
+**It predates the ticket and the ticket's fix closes it.** Filed first, separately and as `open`,
+because a defect that disappears as a side effect of a feature is a defect that never gets
+recorded — and this one is a false statement printed to a seller, which is the part worth
 remembering happened.
+
+---
+
+**FIXED, AND WHAT THE FIX IS.** One set, sized once in `property_builder.COMP_SET_MAX = 15`.
+Everything downstream derives from it; `apps/api`'s `ComparablesRequest.limit` carries the same
+number and a test parses both files and fails when they drift, because two deployments have no
+other way to share a constant.
+
+The four nearest keep their cards — the photographs are why the card page works — and the rest
+of the set follows on a **continuation page**, a list of every comparable the range was drawn
+from. The builder adds that page to the page set only when there is a rest, beside the two
+conditional DROPS (`market_trends`, `overview`) and before `paginate`, so the page numbers and
+the contents row come out of the existing D-121 machinery rather than a second copy of it. One
+page, not the three that more cards would have cost.
+
+The analysis page's bar chart was `comparables[:4]` too — four bars above a table summarising
+fifteen — and now draws the set. Fixed-width bars overflowed the chart by up to 246px at
+fifteen, measured; they share the width now.
+
+**WHAT THE GATE ASSERTS, WHICH IS THE INVARIANT AND NOT THE CHANGE.** At seven set sizes across
+five themes: the analysis note's count, `stats.total_comps`, the chart's bars and the number of
+comparables actually rendered are **the same number**, and both ends of the range appear
+somewhere a reader can see them. A new cap anywhere in the chain fails it, whichever file it is
+added to. The caps-collapse alone could be undone by the next person adding a slice to make a
+page fit, which is precisely how `[:4]` arrived.
+
+Two parts of the gate are worth naming separately:
+
+* **It is parsed, not grepped** — and the first version was grepped, and was answered by *this
+  file's own prose about the defect*, twice: the template comment explaining why the cap went
+  and the Python comment recording what the cap used to be. Eighth instance of
+  substring-is-not-a-construct, and the first two caught before they shipped.
+* **The page fit is measured in Chromium**, in the worst case the data can produce — all fifteen
+  addresses wrapping to the two-line clamp. A list page that silently overflowed would be this
+  defect wearing the fix's clothes: the rows present in the HTML, off the bottom of the sheet in
+  the PDF, and every count assertion still green. Raising `COMP_SET_MAX` to 22 fails it, which
+  makes the constant and the layout coupled **in the test** rather than only in fact.
+
+**Seven regressions applied and each seen to fail:** a literal cap back in a template; the
+continuation page never added; the consumer `[:6]` restored; the API and the worker set to
+different numbers; the analysis chart back to four bars; `COMP_SET_MAX` raised past what the
+sheet holds; and a live template pulling in the dead template tree (D-160).
+
+**One thing was taken out rather than carried over, and it is a judgement.** The list drops
+**Lot** and **Pool**, which the cards show for the four nearest. Ten columns put the address on
+three lines in three of the five themes and overflowed the page by 390px. The SET is complete —
+every comparable is listed — and two fields that bear on neither the range nor the match are
+not repeated. Putting them back costs a narrower address column and a measurement.
+
+---
+
+### D-160 — a second property-template tree that nothing renders
+
+**Severity:** ROUGH · **Affects:** nothing in production, which is the point · **Found during:**
+scoping D-159's template gate
+**Status:** `open`
+
+`templates/property/` holds **two** template trees.
+
+| | files | lines | rendered |
+|---|---|---|---|
+| `<theme>/<theme>_report.jinja2` | 5 | ~16,000 | yes — `THEME_TEMPLATES` points here |
+| `<theme>/<theme>.jinja2` + `_base/base.jinja2` + `_base/_macros.jinja2` | 7 | **15,628** | **no** |
+
+The second set extends `_base/base.jinja2`, which imports `_base/_macros.jinja2`. Nothing
+reaches any of it: `THEME_TEMPLATES` names only the five `*_report.jinja2`, and none of those
+five carries an `extends`, `import`, `include` or `from`. Fifteen thousand lines of templates
+that cannot render.
+
+**Why it is filed rather than deleted here.** It still carries `comparables[:4]` in seven
+places, so D-159's gate had to decide whether to cover it. Covering it would have meant fixing
+it, and fixing dead code is how dead code survives another year. The gate is scoped to the live
+five and **asserts that the exclusion is a fact** — `test_the_live_template_set_is_the_five_entry_files`
+fails the moment a live template pulls one of these in, which is the only way the dead set can
+become reachable. §0.6: an unstated boundary reads as none, so the boundary is stated and
+checked.
+
+**What it costs while it sits there.** Every grep for a template construct returns it, and
+every answer is wrong in the same direction — it looks like a site that needs fixing and is
+not. Three sweeps in this project have already been sized against file counts that included
+it. Deleting it is one commit and a `git log` check that nothing references the paths; it needs
+somebody to confirm it is not a staging ground for a redesign, which is why it is a question
+rather than a change.
 
 ---
 
