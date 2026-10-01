@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 50 | Real, unfixed |
+| `open` | 51 | Real, unfixed |
 | `fixed` | 105 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **160** | D-001 … D-160, contiguous, no duplicates |
+| **Total** | **161** | D-001 … D-161, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 13 · ROUGH 21. (Sums to 50, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 13 · ROUGH 21. (Sums to 51, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9748,6 +9748,64 @@ number that explains itself.
 
 **§0.6, added with this entry:** *a finding is not new until you have looked for it in the
 record.* One grep of `DEFECT_LIST.md` for `template` would have answered it.
+
+---
+
+### D-161 — the market surface's only contrast defect is one construct, measured for the first time since C and D
+
+**Severity:** WRONG · **Affects:** every market report PDF, all ten types, all six brands ·
+**Found during:** reviewing Claude Design's market handoff, which needed a baseline to be judged against
+**Status:** `open`
+
+There was no current number for this surface. D-129's 213 is the **property** report; the
+2026-09-29 market audit predates Workstreams C and D, which rewrote the market templates. So the
+gate's own 60-document market corpus (10 report types × 6 brands) was measured with the pixel
+instrument, 2026-10-01:
+
+| | |
+|---|---|
+| runs | **5,058** |
+| failing | **66** |
+| combinations | **6** |
+| declined | **0** |
+| worst | **2.66:1** |
+
+**All sixty-six are status or tier badges** — coloured text on a tinted chip of the same hue.
+Not one brand-colour failure, not one neutral failure. Nothing else on the surface fails.
+
+| ratio | pairing | runs | what |
+|---|---|---|---|
+| 2.66 | `#ca8a04` on `#faf3e5` | 18 | `span.status-badge.pending` |
+| 2.85 | `#d97706` on `#fef1db` | 6 | `span.listing-tier-badge` "High" |
+| 2.89 | `#16a34a` on `#def6e7` | 6 | tier "Median" |
+| 2.95 | `#16a34a` on `#e7f6ed` | 18 | `span.status-badge.active` |
+| 4.12 | `#dc2626` on `#fbe9e9` | 12 | `span.status-badge.closed` |
+| 4.35 | `#2563eb` on `#e2ecfe` | 6 | tier "Low" |
+
+**This surface is in far better shape than the property one** — 1.3% of runs against 9.2% — and
+what remains is a single construct used six ways. Workstreams C and D did that, and nobody had
+counted it, which is why it is filed now rather than claimed.
+
+**REMOVING THE TINT IS NOT THE FIX, AND THAT IS THE USEFUL PART.** Claude Design's market
+handoff proposes exactly that — *"Status/delta colour: text only, never fills"*. On white:
+
+| badge | on the chip | on white | |
+|---|---|---|---|
+| `#dc2626` | 4.12 | **4.83** | fixed |
+| `#2563eb` | 4.35 | **5.17** | fixed |
+| `#16a34a` | 2.95 | 3.30 | still fails |
+| `#ca8a04` | 2.66 | 2.94 | still fails |
+| `#d97706` | 2.85 | 3.19 | still fails |
+
+Roughly 0.35 of headroom, two of six fixed. **The hues are too light for 4.5 on white at badge
+size**, so the remedy is a darker *ink* variant per semantic — the move `primary_ink` already
+makes for the brand — not a different surface behind the same green.
+
+**And the same construct is being imported onto the surface that does not have it.** Claude
+Design's *property* handoff adds status pills: Sold `#dc2626` on `#fee2e2` 3.95, Pending
+`#d97706` on `#fef3c7` 2.86, Active `#059669` on `#d1fae5` 3.32 — declared "semantic and fixed",
+on a surface with no status badges today. One construct, two packages, opposite directions, and
+the net worse than either alone. See `docs/DESIGN_HANDOFF_REVIEW_2026-10-01.md` §8.3a and §9.2a.
 
 ---
 
