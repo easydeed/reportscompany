@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 53 | Real, unfixed |
-| `fixed` | 100 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 52 | Real, unfixed |
+| `fixed` | 101 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | **Total** | **157** | D-001 … D-157, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 14 · ROUGH 22. (Sums to 53, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 22. (Sums to 52, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -6636,7 +6636,7 @@ painting a shape the size of the image and saying nothing.
 
 **Severity:** WRONG · **Affects:** the `price_bands` email · **Found during:** Workstream B
 (register item **B6**), re-verified 2026-09-29
-**Status:** `open`
+**Status:** `fixed` — `fix/d115-price-band-bars`
 
 The second register item with no board entry. `email/template.py:1053`, `_band_rows`:
 
@@ -6663,6 +6663,37 @@ diff cannot also change what renders. The docstring says so. The defect is untou
 decision: whether a 4%-of-total band should be drawn as a 4% sliver or whether the chart wants a
 second, explicitly-labelled "relative to largest" reading. The 2% floor already in the code exists
 so a one-listing band does not vanish, and survives either choice.
+
+> **FIXED 2026-10-01 — `fix/d115-price-band-bars`. The sliver, and the floor did not survive.**
+>
+> **The width is PARSED FROM THE LABEL, not recomputed from the total.** Deriving both from
+> `count / total` would leave the bar and the label able to differ by a rounding step — the same
+> defect one order of magnitude down. Parsing the printed string makes the bar a picture of the
+> number the reader is comparing it against, exactly, including its rounding.
+>
+> **The 2% floor is gone, and that is the judgement in this entry.** Kept, it draws a 2% bar
+> beside a label reading 0% or 1% — this defect again, smaller. The count is printed on every
+> row (`"N listings"`), so a band with listings is never invisible; only its bar is, and only
+> when its share rounds to zero, which is what its label says too. Restoring the floor means
+> accepting a bar that contradicts its label, and that is the whole of what was wrong here.
+> A band that draws no bar now omits the filled `<td>` rather than setting `width="0%"`, which
+> several mail clients render as a hairline.
+>
+> **An unreadable label draws no bar rather than a guessed one.** `_label_share` returns `None`
+> and the width is 0. A bar drawn from a fallback would be this defect in its original form.
+>
+> `max_count` at the caller became unused and was **removed rather than left** — an unused
+> normaliser is an invitation to normalise.
+>
+> **The tests assert the RELATION — the bar equals the label on this row — read out of the
+> rendered email**, never a table of expected widths, which would have to be maintained
+> alongside the code and would then agree with it by construction. The fixtures are deliberately
+> lopsided: at 50/50 the old code and the new agree on every row, so a balanced fixture would
+> have passed against the defect. Move-Up at 64 of 100 is the register's own case — largest
+> band, so the old code drew 100% beside a label reading 64%.
+>
+> Two regressions applied and each seen to fail: `count / max_count` restored (8 tests), and the
+> 2% floor restored on top of the correct width (4 tests).
 
 ---
 
@@ -9345,7 +9376,22 @@ on prose about the thing it forbids. §0.6, the entry it is an instance of.
 *mentions* the audience, not that the sense is right. `_audience != 'agent'` passes it. That is
 deliberate — reading the sense out of an AST is a worse test than rendering the document, and
 the rendered consumer gate catches exactly that inversion. Verified by applying it: the
-structural test stayed green and two render tests fired. **Five further regressions, each seen
+structural test stayed green and two render tests fired.
+
+> **THE AST GATE IS NOT COVERAGE FOR THIS PROPERTY. DO NOT READ IT AS SUCH.**
+>
+> A flipped operator — `==` to `!=`, one character — puts a third party's name from the
+> assessor roll onto a report a stranger requested, and
+> `test_an_owner_identity_field_is_only_reachable_on_the_agent_path` stays **green** on all
+> five themes while it happens. The only thing standing between that edit and the disclosure
+> is `test_no_assessor_owner_name_reaches_a_consumer_report`, which renders.
+>
+> So the render tests are load-bearing for a security-adjacent property, on five themes, and
+> the structural gate is a *supplement* that covers the orthogonal failure — a sixth theme
+> added with no gate at all, which the render tests cannot see because they only render the
+> five that exist. Each covers what the other cannot. Neither is sufficient alone, and
+> anybody who deletes the render half because "the AST test already checks the owner block"
+> will have removed the half that matters. **Five further regressions, each seen
 to fail:** the condition dropped, the row moved into the `{% else %}`, the condition inverted
 (render tests only), the block deleted from one theme, and `mailing_address` restored *inside*
 the agent gate — the one a gatedness-only test would wave through.

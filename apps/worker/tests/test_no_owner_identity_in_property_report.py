@@ -35,6 +35,25 @@ contains the word `mailing_address` while describing why it is absent —
 §0.6's "a substring is not a construct", which this file's previous version
 would have failed on.
 
+THIS FILE IS NOT COVERAGE FOR THE DISCLOSURE. READ THIS BEFORE TRUSTING IT.
+---------------------------------------------------------------------------
+The gate below checks that a branch MENTIONS the audience. It does not check
+that the sense is right, and it cannot — `_audience != 'agent'` passes it.
+That is one character away from putting a name off the assessor roll onto a
+report a stranger requested, with every test in this file green.
+
+The only thing standing between that edit and the disclosure is
+`test_no_assessor_owner_name_reaches_a_consumer_report` in
+`test_consumer_names_the_requester.py`, which RENDERS the consumer path and
+greps the output. Confirmed by applying the inversion: this file stayed
+green, two render tests fired.
+
+The two halves cover different failures and neither is sufficient alone.
+The render tests see the sense, on the five themes that exist. This file
+sees a SIXTH theme added with no gate at all, which the render tests cannot,
+because they only render the five. If you are here to delete the render half
+because "the AST test already checks the owner block", you have it backwards.
+
 WHY MAILING ADDRESS IS STILL ON THE LIST
 ----------------------------------------
 For an absentee owner it is not a fact about the property — it is where that
