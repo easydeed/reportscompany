@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&amp;family=Geist:wght@400;500;600;700&amp;family=Barlow+Condensed:wght@600;700&amp;family=Barlow:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>body{margin:0;background:#E9E8E4;color:#14161A}</style>
+</helmet>
+<div style="display:flex;flex-direction:column;gap:32px;align-items:center;padding:32px 0">
+<sc-for list="{{ pages }}" as="pg" hint-placeholder-count="6">
+  <div data-screen-label="{{ pg.label }}" style="width:816px;height:1056px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;overflow:hidden;font-family:{{ body }};color:#14161A;box-sizing:border-box;position:relative">
+
+    <div style="height:40px;flex-shrink:0;padding:0 52px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ECECE8;font-size:10.5px;color:#5E636B;letter-spacing:0.06em;text-transform:uppercase">
+      <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Property report · {{ shortAddress }}</span>
+      <span>{{ dateLabel }}</span>
+    </div>
+
+    <sc-if value="{{ pg.isCover }}" hint-placeholder-val="{{ true }}">
+      <div style="background: {{ primary }}; color: #FFFFFF; padding: 36px 52px 32px; display: flex; flex-direction: column; gap: 26px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;letter-spacing:0.12em;text-transform:uppercase;opacity:0.85">{{ reportKind }}</span>
+          <span style="height:40px;max-width:200px;display:flex;align-items:center;font-size:18px;font-weight:700;letter-spacing:-0.01em">{{ brandName }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="height:{{ titleBoxH }};display:flex;align-items:flex-end;overflow:hidden"><span style="font-family: {{ display }}; font-weight: {{ displayWeight }}; font-size: {{ titleSize }}; line-height: 1.15; letter-spacing: {{ displayTracking }}; text-transform: {{ displayCase }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; color: #FFFFFF">{{ street }}</span></div>
+          <span style="font-size:22px;font-weight:500;opacity:0.92">{{ cityLine }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid {{ onPrimaryRule }};padding-top:16px">
+          <sc-for list="{{ heroStats }}" as="s" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;gap:3px;padding-right:12px"><span style="font-family: {{ display }}; font-weight: {{ displayWeight }}; font-size: 30px; line-height: 1; letter-spacing: {{ displayTracking }}; color: #FFFFFF">{{ s.v }}</span><span style="font-size:11px;opacity:0.85">{{ s.l }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding:24px 52px 0;display:flex;flex-direction:column;gap:22px;flex:1;min-height:0">
+        <div style="flex:1;min-height:300px;border-radius:{{ radius }};overflow:hidden;background:{{ tint }};position:relative">
+          <sc-if value="{{ hasHero }}" hint-placeholder-val="{{ true }}"><img src="{{ heroPhoto }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if>
+          <sc-if value="{{ noHero }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;color:{{ ink }}"><span style="font-family:{{ display }};font-size:28px;font-weight:{{ displayWeight }};line-height:1">{{ cityName }}</span><span style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;margin-top:6px;opacity:0.8">No photo on file</span></div></sc-if>
+        </div>
+        <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:28px;padding-bottom:20px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600">Prepared for</span>
+            <span style="font-family:{{ display }};font-weight:{{ displayWeight }};font-size:22px;line-height:1.15;letter-spacing:{{ displayTracking }}">{{ preparedFor }}</span>
+            <span style="font-size:13px;color:#5E636B">{{ preparedNote }}</span>
+          </div>
+          <div style="background:{{ tint }};border-radius:{{ radius }};padding:18px 20px;display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600">In short</span>
+            <p style="margin:0;font-size:13.5px;line-height:1.5;color:#2A2D33;max-height:81px;overflow:hidden;text-wrap:pretty">{{ narrative }}</p>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.isHome }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:28px 52px 0;display:flex;flex-direction:column;gap:18px;flex:1;min-height:0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+          <h2 style="margin:0;font-family:{{ display }};font-weight:{{ displayWeight }};font-size:40px;line-height:1;letter-spacing:{{ displayTracking }};text-transform:{{ displayCase }}">Your home</h2>
+          <span style="font-size:12px;color:#5E636B;text-align:right">{{ fullAddress }}<br>APN {{ apn }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div style="height:220px;border-radius:{{ radius }};overflow:hidden;background:{{ tint }};position:relative"><img src="{{ aerialPhoto }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><span style="position:absolute;left:12px;bottom:12px;background:#fff;color:#14161A;font-size:11px;font-weight:600;padding:5px 9px;border-radius:4px">Aerial</span></div>
+          <div style="height:220px;border-radius:{{ radius }};overflow:hidden;background:{{ tint }};position:relative"><img src="{{ streetPhoto }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><span style="position:absolute;left:12px;bottom:12px;background:#fff;color:#14161A;font-size:11px;font-weight:600;padding:5px 9px;border-radius:4px">Street view</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 40px;align-items:start">
+          <sc-for list="{{ detailGroups }}" as="g" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column">
+              <span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600;padding:14px 0 6px;border-bottom:1.5px solid #14161A">{{ g.title }}</span>
+              <sc-for list="{{ g.rows }}" as="r" hint-placeholder-count="7">
+                <div style="display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid #ECECE8;font-size:12.5px"><span style="color:#5E636B;white-space:nowrap">{{ r.l }}</span><span style="font-weight:600;color:{{ r.c }};text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.v }}</span></div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ hasUnknowns }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:14px;align-items:baseline;padding:14px 16px;background:#F6F6F3;border-radius:{{ radius }};font-size:12px;line-height:1.5"><span style="font-weight:700;white-space:nowrap;color:#5E636B">Not on record</span><span style="color:#5E636B">{{ unknownList }}. A dash anywhere in this report means the public record doesn't say, not that the answer is no.</span></div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.isComps }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:32px 52px 0;display:flex;flex-direction:column;gap:20px;flex:1;min-height:0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+          <h2 style="margin:0;font-family:{{ display }};font-weight:{{ displayWeight }};font-size:40px;line-height:1;letter-spacing:{{ displayTracking }};text-transform:{{ displayCase }}">Comparable sales</h2>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span style="display:inline-flex;align-items:center;gap:8px;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:4px;background:{{ tint }};color:{{ ink }};white-space:nowrap"><span style="width:20px;height:20px;border-radius:4px;background:{{ primary }};color:{{ onPrimary }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700">{{ confGrade }}</span>{{ confLabel }}</span><span style="font-size:12px;color:#5E636B;text-align:right">{{ compCount }} homes within {{ compRadius }} · last {{ compWindow }}</span></div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:20px 16px">
+          <sc-for list="{{ comps }}" as="c" hint-placeholder-count="6">
+            <div style="display:flex;flex-direction:column;min-height:0">
+              <div style="position:relative;flex:1;min-height:0;border-radius:{{ radius }};overflow:hidden;background:{{ tint }}">
+                <sc-if value="{{ c.hasPhoto }}" hint-placeholder-val="{{ true }}"><img src="{{ c.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if>
+                <sc-if value="{{ c.noPhoto }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;color:{{ ink }}"><span style="font-family:{{ display }};font-size:20px;font-weight:{{ displayWeight }};line-height:1">{{ c.hood }}</span><span style="font-size:9.5px;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;opacity:0.8">No photo on file</span></div></sc-if>
+                <span style="position:absolute;left:10px;top:10px;background:#fff;color:#14161A;font-size:14px;font-weight:700;padding:4px 8px;border-radius:4px">{{ c.price }}</span>
+                <span style="position:absolute;right:10px;top:10px;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;padding:3px 7px;border-radius:4px;background:{{ c.statusBg }};color:{{ c.statusFg }}">{{ c.status }}</span>
+              </div>
+              <div style="padding-top:9px;display:flex;flex-direction:column;gap:3px">
+                <span style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.address }}</span>
+                <span style="font-size:11px;color:#5E636B">{{ c.specs }}</span>
+                <span style="font-size:11px;color:#5E636B">{{ c.ppsf }} /sq ft · {{ c.dist }} · {{ c.when }}</span>
+                <span style="font-size:11px;color:#8A8E95">Lot {{ c.lot }} · {{ c.hoa }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.isWorth }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:32px 52px 0;display:flex;flex-direction:column;gap:24px;flex:1;min-height:0">
+        <h2 style="margin:0;font-family:{{ display }};font-weight:{{ displayWeight }};font-size:40px;line-height:1;letter-spacing:{{ displayTracking }};text-transform:{{ displayCase }}">What the comparable sales support</h2>
+        <div style="background:#0f172a;color:#fff;border-radius:{{ radius }};padding:36px 36px;display:flex;flex-direction:column;gap:22px">
+          <span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ onDark }};font-weight:600">Range supported by {{ closedCount }} closed sales · confidence {{ confGrade }}, {{ confLabelLower }}</span>
+          <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap"><span style="font-family:{{ display }};font-weight:{{ displayWeight }};font-size:72px;line-height:0.95;letter-spacing:{{ displayTracking }};white-space:nowrap">{{ rangeLow }} – {{ rangeHigh }}</span><span style="font-size:13px;color:rgba(255,255,255,0.8)">median {{ rangeMid }}</span></div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,0.14)"><div style="position:absolute;top:0;bottom:0;left:{{ bandL }};right:{{ bandR }};background:{{ onDark }};border-radius:5px"></div><div style="position:absolute;top:-6px;left:{{ subjectX }};width:3px;height:22px;background:#fff;border-radius:2px;transform:translateX(-50%)"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.8)"><span>{{ axisLow }}</span><span style="color:#fff;font-weight:600">▲ your home's last recorded sale · {{ lastSale }}</span><span>{{ axisHigh }}</span></div>
+          </div>
+          <p style="margin:0;font-size:12px;line-height:1.5;color:rgba(255,255,255,0.8);text-wrap:pretty">This is what recent sales of similar homes nearby support. It is a report of the market, not an appraisal, and a listing price is a conversation with your agent.</p>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 110px 110px 110px;gap:12px;padding-bottom:8px;border-bottom:1.5px solid #14161A;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B"><span></span><span style="text-align:right;color:{{ ink }};font-weight:700">Your home</span><span style="text-align:right">Low</span><span style="text-align:right">Median</span><span style="text-align:right">High</span></div>
+          <sc-for list="{{ compareRows }}" as="r" hint-placeholder-count="5">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px 110px 110px 110px;gap:12px;padding:13px 0;border-bottom:1px solid #ECECE8;font-size:13.5px;font-variant-numeric:tabular-nums"><span style="color:#5E636B">{{ r.l }}</span><span style="text-align:right;font-weight:700;color:{{ r.sc }}">{{ r.s }}</span><span style="text-align:right">{{ r.lo }}</span><span style="text-align:right">{{ r.mid }}</span><span style="text-align:right">{{ r.hi }}</span></div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600;padding-bottom:6px">Each sale</span>
+          <sc-for list="{{ compBars }}" as="b" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:170px minmax(0,1fr) 90px;gap:12px;align-items:center;font-size:12.5px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.address }}</span><div style="height:22px;background:#F1F1EE;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ b.w }};background:{{ primary }};border-radius:3px"></div></div><span style="text-align:right;font-weight:600;font-variant-numeric:tabular-nums">{{ b.price }}</span></div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.isMarket }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:32px 52px 0;display:flex;flex-direction:column;gap:32px;flex:1;min-height:0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+          <h2 style="margin:0;font-family:{{ display }};font-weight:{{ displayWeight }};font-size:40px;line-height:1;letter-spacing:{{ displayTracking }};text-transform:{{ displayCase }}">Your market</h2>
+          <span style="font-size:12px;color:#5E636B;text-align:right">{{ cityName }} · {{ marketWindow }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1.5px solid #14161A">
+          <sc-for list="{{ marketStats }}" as="s" hint-placeholder-count="4">
+            <div style="padding:22px 16px 22px 0;display:flex;flex-direction:column;gap:6px;border-right:1px solid #ECECE8"><span style="font-family:{{ display }};font-weight:{{ displayWeight }};font-size:44px;line-height:1;letter-spacing:{{ displayTracking }};color:{{ s.c }}">{{ s.v }}</span><span style="font-size:11.5px;color:#5E636B">{{ s.l }}</span></div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;font-weight:700">{{ moiHeadline }}</span><span style="font-size:12px;line-height:1.5;color:#5E636B">{{ moiNote }}</span></div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">
+            <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;height:44px">
+              <sc-for list="{{ moiCells }}" as="m" hint-placeholder-count="8"><div style="background:{{ m.bg }};border-radius:3px"></div></sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:4fr 2fr 2fr;gap:4px;font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:#5E636B"><div style="border-top:2px solid #14161A;padding-top:6px">Seller's · under 4 mo</div><div style="border-top:2px solid #B9BBC1;padding-top:6px">Balanced</div><div style="border-top:2px solid #DADBDF;padding-top:6px">Buyer's · 6+</div></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;flex:1;min-height:0">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600">Median sale price · last 6 months</span><span style="font-size:11px;color:#5E636B">Thousands of dollars</span></div>
+          <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;flex:1;min-height:0">
+            <div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;font-size:10px;color:#8A8E95;text-align:right;font-variant-numeric:tabular-nums"><span>{{ yTop }}</span><span>{{ yMid }}</span><span>{{ yBot }}</span></div>
+            <div style="position:relative;height:100%;border-left:1px solid #D9DADF;border-bottom:1px solid #14161A">
+              <div style="position:absolute;left:0;right:0;top:50%;border-top:1px dashed #E4E4E0"></div>
+              <div style="position:absolute;inset:0;display:grid;grid-template-columns:repeat(6,1fr);gap:18px;padding:0 14px;align-items:end">
+                <sc-for list="{{ months }}" as="m" hint-placeholder-count="6">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end"><span style="font-size:11px;font-weight:700;font-variant-numeric:tabular-nums">{{ m.v }}</span><div style="width:100%;height:{{ m.h }};background:{{ m.bg }};border-radius:3px 3px 0 0"></div></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:44px 1fr;gap:10px;padding-bottom:24px"><span></span><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:18px;padding:0 14px;font-size:10.5px;color:#5E636B;text-align:center"><sc-for list="{{ months }}" as="m" hint-placeholder-count="6"><span>{{ m.l }}</span></sc-for></div></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ pg.isNotes }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:32px 52px 0;display:flex;flex-direction:column;gap:32px;flex:1;min-height:0">
+        <h2 style="margin:0;font-family:{{ display }};font-weight:{{ displayWeight }};font-size:40px;line-height:1;letter-spacing:{{ displayTracking }};text-transform:{{ displayCase }}">Next steps</h2>
+        <div style="background:{{ primary }};color:{{ onPrimary }};border-radius:{{ radius }};padding:44px 40px;display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:28px;align-items:center">
+          <div style="width:120px;height:120px;border-radius:999px;background:#fff;color:{{ ink }};display:flex;align-items:center;justify-content:center;font-family:{{ display }};font-weight:{{ displayWeight }};font-size:42px">{{ initials }}</div>
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:0"><span style="font-family: {{ display }}; font-weight: {{ displayWeight }}; font-size: 32px; line-height: 1; letter-spacing: {{ displayTracking }}; color: #FFFFFF">{{ agentName }}</span><span style="font-size:14px;opacity:0.9">{{ brandName }} · DRE #{{ license }}</span><span style="font-size:13px;opacity:0.9;line-height:1.5;max-width:400px;text-wrap:pretty">{{ agentBlurb }}</span></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><span style="background:#fff;color:{{ ink }};font-size:15px;font-weight:700;padding:12px 18px;border-radius:{{ radius }};white-space:nowrap">{{ agentPhone }}</span><span style="font-size:13px;opacity:0.9">{{ agentEmail }}</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;padding-top:8px">
+          <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600">How the comparables were chosen</span><p style="margin:0;font-size:15px;line-height:1.6;color:#2A2D33;text-wrap:pretty">Closed sales within {{ compRadius }} of your home in the last {{ compWindow }}, matched on property type and kept within roughly 25% of your home's living area. Listings still on the market are shown for context and not counted in the range.</p></div>
+          <div style="display:flex;flex-direction:column;gap:12px"><span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600">Where the data comes from</span><p style="margin:0;font-size:15px;line-height:1.6;color:#2A2D33;text-wrap:pretty">Sales and listings from CRMLS, pulled {{ dateLabel }}. Property details from the county assessor's public record. A dash means the record is silent, not that the answer is no.</p></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;flex:1"><span style="font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;color:{{ ink }};font-weight:600">If you're thinking about selling</span><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px"><sc-for list="{{ nextSteps }}" as="s" hint-placeholder-count="3"><div style="background:{{ tint }};border-radius:{{ radius }};padding:18px 20px;display:flex;flex-direction:column;gap:8px"><span style="font-family:{{ display }};font-weight:{{ displayWeight }};font-size:30px;line-height:1;color:{{ ink }}">{{ s.n }}</span><span style="font-size:14px;font-weight:700">{{ s.t }}</span><span style="font-size:13px;line-height:1.5;color:#5E636B">{{ s.b }}</span></div></sc-for></div></div>
+        <div style="padding:16px 0;border-top:1px solid #ECECE8;font-size:10.5px;line-height:1.5;color:#8A8E95;text-wrap:pretty">Information is deemed reliable but not guaranteed. This report is not an appraisal and is not intended to be relied upon as one. {{ consumerDisclosure }}</div>
+      </div>
+    </sc-if>
+
+    <div style="margin:0 52px;padding:14px 0 22px;border-top:1px solid #E4E4E0;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;flex-shrink:0">
+      <span><strong style="font-weight:700">{{ agentName }}</strong> <span style="color:#5E636B">· {{ brandName }} · {{ agentPhone }}</span></span>
+      <span style="color:#5E636B;font-variant-numeric:tabular-nums">Page {{ pg.n }} of {{ pageCount }}</span>
+    </div>
+  </div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;elegant&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;elegant&quot;,&quot;bold&quot;,&quot;modern&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;brand&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;teal&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;red&quot;,&quot;teal&quot;,&quot;cyan&quot;,&quot;amber&quot;,&quot;lime&quot;,&quot;violet&quot;],&quot;section&quot;:&quot;Theme&quot;},&quot;path&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;agent&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;agent&quot;,&quot;consumer&quot;],&quot;section&quot;:&quot;Data&quot;},&quot;hasMarket&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Data&quot;},&quot;missingPhotos&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Data&quot;},&quot;street&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;2143 Bonita Avenue&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Data&quot;},&quot;city&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;La Verne&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Data&quot;},&quot;brandName&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;Coastline Realty&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentName&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;Jordan Reyes&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentPhone&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;(909) 555-0142&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentEmail&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;jordan@coastlinerealty.com&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;requesterName&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;Sam Whitaker&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;brandHex&quot;:{&quot;editor&quot;:null,&quot;default&quot;:null,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  static BRANDS = { red: "#DC2626", teal: "#0D9488", cyan: "#0E7490", amber: "#F59E0B", lime: "#84CC16", violet: "#7C3AED" };
+  static THEMES = {
+    elegant: { display: "'Cormorant Garamond', Georgia, serif", body: "'Geist', system-ui, sans-serif", displayWeight: 500, displayTracking: "-0.01em", displayCase: "none", radius: "0px" },
+    bold: { display: "'Barlow Condensed', 'Arial Narrow', sans-serif", body: "'Barlow', system-ui, sans-serif", displayWeight: 700, displayTracking: "0", displayCase: "uppercase", radius: "4px" },
+    modern: { display: "'Manrope', system-ui, sans-serif", body: "'Manrope', system-ui, sans-serif", displayWeight: 800, displayTracking: "-0.035em", displayCase: "none", radius: "14px" }
+  };
+  static rgb(h) { h = h.replace("#", ""); if (h.length === 3) h = h.split("").map(c => c + c).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); }
+  static hex(r, g, b) { return "#" + [r, g, b].map(c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, "0")).join(""); }
+  static lum(h) { const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; const [r, g, b] = Component.rgb(h); return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); }
+  static contrast(a, b) { const la = Component.lum(a), lb = Component.lum(b); return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05); }
+  static derive(p) {
+    const C = Component, WHITE = "#ffffff", NB = "#14151a", DARK = "#0f172a";
+    const scale = (h, f) => C.hex(...C.rgb(h).map(c => c * f));
+    let ink = p.toLowerCase(); for (let i = 0; i < 64 && C.contrast(ink, WHITE) < 4.5; i++) { const s = scale(ink, 0.94); if (s === ink) break; ink = s; }
+    const brighten = h => { let [r, g, b] = C.rgb(h).map(c => c / 255); const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let v = mx, s = mx ? (mx - mn) / mx : 0, hh = 0; const d = mx - mn; if (d) { hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; hh /= 6; if (hh < 0) hh += 1; } if (v >= 1) s = Math.max(0, s - 0.04); else v = Math.min(1, v + 0.04); const i = Math.floor(hh * 6), f = hh * 6 - i, pp = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s); const m = [[v, t, pp], [q, v, pp], [pp, v, t], [pp, q, v], [t, pp, v], [v, pp, q]][i % 6]; return C.hex(...m.map(c => c * 255)); };
+    let od = p.toLowerCase(); for (let i = 0; i < 64 && C.contrast(od, DARK) < 4.5; i++) { const s = brighten(od); if (s === od) { od = WHITE; break; } od = s; }
+    const [r, g, b] = C.rgb(p); const tint = C.hex(r * 0.06 + 255 * 0.94, g * 0.06 + 255 * 0.94, b * 0.06 + 255 * 0.94);
+    return { primary: p.toLowerCase(), primaryDark: scale(p, 0.78), ink, onPrimary: C.contrast(WHITE, p) >= C.contrast(NB, p) ? WHITE : NB, tint, onDark: od };
+  }
+  renderVals() {
+    const P = this.props, C = Component;
+    const theme = C.THEMES[P.theme] || C.THEMES.elegant;
+    const brandHex = C.BRANDS[P.brand] || P.brandHex || C.BRANDS.teal;
+    const T = C.derive(brandHex);
+    const consumer = (P.path || "agent") === "consumer";
+    const hasMarket = P.hasMarket !== false;
+    const missingPhotos = !!P.missingPhotos;
+    const street = P.street || "2143 Bonita Avenue";
+    const cityName = P.city || "La Verne";
+    const len = street.length;
+    const titleSize = len <= 18 ? "64px" : len <= 24 ? "54px" : len <= 30 ? "46px" : len <= 38 ? "38px" : "32px";
+    const dash = "—", DASHC = "#B9BBC1";
+    const known = (l, v, fmt) => ({ l, v: v == null || v === "" ? dash : fmt ? fmt(v) : String(v), c: v == null || v === "" ? DASHC : "#14161A" });
+    const num = v => Math.round(v).toLocaleString();
+    const beds = 3, baths = P.bathsKnown === false ? null : 2, sqft = 1642, year = 1949, lot = 7405;
+    const g1 = [known("Bedrooms", beds, v => v === 0 ? "Studio" : v), known("Bathrooms", baths), known("Living area", sqft, v => num(v) + " sq ft"), known("Lot size", lot, v => num(v) + " sq ft"), known("Year built", year), known("Property type", "Single-family"), known("Stories", null), known("Pool / spa", null)];
+    const g2 = [known("APN", "8371-014-022"), known("Last sale", "$612,000 · Mar 2019"), known("Assessed value", 655200, v => "$" + num(v)), known("Land / improvements", "$392,100 / $263,100"), known("Annual tax", 8190, v => "$" + num(v) + " · 2025"), known("Tax status", null), known("HOA", "None"), known("Zoning", null), known("Garage", null)];
+    const g3 = [known("District", "Bonita Unified"), known("Elementary", "Roynon Elementary"), known("Middle", "Ramona Middle"), known("High", "Bonita High")];
+    if (!consumer) g2.splice(0, 0, known("Owner of record", "Maria & Luis Chen"));
+    const unknown = [...g1, ...g2].filter(r => r.v === dash).map(r => r.l).concat(["Fireplace", "Total rooms", "Use code", "Census tract"]);
+    const U = "https://images.unsplash.com/photo-", Q = "?w=640&h=480&fit=crop";
+    const rawComps = [
+      ["1583608205776-bfd35f0d9f83", 641000, "2210 Bonita Ave", 3, 2, 1590, "Sold", "0.2 mi", "Jul 2026", "Bonita"],
+      ["1600585154340-be6161a56a0c", 598000, "1847 Third St", 3, 2, 1480, "Sold", "0.4 mi", "Jun 2026", "Old Town"],
+      ["1570129477492-45c003edd2be", 705000, "2480 Damien Ave", 4, 2, 1810, "Sold", "0.5 mi", "Aug 2026", "Damien"],
+      ["1600596542815-ffad4c1539a9", 569000, "1920 Fifth St", 3, 1, 1390, "Sold", "0.6 mi", "May 2026", "Old Town"],
+      ["1598228723793-52759bba239c", 672000, "2355 Walnut St", 3, 2, 1700, "Pending", "0.3 mi", "Listed Sep", "Bonita"],
+      ["1512917774080-9991f1c4c750", 689000, "2014 Wheeler Ave", 4, 2, 1760, "Sold", "0.7 mi", "Apr 2026", "Lordsburg"]
+    ];
+    const ST = { Sold: ["#dc2626", "#fee2e2"], Active: ["#059669", "#d1fae5"], Pending: ["#d97706", "#fef3c7"] };
+    const lots = [6900, 5800, 8200, 6100, 7000, 7600], hoas = [0, null, 0, 0, 85, 0];
+    const comps = rawComps.map((c, i) => { const noPhoto = missingPhotos && (i === 1 || i === 4); return { lot: num(lots[i]) + " sq ft", hoa: hoas[i] === null ? "HOA —" : hoas[i] === 0 ? "No HOA" : "HOA $" + hoas[i] + "/mo", photo: U + c[0] + Q, hasPhoto: !noPhoto, noPhoto, price: "$" + num(c[1]), address: c[2], specs: `${c[3]} bd · ${c[4]} ba · ${num(c[5])} sq ft`, ppsf: "$" + Math.round(c[1] / c[5]), status: c[6], statusFg: ST[c[6]][0], statusBg: ST[c[6]][1], dist: c[7], when: c[8], hood: c[9], p: c[1], s: c[5], y: [1951, 1948, 1962, 1946, 1955, 1958][i], closed: c[6] === "Sold" }; });
+    const closed = comps.filter(c => c.closed).map(c => c.p).sort((a, b) => a - b);
+    const confGrade = P.confidence || "A", confLabel = { A: "Strict match", B: "Relaxed match · wider radius", C: "Broad match · older sales", D: "Thin market" }[confGrade];
+    const lo = closed[0], hi = closed[closed.length - 1], mid = closed[Math.floor(closed.length / 2)];
+    const axisLo = Math.floor(lo * 0.92 / 1000) * 1000, axisHi = Math.ceil(hi * 1.06 / 1000) * 1000;
+    const pct = v => Math.round((v - axisLo) / (axisHi - axisLo) * 1000) / 10 + "%";
+    const lastSale = 612000;
+    const short = v => v >= 1e6 ? "$" + (v / 1e6).toFixed(2).replace(/0$/, "") + "M" : "$" + Math.round(v / 1000) + "K";
+    const ppsfs = comps.filter(c => c.closed).map(c => c.p / c.s).sort((a, b) => a - b), sqs = comps.filter(c => c.closed).map(c => c.s).sort((a, b) => a - b), yrs = comps.filter(c => c.closed).map(c => c.y).sort((a, b) => a - b);
+    const m = a => a[Math.floor(a.length / 2)];
+    const compareRows = [
+      { l: "Sale price", s: "$" + num(lastSale) + " (2019)", sc: "#14161A", lo: "$" + num(lo), mid: "$" + num(mid), hi: "$" + num(hi) },
+      { l: "Price per sq ft", s: "$" + Math.round(lastSale / sqft) + " (2019)", sc: "#14161A", lo: "$" + Math.round(ppsfs[0]), mid: "$" + Math.round(m(ppsfs)), hi: "$" + Math.round(ppsfs[ppsfs.length - 1]) },
+      { l: "Living area", s: num(sqft) + " sq ft", sc: "#14161A", lo: num(sqs[0]), mid: num(m(sqs)), hi: num(sqs[sqs.length - 1]) },
+      { l: "Year built", s: String(year), sc: "#14161A", lo: String(yrs[0]), mid: String(m(yrs)), hi: String(yrs[yrs.length - 1]) },
+      { l: "Bedrooms", s: String(beds), sc: "#14161A", lo: "3", mid: "3", hi: "4" }
+    ];
+    const compBars = [...comps].sort((a, b) => b.p - a.p).map(c => ({ address: c.address + (c.closed ? "" : " · pending"), w: Math.round(c.p / hi * 100) + "%", price: "$" + num(c.p) }));
+    const moi = 2.3;
+    const moiCells = Array.from({ length: 8 }, (_, i) => ({ bg: i < Math.round(moi) ? T.primary : "#EDEDEA" }));
+    const monthsRaw = [["Apr", 618], ["May", 625], ["Jun", 641], ["Jul", 652], ["Aug", 648], ["Sep", 660]];
+    const yTopV = 700, yBotV = 550;
+    const months = monthsRaw.map(([l, v], i) => ({ l, v: "$" + v + "K", h: Math.round((v - yBotV) / (yTopV - yBotV) * 100) + "%", bg: i === monthsRaw.length - 1 ? T.primary : T.primaryDark }));
+    const agentName = P.agentName || "Jordan Reyes";
+    const pageDefs = [
+      ["cover", "Cover", { isCover: true }], ["home", "Your home", { isHome: true }], ["comps", "Comparable sales", { isComps: true }], ["worth", "What the comps support", { isWorth: true }],
+      hasMarket ? ["market", "Your market", { isMarket: true }] : null, ["notes", "Next steps", { isNotes: true }]
+    ].filter(Boolean);
+    const pages = pageDefs.map((d, i) => ({ key: d[0], label: `${i + 1} · ${d[1]}`, n: i + 1, isCover: false, isHome: false, isComps: false, isWorth: false, isMarket: false, isNotes: false, ...d[2] }));
+    return {
+      ...theme, primary: T.primary, ink: T.ink, onPrimary: T.onPrimary, tint: T.tint, onDark: T.onDark,
+      onPrimaryRule: T.onPrimary === "#ffffff" ? "rgba(255,255,255,0.3)" : "rgba(20,21,26,0.25)",
+      pages, pageCount: pages.length,
+      reportKind: consumer ? "Home value report" : "Seller's report",
+      brandName: P.brandName || "Coastline Realty", agentName, initials: agentName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
+      agentPhone: P.agentPhone || "(909) 555-0142", agentEmail: P.agentEmail || "jordan@coastlinerealty.com", license: "02145678",
+      agentBlurb: consumer ? "You asked what your home is worth. Here's what nearby sales say. When you're ready, I'll walk you through what a listing could look like." : "Happy to walk through this with you and talk about timing, pricing and what buyers in La Verne are looking for right now.",
+      dateLabel: "Sep 23, 2026",
+      street, cityName, cityLine: cityName + ", CA 91750", fullAddress: street + ", " + cityName + ", CA 91750", shortAddress: street, apn: "8371-014-022",
+      titleSize, titleBoxH: "78px",
+      heroStats: (() => { const cands = [[beds, "Bedrooms", v => v === 0 ? "Studio" : String(v)], [baths, "Bathrooms", String], [sqft, "Sq ft", num], [year, "Built", String], [lot, "Lot sq ft", num]]; return cands.filter(c => c[0] != null).slice(0, 4).map(c => ({ v: c[2](c[0]), l: c[1] })); })(),
+      hasHero: !missingPhotos, noHero: missingPhotos, heroPhoto: U + "1564013799919-ab600027ffc6?w=1400&h=800&fit=crop",
+      aerialPhoto: U + "1524813686514-a57563d77965?w=800&h=600&fit=crop", streetPhoto: U + "1600047509807-ba8f99d2cdde?w=800&h=600&fit=crop",
+      preparedFor: consumer ? (P.requesterName || "Sam Whitaker") : "The owners of 2143 Bonita Avenue",
+      preparedNote: consumer ? "Requested from " + (P.brandName || "Coastline Realty") + "'s home-value page" : "Prepared at the request of " + agentName,
+      narrative: "Four similar homes within half a mile closed between $569K and $705K in the last five months, with the most recent at $641K. Bonita-area homes are selling in about three weeks at 2.3 months of inventory.",
+      detailGroups: [{ title: "The home", rows: g1 }, { title: "Record & taxes", rows: g2 }, { title: "Schools", rows: g3 }, { title: "Location", rows: [known("County", "Los Angeles"), known("Neighborhood", "Bonita"), known("Census tract", null)] }],
+      hasUnknowns: unknown.length > 0, unknownList: unknown.join(" · "),
+      confGrade, confLabel, confLabelLower: confLabel.toLowerCase(), closedCount: closed.length, compCount: comps.length, compRadius: "0.75 miles", compWindow: "6 months", comps,
+      rangeLow: short(lo), rangeHigh: short(hi), rangeMid: short(mid), axisLow: short(axisLo), axisHigh: short(axisHi),
+      bandL: pct(lo), bandR: (100 - parseFloat(pct(hi))) + "%", subjectX: pct(lastSale), lastSale: "$" + num(lastSale) + " in 2019",
+      compareRows, compBars,
+      marketWindow: "Apr – Sep 2026",
+      marketStats: [{ v: "$660K", l: "Median sale price · ▲ 4.2%", c: T.ink }, { v: "22", l: "Days to contract · ▼ 3", c: "#14161A" }, { v: "64%", l: "Sold in 30 days or less", c: "#14161A" }, { v: "18%", l: "Took a price cut · median $15K", c: "#14161A" }],
+      moiHeadline: "It's a seller's market", moiNote: "2.3 months of inventory. At this pace every home for sale in La Verne would be gone in under three months.",
+      moiCells, months, yTop: "$700K", yMid: "$625K", yBot: "$550K",
+      nextSteps: [{ n: "1", t: "A walkthrough", b: "20 minutes at the house so the range reflects your home, not just the record." }, { n: "2", t: "A pricing plan", b: "Where to list, and what the first two weeks should look like." }, { n: "3", t: "A timeline", b: "When to prepare, when to go live, and what to expect at each step." }],
+      consumerDisclosure: consumer ? "Prepared for the person who requested it and addressed to them by name; it does not contain owner-of-record information." : ""
+    };
+  }
+}
+</script>
+</body>
+</html>
