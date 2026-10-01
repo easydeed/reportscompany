@@ -28,6 +28,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from worker.template_filters import (
     format_currency as _fmt_currency,
     format_currency_short as _fmt_currency_short,
+    format_measure as _fmt_measure,
     format_number as _fmt_number,
     truncate as _truncate_fn,
 )
@@ -833,6 +834,11 @@ class PropertyReportBuilder:
             self.page_set = selected_pages
         else:
             self.page_set = ["cover", "contents", "aerial", "property", "analysis", "comparables", "range"]
+
+        #: D-142: pages the caller asked for that the render could not produce.
+        #: Set by `render_html`; empty until then, never `None`, so a caller
+        #: reading it does not have to know whether a render has happened.
+        self.pages_dropped: List[str] = []
         
         # Initialize Jinja2 environment - single directory for all templates
         self.env = Environment(
@@ -846,6 +852,7 @@ class PropertyReportBuilder:
         self.env.filters['format_currency'] = _fmt_currency
         self.env.filters['format_currency_short'] = _fmt_currency_short
         self.env.filters['format_number'] = _fmt_number
+        self.env.filters['format_measure'] = _fmt_measure
         self.env.filters['truncate'] = _truncate_fn
         
     @staticmethod
@@ -978,12 +985,31 @@ class PropertyReportBuilder:
             "last_sale_price_per_sqft": sitex_data.get("last_sale_price_per_sqft"),
 
             # Tax/Assessment
-            "assessed_value": sitex_data.get("assessed_value") or 0,
-            "tax_amount": sitex_data.get("tax_amount") or 0,
-            "land_value": sitex_data.get("land_value") or 0,
-            "improvement_value": sitex_data.get("improvement_value") or 0,
-            "percent_improved": sitex_data.get("percent_improved") or 0,
-            "improvement_pct": sitex_data.get("percent_improved") or 0,  # V0 template naming
+            #
+            # D-135/D-137: `or 0` ON MONEY. Every one of these is printed
+            # `| format_currency`, and `format_currency(0)` is **"$0"** — a
+            # number, not a gap. The same house rendered `$337,378` of land
+            # when the worker looked it up through SiteX and **$0** when the
+            # wizard supplied the data, because `land_value` and
+            # `improvement_value` are in SiteX's 28 keys and not in the
+            # wizard's 25. Same property, two reports, different numbers,
+            # decided by which code path created it.
+            #
+            # `$0` of land is a claim about a parcel. `0%` improved is a claim
+            # about a building. `None` renders "N/A" through the same filter,
+            # which is D-118's precedent for exactly this — an unknown figure
+            # says it is unknown.
+            #
+            # NOTE, not silently unified: this document now spells absence two
+            # ways, "N/A" from `format_currency(None)` and "-" from `ABSENT`.
+            # Both are honest; they are not the same word. One for the design
+            # handover rather than a change made in passing.
+            "assessed_value": sitex_data.get("assessed_value"),
+            "tax_amount": sitex_data.get("tax_amount"),
+            "land_value": sitex_data.get("land_value"),
+            "improvement_value": sitex_data.get("improvement_value"),
+            "percent_improved": sitex_data.get("percent_improved") or ABSENT,
+            "improvement_pct": sitex_data.get("percent_improved") or ABSENT,  # V0 template naming
             # D-137. Was `or "Current"` — an assertion about a stranger's
             # property taxes, on a field no producer writes.
             "tax_status": sitex_data.get("tax_status") or ABSENT,
@@ -1388,70 +1414,34 @@ class PropertyReportBuilder:
             # Graceful fallback: return first 10 chars (keeps YYYY-MM-DD readable)
             return str(date_str)[:10]
 
-    def _build_neighborhood_context(self) -> Dict[str, Any]:
-        """
-        Build neighborhood statistics context.
-        Uses data from sitex_data if available, otherwise defaults.
-        """
-        sitex_data = self.report_data.get("sitex_data") or {}
-        neighborhood = sitex_data.get("neighborhood") or {}
-        
-        return {
-            "female_ratio": neighborhood.get("female_ratio", "51.5"),
-            "male_ratio": neighborhood.get("male_ratio", "48.5"),
-            "avg_sale_price": neighborhood.get("avg_sale_price", ""),
-            "avg_sqft": neighborhood.get("avg_sqft", ""),
-            "avg_beds": neighborhood.get("avg_beds", "3"),
-            "avg_baths": neighborhood.get("avg_baths", "2"),
-        }
-    
-    def _build_area_analysis_context(self) -> Dict[str, Any]:
-        """
-        Build area analysis context for charts and statistics.
-        """
-        sitex_data = self.report_data.get("sitex_data") or {}
-        area = sitex_data.get("area_analysis") or {}
-        
-        return {
-            "chart_url": area.get("chart_url"),
-            "area_min_radius": area.get("area_min_radius", "0.1 mi"),
-            "area_median_radius": area.get("area_median_radius", "0.5 mi"),
-            "area_max_radius": area.get("area_max_radius", "1.2 mi"),
-            "living_area": sitex_data.get("sqft"),
-            "living_area_low": area.get("living_area_low"),
-            "living_area_median": area.get("living_area_median"),
-            "living_area_high": area.get("living_area_high"),
-            "price_per_sqft": area.get("price_per_sqft"),
-            "price_per_sqft_low": area.get("price_per_sqft_low"),
-            "price_per_sqft_median": area.get("price_per_sqft_median"),
-            "price_per_sqft_high": area.get("price_per_sqft_high"),
-            "year_built": sitex_data.get("year_built"),
-            "year_low": area.get("year_low"),
-            "year_median": area.get("year_median"),
-            "year_high": area.get("year_high"),
-            "lot_size": sitex_data.get("lot_size"),
-            "lot_size_low": area.get("lot_size_low"),
-            "lot_size_median": area.get("lot_size_median"),
-            "lot_size_high": area.get("lot_size_high"),
-            "bedrooms": sitex_data.get("bedrooms"),
-            "bedrooms_low": area.get("bedrooms_low"),
-            "bedrooms_median": area.get("bedrooms_median"),
-            "bedrooms_high": area.get("bedrooms_high"),
-            "bathrooms": sitex_data.get("bathrooms"),
-            "bathrooms_low": area.get("bathrooms_low"),
-            "bathrooms_median": area.get("bathrooms_median"),
-            "bathrooms_high": area.get("bathrooms_high"),
-            "stories": area.get("stories"),
-            "pool": sitex_data.get("pool"),
-            "pool_low": area.get("pool_low"),
-            "pool_median": area.get("pool_median"),
-            "pool_high": area.get("pool_high"),
-            "sale_price": area.get("sale_price"),
-            "sale_price_low": area.get("sale_price_low"),
-            "sale_price_median": area.get("sale_price_median"),
-            "sale_price_high": area.get("sale_price_high"),
-        }
-    
+    # D-136 — `_build_neighborhood_context` and `_build_area_analysis_context`
+    # WERE HERE, AND THEY INVENTED DEMOGRAPHICS. Deleted 2026-10-01.
+    #
+    #     "female_ratio": neighborhood.get("female_ratio", "51.5"),
+    #     "male_ratio":   neighborhood.get("male_ratio",   "48.5"),
+    #     "avg_beds":     neighborhood.get("avg_beds",     "3"),
+    #     "area_min_radius": area.get("area_min_radius", "0.1 mi"),
+    #
+    # They read `sitex_data["neighborhood"]` and `sitex_data["area_analysis"]`,
+    # and neither key is written by either producer of that blob (D-135) — so
+    # the defaults were not defaults, they were the only path. Forty-one
+    # fields of made-up figures, built on every render.
+    #
+    # NO REPORT EVER PRINTED ONE, which is why this was FRAGILE and not WRONG,
+    # and checked again before deleting rather than taken from the entry: no
+    # template in the repository references `neighborhood.<field>` or
+    # `area_analysis.<field>`. Every "neighborhood" in the templates is prose
+    # about an aerial photograph.
+    #
+    # Deleted rather than sourced because the gun was loaded and pointed at a
+    # page nobody has written yet: the contexts sat in `render_html`'s dict
+    # under plausible names, and the first person to add a "Neighborhood" page
+    # would have wired up `51.5% female / 48.5% male` for a census tract
+    # nobody looked at. Sourcing them is a feature with a data supplier behind
+    # it; keeping them until then is a trap with a default value in it.
+    #
+    # `test_no_invented_demographics.py` fails if either name comes back.
+
     @staticmethod
     def _extract_price(comp: Dict) -> Optional[float]:
         """Extract a numeric price from a comp dict, checking all known field names."""
@@ -1606,6 +1596,15 @@ class PropertyReportBuilder:
                     "price", "price_display")}
             raw_price = self._extract_price(comp) or 0
             sqft = comp.get("sqft") or comp.get("living_area") or comp.get("area")
+            # D-125: THE NUMBERS STAY NUMBERS HERE. `format_measure` is applied
+            # in the templates, which is where presentation belongs — and,
+            # more to the point, formatting them here made an audit quieter.
+            # `numeric_leaf_names()` walks these contexts to derive which
+            # fields are numeric, and a field whose value is the STRING
+            # "1949" is not numeric, so seven names dropped out and the
+            # zero-conditional audit silently stopped covering them. That is
+            # D-119's own postmortem, repeated two entries later, in the
+            # function that postmortem is written inside.
             return {
                 "distance": _safe_num(comp.get("distance_miles") or comp.get("distance"), 0),
                 "sqft": _safe_num(sqft, 0),
@@ -1907,6 +1906,12 @@ class PropertyReportBuilder:
         # reports that don't include the Market Trends page.
         page_set = list(self.page_set)  # local copy so we can drop the page if data fails
 
+        # D-142: WHAT WAS ASKED FOR, captured before the first drop.
+        # `self.page_set` is the request; `page_set` below is what survives.
+        # Taking the difference at the end needs the original, and the
+        # original is destroyed one statement at a time by the two drops.
+        requested_pages = list(page_set)
+
         # Allow callers (e.g. test scripts) to pre-inject data and skip the API call.
         market_trends_data = self.report_data.get("market_trends_data") or None
 
@@ -1981,8 +1986,6 @@ class PropertyReportBuilder:
             "images": self._build_images_context(),
             
             # Legacy context (for any remaining old templates)
-            "neighborhood": self._build_neighborhood_context(),
-            "area_analysis": self._build_area_analysis_context(),
             "range_of_sales": self._build_range_of_sales_context(),
             
             # Content sections (use template defaults)
@@ -2039,6 +2042,44 @@ class PropertyReportBuilder:
         page_numbers, contents_keys = paginate(page_set)
         context["page_numbers"] = page_numbers
         context["contents_keys"] = contents_keys
+
+        # ── D-142: say that a page was dropped ────────────────────────────
+        #
+        # A report missing its market-trends page because SimplyRETS was down
+        # was byte-for-byte the same document as one whose page set never
+        # included it. Three readers, none of them served: the recipient saw
+        # a shorter document with no explanation, the agent saw nothing at
+        # all, and we had one `info` line per render in a log nobody reads
+        # per-report.
+        #
+        # THIS IS THE HALF THAT NEEDS NO DECISION. Whether the document says
+        # so, and whether the report row carries a column, are both open and
+        # belong to Jerry and to Claude Design. What does not need deciding
+        # is that the fact should be *computable in aggregate* — "market
+        # trends failed on 40% of consumer reports last week" is the number
+        # the entry says nobody can currently produce, and one structured
+        # WARNING per affected render is enough to produce it.
+        #
+        # `warning`, not `info`: a page the customer asked for and did not
+        # get is not routine, and the old line's level is half of why nobody
+        # was reading it. Nothing is logged when nothing was dropped, so the
+        # line's presence IS the signal.
+        #
+        # `pages_dropped` also goes in the context, so a theme can render it
+        # the day that is decided, and on the builder, so `tasks.py` can
+        # persist it the day a column exists. Neither is wired up here —
+        # putting the value where both can reach it is the part that is
+        # unambiguously ours.
+        pages_dropped = [p for p in requested_pages if p not in page_set]
+        context["pages_dropped"] = pages_dropped
+        self.pages_dropped = pages_dropped
+        if pages_dropped:
+            logger.warning(
+                "pages_dropped=%s requested=%d rendered=%d theme=%s — "
+                "the reader is not told; D-142",
+                ",".join(pages_dropped), len(requested_pages), len(page_set),
+                self.theme_name,
+            )
 
         logger.info("Final page_set: %s", page_set)
         logger.info("Pagination: %s", page_numbers)

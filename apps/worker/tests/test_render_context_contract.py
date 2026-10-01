@@ -246,12 +246,14 @@ SURFACES = [
             "percent_improved", "tax_status", "tax_rate_area", "total_rooms",
             "num_units", "use_code", "mailing_address", "notes",
             "estimated_value",
-            # Two nested blobs SiteX has never returned, whose defaults are
-            # INVENTED figures — `female_ratio "51.5"`, `avg_beds "3"`,
-            # `area_min_radius "0.1 mi"`. No live template renders either
-            # context today, so nothing false is printed; wiring one up would
-            # ship fabricated demographics. D-136.
-            "neighborhood", "area_analysis",
+            # `neighborhood` and `area_analysis` WERE HERE. Two nested blobs
+            # SiteX has never returned, whose defaults were invented figures
+            # — `female_ratio "51.5"`, `avg_beds "3"`, `area_min_radius
+            # "0.1 mi"`. The builders that read them are deleted (D-136), so
+            # they are no longer read, so they are no longer orphans. Removed
+            # from the baseline rather than left: a baseline that still names
+            # a fixed gap stops failing when the gap comes back, which is the
+            # direction nobody checks.
             # Read as `latitude or lat`; only the long spelling is produced,
             # and the group covers it — listed because the short alias is dead.
             # (Grouping means these never reach the orphan list; kept here as

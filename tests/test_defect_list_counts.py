@@ -69,6 +69,14 @@ def parse():
     return out
 
 
+def _summary_table() -> str:
+    """The state table at the top, from its header row to its Total row."""
+    text = DEFECT_LIST.read_text()
+    head = text.index("| State | Count | Meaning |")
+    tail = text.index("| **Total** |", head)
+    return text[head:tail]
+
+
 def stated(pattern, text):
     m = re.search(pattern, text)
     assert m, f"the summary table no longer contains {pattern!r} — if the table was "\
@@ -101,6 +109,46 @@ def test_the_summary_table_matches_the_entries(board):
 
     assert stated(r"\| \*\*Total\*\* \| \*\*(\d+)\*\* \|", text) == len(board), (
         f"the table's total disagrees with the {len(board)} entries parsed"
+    )
+
+
+def test_the_table_has_a_row_for_every_status_and_they_sum_to_the_total(board):
+    """A ROW THAT IS SIMPLY ABSENT IS INVISIBLE TO THE TEST ABOVE.
+
+    The three checks above name the statuses they check. On 2026-10-01 a
+    fifth status appeared — `duplicate`, for an entry that turned out to be
+    a re-filing of D-131 — and every assertion above passed while the table's
+    own rows summed to 159 against a stated total of 160. The table was
+    internally inconsistent and nothing said so, which is the exact failure
+    mode this file was written for, one level up from where it was looking.
+
+    So the rows are derived from the entries rather than listed here: every
+    status that occurs must have a row, and the rows must sum to the total.
+    """
+    counts = collections.Counter(status for status, _ in board.values())
+
+    # THE SUMMARY TABLE ONLY. The first version matched `| `word` | 123 |`
+    # across the whole document and summed to 850, because the file carries a
+    # dozen other two-column tables with a code span in the first cell. The
+    # accidental-selector trap, inside the test that exists to stop the
+    # summary drifting — so the table is sliced out by its own header and
+    # Total row before anything is matched.
+    text = _summary_table()
+
+    rows = {m.group(1): int(m.group(2))
+            for m in re.finditer(r"^\| `([a-z-]+)` \| (\d+) \|", text, re.M)}
+
+    missing = sorted(set(counts) - set(rows))
+    assert not missing, (
+        f"{missing} appear on entries and have no row in the summary table, so "
+        f"those entries are counted in the Total and nowhere else"
+    )
+    wrong = {k: (rows[k], counts[k]) for k in counts if rows[k] != counts[k]}
+    assert not wrong, f"table vs entries, (stated, actual): {wrong}"
+
+    assert sum(rows.values()) == len(board), (
+        f"the table's rows sum to {sum(rows.values())} and it claims "
+        f"{len(board)} entries. A row is missing or a count is wrong."
     )
 
 

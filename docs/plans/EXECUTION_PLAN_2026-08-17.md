@@ -1075,6 +1075,33 @@ it.**
   right for things that are genuinely constants of the decision — a threshold somebody chose,
   the shape of the fixture itself — not for arithmetic over the input.
 
+- **A FINDING IS NOT NEW UNTIL YOU HAVE LOOKED FOR IT IN THE RECORD.** *Added 2026-10-01.*
+  D-160. Scoping D-159's template gate meant deciding whether to cover the property templates
+  nothing renders. That decision rediscovered them, and I wrote the rediscovery up as a new
+  defect — with a line count, a table and an argument — against a board that had carried
+  **D-131, "five unreachable copies of the property templates"**, for a day. One grep of
+  `DEFECT_LIST.md` for `template` would have answered it.
+
+  The failure is specific and it is not forgetfulness: **the board is a write path in practice
+  and a read path only in principle.** Every entry in it was written by somebody who had just
+  investigated something; almost none were read by somebody about to. A document whose whole
+  argument is "so the next person does not rediscover this" has to be searched *by the person
+  rediscovering it*, and the moment to search is the moment the finding feels new — which is
+  exactly the moment it feels unnecessary.
+
+  A duplicate costs more than it looks. The two entries drift, the counts carry the same
+  unfixed thing twice, and the one that gets closed is the one with less in it. The remedy is
+  one line before filing: **grep the board for the noun**, and read what comes back. Where the
+  new finding is a superset — D-160 had two files and a gate D-131 did not — fold it into the
+  existing entry and leave the new number as a pointer, because a number referenced from a
+  commit must not vanish.
+
+  *And its corollary, found in the same hour.* The summary table gained a fifth status and the
+  three assertions guarding it all passed, because each one names the status it checks. The
+  rows summed to 159 against a stated 160 and nothing said so. **A guard that enumerates the
+  cases it knows about cannot see a new case** — the rows are derived from the entries now, and
+  must sum to the total.
+
 ---
 
 ## Phase 0 — Security & Tooling

@@ -33,6 +33,45 @@ def format_number(value: Any) -> str:
         return str(value)
 
 
+def format_measure(value: Any) -> str:
+    """A measured quantity as a person writes it: `1949`, `2`, `1.5`, `0.58`.
+
+    D-125. `_safe_num` returns `float(val)` and the analysis table printed it
+    raw, so every cell that is not currency-formatted carried a `.0`:
+
+        Living Area   786.0    770.0    940.0    912.0
+        Year Built    1949.0   1910.0   1953.0   1952.0
+        Bedrooms      2.0      3.0      2.0      3.0
+
+    `1949.0` as a year and `2.0` as a bedroom count read as machine output in
+    a document a seller is meant to take seriously.
+
+    **NOT `int()`.** `1.5` and `2.5` are real bathroom counts and `0.58` is a
+    real distance, so the rule is "drop a trailing `.0`, keep a genuine
+    fraction". `compute.price_bands.format_price` already does exactly this
+    for currency and is the precedent.
+
+    **NO THOUSANDS SEPARATOR.** The commonest user is Year Built, and `1,949`
+    is a wrong year. Living Area and Lot Size keep `format_number`, which
+    groups and is right for them.
+
+    Anything unparseable passes through unchanged, so `ABSENT` ("-") survives
+    — the same contract `format_currency` and `format_number` have, which
+    D-137 relies on.
+    """
+    if value is None:
+        return "-"
+    try:
+        num = float(value)
+    except (ValueError, TypeError):
+        return str(value)
+    if num == int(num):
+        return str(int(num))
+    # `:g` rather than rstrip: it keeps 0.58 at two places and 1.5 at one,
+    # where a fixed format has to choose and gets one of them wrong.
+    return f"{num:g}"
+
+
 def format_currency_short(value: Any) -> str:
     """Format as short currency: 470000 → '$470k', 1200000 → '$1.2M'."""
     if value is None:
