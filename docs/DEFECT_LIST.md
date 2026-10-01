@@ -61,9 +61,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 52 | Real, unfixed |
-| `fixed` | 98 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 101 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **154** | D-001 … D-154, contiguous, no duplicates |
+| **Total** | **157** | D-001 … D-157, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 22. (Sums to 52, the open total.)
 
@@ -9254,6 +9254,147 @@ dropped exactly those two: 615 → 613 failing runs, 178 → 176 combinations.
 person to work out the real contrast by hand and update it. A blind spot nobody can see the
 size of is the thing this board keeps filing; one that grows silently would be the same defect
 again.
+
+---
+
+### D-155 — the report stopped naming the record owner; the email carrying it did not
+
+**Severity:** BROKEN · **Affects:** every consumer lead-capture delivery, and the CRM record
+· **Found during:** scoping Jerry's personalisation decision
+**Status:** `fixed` — `fix/owner-name-personalisation`
+
+D-116 removed the owner block from all five property templates because an assessor-roll name,
+under a heading calling the reader a "prospect", on a report **anyone can request for any
+address**, reads as surveillance. That fixed the document. The envelope kept the name.
+
+```python
+# tasks.py, the email delivering the report to whoever requested it
+lead_name = (property_data.get("owner_name") or "").split()[0] ...
+greeting = f"Hi {lead_name},"
+```
+
+**A neighbour requesting a report on 123 Oak St received "Hi Gerardo,"** — a third party's
+first name, from public record, in an unsolicited email to a stranger. It is D-116's defect
+exactly, one layer out, and it survived because D-116 was scoped to the templates.
+
+**And at the source.** `lead_pages.py` wrote `payload.name or payload.owner_name` into the
+`leads` table, so the CRM recorded the person who **owns** the house as the person who **asked
+about** it. The form collects a name; the fallback discarded it whenever it was blank and
+substituted a stranger's.
+
+**Why the worker reached for it: the requester's name never arrived.** `lead_pages.py` built
+the `property_data` jsonb the worker reads back and put `owner_name` in it and not `name`. The
+only name in scope was the wrong one. Fixed by carrying `requester_name` — one field, no
+migration, dropped by the existing `None` filter when the form supplied nothing, which is the
+intended behaviour rather than an accident of it.
+
+**No fallback anywhere, and that is the whole rule.** `requester_name()` returns `""` and the
+greeting becomes `"Hi,"`. The only other name available is a third party's; substituting it is
+the defect, not a graceful degradation.
+
+---
+
+### D-156 — the agent's lead notification named the record owner as the lead
+
+**Severity:** WRONG · **Affects:** every consumer lead SMS to an agent · **Found during:**
+the same read as D-155
+**Status:** `fixed` — `fix/owner-name-personalisation`
+
+```python
+lead_name = property_data.get("owner_name")
+send_agent_notification_sms(..., lead_name=lead_name)
+```
+
+Two consequences, and the second is worse. The agent **chases the wrong person by name** — the
+deed holder rather than whoever filled the form. And on a report a neighbour requested, the
+product hands an agent a third party's name as a sales lead, unprompted.
+
+Same one-line cause as D-155 and fixed with the same helper. Filed separately because they are
+different surfaces with different readers, and closing one would not have closed the other.
+
+---
+
+### D-157 — the two report paths now differ on purpose, which has never been true before
+
+**Severity:** FRAGILE · **Affects:** the property report on both paths · **Found during:**
+implementing Jerry's decision
+**Status:** `fixed` — `fix/owner-name-personalisation`
+
+Jerry's decision, 2026-10-01: personalise rather than anonymise. The **consumer** report is
+addressed to whoever requested it, from the lead form, and never carries the owner of record.
+The **agent** report carries the owner of record, under the neutral heading the page already
+has, because an agent running a report on a property knowingly is a different context from a
+stranger typing an address into a lead page. `mailing_address` stays out of both — for an
+absentee owner that is where a person lives, not a fact about the property.
+
+**This is the first DELIBERATE divergence between the two paths.** Every previous one was
+accidental: D-138, D-139, D-140 and D-141 were four field crossings in a single month. A
+difference that is supposed to exist needs a test that fails when it stops existing, and it
+cannot be a test that reads the templates — the templates now legitimately contain an owner
+block.
+
+**TWO DEFENCES, AND EITHER ALONE IS SUFFICIENT TODAY — WHICH IS WHY EACH NEEDED ITS OWN TEST.**
+
+1. the consumer builder does not forward `owner_name` at all;
+2. the templates render the block only when `audience == "agent"`.
+
+The obvious test — render the real consumer path, assert the name is absent — exercises them
+together and **passes when either one is removed**. Found by trying it: dropping the
+`_audience` condition from a theme changed nothing, because the consumer builder omits the
+field, so `property.owner_name` is `""` either way. A defence whose removal is invisible is a
+defence nobody will notice losing.
+
+So there are three tests: both defences together against the realistic failure — a refactor
+reuniting the paths, which loses the flag *and* restores the field (five themes, fires); the
+template gate alone, with the owner data deliberately put in front of it; and the builder
+omission alone, asserted on the context rather than the render, because the render is where
+the other defence would mask it.
+
+`audience` defaults to **"agent"**, not "consumer": the agent path does not set it, and a
+caller that forgets should get the behaviour that is safe to be wrong about — a default of
+"consumer" would silently strip the block from the report meant to have it, which is a defect
+nobody would report.
+
+**Six regressions applied and each seen to fail:** the CRM fallback restored, the paths
+reunited, the template gate dropped from one theme, the builder forwarding the owner again,
+the greeting reverted to `owner_name`, and a third site reading `property_data["owner_name"]`.
+
+**D-116's own gate had to be rewritten rather than deleted, and that is the subtle part.**
+`test_no_owner_identity_in_property_report.py` enforced "no property template references an
+owner identity field" by walking every template — which is now false by decision, so it failed
+ten times. A blanket rule that stops being true cannot be relaxed to nothing, because what it
+protected is still real. It is narrowed to the shape of the new rule: every reference to
+`owner_name` / `secondary_owner` must be reachable only under a branch that tests the audience,
+`mailing_address` under none, **and each of the five themes must actually have the block** —
+without that last clause the first is satisfied by deleting it.
+
+Parsed with Jinja's own parser, not grepped. The comment above each restored block explains
+that `mailing_address` stays out, and in doing so contains the word; a text match would fail
+on prose about the thing it forbids. §0.6, the entry it is an instance of.
+
+**What that structural gate cannot see, stated rather than assumed:** it checks that a branch
+*mentions* the audience, not that the sense is right. `_audience != 'agent'` passes it. That is
+deliberate — reading the sense out of an AST is a worse test than rendering the document, and
+the rendered consumer gate catches exactly that inversion. Verified by applying it: the
+structural test stayed green and two render tests fired.
+
+> **THE AST GATE IS NOT COVERAGE FOR THIS PROPERTY. DO NOT READ IT AS SUCH.**
+>
+> A flipped operator — `==` to `!=`, one character — puts a third party's name from the
+> assessor roll onto a report a stranger requested, and
+> `test_an_owner_identity_field_is_only_reachable_on_the_agent_path` stays **green** on all
+> five themes while it happens. The only thing standing between that edit and the disclosure
+> is `test_no_assessor_owner_name_reaches_a_consumer_report`, which renders.
+>
+> So the render tests are load-bearing for a security-adjacent property, on five themes, and
+> the structural gate is a *supplement* that covers the orthogonal failure — a sixth theme
+> added with no gate at all, which the render tests cannot see because they only render the
+> five that exist. Each covers what the other cannot. Neither is sufficient alone, and
+> anybody who deletes the render half because "the AST test already checks the owner block"
+> will have removed the half that matters. **Five further regressions, each seen
+to fail:** the condition dropped, the row moved into the `{% else %}`, the condition inverted
+(render tests only), the block deleted from one theme, and `mailing_address` restored *inside*
+the agent gate — the one a gatedness-only test would wave through.
 
 ---
 

@@ -370,6 +370,13 @@ async def request_report(
             "improvement_value": payload.improvement_value,
             "tax_amount": payload.tax_amount,
             "tax_year": payload.tax_year,
+            # WHO ASKED, as distinct from who owns it. The worker greets the
+            # requester with this; before it existed the greeting used
+            # `owner_name`, so a neighbour requesting a report was addressed by
+            # the record owner's first name (D-155). Dropped by the filter
+            # below when the form did not supply one, which is the intended
+            # behaviour: no name, no greeting, and never a substitute.
+            "requester_name": payload.name,
         }
         property_data = {k: v for k, v in property_data.items() if v is not None}
         
@@ -428,7 +435,13 @@ async def request_report(
             """,
             (
                 account_id,
-                payload.name or payload.owner_name,
+                # `payload.name`, with NO fallback to `payload.owner_name`.
+                # A form that collects a name uses it or nothing: falling back
+                # to the assessor roll records the person who OWNS the house as
+                # the person who ASKED about it, which is a different human
+                # whenever the requester is a neighbour, a buyer or an agent.
+                # Same defect as the report's owner block (D-116), in the CRM.
+                payload.name,
                 payload.email,
                 payload.phone,
                 f"CMA report requested for {full_address}",

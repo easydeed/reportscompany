@@ -322,6 +322,14 @@
      } %}
   {% set _nums = page_numbers | default({}) %}
   {% set _toc = contents_keys | default([]) %}
+  {#- D-157: WHO THIS DOCUMENT IS FOR. "agent" may carry the owner of record;
+      "consumer" may not, and is addressed by the name the requester typed on
+      the lead form instead. Defaults to "agent" because the agent path does
+      not set it — a default of "consumer" would silently strip the block from
+      the surface that is meant to have it. The consumer path also omits the
+      owner data entirely, so this gate is the second line, not the only one. -#}
+  {% set _audience = audience | default('agent') %}
+  {% set _prepared_for = prepared_for | default('') %}
   <div class="sheet">
 
     {% if "cover" in _pages %}
@@ -338,6 +346,13 @@
           <div class="cover-address-box">
             <div class="cover-street">{{ property.street_address }}</div>
             <div class="cover-city">{{ property.city }}, {{ property.state }} {{ property.zip_code }}</div>
+            {# D-157: the REQUESTER, from the lead form — not the owner of record. Absent
+             when the form supplied no name; there is no fallback, because the only
+             other name available is a third party's from public record. Colour is
+             inherited rather than set, so it follows each cover's own palette. #}
+            {%- if _prepared_for %}
+            <div class="cover-prepared-for" style="margin-top:10px; font-size:12px; letter-spacing:.08em; text-transform:uppercase;">Prepared for {{ _prepared_for }}</div>
+            {%- endif %}
           </div>
         </div>
       </div>
@@ -441,6 +456,17 @@
           <div class="property-grid">
             <div class="property-item"><span class="property-item-label">APN</span><span class="property-item-value">{{ property.apn | default('-') }}</span></div>
             <div class="property-item"><span class="property-item-label">County</span><span class="property-item-value">{{ property.county | default('-') }}</span></div>
+            {# D-157: OWNER OF RECORD, AGENT PATH ONLY. D-116 removed this because it
+                 printed an assessor-roll name to whoever requested a report on any
+                 address. An agent running a report knowingly is a different context.
+                 The consumer path does not carry the data at all; this gate is the
+                 second line. `mailing_address` stays out of both. #}
+            {%- if _audience == 'agent' and property.owner_name %}
+            <div class="property-item"><span class="property-item-label">Owner of Record</span><span class="property-item-value">{{ property.owner_name }}</span></div>
+            {%- if property.secondary_owner and property.secondary_owner != '-' %}
+            <div class="property-item"><span class="property-item-label">&nbsp;</span><span class="property-item-value">{{ property.secondary_owner }}</span></div>
+            {%- endif %}
+            {%- endif %}
             <div class="property-item"><span class="property-item-label">Census Tract</span><span class="property-item-value">{{ property.census_tract | default('-') }}</span></div>
             <div class="property-item"><span class="property-item-label">Site Address</span><span class="property-item-value">{{ property.street_address }}, {{ property.city }}</span></div>
             <div class="property-item"><span class="property-item-label">Legal</span><span class="property-item-value">{{ property.legal_description | default('-') }}</span></div>

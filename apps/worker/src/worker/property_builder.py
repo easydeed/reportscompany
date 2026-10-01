@@ -893,6 +893,19 @@ class PropertyReportBuilder:
             # D-090: the trailing `.get(k, "")` in each of these `or` chains is
             # the last term, so when it returns None — key present, value NULL —
             # None is the result of the whole expression.
+            # OWNER OF RECORD — AGENT PATH ONLY. D-116 removed this block from
+            # every theme because it printed an assessor-roll name under a
+            # heading calling the reader a "prospect", on a report anyone can
+            # request for any address. It is back for the agent path only: an
+            # agent running a report on a property knowingly is a different
+            # context from a stranger who typed an address into a lead page.
+            #
+            # The templates gate on `audience`, and a rendered-output test
+            # asserts these names appear in no consumer document. `audience`
+            # defaults to "agent" because the agent path does not set it and a
+            # new caller that forgets should get the OLD behaviour, not the
+            # unguarded one — a default of "consumer" would silently strip the
+            # block from a surface that is meant to have it.
             "owner_name": self.report_data.get("owner_name") or sitex_data.get("owner_name") or "",
             "secondary_owner": sitex_data.get("secondary_owner") or "-",
             "county": self.report_data.get("property_county") or sitex_data.get("county") or "",
@@ -1885,6 +1898,16 @@ class PropertyReportBuilder:
             
             # Page set (may have market_trends removed if data unavailable)
             "page_set": page_set,
+
+            # WHO THIS DOCUMENT IS FOR, and it changes what may appear on it.
+            # "agent" (the default, and what the agent path does not set) may
+            # carry the owner of record; "consumer" may not, and is addressed
+            # by the name the requester typed on the lead form instead.
+            # Deliberate divergence between the two paths, which is new — the
+            # last five (D-138…D-141) were all accidental convergence, so this
+            # one is asserted on the rendered output rather than trusted.
+            "audience": self.report_data.get("audience") or "agent",
+            "prepared_for": (self.report_data.get("prepared_for") or "").strip(),
 
             # Market trends data (None when page was dropped)
             "market_trends": market_trends_data,
