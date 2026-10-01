@@ -25,7 +25,24 @@ from worker.compute.monthly_trend import (  # noqa: E402
 from worker.market_builder import MarketReportBuilder  # noqa: E402
 from worker.themes import derive_theme  # noqa: E402
 
-TODAY = date(2026, 9, 24)
+#: THE CLOCK, AND THERE IS ONLY ONE OF IT (D-158).
+#:
+#: This was `date(2026, 9, 24)`, frozen, while the render helpers below go
+#: through `MarketReportBuilder`, which calls `median_series(history)` with no
+#: `today=` and so reads `date.today()`. Two clocks in one test file: the
+#: fixtures were anchored to September and the code bucketing them was
+#: anchored to whatever day the suite ran.
+#:
+#: It passed for as long as the real date stayed inside the fixture's window
+#: and failed on 2026-10-01, when the oldest of the twelve fixture months fell
+#: out of the trailing-twelve the builder computes — 88 rows bucketed, not 96.
+#: Nothing was wrong with the product; the test had been counting on the
+#: calendar not moving.
+#:
+#: A frozen date here would need the builder to take an injected one, which is
+#: product surface added for a test. The live clock is the honest choice: the
+#: fixture is built from the same `today` the code under test will use.
+TODAY = date.today()
 
 
 def closings(month, year=2026, n=8, price=900000):
@@ -102,10 +119,24 @@ def test_one_drawable_month_is_not_a_trend():
 
 
 def test_the_window_ends_on_this_month_and_is_twelve_long():
+    """Both ends computed from the clock, not written down.
+
+    This read `"Sep"` / 2026 and `"Oct"` / 2025 — correct on the day it was
+    written and on no day after. D-158: the labels are the window's shape,
+    and the shape is "ends this month, twelve long", which is what is
+    asserted. The literal month names asserted the calendar.
+    """
     series = median_series(full_year(), today=TODAY)
     assert len(series) == 12
-    assert series[-1]["label"] == "Sep" and series[-1]["year"] == 2026
-    assert series[0]["label"] == "Oct" and series[0]["year"] == 2025
+
+    oldest_y, oldest_m = TODAY.year, TODAY.month - 11
+    while oldest_m <= 0:
+        oldest_y, oldest_m = oldest_y - 1, oldest_m + 12
+
+    assert (series[-1]["label"], series[-1]["year"]) == (
+        date(TODAY.year, TODAY.month, 1).strftime("%b"), TODAY.year)
+    assert (series[0]["label"], series[0]["year"]) == (
+        date(oldest_y, oldest_m, 1).strftime("%b"), oldest_y)
 
 
 def test_unreadable_dates_and_missing_prices_are_skipped_not_guessed():
@@ -210,9 +241,31 @@ def test_the_gridlines_are_solid():
     assert "stroke-dasharray" not in svg
 
 
+#: 12 months x 8 closings. Written down so a change to `full_year`'s shape is
+#: visible here rather than absorbed by a count derived from it.
+FULL_YEAR_ROWS = 96
+
+
+def test_the_fixture_is_the_size_this_file_says_it_is():
+    assert len(full_year(n=8)) == FULL_YEAR_ROWS
+
+
 def test_the_note_states_the_sample_the_medians_came_from():
-    html = report(history=full_year(n=8))
-    assert "96 sales" in html
+    """Every row the fixture supplies is a row the note counts.
+
+    Asserted against the fixture rather than against the literal 96, because
+    the thing that can go wrong is rows being DROPPED between the fixture and
+    the bucket — which is what happened when the two clocks disagreed, and
+    which a hardcoded 96 reports as "the note is wrong" rather than as "eight
+    sales went missing".
+    """
+    rows = full_year(n=8)
+    html = report(history=rows)
+    assert f"{len(rows):,} sales" in html, (
+        "the note's total is not the number of rows handed to the builder; "
+        "some month of the fixture is falling outside the window the builder "
+        "buckets into"
+    )
     assert f"fewer than {MIN_CLOSED_FOR_MEDIAN} closings" in html
 
 
