@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap"></link>
+<style>body{margin:0;font-family:'Geist',system-ui,sans-serif;color:#14161A}</style>
+</helmet>
+<div style="width:816px;height:1056px;background:#fff;display:flex;flex-direction:column;overflow:hidden;font-family:'Geist',system-ui,sans-serif;color:#14161A;box-sizing:border-box">
+  <div style="background:{{ primary }};color:#fff;padding:36px 52px 30px;display:flex;flex-direction:column;gap:30px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.78)">{{ dateLabel }}</div>
+      <div style="height:44px;max-width:200px;display:flex;align-items:center;font-size:20px;font-weight:700;letter-spacing:-0.02em;text-align:right">{{ brandName }}</div>
+    </div>
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+      <div style="display:flex;align-items:flex-end;gap:16px;min-width:0">
+        <div style="font-size:{{ bigSize }};font-weight:600;line-height:0.88;letter-spacing:-0.045em;font-variant-numeric:tabular-nums;white-space:nowrap">{{ bigNum }}</div>
+        <div style="font-size:22px;font-weight:600;line-height:1.1;letter-spacing:-0.01em;padding-bottom:3px;text-wrap:balance">{{ bigLabel }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+        <span style="font-size:13px;font-weight:600;background:#fff;color:{{ primary }};padding:4px 10px;border-radius:999px;white-space:nowrap">{{ pill }}</span>
+        <span style="font-size:12px;color:rgba(255,255,255,0.85);text-align:right;white-space:nowrap">{{ pillSub }}</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid rgba(255,255,255,0.25)">
+      <sc-for list="{{ stats }}" as="s" hint-placeholder-count="3">
+        <div style="padding:16px 16px 0 0;display:flex;flex-direction:column;gap:3px;border-left:1px solid rgba(255,255,255,0.25);padding-left:16px"><div style="font-size:26px;font-weight:600;letter-spacing:-0.02em;line-height:1">{{ s.v }}</div><div style="font-size:11.5px;color:rgba(255,255,255,0.85)">{{ s.l }}</div></div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="flex:1;min-height:0;padding:28px 52px 0;display:flex;flex-direction:column">
+    <sc-if value="{{ isPhotos }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1;min-height:0;display:grid;grid-template-columns:{{ gridCols }};grid-auto-rows:minmax(0,1fr);gap:20px 16px">
+        <sc-for list="{{ photos }}" as="l" hint-placeholder-count="6">
+          <div style="display:flex;flex-direction:column;min-height:0">
+            <div style="position:relative;flex:1;min-height:0;background:#F1F1EE;border-radius:6px;overflow:hidden">
+              <img src="{{ l.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></img>
+              <div style="position:absolute;left:10px;top:10px;background:#fff;color:#14161A;font-size:15px;font-weight:700;letter-spacing:-0.01em;padding:4px 9px;border-radius:4px">{{ l.price }}</div>
+            </div>
+            <div style="padding-top:10px;display:flex;flex-direction:column;gap:3px">
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.address }}</div>
+              <div style="font-size:11.5px;color:#5E636B">{{ l.hood }} · {{ l.specs }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTable }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 72px 44px;column-gap:12px;padding-bottom:8px;border-bottom:1.5px solid #14161A;font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:#5E636B">
+        <div>Address</div><div style="text-align:center">Bd/Ba</div><div style="text-align:right">Sq ft</div><div style="text-align:right">{{ priceHead }}</div><div style="text-align:right">{{ vsHead }}</div><div style="text-align:right">Days</div>
+      </div>
+      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="16">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 72px 44px;column-gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #ECECE8;font-size:12px;font-variant-numeric:tabular-nums">
+          <div style="min-width:0;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden"><span style="font-weight:600">{{ r.address }}</span><span style="color:#8A8E95;overflow:hidden;text-overflow:ellipsis">{{ r.hood }}</span></div>
+          <div style="text-align:center;color:#5E636B">{{ r.bdba }}</div>
+          <div style="text-align:right;color:#5E636B">{{ r.sqft }}</div>
+          <div style="text-align:right;font-weight:600">{{ r.price }}</div>
+          <div style="text-align:right;font-weight:600;color:{{ r.vsColor }}">{{ r.vs }}</div>
+          <div style="text-align:right;color:#5E636B">{{ r.dom }}</div>
+        </div>
+      </sc-for>
+      <div style="display:flex;justify-content:flex-end;padding-top:10px;font-size:11px;color:#5E636B">Showing 13 of {{ total }} · page 1 of {{ pages }}</div>
+    </sc-if>
+
+    <sc-if value="{{ isBands }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:120px minmax(0,1fr) 72px 60px 64px;column-gap:14px;padding-bottom:8px;border-bottom:1.5px solid #14161A;font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:#5E636B">
+        <div>Price band</div><div>Active listings</div><div style="text-align:right">Median</div><div style="text-align:right">Days</div><div style="text-align:right">$/sq ft</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;padding-top:14px">
+        <sc-for list="{{ bands }}" as="b" hint-placeholder-count="7">
+          <div style="display:grid;grid-template-columns:120px minmax(0,1fr) 72px 60px 64px;column-gap:14px;align-items:center;font-size:12.5px;font-variant-numeric:tabular-nums">
+            <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ b.label }}</span><span style="font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:{{ b.tagColor }}">{{ b.tag }}</span></div>
+            <div style="height:36px;background:#F4F4F1;border-radius:4px;overflow:hidden"><div style="height:100%;width:{{ b.w }};background:{{ b.barColor }};border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;box-sizing:border-box;color:#fff;font-size:13px;font-weight:600">{{ b.count }}</div></div>
+            <div style="text-align:right;font-weight:600">{{ b.median }}</div>
+            <div style="text-align:right;font-weight:600;color:{{ b.tagColor }}">{{ b.dom }}</div>
+            <div style="text-align:right;color:#5E636B">{{ b.ppsf }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isSnapshot }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:30px">
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;font-weight:600">It's a seller's market</div><div style="font-size:12px;line-height:1.5;color:#5E636B;text-wrap:pretty">1.9 months of inventory. At this pace, every listing would sell in under two months.</div></div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">
+            <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;height:34px">
+              <div style="background:{{ primary }};border-radius:3px"></div><div style="background:{{ primary }};border-radius:3px"></div>
+              <div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:4fr 2fr 2fr;gap:4px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:#5E636B"><div style="border-top:2px solid #14161A;padding-top:6px">Seller's &lt;4 mo</div><div style="border-top:2px solid #B9BBC1;padding-top:6px">Balanced</div><div style="border-top:2px solid #DADBDF;padding-top:6px">Buyer's 6+</div></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;font-weight:600">Move-up homes lead</div><div style="font-size:12px;line-height:1.5;color:#5E636B;text-wrap:pretty">Nearly half of this month's sales closed between $1.1M and $2M.</div></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:110px 1fr 150px;gap:14px;align-items:center;font-size:12.5px;font-variant-numeric:tabular-nums">
+                <div style="display:flex;flex-direction:column"><span style="font-weight:600">{{ t.name }}</span><span style="font-size:10.5px;color:#5E636B">{{ t.range }}</span></div>
+                <div style="height:22px;background:#F4F4F1;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ t.w }};background:{{ accent }};border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;box-sizing:border-box;color:#fff;font-size:11.5px;font-weight:600">{{ t.closed }}</div></div>
+                <div style="font-size:11.5px;color:#5E636B;text-align:right">{{ t.median }} median · {{ t.moi }} mo</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start">
+          <div style="font-size:13px;font-weight:600">By property type</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+            <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Single-family</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$1.78M</div><div style="font-size:11px;color:#5E636B">64 sold · 17 days</div></div>
+            <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Condo</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$905K</div><div style="font-size:11px;color:#5E636B">31 sold · 22 days</div></div>
+            <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Townhome</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$1.21M</div><div style="font-size:11px;color:#5E636B">23 sold · 20 days</div></div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="margin:24px 52px 0;padding:16px 0;border-top:1px solid #E4E4E0;display:flex;align-items:center;gap:14px">
+    <div style="width:48px;height:48px;border-radius:999px;background:{{ primary }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">{{ initials }}</div>
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font-size:15px;font-weight:600">{{ agentName }}</div><div style="font-size:12px;color:#5E636B">{{ brandName }} · DRE #02145678</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:500"><span>{{ agentPhone }}</span><span style="color:{{ primary }}">{{ agentEmail }}</span></div>
+  </div>
+  <div style="padding:0 52px 28px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:816,&quot;height&quot;:1056},&quot;kind&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;snapshot&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;snapshot&quot;,&quot;listings&quot;,&quot;closed&quot;,&quot;inventory&quot;,&quot;bands&quot;,&quot;featured&quot;,&quot;gallery&quot;]},&quot;primary&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#18235c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#18235c&quot;,&quot;#4F46E5&quot;,&quot;#14532D&quot;,&quot;#7F1D1D&quot;]},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#0d9488&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#0d9488&quot;,&quot;#D97706&quot;,&quot;#CA8A04&quot;,&quot;#DB2777&quot;]},&quot;area&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Irvine&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;brandName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Coastline Realty&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Jordan Reyes&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentPhone&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;(949) 555-0142&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentEmail&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;jordan@coastlinerealty.com&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;dateLabel&quot;:{&quot;editor&quot;:null,&quot;default&quot;:&quot;Aug 24 – Sep 23, 2026&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const kind = p.kind || "snapshot";
+    const primary = p.primary || "#18235c", accent = p.accent || "#0d9488";
+    const area = p.area || "Irvine";
+    const agentName = p.agentName || "Jordan Reyes";
+    const U = "https://images.unsplash.com/photo-", Q = "?w=720&h=520&fit=crop";
+    const homes = [
+      ["1583608205776-bfd35f0d9f83","$1,380,000","14 Cartwheel","Woodbridge","4 bd · 3 ba · 2,140 sf"],["1512917774080-9991f1c4c750","$2,150,000","52 Pathway","Northwood","5 bd · 4 ba · 3,380 sf"],
+      ["1570129477492-45c003edd2be","$1,060,000","301 Stanford Ct","Turtle Rock","3 bd · 2 ba · 1,620 sf"],["1598228723793-52759bba239c","$1,740,000","8 Lyon","Portola Springs","4 bd · 3 ba · 2,610 sf"],
+      ["1600596542815-ffad4c1539a9","$875,000","89 Maple Heights","Westpark","2 bd · 2 ba · 1,180 sf"],["1600585154340-be6161a56a0c","$1,290,000","310 Sunset","Quail Hill","3 bd · 3 ba · 1,940 sf"],
+      ["1564013799919-ab600027ffc6","$1,649,000","22 Canopy","Great Park","4 bd · 3 ba · 2,380 sf"],["1600047509807-ba8f99d2cdde","$2,249,000","9 Shooting Star","Quail Hill","4 bd · 4 ba · 2,960 sf"],
+      ["1600566753190-17f0baa2a6c3","$1,129,000","41 Cedarbrook","Woodbridge","3 bd · 2 ba · 1,540 sf"]
+    ].map(h => ({ photo: U + h[0] + Q, price: h[1], address: h[2], hood: h[3], specs: h[4] }));
+    const st = ["Cartwheel","Pathway","Stanford Ct","Lyon","Maple Heights","Sunset","Pine Ridge Ct","Bellatrix","Tangerine","Kestrel","Scholarship","Hedgerow","Coral Rose","Mustang","Lunar","Night Bloom"];
+    const hd = ["Woodbridge","Northwood","Great Park","Turtle Rock","Portola Springs","Quail Hill","Westpark","Woodbury"];
+    const rows = st.slice(0, 13).map((s, i) => {
+      const beds = 2 + (i % 4), price = 780 + ((i * 173) % 1900), vs = 96.5 + ((i * 37) % 60) / 10, dom = 2 + ((i * 11) % 38);
+      const isNew = dom <= 7;
+      return { address: (10 + i * 7) + " " + s, hood: hd[i % hd.length], bdba: beds + "/" + Math.max(2, beds - (i % 2)), sqft: (1100 + beds * 420 + (i % 5) * 60).toLocaleString(),
+        price: "$" + (price * 1000).toLocaleString(), dom,
+        vs: kind === "closed" ? vs.toFixed(1) + "%" : (isNew ? "New" : "—"),
+        vsColor: kind === "closed" ? (vs > 100 ? accent : "#5E636B") : (isNew ? accent : "#B9BBC1") };
+    });
+    const bandsRaw = [["Under $800K",18,"$712K",24,"$705"],["$800K – $1M",29,"$905K",19,"$742"],["$1M – $1.25M",41,"$1.12M",16,"$768"],["$1.25M – $1.5M",38,"$1.36M",18,"$771"],["$1.5M – $2M",44,"$1.72M",22,"$758"],["$2M – $3M",27,"$2.38M",31,"$812"],["$3M+",15,"$4.20M",58,"$1,040"]];
+    const bands = bandsRaw.map(b => { const fast = b[3] === 16, slow = b[3] === 58; return { label: b[0], count: b[1], w: Math.round(b[1] / 44 * 100) + "%", median: b[2], dom: b[3], ppsf: b[4], tag: fast ? "Fastest" : slow ? "Slowest" : "", tagColor: fast ? accent : slow ? "#B42318" : "#5E636B", barColor: fast ? accent : primary }; });
+    const K = {
+      snapshot: { bigNum: "$1.46M", bigSize: "96px", bigLabel: "median sale price in " + area, pill: "▲ 3.1%", pillSub: "vs. prior 30 days", stats: [["118","Closed sales · ▲6%"],["19","Days on market · ▼2"],["99.1%","Sale-to-list"]] },
+      listings: { bigNum: "24", bigSize: "88px", bigLabel: "new listings in " + area, pill: "$875K – $2.15M", pillSub: "this week", stats: [["$1.42M","Median list price"],["6","Under $1M"],["1.9 mo","Of inventory"]], photos: homes.slice(0, 6), cols: "repeat(3,minmax(0,1fr))" },
+      gallery: { bigNum: "9", bigSize: "88px", bigLabel: "homes to see this weekend", pill: "Open houses", pillSub: "Sat & Sun · " + area, stats: [["$875K","From"],["$2.25M","To"],["3","Neighborhoods"]], photos: homes, cols: "repeat(3,minmax(0,1fr))" },
+      featured: { bigNum: "4", bigSize: "88px", bigLabel: "featured homes in " + area, pill: "Hand-picked", pillSub: "$1.06M – $2.15M", stats: [["4","Listings"],["$1.56M","Avg. price"],["2,440","Avg. sq ft"]], photos: homes.slice(0, 4), cols: "repeat(2,minmax(0,1fr))" },
+      closed: { bigNum: "118", bigSize: "88px", bigLabel: "homes sold in " + area, pill: "99.1% of asking", pillSub: "last 30 days", stats: [["$1.46M","Median price"],["19","Avg. days"],["31","Sold over asking"]], table: true, priceHead: "Sold for", vsHead: "vs. list", total: 118, pages: 6 },
+      inventory: { bigNum: "212", bigSize: "88px", bigLabel: "homes for sale in " + area, pill: "1.9 months", pillSub: "of inventory · seller's market", stats: [["$1.52M","Median list"],["41","New this week"],["18","Avg. days listed"]], table: true, priceHead: "List price", vsHead: "Status", total: 212, pages: 10 },
+      bands: { bigNum: "$1–1.25M", bigSize: "64px", bigLabel: "is moving fastest", pill: "16 days", pillSub: "8 days faster than the area", stats: [["212","Active listings"],["$1.52M","Median list"],["$615K – $6.9M","Price range"]], bands: true }
+    };
+    const k = K[kind] || K.snapshot;
+    return {
+      primary, accent, agentName, brandName: p.brandName || "Coastline Realty", agentPhone: p.agentPhone || "(949) 555-0142", agentEmail: p.agentEmail || "jordan@coastlinerealty.com",
+      initials: agentName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase(),
+      dateLabel: p.dateLabel || "Aug 24 – Sep 23, 2026",
+      bigNum: k.bigNum, bigSize: k.bigSize, bigLabel: k.bigLabel, pill: k.pill, pillSub: k.pillSub, stats: k.stats.map(s => ({ v: s[0], l: s[1] })),
+      isPhotos: !!k.photos, photos: k.photos || [], gridCols: k.cols || "repeat(3,minmax(0,1fr))",
+      isTable: !!k.table, rows, priceHead: k.priceHead, vsHead: k.vsHead, total: k.total, pages: k.pages,
+      isBands: !!k.bands, bands,
+      isSnapshot: kind === "snapshot",
+      tiers: [{ name: "Entry", range: "Under $1.1M", closed: 38, w: "67%", median: "$878K", moi: "1.4" },{ name: "Move-up", range: "$1.1M – $2M", closed: 57, w: "100%", median: "$1.47M", moi: "1.8" },{ name: "Luxury", range: "$2M+", closed: 23, w: "40%", median: "$2.65M", moi: "3.1" }]
+    };
+  }
+}
+</script>
+</body>
+</html>
