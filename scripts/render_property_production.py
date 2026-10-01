@@ -165,7 +165,12 @@ for theme in sorted(THEME_TEMPLATES):
         "comparables": b._build_comparables_context(),
         "stats": b._build_stats_context(),
         "images": b._build_images_context(),
-        "area_analysis": b._build_area_analysis_context(),
+        # `area_analysis` was dumped here. Its builder is deleted — it read a
+        # `sitex_data` key no producer writes and filled the gap with invented
+        # figures (D-136). The deletion did not break a render; it broke THIS,
+        # because the D-136 sweep covered the builder and the templates and
+        # stopped at the language boundary of "what renders". A script is not
+        # a render and is still a caller. §0.6, the construct-search scope rule.
         "range_of_sales": b._build_range_of_sales_context(),
     }
 (OUT / f"context__{VARIANT}.json").write_text(json.dumps(ctx_dump, indent=2, default=str))
