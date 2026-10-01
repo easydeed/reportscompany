@@ -7678,21 +7678,37 @@ market surface's D-112 shape again: a small number of role definitions, not a lo
 > columns — so 2,291 runs are measured where 2,344 were before. **Both numbers are pixel
 > figures; 229 was already one.** This is a current count, not a correction of a bad one.
 >
-> **AND IT IS FOUR ROLE DEFINITIONS, NOT A GRIND.** 8 of the 52 combinations carry 132 of the
-> 215 runs:
+> **AND IT IS SIX ROLE DEFINITIONS, NOT A GRIND.** Six colours carry **146 of the 213** — 69%:
 >
-> | theme | foreground | on | ratio | needs | runs | where |
-> |---|---|---|---|---|---|---|
-> | modern | `#94a3b8` | white / `#f1f5f9` | 2.34–2.56 | 4.5 | **31** | every secondary string |
-> | bold | `#d69649` | white | 2.52 | 4.5 | **27** | `div.brand`, contents pages, cover agent title |
-> | modern | `#c55145` | `#f1f5f9` | 4.13 | 4.5 | **24** | contents numerals, pills |
-> | modern | white | `#ff6b5b` | 2.80 | 4.5 | **18** | comp-card price, Sale Price row |
-> | classic | `#4a90a4` | white *and* reversed | 3.61 | 4.5 | **22** | page-header labels, Sale Price row |
-> | teal | `#34d1c3` | white | 1.90 | 3.0 | **12** | every `h2.section-title`, cover logo |
+> | theme | colour | against | ratio | needs | runs | where | kind |
+> |---|---|---|---|---|---|---|---|
+> | modern | `#94a3b8` | white, `#f1f5f9`, `#3b4053` | 2.34–4.01 | 4.5 | **31** | every secondary string, 9 selectors | **literal** `--silver` |
+> | bold | `#d69649` | white | 2.52 | 4.5 | **27** | `div.brand`, contents pages, cover agent title | **literal** `--gold` |
+> | classic | `#4a90a4` | white, `#fefdfa`, *and reversed* | 3.55–3.61 | 4.5 | **24** | page-header labels, Sale Price row | **literal** `--sky` |
+> | modern | `#c55145` | `#f1f5f9` | 4.13 | 4.5 | **24** | `div.contents-num`, `span.pill` | **derived** — `primary_ink` of `#ff6b5b` |
+> | modern | `#ff6b5b` | white on it | 2.55–2.80 | 4.5 | **22** | comp-card price, Sale Price row | **brand default** `--coral` |
+> | teal | `#34d1c3` | white, `#535d7d` | 1.90–3.42 | 3.0 / 4.5 | **18** | every `h2.section-title`, cover logo | **brand default** `--teal` |
 >
 > The rest is a tail of fives: `#16a34a` on each theme's off-white in the market-trends change
-> chips, and `#999999`/`#6b7280` muted text. **Handing Claude Design a list of 215 runs would
+> chips, and `#999999`/`#6b7280` muted text. **Handing Claude Design a list of 213 runs would
 > be handing over a grind. It is six values.**
+>
+> **AND THE THREE KINDS ARE NOT THE SAME JOB, which the old table hid by listing only hexes.**
+> Three are hard-coded literals in a theme's `:root` and a designer can simply change them (82
+> runs). Two are the **brand default** behind `theme_color`, so changing the hex fixes the
+> default and leaves every affiliate who picked their own colour with the identical failure —
+> the real fix there is a contrast rule in the derivation, not a swatch (40 runs). One is
+> **computed by `themes.derive_theme`** and is engineering, not design (24 runs).
+>
+> > **THE PREVIOUS VERSION OF THIS TABLE WAS WRONG IN THREE CELLS AND IN ITS TOTAL.** It said
+> > "8 of the 52 combinations carry 132 of the 215", listed classic at 22 and teal at 12, and
+> > its own six rows summed to 134. Re-derived from the measurement rather than re-read:
+> > **213 failing, 51 combinations, 2 declined, of 2,311 runs**, and the six colours carry
+> > **146** when a colour failing in both directions is counted once, because fixing it once
+> > fixes both. The failing-run totals and the per-theme split (modern 90, teal 40, bold 38,
+> > classic 35, elegant 12) were right all along; the role table was assembled by eye.
+> >
+> > The number that went out of this room was 132. It is 146 of 213.
 >
 > **A floor, deliberately outside the ratchet.** `test_no_invisible_text_in_property_reports.py`
 > fails on any run below **1.5:1**, with no baseline and no exceptions. A ratchet can absorb an
@@ -7831,10 +7847,21 @@ so the tree is seven files, not five:
 
 | | files | lines | rendered |
 |---|---|---|---|
-| `<theme>/<theme>_report.jinja2` | 5 | ~16,000 | yes — `THEME_TEMPLATES` points here |
-| `<theme>/<theme>.jinja2` + `_base/base.jinja2` + `_base/_macros.jinja2` | 7 | **15,628** | **no** |
+| `<theme>/<theme>_report.jinja2` | 5 | **5,767** | yes — `THEME_TEMPLATES` points here |
+| `<theme>/<theme>.jinja2` + `_base/base.jinja2` + `_base/_macros.jinja2` | 7 | **7,715** | **no** |
 
-Near enough half the property-template code in the repository renders nowhere.
+**There is more dead property-template code than live.**
+
+> **THIS NUMBER WAS 15,628 UNTIL 2026-10-01, AND IT WAS WRONG BY A DOUBLE COUNT.** It came from
+> a `wc -l` whose shell glob listed `_base/base.jinja2` twice, and the `total` line was read off
+> without checking what had been summed. §0.6's first rule, by name: *a number in a tool's
+> output is a property of the tool until you check.* Third instance this week — 48 derived from
+> the wrong corpus, "30 market and 30 property" written from memory, and now a total read off a
+> listing nobody counted the rows of. The conclusion is unchanged and gets stronger: at 7,715
+> against 5,767 the dead tree is still larger than the live one.
+>
+> It is now asserted — `test_handover_numbers_are_current.py` recomputes both figures from the
+> files and fails when the handover document states something else.
 
 **The exclusion is now asserted rather than implied (D-159).**
 `test_one_comp_set.py::test_the_live_template_set_is_the_five_entry_files` reads each of the
@@ -9730,8 +9757,8 @@ over a query that has used six since D-117, so the next person grepping that sen
 hits and cannot tell which five matter.
 
 D-160 had two things D-131 did not — `_base/base.jinja2` and `_base/_macros.jinja2` are in the
-dead tree too, making it seven files and 15,628 lines, and the exclusion is now asserted by a
-test. **Both are folded into D-131**, which is the entry to read. Nothing is lost by this one
+dead tree too, making it seven files and **7,715 lines** (D-160 said 15,628, a double count, now
+corrected on D-131), and the exclusion is now asserted by a test. **Both are folded into D-131**, which is the entry to read. Nothing is lost by this one
 becoming a pointer.
 
 **WHY IT HAPPENED, WHICH IS THE ONLY REASON TO KEEP THE NUMBER.** D-159's gate had to decide
