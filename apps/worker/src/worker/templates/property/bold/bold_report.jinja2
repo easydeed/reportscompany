@@ -1072,11 +1072,11 @@
           <div class="property-section">
             <div class="property-section-header">Property Details</div>
             <table class="property-table">
-              <tr><td>Bedrooms</td><td>{{ property.bedrooms | default('-') }}</td></tr>
-              <tr><td>Bathrooms</td><td>{{ property.bathrooms | default('-') }}</td></tr>
+              <tr><td>Bedrooms</td><td>{{ property.bedrooms | format_measure }}</td></tr>
+              <tr><td>Bathrooms</td><td>{{ property.bathrooms | format_measure }}</td></tr>
               <tr><td>Square Feet</td><td>{{ property.sqft | default('-') | int | format_number }}</td></tr>
               <tr><td>Lot Size</td><td>{{ property.lot_size | default('-') | int | format_number }} sq ft</td></tr>
-              <tr><td>Year Built</td><td>{{ property.year_built | default('-') }}</td></tr>
+              <tr><td>Year Built</td><td>{{ property.year_built | format_measure }}</td></tr>
               <tr><td>Property Type</td><td>{{ property.property_type | default('Single Family') }}</td></tr>
             </table>
           </div>
@@ -1109,13 +1109,13 @@
           <tr><th>Metric</th><th>Subject</th><th>Low</th><th>Medium</th><th>High</th></tr>
         </thead>
         <tbody>
-          <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | default('0') }}</td><td>{{ stats.low.distance | default('-') }}</td><td>{{ stats.medium.distance | default('-') }}</td><td>{{ stats.high.distance | default('-') }}</td></tr>
-          <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | default('-') }}</td><td>{{ stats.low.sqft | default('-') }}</td><td>{{ stats.medium.sqft | default('-') }}</td><td>{{ stats.high.sqft | default('-') }}</td></tr>
+          <tr><td>Distance (mi)</td><td>{{ stats.piq.distance | format_measure }}</td><td>{{ stats.low.distance | format_measure }}</td><td>{{ stats.medium.distance | format_measure }}</td><td>{{ stats.high.distance | format_measure }}</td></tr>
+          <tr><td>Living Area (sf)</td><td>{{ stats.piq.sqft | format_measure }}</td><td>{{ stats.low.sqft | format_measure }}</td><td>{{ stats.medium.sqft | format_measure }}</td><td>{{ stats.high.sqft | format_measure }}</td></tr>
           <tr><td>Price/Sq.Ft.</td><td>{{ stats.piq.price_per_sqft | format_currency }}</td><td>{{ stats.low.price_per_sqft | format_currency }}</td><td>{{ stats.medium.price_per_sqft | format_currency }}</td><td>{{ stats.high.price_per_sqft | format_currency }}</td></tr>
-          <tr><td>Year Built</td><td>{{ stats.piq.year_built | default('-') }}</td><td>{{ stats.low.year_built | default('-') }}</td><td>{{ stats.medium.year_built | default('-') }}</td><td>{{ stats.high.year_built | default('-') }}</td></tr>
+          <tr><td>Year Built</td><td>{{ stats.piq.year_built | format_measure }}</td><td>{{ stats.low.year_built | format_measure }}</td><td>{{ stats.medium.year_built | format_measure }}</td><td>{{ stats.high.year_built | format_measure }}</td></tr>
           <tr><td>Lot Size (sf)</td><td>{{ stats.piq.lot_size | format_number }}</td><td>{{ stats.low.lot_size | format_number }}</td><td>{{ stats.medium.lot_size | format_number }}</td><td>{{ stats.high.lot_size | format_number }}</td></tr>
-          <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | default('-') }}</td><td>{{ stats.low.bedrooms | default('-') }}</td><td>{{ stats.medium.bedrooms | default('-') }}</td><td>{{ stats.high.bedrooms | default('-') }}</td></tr>
-          <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | default('-') }}</td><td>{{ stats.low.bathrooms | default('-') }}</td><td>{{ stats.medium.bathrooms | default('-') }}</td><td>{{ stats.high.bathrooms | default('-') }}</td></tr>
+          <tr><td>Bedrooms</td><td>{{ stats.piq.bedrooms | format_measure }}</td><td>{{ stats.low.bedrooms | format_measure }}</td><td>{{ stats.medium.bedrooms | format_measure }}</td><td>{{ stats.high.bedrooms | format_measure }}</td></tr>
+          <tr><td>Bathrooms</td><td>{{ stats.piq.bathrooms | format_measure }}</td><td>{{ stats.low.bathrooms | format_measure }}</td><td>{{ stats.medium.bathrooms | format_measure }}</td><td>{{ stats.high.bathrooms | format_measure }}</td></tr>
         </tbody>
         <tfoot>
           <tr><td>{{ comps_window.price_row }}</td><td>{{ stats.piq.price_display }}</td><td>{{ stats.low.price_display }}</td><td>{{ stats.medium.price_display }}</td><td>{{ stats.high.price_display }}</td></tr>
@@ -1260,7 +1260,7 @@
             <div class="comp-card-stats">
               <div class="comp-stat"><div class="comp-stat-label">{{ comp.sold_date_label | default('Sold') }}</div><div class="comp-stat-value">{{ comp.sold_date }}</div></div>
               <div class="comp-stat"><div class="comp-stat-label">Sq.Ft.</div><div class="comp-stat-value">{{ comp.sqft | format_number }}</div></div>
-              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms }}/{{ comp.bathrooms }}</div></div>
+              <div class="comp-stat"><div class="comp-stat-label">Bed/Bath</div><div class="comp-stat-value">{{ comp.bedrooms | format_measure }}/{{ comp.bathrooms | format_measure }}</div></div>
               <div class="comp-stat"><div class="comp-stat-label">$/Sq.Ft.</div><div class="comp-stat-value">{{ comp.price_per_sqft | format_currency }}</div></div>
             </div>
           </div>
@@ -1298,8 +1298,8 @@
             <td>{{ comp.distance_miles | default('-') }}</td>
             <td>{{ comp.sqft | format_number }}</td>
             <td>{{ comp.price_per_sqft | format_currency }}</td>
-            <td>{{ comp.bedrooms }}/{{ comp.bathrooms }}</td>
-            <td>{{ comp.year_built }}</td>
+            <td>{{ comp.bedrooms | format_measure }}/{{ comp.bathrooms | format_measure }}</td>
+            <td>{{ comp.year_built | format_measure }}</td>
           </tr>
         {%- endfor %}
         </tbody>

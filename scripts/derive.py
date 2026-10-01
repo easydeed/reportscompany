@@ -31,8 +31,15 @@ print(f"total {len(ids)}  first {ids[0]}  last {ids[-1]}")
 print(f"missing {missing}  dupes {[i for i, n in collections.Counter(ids).items() if n > 1]}")
 
 counts = collections.Counter(status for status, _ in board.values())
-for k in ("recorded", "open", "fixed", "closed-not-live"):
-    print(f"  {k}: {counts.get(k, 0)}")
+
+# EVERY status, not a hardcoded four. The four-name loop printed
+# 0 + 52 + 103 + 4 = 159 against a stated total of 160 the moment a fifth
+# status (`duplicate`) appeared, and printed it without complaint — a summary
+# that can omit a row is the drift this script exists to catch, one level up.
+for k in sorted(counts):
+    print(f"  {k}: {counts[k]}")
+assert sum(counts.values()) == len(ids), (
+    f"statuses sum to {sum(counts.values())} against {len(ids)} entries")
 
 opensev = collections.Counter(sev for status, sev in board.values() if status == "open")
 print(f"open by severity: {dict(opensev)}  sum {sum(opensev.values())}")

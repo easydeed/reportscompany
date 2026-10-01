@@ -60,12 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 53 | Real, unfixed |
-| `fixed` | 103 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 50 | Real, unfixed |
+| `fixed` | 105 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
+| `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **160** | D-001 … D-160, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 23. (Sums to 53, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 13 · ROUGH 21. (Sums to 50, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -7449,7 +7450,7 @@ renders all five and asserts the row sets match.
 
 **Severity:** ROUGH · **Affects:** the Area Sales Analysis table in all five themes; the property
 page's Bathrooms field · **Found during:** Workstream E measurement (E19)
-**Status:** `open`
+**Status:** `fixed` — `fix/engineering-remainder`
 
 `_safe_num` returns `float(val)` and the templates interpolate it raw. Every numeric cell that is
 not currency-formatted therefore carries `.0`:
@@ -7473,6 +7474,34 @@ already does exactly this for currency and is the precedent.
 E19 recorded this as unevenly applied — *"Group A formats correctly"*. Group A is the QA script,
 whose own `format_number` differs from production's. **On the production path all five themes are
 affected identically.**
+
+---
+
+**FIXED.** `template_filters.format_measure` — drop a trailing `.0`, keep a genuine fraction, no
+thousands separator (the commonest user is Year Built and `1,949` is a wrong year; Living Area
+and Lot Size keep `format_number`, which groups). 145 interpolations across the five themes now
+go through it.
+
+**IT WENT IN THE WRONG PLACE FIRST, AND THE WRONG PLACE LOOKED BETTER.** Formatting in the
+builder is one change instead of 145 and fixes every theme at once, so that is what was built —
+and it turned seven context fields from numbers into strings. `numeric_leaf_names()` derives the
+set of numeric fields by walking those contexts, `"1949"` is not a number, and the
+zero-conditional audit silently stopped covering `year_built`, `bedrooms`, `bathrooms`, `sqft`,
+`distance`, `lot_size` and `stories`.
+
+**That is D-119's postmortem, two entries later, reproduced inside the function that postmortem
+is written in.** The comment in `_zero_conditionals.py` says it in as many words: *"Nothing
+failed. The audit just got quieter, which is the failure mode this whole file exists to
+prevent."* It was caught this time only because the derived-set guard added after D-119 fails
+when a name it expects disappears.
+
+So the numbers stay numbers in the context and the formatting is in the templates, which is both
+the correct layering and the one that leaves the audit intact. **Three regressions applied and
+each seen to fail:** `_safe_num`'s float reaching the page again; `int()` in place of
+`format_measure`, which is the obvious wrong fix and loses `1.5` baths; and the subject's column
+formatted differently from the three comp columns beside it — which is how the first attempt
+actually rendered, and is worse than the defect, because it reads as the subject being a
+different kind of number.
 
 ---
 
@@ -7794,6 +7823,38 @@ owner block.
 
 ---
 
+**IT IS SEVEN FILES, NOT FIVE, AND 15,628 LINES — 2026-10-01, folded in from D-160.**
+
+The five `<theme>/<theme>.jinja2` all `{% extends '_base/base.jinja2' %}`, and that file
+`{% import '_base/_macros.jinja2' as macros %}`. Both are reachable **only** from the dead five,
+so the tree is seven files, not five:
+
+| | files | lines | rendered |
+|---|---|---|---|
+| `<theme>/<theme>_report.jinja2` | 5 | ~16,000 | yes — `THEME_TEMPLATES` points here |
+| `<theme>/<theme>.jinja2` + `_base/base.jinja2` + `_base/_macros.jinja2` | 7 | **15,628** | **no** |
+
+Near enough half the property-template code in the repository renders nowhere.
+
+**The exclusion is now asserted rather than implied (D-159).**
+`test_one_comp_set.py::test_the_live_template_set_is_the_five_entry_files` reads each of the
+five live templates and fails if any grows an `extends`, `import`, `include` or `from`. That is
+the only way the dead set can become reachable, so the gate's scope cannot quietly become a lie
+— §0.6, an unstated boundary reads as none.
+
+D-159's comp gate is scoped to the live five for the reason this entry gives: covering the dead
+tree would have meant *fixing* it, and fixing dead code is how dead code survives another year.
+It still carries `comparables[:4]` in seven places.
+
+**FOR THE CLAUDE DESIGN HANDOVER — the cheap half of this, to be done before the redesign
+starts.** A redesign reads a second template tree as the current one; `teal.jinja2` looks exactly
+as current as `teal_report.jinja2` and is near-complete. The handover note must say, by name:
+**`<theme>/<theme>.jinja2` and everything in `_base/` render nowhere — do not read them, do not
+port them, do not take their copy as live.** That removes the trap while the files survive, and
+costs a paragraph rather than the deletion decision this entry is still waiting on.
+
+---
+
 ### D-132 — six months of comps has no floor, and the ladder cannot widen time
 
 **Severity:** WRONG · **Affects:** property reports in thin markets; the consumer lead-capture
@@ -8038,10 +8099,39 @@ a data source nobody diffed it with.
 
 ---
 
+**THE PATH DIVERGENCE IS FIXED; THE NINETEEN ARE STILL OPEN — 2026-10-01.** Two different
+things were inside this entry and only one of them is engineering.
+
+*Fixed.* `or 0` on five money fields. Every one is printed `| format_currency`, and
+`format_currency(0)` is **"$0"** — a number, not a gap. So the same house rendered `$337,378`
+of land value when the worker looked it up through SiteX and **$0** when the wizard supplied the
+data, because `land_value` and `improvement_value` are among SiteX's 28 keys and not among the
+wizard's 25. Same property, two reports, different numbers, decided by which code path created
+it. `assessed_value`, `tax_amount`, `land_value` and `improvement_value` now pass `None`
+through, which `format_currency` renders "N/A"; `percent_improved` becomes `ABSENT` rather than
+`0%`, which was a claim about a building. D-137's rule, applied to the fields D-137 did not
+reach.
+
+*Noted, not changed.* The document now spells absence two ways — `"N/A"` from
+`format_currency(None)` (D-118's precedent, and what the adjacent currency cells already do)
+and `"-"` from `ABSENT`. Both are honest and they are not the same word. **For the design
+handover** rather than unified in passing, because picking one is a copy decision.
+
+*Still open: the nineteen.* `zoning`, `garage`, `fireplace`, `census_tract`, `stories`,
+`housing_tract`, `lot_number`, `page_grid`, `partial_bath`, `tax_rate_area`, `total_rooms`,
+`num_units`, `use_code`, `notes` and the rest render `-` on every real report, forever, because
+no producer writes them. Whether a row that is permanently a dash should be on the page at all
+is **a product decision, not an engineering one** — it is the difference between "we looked and
+there is nothing" and "we do not collect this". Two of the nineteen are already resolved
+elsewhere: `mailing_address` is deliberately out (D-116/D-157) and `estimated_value` is D-134.
+The remaining list goes to Jerry with the handover.
+
+---
+
 ### D-136 — two context builders invent demographics, and nothing renders them yet
 
 **Severity:** FRAGILE · **Affects:** nothing today · **Found during:** D-135's gate
-**Status:** `open`
+**Status:** `fixed` — `fix/engineering-remainder`
 
 `_build_neighborhood_context` reads `sitex_data["neighborhood"]` and
 `_build_area_analysis_context` reads `sitex_data["area_analysis"]`. Neither key exists in either
@@ -8063,6 +8153,30 @@ It is filed because the gun is loaded. The contexts are in `render_html`'s dict 
 names, and the first person to put a "Neighborhood" page in a theme wires up
 `51.5% female / 48.5% male` for a census tract nobody looked at. Delete both builders, or
 source them.
+
+---
+
+**DELETED — both builders and both context keys, 2026-10-01.** Forty-one fields of invented
+figures, assembled on every render and consumed by nothing.
+
+Deleted rather than sourced because sourcing them is a feature with a data supplier behind it,
+and keeping them until that exists is a trap with a default value in it. Re-checked before
+deleting rather than taken from this entry: no template in the repository references
+`neighborhood.<field>` or `area_analysis.<field>` — every "neighborhood" in the templates is
+prose about an aerial photograph.
+
+`test_no_invented_demographics.py` gates the SHAPE, not the two names. A renamed builder
+satisfies "these functions are gone", so the three invented radii and the two ratios are also
+asserted absent as literals anywhere in the builder, and the **context** is asserted free of
+both keys in all five themes — captured at the template handover, because the context is where
+the trap was and a render test was green for the defect's entire life.
+
+Two other gates moved with it, both of which failed until they did, and both of which exist to
+fail in this direction: `test_absent_is_not_a_default` carried three entries excusing
+`"0.1 mi"`, `"0.5 mi"` and `"1.2 mi"` with the note *"delete the builder; do not launder the
+default"* — the excuse now has nothing to excuse — and D-135's orphan baseline listed
+`neighborhood` and `area_analysis` as reads with no producer, which they no longer are because
+they are no longer read.
 
 ---
 
@@ -8547,6 +8661,38 @@ half: **"market trends failed on 40% of consumer reports last week" is a number 
 currently produce.**
 
 Not fixed here. D-141 restored the page this defect was hiding behind; this is the general case.
+
+---
+
+**THE AGGREGATE HALF IS BUILT — 2026-10-01. The other two halves still need deciding.**
+
+Of the three readers this entry names, only one can be served without a decision:
+
+| who | what they get now |
+|---|---|
+| the recipient | still a shorter document, no explanation — **a copy decision, Claude Design's** |
+| the agent | still nothing — **a schema decision, a `pages_dropped` column and a migration** |
+| **us** | **one `WARNING` per affected render, naming the pages** |
+
+`render_html` captures the requested page set before the first drop, takes the difference after
+the last one, and logs
+`pages_dropped=market_trends requested=5 rendered=4 theme=teal` at **warning**. The old line was
+`info`, which is half of why nobody read it: a page the customer asked for and did not get is
+not routine. **Nothing is logged when nothing was dropped**, so the line's presence is the
+signal — and that is the direction a careless version gets wrong, because a report on every
+render reads 100% on every surface and means nothing.
+
+`pages_dropped` is also on the builder and in the render context, so `tasks.py` can persist it
+the day a column exists and a theme can render it the day the copy is written. Neither is wired
+up: putting the value where both can reach it is the unambiguously-ours part, and the entry's
+own sentence — *"somewhere to put it is the open question"* — is still the open question.
+
+**"Market trends failed on 40% of consumer reports last week" is now a `grep`.** That was the
+number the entry said nobody could produce.
+
+**Three regressions applied and each seen to fail:** the level back to `info`; the line emitted
+on every render rather than only on a drop; and the difference taken the wrong way round, which
+reports D-159's deliberately ADDED `comparables_all` page as a loss on every multi-comp report.
 
 
 > **A SECOND INSTANCE, AND IT IS NOW THE ONLY WAY EITHER PAGE IS TESTED — 2026-10-01.**
@@ -9571,38 +9717,37 @@ not repeated. Putting them back costs a narrower address column and a measuremen
 
 ---
 
-### D-160 — a second property-template tree that nothing renders
+### D-160 — DUPLICATE OF D-131. Filed without reading the board
 
-**Severity:** ROUGH · **Affects:** nothing in production, which is the point · **Found during:**
-scoping D-159's template gate
-**Status:** `open`
+**Severity:** ROUGH · **Affects:** this document · **Found during:** working D-125…D-142, the
+item after the one that filed it
+**Status:** `duplicate` — the finding and the work live on **D-131**
 
-`templates/property/` holds **two** template trees.
+D-160 and D-131 are the same defect. D-131 was filed 2026-09-30 during D-117's copy fix —
+*"five unreachable copies of the property templates, carrying copy that has now drifted"* — and
+says what D-160 said, plus the part D-160 missed: the dead copies still claim **twelve months**
+over a query that has used six since D-117, so the next person grepping that sentence finds ten
+hits and cannot tell which five matter.
 
-| | files | lines | rendered |
-|---|---|---|---|
-| `<theme>/<theme>_report.jinja2` | 5 | ~16,000 | yes — `THEME_TEMPLATES` points here |
-| `<theme>/<theme>.jinja2` + `_base/base.jinja2` + `_base/_macros.jinja2` | 7 | **15,628** | **no** |
+D-160 had two things D-131 did not — `_base/base.jinja2` and `_base/_macros.jinja2` are in the
+dead tree too, making it seven files and 15,628 lines, and the exclusion is now asserted by a
+test. **Both are folded into D-131**, which is the entry to read. Nothing is lost by this one
+becoming a pointer.
 
-The second set extends `_base/base.jinja2`, which imports `_base/_macros.jinja2`. Nothing
-reaches any of it: `THEME_TEMPLATES` names only the five `*_report.jinja2`, and none of those
-five carries an `extends`, `import`, `include` or `from`. Fifteen thousand lines of templates
-that cannot render.
+**WHY IT HAPPENED, WHICH IS THE ONLY REASON TO KEEP THE NUMBER.** D-159's gate had to decide
+whether to cover the dead templates. That decision rediscovered the dead templates. I wrote the
+finding up as new, with a line count and a table, and did not search the board — a board
+reorganised twice this month specifically so that it could be searched. The whole argument for
+keeping this document is that it is a read path, and I treated it as write-only.
 
-**Why it is filed rather than deleted here.** It still carries `comparables[:4]` in seven
-places, so D-159's gate had to decide whether to cover it. Covering it would have meant fixing
-it, and fixing dead code is how dead code survives another year. The gate is scoped to the live
-five and **asserts that the exclusion is a fact** — `test_the_live_template_set_is_the_five_entry_files`
-fails the moment a live template pulls one of these in, which is the only way the dead set can
-become reachable. §0.6: an unstated boundary reads as none, so the boundary is stated and
-checked.
+A duplicate is cheaper than a missed defect and more expensive than it looks: the two entries
+drift, the counts double-count the same unfixed thing, and the second one is the one somebody
+closes. It is recorded rather than deleted because the IDs are referenced from commit
+`fix/one-comp-set` and PR #136, and a number that vanishes from the record is worse than a
+number that explains itself.
 
-**What it costs while it sits there.** Every grep for a template construct returns it, and
-every answer is wrong in the same direction — it looks like a site that needs fixing and is
-not. Three sweeps in this project have already been sized against file counts that included
-it. Deleting it is one commit and a `git log` check that nothing references the paths; it needs
-somebody to confirm it is not a staging ground for a redesign, which is why it is a question
-rather than a change.
+**§0.6, added with this entry:** *a finding is not new until you have looked for it in the
+record.* One grep of `DEFECT_LIST.md` for `template` would have answered it.
 
 ---
 

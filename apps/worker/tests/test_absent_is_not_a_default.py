@@ -77,12 +77,15 @@ ALLOWED = {
         "path — which is the whole distinction D-137 turns on.",
     "Sold":
         "comp.sold_date_label; set per comp from status on every path",
-    "0.1 mi": "D-136 — invented radii in a context builder NO TEMPLATE "
-              "RENDERS. Delete the builder; do not launder the default.",
-    "0.5 mi": "as 0.1 mi (D-136)",
-    "1.2 mi": "as 0.1 mi (D-136)",
-    "0": "stats.piq.distance — the subject's distance from itself IS zero, a "
-         "measurement, not a stand-in for absence",
+    # "0.1 mi" / "0.5 mi" / "1.2 mi" WERE EXCUSED HERE, with the note "delete
+    # the builder; do not launder the default". The builder is deleted
+    # (D-136), so the excuse has nothing to excuse and this test says so —
+    # which is the half of a baseline that usually rots quietly.
+    # "0" WAS EXCUSED HERE for `stats.piq.distance | default('0')` — the
+    # subject's distance from itself IS zero, a measurement rather than a
+    # stand-in for absence. The `default('0')` is gone: that cell now goes
+    # through `format_measure`, which renders the literal 0 as "0" (checked
+    # in the render, all five themes). Same output, no default to excuse.
 }
 
 
