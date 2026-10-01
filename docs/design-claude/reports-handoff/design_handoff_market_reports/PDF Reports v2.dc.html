@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap"></link>
+<style>body{margin:0;background:#E9E8E4;font-family:'Geist',system-ui,sans-serif;color:#14161A}a{color:#18235c}a:hover{color:#0d9488}</style>
+</helmet>
+<section style="padding:64px 64px 0;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Turn 3 · Handoff details</div>
+    <h1 style="margin:0;font-family:'Geist',sans-serif;font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-0.03em">Continuation pages, missing photos, headline rules</h1>
+  </div>
+  <div id="3a" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;background:#14161A;color:#fff;padding:3px 8px;border-radius:4px">3a</span>
+      <span style="font-size:16px;font-weight:600">Handoff set</span>
+      <span style="font-size:14px;color:#5E636B">Applies to every report in <a href="#2a">2a</a> and <a href="#1b">1b</a>.</span>
+    </div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start">
+
+      <div data-screen-label="3a Closed Sales page 2" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;overflow:hidden">
+        <div style="background:{{ primary }};color:#fff;padding:18px 52px;display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;align-items:baseline;gap:14px">
+            <span style="font-size:13px;font-weight:600">Closed Sales · Irvine</span>
+            <span style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.85)">Aug 24 – Sep 23 · Page 2 of 8</span>
+          </div>
+          <div style="height:28px;max-width:140px;display:flex;align-items:center;justify-content:flex-end;font-size:15px;font-weight:700;letter-spacing:-0.02em">Coastline Realty</div>
+        </div>
+        <div style="flex:1;min-height:0;padding:22px 52px 0;display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 72px 44px;column-gap:12px;padding-bottom:8px;border-bottom:1.5px solid #14161A;font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:#5E636B">
+            <div>Address</div><div style="text-align:center">Bd/Ba</div><div style="text-align:right">Sq ft</div><div style="text-align:right">Sold for</div><div style="text-align:right">vs. list</div><div style="text-align:right">Days</div>
+          </div>
+          <sc-for list="{{ closedRows2 }}" as="r" hint-placeholder-count="26">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 72px 44px;column-gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #ECECE8;font-size:12px;font-variant-numeric:tabular-nums">
+              <div style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-weight:600">{{ r.address }}</span> <span style="color:#8A8E95">{{ r.hood }}</span></div>
+              <div style="text-align:center;color:#5E636B">{{ r.bdba }}</div>
+              <div style="text-align:right;color:#5E636B">{{ r.sqft }}</div>
+              <div style="text-align:right;font-weight:600">{{ r.price }}</div>
+              <div style="text-align:right;font-weight:600;color:{{ r.vsColor }}">{{ r.vs }}</div>
+              <div style="text-align:right;color:#5E636B">{{ r.dom }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin:16px 52px 0;padding:14px 0 28px;border-top:1px solid #E4E4E0;display:flex;justify-content:space-between;align-items:center;font-size:12px">
+          <span><strong style="font-weight:600">Jordan Reyes</strong> <span style="color:#5E636B">· Coastline Realty · (949) 555-0142</span></span>
+          <span style="font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Rows 17–42 of 118 · CRMLS</span>
+        </div>
+      </div>
+
+      <div style="width:560px;display:flex;flex-direction:column;gap:32px">
+        <div style="background:#fff;border-radius:8px;padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:16px;font-weight:600">Continuation pages</div>
+            <div style="font-size:13px;line-height:1.5;color:#5E636B;text-wrap:pretty">Page 2 and on: a 56px brand strip that names the report, area and page count, the same table columns, and a one-line agent footer. That fits 26 rows, up from 16 on page 1.</div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:16px;font-weight:600">Missing photo</div>
+            <div style="font-size:13px;line-height:1.5;color:#5E636B;text-wrap:pretty">A tinted tile with the neighborhood set large. No broken-image icon, no stock house. The price tag stays in the same spot, so the grid reads evenly.</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:#F1F1EE"><img src="{{ okPhoto }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></img><div style="position:absolute;left:10px;top:10px;background:#fff;font-size:14px;font-weight:700;padding:4px 9px;border-radius:4px">$1,380,000</div></div>
+              <div style="font-size:11px;color:#5E636B">With photo</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:{{ primaryTint }};display:flex;flex-direction:column;justify-content:flex-end;padding:14px;box-sizing:border-box">
+                <div style="position:absolute;left:10px;top:10px;background:#fff;font-size:14px;font-weight:700;padding:4px 9px;border-radius:4px">$1,129,000</div>
+                <div style="font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1.05;color:{{ primary }}">Woodbridge</div>
+                <div style="font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:{{ primary }};opacity:0.75;margin-top:4px">Photos coming soon</div>
+              </div>
+              <div style="font-size:11px;color:#5E636B">No photo from MLS</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 1px 2px rgba(0,0,0,0.06)">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="font-size:16px;font-weight:600">Headline rules</div>
+            <div style="font-size:13px;line-height:1.5;color:#5E636B;text-wrap:pretty">Every headline is a fixed template filled from the report data. No AI writing, so nothing can be made up. If the data is thin, the plain title shows instead.</div>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #14161A">
+            <sc-for list="{{ rules }}" as="r" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:130px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid #ECECE8;font-size:12px;line-height:1.45">
+                <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ r.where }}</span><span style="font-family:'Geist Mono',monospace;font-size:10px;color:#8A8E95">{{ r.when }}</span></div>
+                <div style="display:flex;flex-direction:column;gap:3px"><span style="font-weight:600;color:{{ primary }}">{{ r.text }}</span><span style="color:#5E636B">{{ r.else }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<section style="padding:64px 64px 0;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Turn 2 · Color block across the other report types</div>
+    <h1 style="margin:0;font-family:'Geist',sans-serif;font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-0.03em">Closed, Inventory, Price Bands, Featured</h1>
+    <div style="font-size:14px;line-height:1.5;color:#3A3E45;max-width:760px;text-wrap:pretty">Same system as <a href="#1b">1b</a>: brand color owns the top, one big number leads, then the detail. Table pages use a shorter band so more rows fit. Over-asking sales and new listings are highlighted in the accent color.</div>
+  </div>
+  <div id="2a" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;background:#14161A;color:#fff;padding:3px 8px;border-radius:4px">2a</span>
+      <span style="font-size:16px;font-weight:600">Color block · full set</span>
+    </div>
+    <div style="display:flex;gap:32px;flex-wrap:wrap">
+
+      <div data-screen-label="2a Closed Sales" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;overflow:hidden">
+        <div style="background:{{ primary }};color:#fff;padding:36px 52px 28px;display:flex;flex-direction:column;gap:28px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.78)">Aug 24 – Sep 23, 2026</div>
+            <div style="height:44px;max-width:180px;display:flex;align-items:center;justify-content:flex-end;font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1;text-align:right">Coastline Realty</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+            <div style="display:flex;align-items:flex-end;gap:16px">
+              <div style="font-size:88px;font-weight:600;line-height:0.85;letter-spacing:-0.045em">118</div>
+              <div style="font-size:22px;font-weight:600;line-height:1.1;letter-spacing:-0.01em;padding-bottom:2px">homes sold<br>in Irvine</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,auto);border-left:1px solid rgba(255,255,255,0.25)">
+              <div style="padding:0 18px;display:flex;flex-direction:column;gap:3px"><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$1.46M</div><div style="font-size:11px;color:rgba(255,255,255,0.85)">Median price</div></div>
+              <div style="padding:0 18px;border-left:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;gap:3px"><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">99.1%</div><div style="font-size:11px;color:rgba(255,255,255,0.85)">Sale-to-list</div></div>
+              <div style="padding:0 0 0 18px;border-left:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;gap:3px"><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">19</div><div style="font-size:11px;color:rgba(255,255,255,0.85)">Avg. days</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;padding:22px 52px 0;display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 72px 44px;column-gap:12px;padding-bottom:8px;border-bottom:1.5px solid #14161A;font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:#5E636B">
+            <div>Address</div><div style="text-align:center">Bd/Ba</div><div style="text-align:right">Sq ft</div><div style="text-align:right">Sold for</div><div style="text-align:right">vs. list</div><div style="text-align:right">Days</div>
+          </div>
+          <sc-for list="{{ closedRows }}" as="r" hint-placeholder-count="16">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 72px 44px;column-gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #ECECE8;font-size:12px;font-variant-numeric:tabular-nums">
+              <div style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-weight:600">{{ r.address }}</span> <span style="color:#8A8E95">{{ r.hood }}</span></div>
+              <div style="text-align:center;color:#5E636B">{{ r.bdba }}</div>
+              <div style="text-align:right;color:#5E636B">{{ r.sqft }}</div>
+              <div style="text-align:right;font-weight:600">{{ r.price }}</div>
+              <div style="text-align:right;font-weight:600;color:{{ r.vsColor }}">{{ r.vs }}</div>
+              <div style="text-align:right;color:#5E636B">{{ r.dom }}</div>
+            </div>
+          </sc-for>
+          <div style="display:flex;justify-content:space-between;padding-top:10px;font-size:11px;color:#5E636B">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:{{ accent }};margin-right:6px"></span>Sold over asking</span>
+            <span>Showing 16 of 118 · page 1 of 8</span>
+          </div>
+        </div>
+        <div style="margin:18px 52px 0;padding:16px 0;border-top:1px solid #E4E4E0;display:flex;align-items:center;gap:14px">
+          <div style="width:48px;height:48px;border-radius:999px;background:{{ primary }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">JR</div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font-size:15px;font-weight:600">Jordan Reyes</div><div style="font-size:12px;color:#5E636B">Coastline Realty · DRE #02145678</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:500"><span>(949) 555-0142</span><span style="color:{{ primary }}">jordan@coastlinerealty.com</span></div>
+        </div>
+        <div style="padding:0 52px 28px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS closed sales · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+      </div>
+
+      <div data-screen-label="2a Active Inventory" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;overflow:hidden">
+        <div style="background:{{ primary }};color:#fff;padding:36px 52px 28px;display:flex;flex-direction:column;gap:28px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.78)">As of Sep 23, 2026</div>
+            <div style="height:44px;max-width:180px;display:flex;align-items:center;justify-content:flex-end;font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1;text-align:right">Coastline Realty</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+            <div style="display:flex;align-items:flex-end;gap:16px">
+              <div style="font-size:88px;font-weight:600;line-height:0.85;letter-spacing:-0.045em">212</div>
+              <div style="font-size:22px;font-weight:600;line-height:1.1;letter-spacing:-0.01em;padding-bottom:2px">homes for sale<br>in Irvine</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,auto);border-left:1px solid rgba(255,255,255,0.25)">
+              <div style="padding:0 18px;display:flex;flex-direction:column;gap:3px"><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$1.52M</div><div style="font-size:11px;color:rgba(255,255,255,0.85)">Median list</div></div>
+              <div style="padding:0 18px;border-left:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;gap:3px"><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">1.9 mo</div><div style="font-size:11px;color:rgba(255,255,255,0.85)">Of inventory</div></div>
+              <div style="padding:0 0 0 18px;border-left:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;gap:3px"><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">41</div><div style="font-size:11px;color:rgba(255,255,255,0.85)">New this week</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;padding:22px 52px 0;display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 44px;column-gap:12px;padding-bottom:8px;border-bottom:1.5px solid #14161A;font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:#5E636B">
+            <div>Address</div><div style="text-align:center">Bd/Ba</div><div style="text-align:right">Sq ft</div><div style="text-align:right">List price</div><div style="text-align:right">Days</div>
+          </div>
+          <sc-for list="{{ invRows }}" as="r" hint-placeholder-count="16">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 64px 72px 108px 44px;column-gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid #ECECE8;font-size:12px;font-variant-numeric:tabular-nums">
+              <div style="min-width:0;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden">
+                <span style="font-weight:600">{{ r.address }}</span><span style="color:#8A8E95;overflow:hidden;text-overflow:ellipsis">{{ r.hood }}</span>
+                <sc-if value="{{ r.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#fff;background:{{ accent }};padding:2px 6px;border-radius:3px;flex-shrink:0">New</span></sc-if>
+              </div>
+              <div style="text-align:center;color:#5E636B">{{ r.bdba }}</div>
+              <div style="text-align:right;color:#5E636B">{{ r.sqft }}</div>
+              <div style="text-align:right;font-weight:600">{{ r.price }}</div>
+              <div style="text-align:right;color:#5E636B">{{ r.dom }}</div>
+            </div>
+          </sc-for>
+          <div style="display:flex;justify-content:flex-end;padding-top:10px;font-size:11px;color:#5E636B">Showing 16 of 212 · page 1 of 14</div>
+        </div>
+        <div style="margin:18px 52px 0;padding:16px 0;border-top:1px solid #E4E4E0;display:flex;align-items:center;gap:14px">
+          <div style="width:48px;height:48px;border-radius:999px;background:{{ primary }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">JR</div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font-size:15px;font-weight:600">Jordan Reyes</div><div style="font-size:12px;color:#5E636B">Coastline Realty · DRE #02145678</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:500"><span>(949) 555-0142</span><span style="color:{{ primary }}">jordan@coastlinerealty.com</span></div>
+        </div>
+        <div style="padding:0 52px 28px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS active listings · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+      </div>
+
+      <div data-screen-label="2a Price Bands" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;overflow:hidden">
+        <div style="background:{{ primary }};color:#fff;padding:36px 52px 32px;display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.78)">Aug 24 – Sep 23, 2026</div>
+            <div style="height:44px;max-width:180px;display:flex;align-items:center;justify-content:flex-end;font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1;text-align:right">Coastline Realty</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.78)">Irvine · Price Bands</div>
+            <div style="font-size:52px;font-weight:600;line-height:1;letter-spacing:-0.035em;text-wrap:balance">$1M – $1.25M is moving fastest</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.85)">41 listings in this band go under contract in 16 days on average. That's 8 days faster than the market overall.</div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;padding:28px 52px 0;display:flex;flex-direction:column;gap:14px">
+          <div style="display:grid;grid-template-columns:120px minmax(0,1fr) 72px 60px 64px;column-gap:14px;padding-bottom:8px;border-bottom:1.5px solid #14161A;font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:0.06em;text-transform:uppercase;color:#5E636B">
+            <div>Price band</div><div>Active listings</div><div style="text-align:right">Median</div><div style="text-align:right">Days</div><div style="text-align:right">$/sq ft</div>
+          </div>
+          <sc-for list="{{ bands }}" as="b" hint-placeholder-count="7">
+            <div style="display:grid;grid-template-columns:120px minmax(0,1fr) 72px 60px 64px;column-gap:14px;align-items:center;font-size:12.5px;font-variant-numeric:tabular-nums">
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="font-weight:600">{{ b.label }}</span><span style="font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:{{ b.tagColor }}">{{ b.tag }}</span></div>
+              <div style="height:36px;background:#F4F4F1;border-radius:4px;overflow:hidden"><div style="height:100%;width:{{ b.w }};background:{{ b.barColor }};border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;box-sizing:border-box;color:#fff;font-size:13px;font-weight:600">{{ b.count }}</div></div>
+              <div style="text-align:right;font-weight:600">{{ b.median }}</div>
+              <div style="text-align:right;font-weight:600;color:{{ b.tagColor }}">{{ b.dom }}</div>
+              <div style="text-align:right;color:#5E636B">{{ b.ppsf }}</div>
+            </div>
+          </sc-for>
+          <div style="margin-top:8px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+            <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Total active</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">212</div></div>
+            <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Median list price</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$1.52M</div></div>
+            <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Price range</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$615K – $6.9M</div></div>
+          </div>
+        </div>
+        <div style="margin:18px 52px 0;padding:16px 0;border-top:1px solid #E4E4E0;display:flex;align-items:center;gap:14px">
+          <div style="width:48px;height:48px;border-radius:999px;background:{{ primary }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">JR</div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font-size:15px;font-weight:600">Jordan Reyes</div><div style="font-size:12px;color:#5E636B">Coastline Realty · DRE #02145678</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:500"><span>(949) 555-0142</span><span style="color:{{ primary }}">jordan@coastlinerealty.com</span></div>
+        </div>
+        <div style="padding:0 52px 28px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS active listings · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+      </div>
+
+      <div data-screen-label="2a Featured Listings" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;overflow:hidden">
+        <div style="background:{{ primary }};color:#fff;padding:36px 52px 28px;display:flex;flex-direction:column;gap:28px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.78)">September 2026</div>
+            <div style="height:44px;max-width:180px;display:flex;align-items:center;justify-content:flex-end;font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1;text-align:right">Coastline Realty</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px">
+            <div style="font-size:52px;font-weight:600;line-height:1;letter-spacing:-0.035em">Featured homes<br>in Irvine</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.85);text-align:right;line-height:1.5">4 hand-picked listings<br>$1.06M – $2.15M</div>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:24px 20px;padding:28px 52px 0">
+          <sc-for list="{{ featured }}" as="f" hint-placeholder-count="4">
+            <div style="display:flex;flex-direction:column;min-height:0">
+              <div style="position:relative;flex:1;min-height:0;background:#F1F1EE;border-radius:6px;overflow:hidden">
+                <img src="{{ f.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></img>
+                <div style="position:absolute;left:12px;top:12px;background:#fff;color:#14161A;font-size:18px;font-weight:700;letter-spacing:-0.02em;padding:5px 10px;border-radius:4px">{{ f.price }}</div>
+              </div>
+              <div style="padding-top:12px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px">
+                <div style="min-width:0;display:flex;flex-direction:column;gap:3px">
+                  <div style="font-size:15px;font-weight:600;letter-spacing:-0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ f.address }}</div>
+                  <div style="font-size:12px;color:#5E636B">{{ f.hood }}</div>
+                </div>
+                <div style="display:flex;gap:14px;flex-shrink:0;font-size:12px;font-variant-numeric:tabular-nums">
+                  <div style="display:flex;flex-direction:column;align-items:flex-end"><strong style="font-weight:600">{{ f.beds }}</strong><span style="font-size:10px;color:#5E636B">beds</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end"><strong style="font-weight:600">{{ f.baths }}</strong><span style="font-size:10px;color:#5E636B">baths</span></div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end"><strong style="font-weight:600">{{ f.sqft }}</strong><span style="font-size:10px;color:#5E636B">sq ft</span></div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="margin:24px 52px 0;padding:16px 0;border-top:1px solid #E4E4E0;display:flex;align-items:center;gap:14px">
+          <div style="width:48px;height:48px;border-radius:999px;background:{{ primary }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">JR</div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="font-size:15px;font-weight:600">Jordan Reyes</div><div style="font-size:12px;color:#5E636B">Coastline Realty · DRE #02145678</div></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:500"><span>(949) 555-0142</span><span style="color:{{ primary }}">jordan@coastlinerealty.com</span></div>
+        </div>
+        <div style="padding:0 52px 28px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS active listings · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+<section style="padding:64px;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Turn 1 · PDF reports · Market Snapshot + New Listings</div>
+    <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:400;font-size:44px;line-height:1.1;letter-spacing:-0.01em">Two modern directions for the PDFs</h1>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 32px;font-size:14px;line-height:1.5;color:#3A3E45;text-wrap:pretty">
+      <div><strong style="color:#14161A">One brand color, no gradient.</strong> The violet→coral bar and the red “PDF” badge go. Each page uses the agent’s own color.</div>
+      <div><strong style="color:#14161A">One number leads.</strong> Median price is the headline, not one of four equal chips in a ribbon.</div>
+      <div><strong style="color:#14161A">Cut the filler.</strong> “These metrics help you understand…” becomes a real market read, or nothing.</div>
+      <div><strong style="color:#14161A">Rules instead of boxes.</strong> Hairlines and type do the work of the rounded cards and dashed tiles. A months-of-inventory scale gives the raw number meaning.</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:64px;align-items:flex-start">
+
+    <div id="1a" style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;background:#14161A;color:#fff;padding:3px 8px;border-radius:4px">1a</span>
+        <span style="font-size:16px;font-weight:600">Editorial</span>
+        <span style="font-size:14px;color:#5E636B">Serif numbers, lots of white, reads like a local market column.</span>
+      </div>
+      <div style="display:flex;gap:32px;flex-wrap:wrap">
+        <div data-screen-label="1a Market Snapshot" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;padding:48px 56px 36px;box-sizing:border-box;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:2px solid {{ primary }}">
+            <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;color:{{ primary }}">Coastline Realty</div>
+            <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Market Snapshot · Aug 24 – Sep 23, 2026</div>
+          </div>
+          <div style="padding:36px 0 28px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+            <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:400;font-size:84px;line-height:0.95;letter-spacing:-0.025em">Irvine</h1>
+            <div style="font-size:12px;color:#5E636B;text-align:right;line-height:1.5">Last 30 days of closed sales<br>Live MLS data · pulled Sep 23</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:40px;padding-bottom:28px;border-bottom:1px solid #E4E4E0">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Median sale price</div>
+              <div style="font-family:'Newsreader',serif;font-size:76px;line-height:1;letter-spacing:-0.02em;color:{{ primary }};font-variant-numeric:lining-nums">$1,462,000</div>
+              <div style="font-size:13px;color:#1F7A4D;font-weight:600">▲ 3.1% <span style="color:#5E636B;font-weight:400">vs. prior 30 days</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">The read</div>
+              <p style="margin:0;font-family:'Newsreader',serif;font-size:17px;line-height:1.45;color:#2A2D33;text-wrap:pretty">Irvine stayed tight this month: under two months of inventory and homes closing just under asking. Well-priced listings in Woodbridge and Northwood drew multiple offers in the first week.</p>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid #E4E4E0">
+            <div style="padding:20px 20px 20px 0;display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11.5px;color:#5E636B">Closed sales</div>
+              <div style="font-family:'Newsreader',serif;font-size:36px;line-height:1">118</div>
+              <div style="font-size:11.5px;color:#1F7A4D;font-weight:600">▲ 6%</div>
+            </div>
+            <div style="padding:20px;border-left:1px solid #E4E4E0;display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11.5px;color:#5E636B">Avg. days on market</div>
+              <div style="font-family:'Newsreader',serif;font-size:36px;line-height:1">19</div>
+              <div style="font-size:11.5px;color:#1F7A4D;font-weight:600">▼ 2 days</div>
+            </div>
+            <div style="padding:20px;border-left:1px solid #E4E4E0;display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11.5px;color:#5E636B">Sale-to-list</div>
+              <div style="font-family:'Newsreader',serif;font-size:36px;line-height:1">99.1%</div>
+              <div style="font-size:11.5px;color:#1F7A4D;font-weight:600">▲ 0.4 pts</div>
+            </div>
+            <div style="padding:20px 0 20px 20px;border-left:1px solid #E4E4E0;display:flex;flex-direction:column;gap:6px">
+              <div style="font-size:11.5px;color:#5E636B">New listings</div>
+              <div style="font-family:'Newsreader',serif;font-size:36px;line-height:1">164</div>
+              <div style="font-size:11.5px;color:#1F7A4D;font-weight:600">▲ 9%</div>
+            </div>
+          </div>
+          <div style="padding:24px 0;border-bottom:1px solid #E4E4E0;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Months of inventory</div>
+              <div style="font-size:13px"><span style="font-family:'Newsreader',serif;font-size:22px">1.9</span> <span style="color:#5E636B">months · seller’s market</span></div>
+            </div>
+            <div style="position:relative;height:8px;display:grid;grid-template-columns:4fr 2fr 2fr;gap:3px">
+              <div style="background:{{ primary }};border-radius:2px 0 0 2px"></div>
+              <div style="background:#D9DADF"></div>
+              <div style="background:#EDEDEA;border-radius:0 2px 2px 0"></div>
+              <div style="position:absolute;left:23.75%;top:-5px;width:3px;height:18px;background:{{ accent }};border-radius:2px;box-shadow:0 0 0 2px #fff"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:4fr 2fr 2fr;gap:3px;font-size:11px;color:#5E636B">
+              <div>Seller’s · under 4</div><div>Balanced · 4–6</div><div>Buyer’s · 6+</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;padding-top:24px">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">By property type</div>
+              <div style="display:grid;grid-template-columns:1fr auto auto auto;column-gap:18px;font-size:12.5px;font-variant-numeric:tabular-nums">
+                <div style="padding:6px 0;border-bottom:1px solid #14161A;font-size:11px;color:#5E636B">Type</div><div style="padding:6px 0;border-bottom:1px solid #14161A;font-size:11px;color:#5E636B;text-align:right">Median</div><div style="padding:6px 0;border-bottom:1px solid #14161A;font-size:11px;color:#5E636B;text-align:right">Closed</div><div style="padding:6px 0;border-bottom:1px solid #14161A;font-size:11px;color:#5E636B;text-align:right">DOM</div>
+                <div style="padding:9px 0;border-bottom:1px solid #E4E4E0">Single-family</div><div style="padding:9px 0;border-bottom:1px solid #E4E4E0;text-align:right;font-weight:600">$1,780,000</div><div style="padding:9px 0;border-bottom:1px solid #E4E4E0;text-align:right">64</div><div style="padding:9px 0;border-bottom:1px solid #E4E4E0;text-align:right">17</div>
+                <div style="padding:9px 0;border-bottom:1px solid #E4E4E0">Condo</div><div style="padding:9px 0;border-bottom:1px solid #E4E4E0;text-align:right;font-weight:600">$905,000</div><div style="padding:9px 0;border-bottom:1px solid #E4E4E0;text-align:right">31</div><div style="padding:9px 0;border-bottom:1px solid #E4E4E0;text-align:right">22</div>
+                <div style="padding:9px 0">Townhome</div><div style="padding:9px 0;text-align:right;font-weight:600">$1,210,000</div><div style="padding:9px 0;text-align:right">23</div><div style="padding:9px 0;text-align:right">20</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Where homes sold · by price tier</div>
+              <div style="display:flex;flex-direction:column;border-top:1px solid #14161A">
+                <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:92px 1fr auto;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid #E4E4E0;font-size:12.5px;font-variant-numeric:tabular-nums">
+                    <div style="display:flex;flex-direction:column"><span>{{ t.name }}</span><span style="font-size:10.5px;color:#5E636B">{{ t.range }}</span></div>
+                    <div style="height:6px;background:#F1F1EE;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ t.w }};background:{{ primary }};border-radius:3px"></div></div>
+                    <div style="text-align:right;min-width:64px"><strong style="font-weight:600">{{ t.closed }}</strong> <span style="color:#5E636B">sold</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:auto;padding-top:18px;border-top:1px solid #14161A;display:flex;align-items:center;gap:14px">
+            <div style="width:44px;height:44px;border-radius:999px;background:#F1F1EE;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:{{ primary }};flex-shrink:0">JR</div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:14px;font-weight:600">Jordan Reyes</div>
+              <div style="font-size:11.5px;color:#5E636B">Coastline Realty · DRE #02145678</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:11.5px;color:#2A2D33">
+              <span>(949) 555-0142</span><span>jordan@coastlinerealty.com</span>
+            </div>
+          </div>
+          <div style="padding-top:12px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS closed sales, Irvine city limits · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+        </div>
+
+        <div data-screen-label="1a New Listings" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;padding:48px 56px 36px;box-sizing:border-box;overflow:hidden">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:2px solid {{ primary }}">
+            <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;color:{{ primary }}">Coastline Realty</div>
+            <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">New Listings · Aug 24 – Sep 23, 2026</div>
+          </div>
+          <div style="padding:32px 0 24px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+            <h1 style="margin:0;font-family:'Newsreader',serif;font-weight:400;font-size:56px;line-height:1;letter-spacing:-0.02em">New in Irvine</h1>
+            <div style="text-align:right"><div style="font-family:'Newsreader',serif;font-size:40px;line-height:1;color:{{ primary }}">24</div><div style="font-size:11.5px;color:#5E636B;margin-top:4px">homes listed · page 1 of 4</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px 28px;flex:1;min-height:0">
+            <sc-for list="{{ listings }}" as="l" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;gap:10px;min-height:0">
+                <div style="aspect-ratio:16/10;background:#F1F1EE;overflow:hidden;border-radius:2px"><img src="{{ l.photo }}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></img></div>
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+                  <div style="font-family:'Newsreader',serif;font-size:24px;line-height:1">{{ l.price }}</div>
+                  <div style="font-family:'Geist Mono',monospace;font-size:10.5px;color:#5E636B;white-space:nowrap">{{ l.specs }}</div>
+                </div>
+                <div style="font-size:12.5px;color:#2A2D33;margin-top:-4px">{{ l.address }} <span style="color:#8A8E95">· {{ l.hood }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:24px;padding-top:18px;border-top:1px solid #14161A;display:flex;align-items:center;gap:14px">
+            <div style="width:44px;height:44px;border-radius:999px;background:#F1F1EE;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:{{ primary }};flex-shrink:0">JR</div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:14px;font-weight:600">Jordan Reyes</div>
+              <div style="font-size:11.5px;color:#5E636B">Coastline Realty · DRE #02145678</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:11.5px;color:#2A2D33">
+              <span>(949) 555-0142</span><span>jordan@coastlinerealty.com</span>
+            </div>
+          </div>
+          <div style="padding-top:12px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS active listings · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:500;background:#14161A;color:#fff;padding:3px 8px;border-radius:4px">1b</span>
+        <span style="font-size:16px;font-weight:600">Color block</span>
+        <span style="font-size:14px;color:#5E636B">Brand color owns the top third. Bold and scannable, reads well on a phone.</span>
+      </div>
+      <div style="display:flex;gap:32px;flex-wrap:wrap">
+        <div data-screen-label="1b Market Snapshot" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden">
+          <div style="background:{{ primary }};color:#fff;padding:40px 52px 0;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.78)">Aug 24 – Sep 23, 2026</div>
+            <div style="height:44px;max-width:180px;display:flex;align-items:center;justify-content:flex-end;font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1;text-align:right">Coastline Realty</div>
+            </div>
+            <div style="margin-top:44px;font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.78)">Irvine · Market Snapshot</div>
+            <div style="margin-top:10px;display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap">
+              <div style="font-size:104px;font-weight:600;line-height:0.9;letter-spacing:-0.045em;font-variant-numeric:tabular-nums">$1.46M</div>
+              <div style="padding-bottom:10px;display:flex;flex-direction:column;gap:4px">
+                <span style="align-self:flex-start;font-size:13px;font-weight:600;background:#fff;color:{{ primary }};padding:4px 10px;border-radius:999px">▲ 3.1%</span>
+                <span style="font-size:12.5px;color:rgba(255,255,255,0.85)">median sale price vs. prior 30 days</span>
+              </div>
+            </div>
+            <div style="margin-top:40px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid rgba(255,255,255,0.25)">
+              <div style="padding:18px 16px 22px 0;display:flex;flex-direction:column;gap:4px"><div style="font-size:32px;font-weight:600;letter-spacing:-0.02em;line-height:1">118</div><div style="font-size:11.5px;color:rgba(255,255,255,0.85)">Closed sales · ▲6%</div></div>
+              <div style="padding:18px 16px 22px;border-left:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;gap:4px"><div style="font-size:32px;font-weight:600;letter-spacing:-0.02em;line-height:1">19</div><div style="font-size:11.5px;color:rgba(255,255,255,0.85)">Days on market · ▼2</div></div>
+              <div style="padding:18px 16px 22px;border-left:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;gap:4px"><div style="font-size:32px;font-weight:600;letter-spacing:-0.02em;line-height:1">99.1%</div><div style="font-size:11.5px;color:rgba(255,255,255,0.85)">Sale-to-list</div></div>
+              <div style="padding:18px 0 22px 16px;border-left:1px solid rgba(255,255,255,0.25);display:flex;flex-direction:column;gap:4px"><div style="font-size:32px;font-weight:600;letter-spacing:-0.02em;line-height:1">164</div><div style="font-size:11.5px;color:rgba(255,255,255,0.85)">New listings · ▲9%</div></div>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:30px;padding:32px 52px 0">
+            <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:13px;font-weight:600">It’s a seller’s market</div>
+                <div style="font-size:12px;line-height:1.5;color:#5E636B;text-wrap:pretty">1.9 months of inventory. At this pace, every listing would sell in under two months.</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px">
+                <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:4px;height:34px">
+                  <div style="background:{{ primary }};border-radius:3px"></div>
+                  <div style="background:{{ primary }};border-radius:3px;position:relative;overflow:hidden"><div style="position:absolute;inset:0 10% 0 0;background:{{ primary }}"></div><div style="position:absolute;top:0;bottom:0;right:0;width:10%;background:#EDEDEA"></div></div>
+                  <div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div>
+                  <div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div>
+                  <div style="background:#EDEDEA;border-radius:3px"></div><div style="background:#EDEDEA;border-radius:3px"></div>
+                </div>
+                <div style="display:grid;grid-template-columns:4fr 2fr 2fr;gap:4px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:0.04em;text-transform:uppercase;color:#5E636B">
+                  <div style="border-top:2px solid #14161A;padding-top:6px">Seller’s &lt;4 mo</div><div style="border-top:2px solid #B9BBC1;padding-top:6px">Balanced</div><div style="border-top:2px solid #DADBDF;padding-top:6px">Buyer’s 6+</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="font-size:13px;font-weight:600">Move-up homes lead</div>
+                <div style="font-size:12px;line-height:1.5;color:#5E636B;text-wrap:pretty">Nearly half of this month’s sales closed between $1.1M and $2M.</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:110px 1fr 150px;gap:14px;align-items:center;font-size:12.5px;font-variant-numeric:tabular-nums">
+                    <div style="display:flex;flex-direction:column"><span style="font-weight:600">{{ t.name }}</span><span style="font-size:10.5px;color:#5E636B">{{ t.range }}</span></div>
+                    <div style="height:22px;background:#F4F4F1;border-radius:3px;overflow:hidden"><div style="height:100%;width:{{ t.w }};background:{{ accent }};border-radius:3px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;box-sizing:border-box;color:#fff;font-size:11.5px;font-weight:600">{{ t.closed }}</div></div>
+                    <div style="font-size:11.5px;color:#5E636B;text-align:right">{{ t.median }} median · {{ t.moi }} mo</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:start">
+              <div style="font-size:13px;font-weight:600">By property type</div>
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+                <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Single-family</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$1.78M</div><div style="font-size:11px;color:#5E636B">64 sold · 17 days</div></div>
+                <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Condo</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$905K</div><div style="font-size:11px;color:#5E636B">31 sold · 22 days</div></div>
+                <div style="background:#F6F5F1;border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:4px"><div style="font-size:11.5px;color:#5E636B">Townhome</div><div style="font-size:22px;font-weight:600;letter-spacing:-0.02em">$1.21M</div><div style="font-size:11px;color:#5E636B">23 sold · 20 days</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="margin:28px 52px 0;padding:16px 0;border-top:1px solid #E4E4E0;display:flex;align-items:center;gap:14px">
+            <div style="width:48px;height:48px;border-radius:999px;background:{{ primary }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">JR</div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:15px;font-weight:600">Jordan Reyes</div>
+              <div style="font-size:12px;color:#5E636B">Coastline Realty · DRE #02145678</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:500">
+              <span>(949) 555-0142</span><span style="color:{{ primary }}">jordan@coastlinerealty.com</span>
+            </div>
+          </div>
+          <div style="padding:0 52px 28px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS closed sales, Irvine · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+        </div>
+
+        <div data-screen-label="1b New Listings" style="width:816px;height:1056px;flex-shrink:0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08);display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden">
+          <div style="background:{{ primary }};color:#fff;padding:36px 52px 32px;display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-family:'Geist Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.78)">Aug 24 – Sep 23, 2026</div>
+            <div style="height:44px;max-width:180px;display:flex;align-items:center;justify-content:flex-end;font-size:20px;font-weight:700;letter-spacing:-0.02em;line-height:1;text-align:right">Coastline Realty</div>
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px">
+              <div style="display:flex;align-items:flex-end;gap:16px">
+                <div style="font-size:88px;font-weight:600;line-height:0.85;letter-spacing:-0.045em">24</div>
+                <div style="font-size:22px;font-weight:600;line-height:1.1;letter-spacing:-0.01em;padding-bottom:2px">new listings<br>in Irvine</div>
+              </div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.85);text-align:right;line-height:1.5">$875K – $2.15M<br>Page 1 of 4</div>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:20px 16px;padding:28px 52px 0">
+            <sc-for list="{{ listings }}" as="l" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;min-height:0">
+                <div style="position:relative;flex:1;min-height:0;background:#F1F1EE;border-radius:6px;overflow:hidden">
+                  <img src="{{ l.photo }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></img>
+                  <div style="position:absolute;left:10px;top:10px;background:#fff;color:#14161A;font-size:15px;font-weight:700;letter-spacing:-0.01em;padding:4px 9px;border-radius:4px">{{ l.price }}</div>
+                </div>
+                <div style="padding-top:10px;display:flex;flex-direction:column;gap:3px">
+                  <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.address }}</div>
+                  <div style="font-size:11.5px;color:#5E636B">{{ l.hood }} · {{ l.specs }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin:24px 52px 0;padding:16px 0;border-top:1px solid #E4E4E0;display:flex;align-items:center;gap:14px">
+            <div style="width:48px;height:48px;border-radius:999px;background:{{ primary }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">JR</div>
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <div style="font-size:15px;font-weight:600">Jordan Reyes</div>
+              <div style="font-size:12px;color:#5E636B">Coastline Realty · DRE #02145678</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:12px;font-weight:500">
+              <span>(949) 555-0142</span><span style="color:{{ primary }}">jordan@coastlinerealty.com</span>
+            </div>
+          </div>
+          <div style="padding:0 52px 28px;font-family:'Geist Mono',monospace;font-size:9px;letter-spacing:0.04em;color:#8A8E95">Source: CRMLS active listings · Generated Sep 23, 2026 · Deemed reliable, not guaranteed</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;primary&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#18235c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#18235c&quot;,&quot;#7C3AED&quot;,&quot;#0F5132&quot;,&quot;#8A1C1C&quot;],&quot;section&quot;:&quot;Agent brand&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#0d9488&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#0d9488&quot;,&quot;#F26B2B&quot;,&quot;#B08D57&quot;,&quot;#2563EB&quot;],&quot;section&quot;:&quot;Agent brand&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const U = "https://images.unsplash.com/photo-";
+    const q = "?w=640&h=420&fit=crop";
+    const primary = p.primary || "#18235c", accent = p.accent || "#0d9488";
+    const closed = [
+      ["14 Cartwheel","Woodbridge","4/3","2,140","$1,412,000",102.4,6],["52 Pathway","Northwood","5/4","3,380","$2,180,000",101.4,9],
+      ["301 Stanford Ct","Turtle Rock","3/2","1,620","$1,048,000",98.9,14],["8 Lyon","Portola Springs","4/3","2,610","$1,725,000",99.1,11],
+      ["89 Maple Heights","Westpark","2/2","1,180","$862,000",98.5,21],["310 Sunset","Quail Hill","3/3","1,940","$1,305,000",101.2,8],
+      ["27 Pine Ridge Ct","Orchard Hills","5/5","3,920","$2,640,000",97.6,34],["116 Bellatrix","Great Park","4/4","2,480","$1,590,000",100.3,12],
+      ["45 Tangerine","Woodbury","3/3","1,760","$1,190,000",99.6,17],["2 Kestrel","Shady Canyon","5/6","5,210","$4,850,000",96.1,62],
+      ["1803 Scholarship","Central Irvine","2/2","1,090","$765,000",99.4,19],["63 Hedgerow","Woodbridge","3/2","1,480","$1,095,000",100.5,10],
+      ["19 Coral Rose","Turtle Ridge","4/4","3,050","$2,310,000",98.2,27],["7 Mustang","Northpark","4/3","2,290","$1,468,000",100.9,13],
+      ["240 Lunar","Great Park","3/3","1,870","$1,262,000",99.8,15],["38 Night Bloom","Portola Springs","2/2","1,210","$912,000",101.8,7]
+    ].map(r => ({ address: r[0], hood: r[1], bdba: r[2], sqft: r[3], price: r[4], vs: r[5].toFixed(1) + "%", vsColor: r[5] > 100 ? accent : "#5E636B", dom: r[6] }));
+    const inv = [
+      ["22 Canopy","Great Park","4/3","2,380","$1,649,000",2],["118 Ridgeview","Turtle Ridge","5/5","3,610","$2,895,000",5],
+      ["41 Cedarbrook","Woodbridge","3/2","1,540","$1,129,000",3],["6 Almador","Shady Canyon","6/7","6,120","$6,900,000",48],
+      ["905 Tribeca","Central Irvine","2/2","1,120","$799,000",9],["73 Wildflower","Portola Springs","4/4","2,720","$1,798,000",6],
+      ["14 Sycamore","Northwood","4/3","2,210","$1,549,000",14],["380 Cantata","Great Park","3/3","1,810","$1,288,000",1],
+      ["55 Briarwood","University Park","3/2","1,690","$1,215,000",21],["9 Shooting Star","Quail Hill","4/4","2,960","$2,249,000",11],
+      ["127 Fresno","Westpark","2/2","1,050","$715,000",4],["30 Timberland","Woodbury","4/3","2,340","$1,575,000",17],
+      ["61 Lemon Grove","Orchard Hills","5/5","3,880","$2,780,000",26],["208 Prism","Great Park","3/3","1,760","$1,249,000",7],
+      ["17 Summerland","Turtle Rock","4/3","2,450","$1,995,000",33],["4 Juneberry","Portola Springs","3/3","1,640","$1,169,000",2]
+    ].map(r => ({ address: r[0], hood: r[1], bdba: r[2], sqft: r[3], price: r[4], dom: r[5], isNew: r[5] <= 7 }));
+    const bandsRaw = [["Under $800K",18,"$712K",24,"$705"],["$800K – $1M",29,"$905K",19,"$742"],["$1M – $1.25M",41,"$1.12M",16,"$768"],
+      ["$1.25M – $1.5M",38,"$1.36M",18,"$771"],["$1.5M – $2M",44,"$1.72M",22,"$758"],["$2M – $3M",27,"$2.38M",31,"$812"],["$3M+",15,"$4.20M",58,"$1,040"]];
+    const bands = bandsRaw.map(b => {
+      const fast = b[3] === 16, slow = b[3] === 58;
+      return { label: b[0], count: b[1], w: Math.round(b[1] / 44 * 100) + "%", median: b[2], dom: b[3], ppsf: b[4],
+        tag: fast ? "Fastest" : slow ? "Slowest" : "", tagColor: fast ? accent : slow ? "#B42318" : "#5E636B", barColor: fast ? accent : primary };
+    });
+    const FQ = "?w=900&h=640&fit=crop";
+    return {
+      primary, accent, closedRows: closed, invRows: inv, bands,
+      primaryTint: primary + "14",
+      okPhoto: U + "1583608205776-bfd35f0d9f83?w=520&h=390&fit=crop",
+      closedRows2: (() => {
+        const st = ["Alderwood","Bluebell","Carmel","Dovecote","Elmhurst","Fieldstone","Greenfield","Harvest","Ironbark","Juniper","Kingsbury","Larkspur","Meadowlark","Nectar","Oakmont","Primrose","Quarry","Rosemary","Saddlebrook","Thistle","Upland","Verbena","Willowick","Yarrow","Zinnia","Amberwood"];
+        const hd = ["Woodbridge","Northwood","Great Park","Turtle Rock","Portola Springs","Quail Hill","Westpark","Woodbury","University Park"];
+        return st.map((s, i) => {
+          const vs = 96.5 + ((i * 37) % 60) / 10, beds = 2 + (i % 4), price = 780 + ((i * 173) % 1900);
+          return { address: (10 + i * 7) + " " + s, hood: hd[i % hd.length], bdba: beds + "/" + Math.max(2, beds - (i % 2)),
+            sqft: (1100 + beds * 420 + (i % 5) * 60).toLocaleString(), price: "$" + (price * 1000).toLocaleString(),
+            vs: vs.toFixed(1) + "%", vsColor: vs > 100 ? accent : "#5E636B", dom: 5 + ((i * 11) % 38) };
+        });
+      })(),
+      rules: [
+        { where: "Snapshot · market", when: "months of inventory", text: "Under 4 → “It’s a seller’s market” · 4–6 → “The market is balanced” · over 6 → “Buyers have the edge”", else: "Subline: “{moi} months of inventory. At this pace, every listing would sell in {moi} months.”" },
+        { where: "Snapshot · tiers", when: "tier share ≥ 40%", text: "“{Tier} homes lead”", else: "Otherwise: “Sales spread across price tiers”" },
+        { where: "Price Bands", when: "fastest band", text: "“{band} is moving fastest”", else: "Only if that band has ≥ 10 listings and is ≥ 3 days faster than the area average. Otherwise: “Irvine · Price Bands”" },
+        { where: "Every headline", when: "sample size", text: "Hidden if the report has fewer than 10 sales/listings", else: "Falls back to the plain report title, so a thin month never shows an odd claim." },
+        { where: "Deltas", when: "vs. prior period", text: "▲/▼ shown only when the change is ≥ 1%", else: "Smaller moves show “flat”, which avoids noisy green/red on nothing." }
+      ],
+      featured: [
+        { photo: U + "1512917774080-9991f1c4c750" + FQ, price: "$2,150,000", address: "52 Pathway", hood: "Northwood", beds: 5, baths: 4, sqft: "3,380" },
+        { photo: U + "1583608205776-bfd35f0d9f83" + FQ, price: "$1,380,000", address: "14 Cartwheel", hood: "Woodbridge", beds: 4, baths: 3, sqft: "2,140" },
+        { photo: U + "1598228723793-52759bba239c" + FQ, price: "$1,740,000", address: "8 Lyon", hood: "Portola Springs", beds: 4, baths: 3, sqft: "2,610" },
+        { photo: U + "1570129477492-45c003edd2be" + FQ, price: "$1,060,000", address: "301 Stanford Ct", hood: "Turtle Rock", beds: 3, baths: 2, sqft: "1,620" }
+      ],
+      tiers: [
+        { name: "Entry", range: "Under $1.1M", closed: 38, w: "67%", median: "$878K", moi: "1.4" },
+        { name: "Move-up", range: "$1.1M – $2M", closed: 57, w: "100%", median: "$1.47M", moi: "1.8" },
+        { name: "Luxury", range: "$2M+", closed: 23, w: "40%", median: "$2.65M", moi: "3.1" }
+      ],
+      listings: [
+        { photo: U + "1583608205776-bfd35f0d9f83" + q, price: "$1,380,000", address: "14 Cartwheel", hood: "Woodbridge", specs: "4 bd · 3 ba · 2,140 sf" },
+        { photo: U + "1512917774080-9991f1c4c750" + q, price: "$2,150,000", address: "52 Pathway", hood: "Northwood", specs: "5 bd · 4 ba · 3,380 sf" },
+        { photo: U + "1570129477492-45c003edd2be" + q, price: "$1,060,000", address: "301 Stanford Ct", hood: "Turtle Rock", specs: "3 bd · 2 ba · 1,620 sf" },
+        { photo: U + "1598228723793-52759bba239c" + q, price: "$1,740,000", address: "8 Lyon", hood: "Portola Springs", specs: "4 bd · 3 ba · 2,610 sf" },
+        { photo: U + "1600596542815-ffad4c1539a9" + q, price: "$875,000", address: "89 Maple Heights", hood: "Westpark", specs: "2 bd · 2 ba · 1,180 sf" },
+        { photo: U + "1600585154340-be6161a56a0c" + q, price: "$1,290,000", address: "310 Sunset", hood: "Quail Hill", specs: "3 bd · 3 ba · 1,940 sf" }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
