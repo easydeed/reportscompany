@@ -811,6 +811,55 @@
       font-family:'Montserrat',sans-serif; font-size:9px; color:var(--slate); line-height:1.5;
     }
     .overview-footer-name{ font-weight:700; color:var(--navy-on-light); font-size:10px; }
+
+    /* D-159: the comparables continuation page. Every comp the range was
+       drawn from, in full, because the cards page holds four and the note
+       beside the range claims all of them. Neutral ink on paper — the brand
+       colour is the rule under the header and nothing that has to be read,
+       which keeps this page out of D-129's way by construction. */
+    .comp-list{
+      width:100%; border-collapse:collapse; margin-top:14px;
+      table-layout:fixed; font-size:12.5px; color:var(--charcoal);
+    }
+    /* The address is the only column that wraps; the rest are short and
+       fixed. `table-layout:fixed` so a long street name takes its width
+       from nothing else — without it the address ran to three lines in
+       three of the five themes and the page overflowed by 390px. Measured,
+       not guessed; see test_one_comp_set.py. */
+    .comp-list th:first-child, .comp-list td:first-child{ width:27%; }
+    /* Wide enough for a seven-figure price. At 11% `$1,016,000` touched the
+       date beside it — found in the render, not in the markup. */
+    .comp-list th:nth-child(2), .comp-list td:nth-child(2){ width:14%; }
+    .comp-list th{
+      text-align:left; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+      color:var(--slate); border-bottom:2px solid var(--navy);
+      padding:0 7px 8px; font-weight:700; white-space:nowrap;
+    }
+    .comp-list td{
+      padding:8px 7px; border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    .comp-list tbody tr:nth-child(even){ background:rgba(0,0,0,.025); }
+    .comp-list td.cl-addr{ font-weight:700; white-space:normal; }
+    /* TWO LINES, HARD. The worst case measured — all fifteen addresses
+       wrapping — fits every theme with 28px to spare, and a third line on
+       one row would spend that. Clamped rather than trusted to the data,
+       because the data is street names. */
+    .comp-list td.cl-addr span{
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+    .comp-list td.cl-price{ font-weight:800; }
+    .comp-list-note{
+      margin-top:12px; font-size:11px; line-height:1.5; color:var(--slate);
+    }
+    /* D-159: the chart draws the WHOLE comparable set now, not the first
+       four. Fixed-width bars overflowed the chart by up to 246px at
+       fifteen — measured, which is how this was found. The bars share the
+       width instead, up to the old fixed width so a small set still looks
+       like the chart it was. */
+    .chart-bar-wrap{ flex:1 1 0; min-width:0; }
+    .chart-bars .chart-bar{ width:100%; max-width:55px; }
+    .chart-bar-label{ font-size:8px; white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -832,6 +881,7 @@
        "analysis": "Area Sales Analysis",
        "market_trends": "Market Trends",
        "comparables": "Sales Comparables",
+       "comparables_all": "Sales Comparables (continued)",
        "range": "Range of Sales"
      } %}
   {% set _nums = page_numbers | default({}) %}
@@ -842,6 +892,10 @@
       not set it — a default of "consumer" would silently strip the block from
       the surface that is meant to have it. The consumer path also omits the
       owner data entirely, so this gate is the second line, not the only one. -#}
+  {#- D-159: how many comp cards the page holds. From the context, not a
+      literal, because the continuation page takes exactly the rest and the
+      two must not be able to disagree about where the split is. -#}
+  {% set _cards = cards_per_comparables_page | default(4) %}
   {% set _audience = audience | default('agent') %}
   {% set _prepared_for = prepared_for | default('') %}
   <div class="sheet">
@@ -1042,7 +1096,7 @@
       <div class="analysis-chart">
         <div class="chart-title">Recent Comparable Sales Activity</div>
         <div class="chart-bars">
-          {% for comp in comparables[:4] %}
+          {% for comp in comparables %}
           <div class="chart-bar-wrap">
             <div class="chart-bar" style="height: {{ [40, (comp.sale_price / 8000) | int] | max }}px;"></div>
             <div class="chart-bar-label">{{ comp.sold_date | default('-') }}</div>
@@ -1193,7 +1247,7 @@
         <h2 class="page-header-title">{{ _titles.comparables }}</h2>
       </div>
       <div class="comp-grid">
-        {% for comp in comparables[:4] %}
+        {% for comp in comparables[:_cards] %}
         <div class="comp-card">
           <div class="comp-card-image" {% if comp.photo_url or comp.map_image_url %}style="background-image: url('{{ comp.photo_url | default(comp.map_image_url) }}'); background-size: cover; background-position: center;"{% endif %}>
             <div class="comp-card-price">{{ comp.sale_price | format_currency }}</div>
@@ -1214,6 +1268,45 @@
         {% endfor %}
       </div>
       <div class="page-footer"><div class="brand">Bold Collection • TrendyReports</div><div class="num">{% if _nums.get("comparables") %}{{ "%02d" | format(_nums["comparables"]) }}{% endif %}</div></div>
+    </section>
+    {% endif %}
+
+    {% if "comparables_all" in _pages %}
+    {#- D-159: THE REST OF THE SET. The cards page holds four, and the note
+        beside the Area Sales Analysis table says every comparable appears on
+        the comparables page. It did not; four did, and the range was drawn
+        over the eleven the reader could not see. This page is the rest, and
+        the builder adds it to the page set only when there IS a rest. -#}
+    <section class="page comparables comparables-all">
+      <div class="page-header">
+        <div class="page-header-label">Recent Transactions</div>
+        <h2 class="page-header-title">{{ _titles.comparables_all }}</h2>
+      </div>
+      <table class="comp-list">
+        <thead>
+          <tr>
+            <th>Address</th><th>Sold</th><th>Date</th><th>Dist</th><th>Sq.Ft.</th>
+            <th>$/Sq.Ft.</th><th>Bd/Ba</th><th>Built</th>
+          </tr>
+        </thead>
+        <tbody>
+        {%- for comp in comparables %}
+          <tr>
+            <td class="cl-addr"><span>{{ comp.address }}</span></td>
+            <td class="cl-price">{{ comp.sale_price | format_currency }}</td>
+            <td>{{ comp.sold_date }}</td>
+            <td>{{ comp.distance_miles | default('-') }}</td>
+            <td>{{ comp.sqft | format_number }}</td>
+            <td>{{ comp.price_per_sqft | format_currency }}</td>
+            <td>{{ comp.bedrooms }}/{{ comp.bathrooms }}</td>
+            <td>{{ comp.year_built }}</td>
+          </tr>
+        {%- endfor %}
+        </tbody>
+      </table>
+      <p class="comp-list-note">{{ comparables | length }} comparable sales. Every one of them is
+      listed here, and the range on the following page is drawn from these and no others.</p>
+      <div class="page-footer"><div class="brand">Bold Collection • TrendyReports</div><div class="num">{% if _nums.get("comparables_all") %}{{ "%02d" | format(_nums["comparables_all"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 

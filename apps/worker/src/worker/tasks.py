@@ -2390,7 +2390,14 @@ def process_consumer_report(self, report_id: str):
 
                     # Normalize into EXACT same dict format as the
                     # working API endpoint (property.py lines 725-749)
-                    for listing in raw_comps[:15]:
+                    # D-159: was a hand-written `[:15]`, the same number as
+                    # the API's `limit` default and the same number as nothing
+                    # else in the pipeline. Imported at the point of use
+                    # because this module imports the builder lazily
+                    # throughout — the constant travels with the thing it
+                    # sizes.
+                    from .property_builder import COMP_SET_MAX
+                    for listing in raw_comps[:COMP_SET_MAX]:
                         prop_info = listing.get("property") or {}
                         addr_obj = listing.get("address") or {}
                         geo = listing.get("geo") or {}

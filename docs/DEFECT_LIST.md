@@ -60,12 +60,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 52 | Real, unfixed |
-| `fixed` | 102 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 53 | Real, unfixed |
+| `fixed` | 103 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
-| **Total** | **158** | D-001 … D-158, contiguous, no duplicates |
+| **Total** | **160** | D-001 … D-160, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 22. (Sums to 52, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 12 · FRAGILE 14 · ROUGH 23. (Sums to 53, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9452,6 +9452,157 @@ thing under test cannot fail" has a mirror image that this is: a test that write
 value down by hand cannot say *why* it failed. And the clock is an input like any other — a
 test that takes one from the ambient environment while its fixture takes another is not
 testing the thing it names.
+
+---
+
+### D-159 — the report says every comparable is on the page, and shows four of fifteen
+
+**Severity:** WRONG · **Affects:** every property report, both paths, all five themes ·
+**Found during:** sizing Jerry's "one set of N, shown in full" before building it
+**Status:** `fixed` — `fix/one-comp-set`
+
+The analysis page prints:
+
+> *"Low, median and high of **15** comparable sales. The table summarises the spread; **every
+> one of the 15 appears on the Sales Comparables page**."*
+
+Four appear. **Eleven do not.** Measured in the rendered document, agent path, fifteen comps
+supplied, all five themes:
+
+| theme | comp addresses rendered | the note's claim | `Total Comps` badge |
+|---|---|---|---|
+| bold | 4 | 15 | — |
+| classic | 4 | 15 | — |
+| elegant | 4 | 15 | — |
+| modern | 4 | 15 | — |
+| teal | 4 | 15 | **15** |
+
+**AND THE RANGE IS DRAWN OVER THE ELEVEN THE READER CANNOT SEE.** Same render: the range page
+reads **$500k – $850k**; the four visible cards are **$500,000, $525,000, $550,000, $575,000**.
+A seller can check **$75,000 of a $350,000 spread — 21%** — and the entire upper half of the
+range has no evidence anywhere in the document. The page whose only purpose is letting a seller
+check the range against the comparables shows them a fifth of it.
+
+**WHY IT IS NOT A LAYOUT BUG.** The layout is the cause; the false sentence is the defect. The
+comp card is 1.8in of map plus a body; four fill the page with 101px to spare and a fifth needs
+~330px (measured in Chromium, not estimated). So `[:4]` is page capacity, **discovered rather
+than chosen** — and nothing told the prose that computes the note about it.
+
+**EIGHT CAPS, AND NOT ONE OF THEM KNOWS ABOUT THE OTHERS.**
+
+| stage | cap | file |
+|---|---|---|
+| API ladder → SimplyRETS | `payload.limit * 4` = 60 | `routes/property.py:728` |
+| API response | `payload.limit`, default **15**, max 50 | `routes/property.py:792` |
+| worker consumer ladder | `limit=25`, break at ≥3 | `tasks.py:2385` |
+| worker normalisation | `raw_comps[:15]` | `tasks.py:2393` |
+| consumer builder | `comparables[:6]` | `consumer_report_data.py:151` |
+| cards context | `raw_comps[:6]` — *"Max 6 (3 rows of 2)"* | `property_builder.py:1054` |
+| **every template loop** | **`[:4]`**, 24 of them across five themes | all `*_report.jinja2` |
+| analysis table, range, `total_comps` | **no cap at all** | `_build_stats_context` |
+
+The `[:6]` in the cards context is dead: the templates take four of the six. The comment beside
+it says "3 rows of 2", which is a layout that has not existed for as long as the templates have
+said `[:4]`.
+
+**THE CONSUMER PATH IS THINNER AGAIN, FOR THE FIFTH TIME.** `consumer_report_data` forwards
+`comparables[:6]`, so a consumer report drops nine of the fifteen the ladder found before the
+builder ever sees them — and its note then claims *"every one of the 6"* while showing four.
+D-138, D-139, D-140 and D-141 were the first four; this is the fifth, and like those four it is
+a cap nobody recorded a reason for.
+
+**PROVENANCE: NOBODY CHOSE 15 OR 6.** `git log -S "default=15"` and `git log -S "Max 6
+comparables"` both land on commit **202 of 202**, the squashed base, whose message is about
+Market Snapshot gallery rows. Same trace as D-141, same answer: the numbers were never decided,
+they were inherited.
+
+**It predates the ticket and the ticket's fix closes it.** Filed first, separately and as `open`,
+because a defect that disappears as a side effect of a feature is a defect that never gets
+recorded — and this one is a false statement printed to a seller, which is the part worth
+remembering happened.
+
+---
+
+**FIXED, AND WHAT THE FIX IS.** One set, sized once in `property_builder.COMP_SET_MAX = 15`.
+Everything downstream derives from it; `apps/api`'s `ComparablesRequest.limit` carries the same
+number and a test parses both files and fails when they drift, because two deployments have no
+other way to share a constant.
+
+The four nearest keep their cards — the photographs are why the card page works — and the rest
+of the set follows on a **continuation page**, a list of every comparable the range was drawn
+from. The builder adds that page to the page set only when there is a rest, beside the two
+conditional DROPS (`market_trends`, `overview`) and before `paginate`, so the page numbers and
+the contents row come out of the existing D-121 machinery rather than a second copy of it. One
+page, not the three that more cards would have cost.
+
+The analysis page's bar chart was `comparables[:4]` too — four bars above a table summarising
+fifteen — and now draws the set. Fixed-width bars overflowed the chart by up to 246px at
+fifteen, measured; they share the width now.
+
+**WHAT THE GATE ASSERTS, WHICH IS THE INVARIANT AND NOT THE CHANGE.** At seven set sizes across
+five themes: the analysis note's count, `stats.total_comps`, the chart's bars and the number of
+comparables actually rendered are **the same number**, and both ends of the range appear
+somewhere a reader can see them. A new cap anywhere in the chain fails it, whichever file it is
+added to. The caps-collapse alone could be undone by the next person adding a slice to make a
+page fit, which is precisely how `[:4]` arrived.
+
+Two parts of the gate are worth naming separately:
+
+* **It is parsed, not grepped** — and the first version was grepped, and was answered by *this
+  file's own prose about the defect*, twice: the template comment explaining why the cap went
+  and the Python comment recording what the cap used to be. Eighth instance of
+  substring-is-not-a-construct, and the first two caught before they shipped.
+* **The page fit is measured in Chromium**, in the worst case the data can produce — all fifteen
+  addresses wrapping to the two-line clamp. A list page that silently overflowed would be this
+  defect wearing the fix's clothes: the rows present in the HTML, off the bottom of the sheet in
+  the PDF, and every count assertion still green. Raising `COMP_SET_MAX` to 22 fails it, which
+  makes the constant and the layout coupled **in the test** rather than only in fact.
+
+**Seven regressions applied and each seen to fail:** a literal cap back in a template; the
+continuation page never added; the consumer `[:6]` restored; the API and the worker set to
+different numbers; the analysis chart back to four bars; `COMP_SET_MAX` raised past what the
+sheet holds; and a live template pulling in the dead template tree (D-160).
+
+**One thing was taken out rather than carried over, and it is a judgement.** The list drops
+**Lot** and **Pool**, which the cards show for the four nearest. Ten columns put the address on
+three lines in three of the five themes and overflowed the page by 390px. The SET is complete —
+every comparable is listed — and two fields that bear on neither the range nor the match are
+not repeated. Putting them back costs a narrower address column and a measurement.
+
+---
+
+### D-160 — a second property-template tree that nothing renders
+
+**Severity:** ROUGH · **Affects:** nothing in production, which is the point · **Found during:**
+scoping D-159's template gate
+**Status:** `open`
+
+`templates/property/` holds **two** template trees.
+
+| | files | lines | rendered |
+|---|---|---|---|
+| `<theme>/<theme>_report.jinja2` | 5 | ~16,000 | yes — `THEME_TEMPLATES` points here |
+| `<theme>/<theme>.jinja2` + `_base/base.jinja2` + `_base/_macros.jinja2` | 7 | **15,628** | **no** |
+
+The second set extends `_base/base.jinja2`, which imports `_base/_macros.jinja2`. Nothing
+reaches any of it: `THEME_TEMPLATES` names only the five `*_report.jinja2`, and none of those
+five carries an `extends`, `import`, `include` or `from`. Fifteen thousand lines of templates
+that cannot render.
+
+**Why it is filed rather than deleted here.** It still carries `comparables[:4]` in seven
+places, so D-159's gate had to decide whether to cover it. Covering it would have meant fixing
+it, and fixing dead code is how dead code survives another year. The gate is scoped to the live
+five and **asserts that the exclusion is a fact** — `test_the_live_template_set_is_the_five_entry_files`
+fails the moment a live template pulls one of these in, which is the only way the dead set can
+become reachable. §0.6: an unstated boundary reads as none, so the boundary is stated and
+checked.
+
+**What it costs while it sits there.** Every grep for a template construct returns it, and
+every answer is wrong in the same direction — it looks like a site that needs fixing and is
+not. Three sweeps in this project have already been sized against file counts that included
+it. Deleting it is one commit and a `git log` check that nothing references the paths; it needs
+somebody to confirm it is not a staging ground for a redesign, which is why it is a question
+rather than a change.
 
 ---
 
