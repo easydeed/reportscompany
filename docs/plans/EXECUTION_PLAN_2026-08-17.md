@@ -1127,6 +1127,28 @@ it.**
   recurring in the work that fixed a later one. The guards are doing more work than the rules,
   which is the argument for writing a guard every time rather than a rule every time.
 
+- **A RESTORE THAT TARGETS AN UNTRACKED FILE SUCCEEDS AND DOES NOTHING.** *Added 2026-10-05.*
+  Twice this session, both times during regression testing, both times leaving the mutation in
+  place for the suite to measure as real.
+
+  `git checkout -- <path>` and `git restore <path>` restore from the index. A file git is not
+  tracking has nothing in the index, so the command exits 0, prints nothing, and changes
+  nothing. The first instance reverted a whole tracked file and took a *new function* out with
+  it — `format_measure` vanished and 36 test files failed to import, which at least announced
+  itself. The second was silent: an edit planted in a brand-new correction document stayed
+  planted, and the only reason it surfaced is that the gate written minutes earlier asserted
+  on that document's contents.
+
+  **This is the no-op mutation trap again** — the same shape as the `str.replace` that matched
+  nothing and silently updated no counts, and the same shape as `elementsFromPoint` returning
+  `-1`. A command that cannot distinguish "did the thing" from "had nothing to do" is a command
+  whose success tells you nothing.
+
+  The habit: **restore from a copy you made, not from git**, when the file might be new —
+  `cp` the original aside before mutating and `cp` it back, and have the regression's own
+  verification run afterwards rather than trusting the restore. `git status --porcelain` after
+  a restore costs nothing and shows `??` for exactly the files the restore could not touch.
+
 ---
 
 ## Phase 0 — Security & Tooling
