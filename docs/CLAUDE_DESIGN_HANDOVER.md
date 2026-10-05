@@ -15,23 +15,31 @@ both are corrected below and in `DEFECT_LIST.md`.
 **`<theme>/<theme>.jinja2` and everything in `_base/` render nowhere. Do not read them, do not
 port them, do not take their copy as current.** (D-131.)
 
+> **UPDATED 2026-10-05 — THE THEME SET IS NOW THREE.** Jerry cut the themes to
+> **bold, elegant and modern**. `classic` and `teal` are retired and their templates are
+> deleted, which is why the counts below are smaller than in the copy you were sent. The
+> rest of this document stands; where it says "five themes" or names classic or teal, read
+> three. The six colours in section 1 are unchanged — none of them is teal's or classic's.
+
 | tree | files | lines | rendered |
 |---|---|---|---|
-| `templates/property/<theme>/<theme>_report.jinja2` | 5 | **5,767** | **yes** — `THEME_TEMPLATES` maps to exactly these |
-| `templates/property/<theme>/<theme>.jinja2` | 5 | 4,894 | **no** |
+| `templates/property/<theme>/<theme>_report.jinja2` | 3 | **2,860** | **yes** — `THEME_TEMPLATES` maps to exactly these |
+| `templates/property/<theme>/<theme>.jinja2` | 3 | 2,749 | **no** |
 | `templates/property/_base/base.jinja2` | 1 | 2,146 | **no** |
 | `templates/property/_base/_macros.jinja2` | 1 | 675 | **no** |
-| | **7 dead** | **7,715** | |
+| | **5 dead** | **5,570** | |
 
-**There is more dead property-template code than live.** 7,715 lines against 5,767.
+**There is still more dead property-template code than live.** 5,570 lines against 2,860 —
+the ratio got *worse*, because the cut deleted one live file and one dead file per retired
+theme while `_base/` (2,821 lines, none of it rendered) stayed exactly where it was.
 
-The dead five are near-complete copies of the live five and `teal.jinja2` looks exactly as
-current as `teal_report.jinja2`. They are stale in ways you cannot see by reading them: they
+The dead three are near-complete copies of the live three and `bold.jinja2` looks exactly as
+current as `bold_report.jinja2`. They are stale in ways you cannot see by reading them: they
 still say *"comparable homes sold within the last **12 months**"* over a query that has used
 **six** since D-117, and they still cap the comparables at four, which the live templates
-stopped doing today.
+stopped doing.
 
-The live set is asserted to be exactly those five —
+The live set is asserted to be exactly those three —
 `test_one_comp_set.py::test_the_live_template_set_is_the_five_entry_files` fails if any of them
 grows an `extends`, `import`, `include` or `from`. If you need shared markup, that test is the
 thing to change deliberately, not to work around.
@@ -40,10 +48,8 @@ thing to change deliberately, not to work around.
 
 ```
 apps/worker/src/worker/templates/property/bold/bold_report.jinja2
-apps/worker/src/worker/templates/property/classic/classic_report.jinja2
 apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2
 apps/worker/src/worker/templates/property/modern/modern_report.jinja2
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2
 ```
 
 ---

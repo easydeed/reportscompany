@@ -38,14 +38,13 @@ import {
   SharedEmailPreview,
   type PreviewReportType,
 } from "@/components/shared/email-preview"
+import { DEFAULT_THEME_ID, resolveThemeId } from "@/lib/themes.generated"
 
 // ─── Theme definitions (mirror property-wizard/types.ts) ───
 
 const THEMES = [
-  { id: 1, name: "Classic", style: "Timeless & Professional", font: "Merriweather + System Sans", gradient: "linear-gradient(135deg, #1B365D 0%, #2D5F8A 100%)", previewImage: "/previews/1.jpg" },
   { id: 2, name: "Modern", style: "Clean & Contemporary", font: "DM Sans", gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", previewImage: "/previews/2.jpg" },
   { id: 3, name: "Elegant", style: "Sophisticated & Refined", font: "Playfair Display", gradient: "linear-gradient(135deg, #1a1a1a 0%, #C9A962 100%)", previewImage: "/previews/3.jpg" },
-  { id: 4, name: "Teal", style: "Vibrant & Modern", font: "Montserrat", gradient: "linear-gradient(135deg, #18235c 0%, #34d1c3 100%)", previewImage: "/previews/4.jpg" },
   { id: 5, name: "Bold", style: "Impactful & Striking", font: "Clash Display + DM Sans", gradient: "linear-gradient(135deg, #15216E 0%, #D69649 100%)", previewImage: "/previews/5.jpg" },
 ]
 
@@ -97,7 +96,7 @@ export default function BrandingPage() {
     tagline: "",
     primary_color: "#818CF8",
     accent_color: "#F59E0B",
-    default_theme_id: 4,
+    default_theme_id: DEFAULT_THEME_ID,
     header_logo_url: null,
     footer_logo_url: null,
     agent_name: "",
@@ -129,7 +128,7 @@ export default function BrandingPage() {
         tagline: "",
         primary_color: acc.resolved_primary_color || acc.primary_color || "#818CF8",
         accent_color: acc.resolved_accent_color || acc.secondary_color || "#F59E0B",
-        default_theme_id: acc.default_theme_id || 4,
+        default_theme_id: resolveThemeId(acc.default_theme_id),
         header_logo_url: acc.resolved_logo_url || acc.logo_url || acc.email_logo_url || null,
         footer_logo_url: acc.footer_logo_url || acc.email_footer_logo_url || null,
         agent_name: fullName || "",
@@ -241,7 +240,12 @@ export default function BrandingPage() {
   }
 
   const update = (patch: Partial<BrandingData>) => setBranding((prev) => ({ ...prev, ...patch }))
-  const selectedTheme = THEMES.find((t) => t.id === branding.default_theme_id) || THEMES[3]
+  // `|| THEMES[3]` was teal by position. After the cut, index 3 does not
+  // exist — three themes — so this read `undefined` and the page rendered
+  // the preview with no theme at all. Resolved through the registry.
+  const selectedTheme =
+    THEMES.find((t) => t.id === resolveThemeId(branding.default_theme_id)) ||
+    THEMES.find((t) => t.id === DEFAULT_THEME_ID)!
 
   if (isLoading) {
     return (

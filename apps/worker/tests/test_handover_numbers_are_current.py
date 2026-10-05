@@ -92,7 +92,7 @@ def test_every_field_jerry_is_asked_about_is_still_an_orphan():
 
 
 def test_both_template_trees_are_the_size_the_handover_says():
-    """7,715 dead across seven files, 5,767 live across five.
+    """5,570 dead across five files, 2,860 live across three.
 
     THE FIRST VERSION OF THIS NUMBER WAS 15,628, FROM A `wc -l` WHOSE GLOB
     LISTED ONE FILE TWICE. It went into two defect entries, a pull request
@@ -110,7 +110,15 @@ def test_both_template_trees_are_the_size_the_handover_says():
     def total(paths):
         return sum(len(p.read_text(encoding="utf-8").splitlines()) for p in paths)
 
-    assert len(dead) == 7, f"{len(dead)} dead templates now: {[p.name for p in dead]}"
+    # One dead file per theme plus the two in `_base/`. Derived, so the next
+    # cut moves it: the literal 7 here went stale on the theme cut and the
+    # failure read as "the dead tree changed" when it was "a theme left".
+    expected_dead = len(THEME_TEMPLATES) + 2
+    assert len(dead) == expected_dead, (
+        f"{len(dead)} dead templates, expected {expected_dead} "
+        f"({len(THEME_TEMPLATES)} themes + _base/base + _base/_macros): "
+        f"{[p.name for p in dead]}"
+    )
     for label, n in (("dead", total(dead)), ("live", total(sorted(live_paths)))):
         assert f"{n:,}" in text, (
             f"the {label} tree is {n:,} lines; the handover states something else"
@@ -118,7 +126,7 @@ def test_both_template_trees_are_the_size_the_handover_says():
 
 
 @pytest.mark.parametrize("name", sorted(THEME_TEMPLATES.values()))
-def test_the_handover_names_the_five_files_to_open(name):
+def test_the_handover_names_every_live_file_to_open(name):
     text = HANDOVER.read_text(encoding="utf-8")
     assert name.split("/")[-1] in text, (
         f"{name} is a live template and the handover does not name it, so a "

@@ -26,7 +26,8 @@ Two things, both reachable, neither in the filed report:
   whitespace-only title   `"   "` is truthy, so it sailed past the `or` and
                           every theme printed a blank line in cover-sized type.
 
-  dangling separator      classic and bold render `{{ title }} • {{ license }}`
+  dangling separator      bold renders `{{ title }} • {{ license }}` (so did
+                          classic, until the theme cut deleted it)
                           with the bullet OUTSIDE any condition, and `license`
                           is `""` for any agent who has not entered a licence
                           number. Those covers read "Real Estate Agent • ".
@@ -35,12 +36,19 @@ Two things, both reachable, neither in the filed report:
 
 STILL A DECISION, NOT FIXED HERE
 --------------------------------
-Because the Python default wins, all five themes print "Real Estate Agent"
+Because the Python default wins, every theme prints "Real Estate Agent"
 regardless of the per-theme copy ("Luxury Property Specialist" for elegant,
 "Real Estate Specialist" for modern). The theme voice was designed and has
 never rendered. Making it work means moving the fallback out of Python, which
-is a design call. Teal, which has no string of its own, is given no invented
-one: its slot renders only when there is something to put in it.
+is a design call.
+
+AFTER THE THEME CUT
+-------------------
+Three themes, not five. This file named classic and teal in a dict and in two
+`parametrize` lists; the themes now come from the renderer's registry and the
+separator cases are FOUND by parsing the cover line for a `license`
+reference, rather than listed. A list of theme names in a test is a copy of
+the registry, which is the defect D-163 is about.
 """
 import pathlib
 import sys
@@ -55,13 +63,7 @@ TEMPLATES = pathlib.Path(__file__).resolve().parents[1] / "src" / "worker" / "te
 
 # Located by content rather than by line number: a line number is a selector
 # that retargets silently the moment anything above it moves (§0.6).
-THEMES = {
-    "classic": "classic/classic_report.jinja2",
-    "bold": "bold/bold_report.jinja2",
-    "elegant": "elegant/elegant_report.jinja2",
-    "modern": "modern/modern_report.jinja2",
-    "teal": "teal/teal_report.jinja2",
-}
+from worker.theme_registry import THEME_TEMPLATES as THEMES  # noqa: E402
 COVER_CLASSES = ("cover-agent-title", "agent-role")
 
 
@@ -132,19 +134,35 @@ def test_an_agents_own_title_is_never_overridden(theme):
     assert "REALTOR®" in _render_cover(theme, {"title": "REALTOR®"})
 
 
-@pytest.mark.parametrize("theme", ["classic", "bold"])
+#: Themes whose cover line puts the licence beside the title. FOUND, not
+#: listed: the two `parametrize(["classic", "bold"])` lists this replaces both
+#: went stale the moment classic was deleted, and a theme that GAINS a
+#: separator would not have been added to either.
+SEPARATOR_THEMES = sorted(t for t in THEMES if "agent.license" in _cover_line(t))
+
+
+def test_some_theme_still_puts_the_licence_on_the_cover():
+    """Otherwise the two tests below are vacuously green on an empty list."""
+    assert SEPARATOR_THEMES, (
+        "no theme's cover line references agent.license, so the dangling-"
+        "separator defect has nowhere left to happen — delete the two tests "
+        "below rather than leaving them passing over nothing"
+    )
+
+
+@pytest.mark.parametrize("theme", SEPARATOR_THEMES)
 def test_no_separator_is_printed_beside_an_absent_licence(theme):
     """
     THE REACHABLE DEFECT. The bullet sat outside any condition, and `license`
     is the empty string for every agent without a licence number on file — so
-    these two covers read "Real Estate Agent • " with nothing after it.
+    those covers read "Real Estate Agent • " with nothing after it.
     """
     text = _text(_render_cover(theme, {"title": "Broker Associate"}))
     assert not text.endswith("•"), f"{theme}: dangling separator on the cover: {text!r}"
     assert "•" not in text, f"{theme}: separator printed with no licence to separate: {text!r}"
 
 
-@pytest.mark.parametrize("theme", ["classic", "bold"])
+@pytest.mark.parametrize("theme", SEPARATOR_THEMES)
 def test_the_licence_still_appears_when_there_is_one(theme):
     """The guard above must not have deleted the feature it was guarding."""
     text = _text(_render_cover(theme, {"title": "Broker Associate",
@@ -158,8 +176,8 @@ def test_every_cover_uses_the_boolean_default_or_an_explicit_condition(theme):
     """
     `default(x)` fires only on undefined; `default(x, true)` fires on any falsy
     value. The difference is one argument and invisible at a glance, which is
-    exactly how five templates came to carry it. Teal has no fallback string of
-    its own and is not given an invented one, so it guards with `{% if %}`
+    exactly how five templates came to carry it. A theme with no fallback
+    string of its own is given no invented one and guards with `{% if %}`
     instead — both forms are acceptable, a bare `{{ agent.title }}` is not.
     """
     line = _cover_line(theme)

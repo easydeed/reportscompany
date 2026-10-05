@@ -92,18 +92,6 @@ export interface PropertyReportResponse {
 
 export const THEMES: Theme[] = [
   {
-    id: 1,
-    name: "Classic",
-    style: "Timeless & Professional",
-    displayFont: "'Merriweather', serif",
-    gradient: "linear-gradient(135deg, #1B365D 0%, #2D5F8A 100%)",
-    accentDefault: "#4A90A4",
-    suggestedColors: ["#4A90A4", "#C9A962", "#7B68AE", "#2E8B57", "#D4756B"],
-    pageCount: 9,
-    compact: false,
-    previewImage: "/previews/1.jpg",
-  },
-  {
     id: 2,
     name: "Modern",
     style: "Clean & Contemporary",
@@ -126,18 +114,6 @@ export const THEMES: Theme[] = [
     pageCount: 9,
     compact: false,
     previewImage: "/previews/3.jpg",
-  },
-  {
-    id: 4,
-    name: "Teal",
-    style: "Vibrant & Modern",
-    displayFont: "'Montserrat', sans-serif",
-    gradient: "linear-gradient(135deg, #18235c 0%, #34d1c3 100%)",
-    accentDefault: "#34d1c3",
-    suggestedColors: ["#34d1c3", "#F59E0B", "#EC4899", "#8B5CF6", "#22D3EE"],
-    pageCount: 9,
-    compact: true,
-    previewImage: "/previews/4.jpg",
   },
   {
     id: 5,

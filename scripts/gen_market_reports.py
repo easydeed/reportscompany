@@ -78,21 +78,34 @@ ALL_REPORT_TYPES = [
     "new_listings",
 ]
 
-# Market reports are color-only — no per-theme Jinja template (unlike
-# property reports) — so a "theme" is just a (primary, accent) tuple piped
+# Market reports are colour-only — no per-theme Jinja template (unlike
+# property reports) — so a "theme" here is just a (primary, accent) pair piped
 # into the branding payload that MarketReportBuilder reads.
-THEMES = {
-    1: {"slug": "teal",    "primary": "#18235c", "accent": "#0d9488"},
-    2: {"slug": "bold",    "primary": "#1B365D", "accent": "#D4A853"},
-    3: {"slug": "classic", "primary": "#1e3a5f", "accent": "#4a90d9"},
-    4: {"slug": "elegant", "primary": "#1a1a1a", "accent": "#8B2252"},
-    5: {"slug": "modern",  "primary": "#0f172a", "accent": "#FF6B54"},
+#
+# THESE ARE NOT THE PROPERTY THEMES, AND THE SLUGS USED TO SAY THEY WERE.
+# The slugs were `teal, bold, classic, elegant, modern` against ids 1..5 —
+# which is NOT the renderer's pairing (1 is classic, 4 was teal) but IS,
+# exactly, the wrong map the market wizard and the onboarding flow carried
+# (D-163). The wrong map in the product has its provenance here: a QA
+# script's arbitrary preset numbering, borrowed as if it were the renderer's.
+#
+# Renamed to describe the colours, which is what they are. `MarketReportBuilder`
+# reads no theme at all (D-164), so nothing downstream reads these names;
+# `--theme` still accepts the old ids so existing QA invocations keep working.
+PALETTES = {
+    1: {"slug": "deep-teal",   "primary": "#18235c", "accent": "#0d9488"},
+    2: {"slug": "navy-gold",   "primary": "#1B365D", "accent": "#D4A853"},
+    3: {"slug": "steel-blue",  "primary": "#1e3a5f", "accent": "#4a90d9"},
+    4: {"slug": "charcoal-wine", "primary": "#1a1a1a", "accent": "#8B2252"},
+    5: {"slug": "midnight-coral", "primary": "#0f172a", "accent": "#FF6B54"},
 }
-_SLUG_TO_THEME_ID = {v["slug"]: k for k, v in THEMES.items()}
+#: Kept as an alias because this module is imported by name elsewhere in QA.
+THEMES = PALETTES
+_SLUG_TO_THEME_ID = {v["slug"]: k for k, v in PALETTES.items()}
 
 
 def resolve_theme(value: str | int) -> dict:
-    """Accept either a numeric id (1-5) or a slug (teal/bold/...)."""
+    """Accept either a numeric id (1-5) or a palette slug."""
     if isinstance(value, str) and value.isdigit():
         value = int(value)
     if isinstance(value, int) and value in THEMES:
@@ -576,7 +589,9 @@ def main():
     parser.add_argument(
         "--theme",
         default="1",
-        help="Theme id (1-5) or slug (teal/bold/classic/elegant/modern). "
+        help="Palette id (1-5) or slug (deep-teal/navy-gold/steel-blue/"
+             "charcoal-wine/midnight-coral). These are colour pairs, not the "
+             "property themes — market reports have no per-theme template. "
              "Default: 1 (teal). Themes drive header + accent colors.",
     )
     parser.add_argument(

@@ -2,6 +2,8 @@
  * Shared types and constants for the Property Report Wizard
  */
 
+import { DEFAULT_THEME_ID } from "@/lib/themes.generated";
+
 // Property data from SiteX
 export interface PropertyData {
   full_address: string;
@@ -44,15 +46,12 @@ export interface Comparable {
 }
 
 // Theme definitions matching the worker's property templates (apps/worker/src/worker/templates/property/)
+// The ids are 2, 3 and 5 — the cut to three themes retired 1 (classic)
+// and 4 (teal) and ids are never reused, so the gaps are deliberate.
+// `__tests__/ThemeRegistry.test.ts` asserts this list's id set against
+// lib/themes.generated.ts, which is generated from the renderer's own
+// themes.json. Four lists like this one existed and no two agreed.
 export const THEMES = [
-  {
-    id: 1,
-    name: "Classic",
-    description: "Professional navy with Bariol/Nexa fonts",
-    defaultColor: "#0d294b",
-    pages: "full" as const,
-    previewBg: "bg-gradient-to-br from-slate-800 to-slate-900",
-  },
   {
     id: 2,
     name: "Modern",
@@ -70,14 +69,6 @@ export const THEMES = [
     previewBg: "bg-gradient-to-br from-slate-700 to-indigo-900",
   },
   {
-    id: 4,
-    name: "Teal",
-    description: "Modern minimal with teal accent",
-    defaultColor: "#16d3ba",
-    pages: "compact" as const,
-    previewBg: "bg-gradient-to-br from-teal-400 to-cyan-600",
-  },
-  {
     id: 5,
     name: "Bold",
     description: "Navy & gold with Bebas Neue",
@@ -88,6 +79,11 @@ export const THEMES = [
 ] as const;
 
 export type ThemeId = (typeof THEMES)[number]["id"];
+
+//: The entry the helpers fall back to. Asserted non-undefined because a
+//: registry default that is not in THEMES is a build-time mistake, not a
+//: runtime condition to paper over.
+export const DEFAULT_THEME = THEMES.find((t) => t.id === DEFAULT_THEME_ID)!;
 
 // All available report pages
 export const ALL_PAGES = [
@@ -156,7 +152,11 @@ export const initialWizardState: WizardState = {
   cityStateZip: "",
   property: null,
   selectedCompIds: [],
-  theme: 1,
+  // Was the literal 1 (classic). `ThemeId` is derived from THEMES, so the
+  // theme cut turned this into a type error rather than a wizard that opens
+  // on a theme the renderer cannot build — which is the whole argument for
+  // deriving the type instead of writing `1 | 2 | 3 | 4 | 5`.
+  theme: DEFAULT_THEME.id,
   accentColor: "#0d294b",
   selectedPages: ALL_PAGES.map((p) => p.id),
   reportId: null,
@@ -204,7 +204,10 @@ export function getDefaultPagesForTheme(themeId: ThemeId): string[] {
 
 // Helper to get theme by ID
 export function getThemeById(id: ThemeId) {
-  return THEMES.find((t) => t.id === id) || THEMES[0];
+  // `|| THEMES[0]` used to mean "classic"; after the cut THEMES[0] is
+  // whichever theme happens to sort first, which is not a decision anyone
+  // made. Resolve through the registry instead.
+  return THEMES.find((t) => t.id === id) || DEFAULT_THEME;
 }
 
 // Preset accent colors

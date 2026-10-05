@@ -49,13 +49,12 @@ OUTPUT_DIR = PROJECT_ROOT / "output" / "theme_previews"
 R2_BUCKET = os.getenv("R2_BUCKET_NAME", "market-reports")
 R2_PREFIX = "property-reports/previews"
 
-# Theme configurations
+# Theme configurations, from the renderer's registry rather than restated.
+from worker.theme_registry import THEME_LABELS, THEME_NUMBER_MAP  # noqa: E402
+
 THEMES = {
-    1: {"name": "classic", "display": "Classic"},
-    2: {"name": "modern", "display": "Modern"},
-    3: {"name": "elegant", "display": "Elegant"},
-    4: {"name": "teal", "display": "Teal"},
-    5: {"name": "bold", "display": "Bold"},
+    tid: {"name": THEME_NUMBER_MAP[tid], "display": THEME_LABELS[tid]}
+    for tid in sorted(THEME_NUMBER_MAP)
 }
 
 # Page structure (7 pages per theme)

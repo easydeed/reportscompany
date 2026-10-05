@@ -1,0 +1,62 @@
+{
+  "_comment": [
+    "CANONICAL theme registry. Both the renderer and the web app read THIS file.",
+    "",
+    "WHY IT EXISTS",
+    "D-163: five independent copies of the id -> name pairing existed and two of",
+    "them disagreed with the renderer on every single id. A user whose account",
+    "default was 4 (teal) had the wizard pre-select 'elegant'. Nothing compared",
+    "the copies, so nothing failed. This file is the one place the pairing is",
+    "stated; `tests/test_theme_registry_is_single_sourced.py` parses every other",
+    "site that still names a theme and asserts it agrees.",
+    "",
+    "IDS ARE STABLE AND ARE NEVER REUSED",
+    "`accounts.default_theme_id`, `property_reports.theme` and the",
+    "`property_report_stats.theme_<name>` columns all hold historical values.",
+    "Renumbering 2/3/5 to 1/2/3 would silently relabel every report already",
+    "generated, so the retired ids stay retired and the gaps stay.",
+    "",
+    "RETIRING IS NOT DELETING",
+    "A retired theme keeps its row below because the stats columns keep counting",
+    "the reports that were made with it. `accounts.default_theme_id` CHECK stays",
+    "1..5 for the same reason: tightening it to IN (2,3,5) would fail against",
+    "rows that already hold 1 and 4."
+  ],
+  "default_id": 5,
+  "themes": [
+    {
+      "id": 2,
+      "name": "modern",
+      "label": "Modern",
+      "template": "modern/modern_report.jinja2"
+    },
+    {
+      "id": 3,
+      "name": "elegant",
+      "label": "Elegant",
+      "template": "elegant/elegant_report.jinja2"
+    },
+    {
+      "id": 5,
+      "name": "bold",
+      "label": "Bold",
+      "template": "bold/bold_report.jinja2"
+    }
+  ],
+  "retired": [
+    {
+      "id": 1,
+      "name": "classic",
+      "label": "Classic",
+      "retired_on": "2026-10-05",
+      "reason": "Theme cut to three for the Design rewire. Templates deleted."
+    },
+    {
+      "id": 4,
+      "name": "teal",
+      "label": "Teal",
+      "retired_on": "2026-10-05",
+      "reason": "Theme cut to three for the Design rewire. Was the default for 41 of 44 accounts; those rows were migrated to 5 (bold) by db/migrations/0047_theme_cut_to_three.sql."
+    }
+  ]
+}

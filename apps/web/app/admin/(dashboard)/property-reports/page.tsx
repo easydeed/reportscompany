@@ -27,14 +27,23 @@ import { createServerApi } from "@/lib/api-server"
 
 export const dynamic = 'force-dynamic'
 
-// Theme names mapping
-const THEME_NAMES: Record<number, string> = {
-  1: 'Classic',
-  2: 'Modern',
-  3: 'Elegant',
-  4: 'Teal',
-  5: 'Bold',
-}
+import { THEME_REGISTRY, RETIRED_THEME_REGISTRY } from '@/lib/themes.generated'
+
+// Theme names mapping — DELIBERATELY STILL FIVE.
+//
+// This table labels `property_reports.theme` on rows that already exist.
+// 41 of 44 accounts defaulted to 4 (teal) before the cut, so most of the
+// history in this list is teal and classic; dropping those two entries
+// would relabel every one of those rows 'Classic' via the `|| 'Classic'`
+// fallback below, which is why that fallback is also gone.
+//
+// Built from the registry's live AND retired sets so it cannot fall behind
+// a future cut the way the four pickers did (D-163).
+const THEME_NAMES: Record<number, string> = Object.fromEntries(
+  THEME_REGISTRY.map((t) => [t.id, t.label]).concat(
+    RETIRED_THEME_REGISTRY.map((t) => [t.id, t.label]),
+  ),
+)
 
 // Theme colors for badges
 const THEME_COLORS: Record<number, string> = {
@@ -410,7 +419,10 @@ export default async function PropertyReportsAdminPage() {
                     </TableCell>
                     <TableCell>
                       <Badge className={THEME_COLORS[report.theme] || THEME_COLORS[1]}>
-                        {THEME_NAMES[report.theme] || 'Classic'}
+                        {/* Was `|| 'Classic'`, which labelled an unknown theme
+                            id with a real theme's name. An id this table has
+                            never heard of is shown as what it is. */}
+                        {THEME_NAMES[report.theme] || `Theme ${report.theme}`}
                       </Badge>
                     </TableCell>
                     <TableCell>

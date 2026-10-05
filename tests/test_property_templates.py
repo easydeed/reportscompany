@@ -67,6 +67,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import (  # noqa: E402
+    DEFAULT_THEME_NAME,
     PropertyReportBuilder,
     THEME_TEMPLATES,
     TEMPLATES_DIR,
@@ -222,7 +223,12 @@ class TestTemplateExistence:
         assert (TEMPLATES_DIR / path).exists(), f"{theme}: template not found at {path}"
 
     def test_all_themes_defined(self):
-        assert set(THEMES) == {"teal", "bold", "classic", "modern", "elegant"}
+        """The set, written out, so a theme appearing or vanishing is a
+        deliberate edit here rather than a silently smaller parametrisation.
+
+        Was the five names until Jerry's cut on 2026-10-05.
+        """
+        assert set(THEMES) == {"bold", "modern", "elegant"}
 
 
 # ============================================================================
@@ -432,7 +438,7 @@ class TestBuilderContract:
 
         monkeypatch.setattr(vendor, "fetch_properties", explode)
         monkeypatch.setattr(vendor, "count_properties", explode)
-        render("teal", FULL_REPORT_DATA)
+        render(DEFAULT_THEME_NAME, FULL_REPORT_DATA)
 
     def test_the_string_None_does_not_reach_the_page(self):
         """
@@ -445,7 +451,7 @@ class TestBuilderContract:
         measurement. Recorded as an xfail so the day someone checks the vendor,
         the question is already written down and named.
         """
-        html = render("teal", {
+        html = render(DEFAULT_THEME_NAME, {
             **MINIMAL_REPORT_DATA,
             "sitex_data": {"pool": "None"},
         })

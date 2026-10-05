@@ -11,22 +11,6 @@
     "surface; text against the brand colour it sits on. All three must be >= 4.5."
   ],
   "property_themes": {
-    "teal": {
-      "brand": "#34d1c3",
-      "dark_surface": "#18235c",
-      "theme_color": "#34D1C3",
-      "theme_color_light": "#7be1d8",
-      "theme_color_dark": "#279c92",
-      "theme_color_on_light": "#1f847c",
-      "theme_color_on_dark": "#34D1C3",
-      "theme_color_text": "#14151a",
-      "achieved": {
-        "on_light_vs_white": 4.52,
-        "on_dark_vs_surface": 7.71,
-        "text_vs_brand": 9.6,
-        "raw_brand_vs_white": 1.9
-      }
-    },
     "modern": {
       "brand": "#ff6b5b",
       "dark_surface": "#1a1f36",
@@ -41,22 +25,6 @@
         "on_dark_vs_surface": 5.8,
         "text_vs_brand": 6.52,
         "raw_brand_vs_white": 2.8
-      }
-    },
-    "classic": {
-      "brand": "#1b365d",
-      "dark_surface": "#1b365d",
-      "theme_color": "#1B365D",
-      "theme_color_light": "#6a7c95",
-      "theme_color_dark": "#142845",
-      "theme_color_on_light": "#1B365D",
-      "theme_color_on_dark": "#639fff",
-      "theme_color_text": "#ffffff",
-      "achieved": {
-        "on_light_vs_white": 12.12,
-        "on_dark_vs_surface": 4.58,
-        "text_vs_brand": 12.12,
-        "raw_brand_vs_white": 12.12
       }
     },
     "bold": {

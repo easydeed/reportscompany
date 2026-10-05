@@ -55,13 +55,28 @@ sys.path.insert(0, str(ROOT / "apps/worker/src"))
 BASELINE = Path(__file__).parent / "pdf_contrast_baseline.txt"
 REQUIRE = os.environ.get("PDF_CONTRAST_REQUIRE_BROWSER") == "1"
 
+#: Text runs a working walk finds in ONE document, floored. Measured
+#: 2026-10-05 after the theme cut: 101 a document.
+MIN_RUNS_PER_DOCUMENT = 60
+
+
+def _property_themes():
+    """The live themes, from the renderer's own registry.
+
+    Imported rather than listed so the corpus assertions below move
+    with a cut instead of having to be found and edited.
+    """
+    from worker.theme_registry import THEME_TEMPLATES
+    return sorted(THEME_TEMPLATES)
+
 
 def _corpus():
     """The documents. `measure_pdf_contrast.py` still builds them — it is the
-    corpus definition: 90 documents — 60 market (10 report types x 6 brands)
-    and 30 property (5 themes x 6 brands). Counted, not remembered: this was
+    corpus definition: 78 documents — 60 market (10 report types x 6 brands)
+    and 18 property (3 themes x 6 brands). Counted, not remembered: this was
     written as "30 market and 30 property" and carried wrong through two
-    entries before anyone ran `len()` on it."""
+    entries before anyone ran `len()` on it. It was 90 until the theme cut
+    retired classic and teal; the market half did not change."""
     spec = importlib.util.spec_from_file_location(
         "_measure_pdf_contrast", ROOT / "scripts/measure_pdf_contrast.py")
     module = importlib.util.module_from_spec(spec)
@@ -384,13 +399,20 @@ def test_the_measurement_looked_at_something(measured):
     outside, and this gate's whole reason for existing is that the email one
     was the second while reading as the first.
     """
-    assert len(measured) > 8000, (
-        f"only {len(measured)} text runs measured across the corpus — the walker "
-        f"is broken, not the documents clean"
+    # Expressed PER DOCUMENT, not as a corpus total. The total form said
+    # `> 8000` over 90 documents; the theme cut took the corpus to 78 and
+    # turned a working measurement into a failure, which is how a floor gets
+    # lowered to whatever just ran. Measured 2026-10-05: 101 runs a document.
+    floor = MIN_RUNS_PER_DOCUMENT * len({r["doc"] for r in measured})
+    assert len(measured) > floor, (
+        f"only {len(measured)} text runs measured across the corpus (floor "
+        f"{floor}) — the walker is broken, not the documents clean"
     )
     families = {r["doc"].rsplit("__", 1)[0] for r in measured}
     assert len([f for f in families if f.startswith("market")]) >= 8
-    assert len([f for f in families if f.startswith("property")]) == 5
+    assert len([f for f in families if f.startswith("property")]) == len(
+        _property_themes()
+    ), "a property theme rendered no measurable text"
 
 
 # ── D-153 · the key survives a layout change ───────────────────────────────
@@ -552,7 +574,7 @@ def test_a_declined_run_is_not_counted_as_a_failure(measured):
 
 
 def test_the_corpus_is_the_size_the_documentation_says():
-    """90 documents, and the number is asserted because it was wrong twice.
+    """78 documents, and the number is asserted because it was wrong twice.
 
     "30 market and 30 property" was written from memory into this file's own
     docstring and carried through D-130's and D-153's entries before anyone
@@ -563,14 +585,24 @@ def test_the_corpus_is_the_size_the_documentation_says():
     same error one layer out.
 
     Asserted on the composition, not just the total: a change that swapped a
-    report type for a theme would keep 90 and change what the corpus covers.
+    report type for a theme would keep the total and change what the corpus
+    covers.
+
+    The property half is sized FROM THE REGISTRY rather than written down, so
+    the next theme added or cut moves this assertion with it. The market half
+    is a literal 10 because the report types are not derived from anything
+    this file can import — D-162 is the entry about those names.
     """
     corpus = _corpus()
     market, prop = corpus.market_documents(), corpus.property_documents()
     brands = {b for b, _ in corpus.BRANDS}
+    themes = _property_themes()
     assert len(brands) == 6, f"{len(brands)} brands, documented as 6"
+    assert len(themes) == 3, f"{len(themes)} themes after the cut, documented as 3"
     assert len(market) == 60, f"{len(market)} market documents, documented as 60"
-    assert len(prop) == 30, f"{len(prop)} property documents, documented as 30"
-    assert len(market) + len(prop) == 90
+    assert len(prop) == len(themes) * len(brands), (
+        f"{len(prop)} property documents; {len(themes)} themes x "
+        f"{len(brands)} brands is {len(themes) * len(brands)}"
+    )
     assert len({k.rsplit("__", 1)[0] for k in market}) == 10, "10 report types"
-    assert len({k.rsplit("__", 1)[0] for k in prop}) == 5, "5 themes"
+    assert len({k.rsplit("__", 1)[0] for k in prop}) == len(themes)

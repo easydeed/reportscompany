@@ -30,6 +30,13 @@
 #
 # 613 failing runs, 176 combinations, worst 1.00:1, of 9486 runs measured.
 # Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.
+#
+# 2026-10-05, THE THEME CUT. The 58 `property__classic` and
+# `property__teal` entries were DELETED, not regenerated: the documents
+# they recorded no longer exist. 29 classic + 29 teal, counted off the
+# family column. A ratchet may only shrink and this is a shrink; nothing
+# in the surviving 118 entries was touched, so a regression in bold,
+# elegant or modern still fails against the same numbers as before.
 
 market__new_listings	span.listing-tier-badge.tier-high	#d97706	#fef1db
 market__new_listings	span.listing-tier-badge.tier-low	#2563eb	#e2ecfe
@@ -74,35 +81,6 @@ property__bold	span	#d69649	#7c3aed
 property__bold	span	#d69649	#84cc16
 property__bold	span	#d69649	#dc2626
 property__bold	span	#d69649	#f59e0b
-property__classic	div.cover-brand-text	#ffffff	#84cc16
-property__classic	div.cover-brand-text	#ffffff	#f59e0b
-property__classic	div.cover-label	#4a90a4	#fefdfa
-property__classic	div.page-header-label	#4a90a4	#ffffff
-property__classic	div.page-header-label	#c4b7a6	#0d9488
-property__classic	div.page-header-label	#c4b7a6	#0e7490
-property__classic	div.page-header-label	#c4b7a6	#7c3aed
-property__classic	div.page-header-label	#c4b7a6	#84cc16
-property__classic	div.page-header-label	#c4b7a6	#dc2626
-property__classic	div.page-header-label	#c4b7a6	#f59e0b
-property__classic	div.property-section-header	#ffffff	#0d9488
-property__classic	div.property-section-header	#ffffff	#84cc16
-property__classic	div.property-section-header	#ffffff	#f59e0b
-property__classic	div.range-stat-label	#c4b7a6	#0d9488
-property__classic	div.range-stat-label	#c4b7a6	#0e7490
-property__classic	div.range-stat-label	#c4b7a6	#7c3aed
-property__classic	div.range-stat-label	#c4b7a6	#84cc16
-property__classic	div.range-stat-label	#c4b7a6	#dc2626
-property__classic	div.range-stat-label	#c4b7a6	#f59e0b
-property__classic	h2.page-header-title	#ffffff	#84cc16
-property__classic	h2.page-header-title	#ffffff	#f59e0b
-property__classic	span	#e7f4f3	#0d9488
-property__classic	span	#f3fae8	#84cc16
-property__classic	span	#fce9e9	#dc2626
-property__classic	span	#fef5e7	#f59e0b
-property__classic	td	#ffffff	#4a90a4
-property__classic	th	#ffffff	#0d9488
-property__classic	th	#ffffff	#84cc16
-property__classic	th	#ffffff	#f59e0b
 property__elegant	div.contents-label	#0b8277	#faf7f2
 property__elegant	div.contents-label	#53810c	#faf7f2
 property__elegant	div.cover-agent-name	#ffffff	#58880e
@@ -178,32 +156,3 @@ property__modern	span.pill	#dc2626	#f1f5f9
 property__modern	td	#ffffff	#0d9488
 property__modern	td	#ffffff	#84cc16
 property__modern	td	#ffffff	#f59e0b
-property__teal	div.agent-role	#639910	#ffffff
-property__teal	div.agent-role	#b77608	#ffffff
-property__teal	div.brand	#0b8277	#f7f7f9
-property__teal	div.brand	#0da89a	#535d7d
-property__teal	div.brand	#0e9cc2	#535d7d
-property__teal	div.brand	#53810c	#f7f7f9
-property__teal	div.brand	#84cc16	#535d7d
-property__teal	div.brand	#a979ff	#535d7d
-property__teal	div.brand	#f59e0b	#535d7d
-property__teal	div.brand	#ff5151	#535d7d
-property__teal	div.cover-label	#0e9cc2	#142956
-property__teal	div.cover-label	#ff5151	#142956
-property__teal	div.cover-logo-text	#0da89a	#ffffff
-property__teal	div.cover-logo-text	#84cc16	#ffffff
-property__teal	div.cover-logo-text	#f59e0b	#ffffff
-property__teal	h2.h	#0e9cc2	#3b4569
-property__teal	h2.h	#0e9cc2	#3e486c
-property__teal	h2.h	#a979ff	#3e486c
-property__teal	h2.h	#ff5151	#3b4569
-property__teal	h2.h	#ff5151	#3e486c
-property__teal	h2.section-title	#84cc16	#ffffff
-property__teal	h2.section-title	#f59e0b	#ffffff
-property__teal	span.ico	#ffffff	#0d9488
-property__teal	span.ico	#ffffff	#84cc16
-property__teal	span.ico	#ffffff	#f59e0b
-property__teal	td	#18235c	#0d9488
-property__teal	td	#18235c	#0e7490
-property__teal	td	#18235c	#7c3aed
-property__teal	td	#18235c	#dc2626

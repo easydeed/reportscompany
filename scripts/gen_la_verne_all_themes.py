@@ -165,8 +165,13 @@ TARGET_COMPS     = 6          # AI selects best N from the pool
 SIMPLYRETS_LIMIT = 50         # raw pool size for ranking
 
 OUTPUT_DIR = REPO_ROOT / "output" / "la_verne_themes"
-ALL_THEMES = ["classic", "modern", "elegant", "teal", "bold"]
-THEME_NUMBER_MAP = {"classic": 1, "modern": 2, "elegant": 3, "teal": 4, "bold": 5}
+# From the renderer's registry, not restated. These two constants were
+# hand-written copies of the id/name pairing; `generate_preview_screenshots`
+# and `test_template` held byte-identical ones, and all of them would have
+# kept offering classic and teal after the cut deleted their templates.
+from worker.theme_registry import THEME_NAME_MAP as THEME_NUMBER_MAP  # noqa: E402
+
+ALL_THEMES = sorted(THEME_NUMBER_MAP)
 
 SAMPLE_AGENT = {
     "name": "Jennifer Martinez",

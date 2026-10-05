@@ -45,6 +45,12 @@ interface AffiliateStats {
     leads_converted: number
     conversion_rate: number
   }
+  // DELIBERATELY STILL FIVE. These are the keys `property_stats._theme_counts`
+  // returns, and it counts `property_reports.theme` — the id each report was
+  // GENERATED with. 41 of 44 accounts defaulted to teal before the theme cut,
+  // so most of the history in this chart is a retired theme. Dropping classic
+  // and teal here would render a dashboard saying those reports never
+  // happened. Live themes: modern, elegant, bold.
   themes: {
     classic: number
     modern: number
@@ -70,7 +76,10 @@ interface AffiliateStats {
   }[]
 }
 
-// Theme colors for badges
+// Badge colours, keyed by theme NAME because that is how the API returns the
+// counts. Five entries for the same reason the interface above has five: the
+// retired themes still own most of the history. Not the themes' own brand
+// colours — these are chart swatches.
 const THEME_COLORS: Record<string, string> = {
   classic: 'bg-slate-100 text-slate-700 border-slate-300',
   modern: 'bg-blue-100 text-blue-700 border-blue-300',

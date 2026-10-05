@@ -23,6 +23,7 @@ import psycopg
 import ssl
 from celery import Celery
 from .limit_checker import check_usage_limit
+from . import theme_registry
 
 # Create a separate Celery instance for ticker (no result backend needed)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -318,13 +319,17 @@ def create_report_generation(
         (str(account_id),),
     )
 
+    # COALESCE and the no-row arm both used to say 1 (classic) while the
+    # column's own DEFAULT said 4 (teal) and the builder's said 4 — three
+    # different answers to "what theme is this". One answer now, from the
+    # registry, passed as a parameter so the SQL does not restate it either.
     cur.execute("""
-        SELECT COALESCE(default_theme_id, 1), secondary_color
+        SELECT COALESCE(default_theme_id, %s), secondary_color
         FROM accounts
         WHERE id = %s::uuid
-    """, (account_id,))
+    """, (theme_registry.DEFAULT_THEME_ID, account_id))
     acct = cur.fetchone()
-    theme_id = acct[0] if acct else 1
+    theme_id = acct[0] if acct else theme_registry.DEFAULT_THEME_ID
     accent_color = acct[1] if acct else None
 
     cur.execute("""

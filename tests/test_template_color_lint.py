@@ -232,12 +232,18 @@ def test_the_baseline_is_not_empty():
     platform default retired all thirteen. The replacements are annotated
     `lint-allow-hex` rather than baselined, because a platform default IS a
     brand literal and pretending otherwise is what the annotation is for.
+
+    98 -> 70 on 2026-10-05 (the theme cut). 28 entries named the four
+    classic and teal template files, which are deleted. This is the one kind
+    of shrink that is NOT progress on the rule — the violations went away
+    with the files, not because anyone fixed a colour — so it is recorded
+    separately rather than read as 28 fixes.
     """
     n = sum(lint.read_baseline().values())
     assert n > 0, "nothing baselined — has the rule stopped matching?"
-    assert n == 98, (
-        f"the baseline holds {n} entries, not the 98 measured against main on "
-        f"2026-09-29. Fewer is progress: update this number. More is a new "
+    assert n == 70, (
+        f"the baseline holds {n} entries, not the 70 left after the theme cut "
+        f"on 2026-10-05. Fewer is progress: update this number. More is a new "
         f"violation that was baselined instead of fixed."
     )
 

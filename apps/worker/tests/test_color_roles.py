@@ -59,13 +59,15 @@ GOLDEN = Path(__file__).resolve().parent / "golden" / "color_roles.json"
 WHITE = "#ffffff"
 SEED = 20260923
 
-#: The dark surfaces the five property themes actually use, from
+#: The dark surfaces the live property themes actually use, from
 #: PropertyReportBuilder._THEME_DARK_BG. Duplicated here on purpose — if the
 #: builder's map changes, `test_the_dark_surfaces_match_the_builder` says so
 #: rather than this file quietly testing a surface nobody renders on.
+#:
+#: Was five entries; `teal` (#18235c) and `classic` (#1B365D) left with the
+#: theme cut on 2026-10-05.
 THEME_DARK_BG = {
-    "teal": "#18235c", "modern": "#1A1F36", "classic": "#1B365D",
-    "bold": "#15216E", "elegant": "#1a1a1a",
+    "modern": "#1A1F36", "bold": "#15216E", "elegant": "#1a1a1a",
 }
 
 
@@ -83,6 +85,24 @@ def hue_of(v):
 def hue_gap(a, b):
     d = abs(a - b) % 360.0
     return min(d, 360.0 - d)
+
+
+def _saturation(v):
+    """HSV saturation of a hex colour, 0..1.
+
+    `chroma_of` is max-min in 0..255, which conflates "lost its colour" with
+    "got darker". Saturation is the thing `_brighten` is forbidden to spend.
+    """
+    h = normalize_hex(v)[1:]
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return colorsys.rgb_to_hsv(r, g, b)[1]
+
+
+def _value(v):
+    """HSV value of a hex colour, 0..1. Paired with `_saturation`."""
+    h = normalize_hex(v)[1:]
+    r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return colorsys.rgb_to_hsv(r, g, b)[2]
 
 
 def chroma_of(v):
@@ -215,24 +235,83 @@ def test_the_roles_keep_the_brands_hue():
     assert not off, f"the readable value is no longer the brand: {off[:5]}"
 
 
+#: Themes whose brand colour sits on a dark surface — the worst case for
+#: `_ensure_readable_on_dark`, because there is no light direction to spend.
+#: FOUND, not listed: the `("classic", "bold")` tuple this replaces went stale
+#: the moment the theme cut removed classic, and a KeyError in a loop body is
+#: how it reported that. A theme becoming dark-on-dark would not have been
+#: added to the tuple either.
+def _dark_brand_themes():
+    g = golden()["property_themes"]
+    return sorted(
+        t for t, dark in THEME_DARK_BG.items()
+        if contrast(g[t]["brand"], dark) < AA_NORMAL
+    )
+
+
+def test_some_theme_still_puts_its_brand_on_a_dark_surface():
+    """Otherwise the test below is vacuously green on an empty list."""
+    assert _dark_brand_themes(), (
+        "no theme's brand sits on a dark surface any more, so the "
+        "wash-out this guards against has nowhere to happen — delete the "
+        "test below rather than leaving it looping over nothing"
+    )
+
+
 def test_on_dark_spends_saturation_last_not_first():
     """
     The old version reduced saturation on EVERY brightening step — thirty steps
     removed 0.6 of it — so a navy brand asked to be readable on a navy panel
-    came back a grey. Measured on the three themes where the brand IS the dark
+    came back a grey. Measured on the themes where the brand IS the dark
     surface, which is the worst case for this:
 
         classic  old #5f88c3 chroma 100 at 3.35   new #639fff chroma 156 at 4.58
+
+    (classic was retired by the theme cut; its measurement is kept because it
+    is the number the fix was argued from.)
     """
-    for theme in ("classic", "bold"):
+    for theme in _dark_brand_themes():
         dark = THEME_DARK_BG[theme]
         brand = golden()["property_themes"][theme]["brand"]
         on_dark = _ensure_readable_on_dark(brand, dark)
         assert contrast(on_dark, dark) >= AA_NORMAL
-        assert chroma_of(on_dark) > 100, (
-            f"{theme}: {on_dark} has chroma {chroma_of(on_dark)} — brightening "
-            f"washed the brand out instead of raising its value"
+
+        # THE ASSERTION IS "SATURATION WAS SPENT LAST", not "chroma > 100".
+        #
+        # The literal chroma floor was written against classic (#1B365D) and
+        # bold (#0F1629), both saturated navies. Deriving the theme set instead
+        # of listing it brought in elegant, whose brand is #1A1A1A — a pure
+        # neutral, chroma 0. `> 100` is unmeetable for an achromatic brand by
+        # construction (r == g == b, so every brightening step keeps them
+        # equal); the guard would have been demanding the code invent a hue.
+        #
+        # So the property is stated directly. Saturation MAY be spent — once
+        # value is at 1.0 there is nothing else left to raise — but not
+        # before. Measured 2026-10-05:
+        #
+        #     bold     #0f1629 -> #638fff   s 0.634->0.612 (-0.022)  v -> 1.000
+        #     elegant  #1a1a1a -> #888888   s 0.000->0.000 ( 0.000)  v -> 0.533
+        #
+        # The version this replaced removed 0.6 of saturation across thirty
+        # steps, every one of them before value was exhausted.
+        s_in, s_out = _saturation(brand), _saturation(on_dark)
+        v_out = _value(on_dark)
+        assert s_in - s_out <= 0.10, (
+            f"{theme}: {brand} -> {on_dark} spent {s_in - s_out:.3f} of HSV "
+            f"saturation (from {s_in:.3f}); the washing-out this guards "
+            f"against spent 0.6"
         )
+        if s_in - s_out > 0.001:
+            assert v_out >= 0.99, (
+                f"{theme}: {brand} -> {on_dark} spent saturation "
+                f"({s_in:.3f} -> {s_out:.3f}) while value was still at "
+                f"{v_out:.3f} — value is what gets raised first"
+            )
+        if s_in > 0.1:
+            assert chroma_of(on_dark) > 100, (
+                f"{theme}: {on_dark} has chroma {chroma_of(on_dark)} — the "
+                f"brand had saturation {s_in:.3f} to keep"
+            )
 
 
 def test_brighten_raises_value_before_touching_saturation():

@@ -22,6 +22,7 @@ from .market_builder import HISTORY_REPORT_TYPES
 #: default that could change underneath it.
 TREND_HISTORY_FETCH_LIMIT = 1000
 from .redis_utils import create_redis_connection
+from . import theme_registry as _theme_registry
 from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
 from .report_builders import build_result_json
@@ -1678,7 +1679,14 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # /print/{runId} frontend path produced unbranded PDFs missing the
         # Outfit font, themed header, and AI narrative — so we never fall
         # back to it. Reports created without an explicit theme_id default
-        # to theme 1 (teal) so the builder still has a layout to use.
+        # to the registry's default so the builder still has a layout.
+        #
+        # The comment here used to say "theme 1 (teal)", which was wrong
+        # twice: 1 was classic, not teal, and MarketReportBuilder reads no
+        # theme at all — `builder_data["theme_id"]` below has no consumer
+        # on this path (D-164). The value is still resolved and logged
+        # because the log line is how an operator tells a defaulted run
+        # from a chosen one.
         theme_id = None
         theme_accent = None
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
@@ -1693,7 +1701,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     theme_id, theme_accent = theme_row
             conn.commit()
 
-        effective_theme_id = theme_id or 1
+        effective_theme_id = _theme_registry.resolve(theme_id)[1]
         print(
             f"🔍 REPORT RUN {run_id}: step=generate_pdf "
             f"(server-side, theme={effective_theme_id}"
@@ -2542,7 +2550,7 @@ def process_consumer_report(self, report_id: str):
                         primary_color = "#1B365D"
                         secondary_color = "#B8860B"
                         brand_logo = email_logo = None
-                        default_theme_id = 4
+                        default_theme_id = _theme_registry.DEFAULT_THEME_ID
                         account_name = ""
                         website_url = ""
                         job_title = license_number = agent_photo = company_name = agent_email_addr = ""

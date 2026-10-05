@@ -24,10 +24,8 @@ import {
   getAudienceLabel,
   getAreaDisplay,
 } from "./types"
+import { THEME_ID_TO_NAME, themeName, DEFAULT_THEME_ID } from "@/lib/themes.generated"
 
-const THEME_ID_MAP: Record<number, string> = {
-  1: "teal", 2: "bold", 3: "classic", 4: "elegant", 5: "modern",
-}
 
 const REPORT_TYPE_LABELS: Record<string, string> = {
   new_listings_gallery: "New Listings Gallery",
@@ -84,7 +82,9 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     email: "agent@example.com",
     photoUrl: null as string | null,
   })
-  const [themeId, setThemeId] = useState("teal")
+  // A NAME, not an id, because `POST /v1/reports` takes `theme_id` as a
+  // string. The literal here was "teal", which the theme cut retired.
+  const [themeId, setThemeId] = useState(themeName(DEFAULT_THEME_ID))
   const [generationState, setGenerationState] = useState<GenerationState>("idle")
   const [generatedReportId, setGeneratedReportId] = useState<string | null>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
@@ -129,8 +129,11 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         }
         if (aRes.ok) {
           const a = await aRes.json()
-          if (a.default_theme_id && THEME_ID_MAP[a.default_theme_id]) {
-            setThemeId(THEME_ID_MAP[a.default_theme_id])
+          // Was a local THEME_ID_MAP wrong on every id (D-163): an
+          // account on 4 pre-selected `elegant` and rendered in teal. A
+          // retired id falls through to the default set above.
+          if (a.default_theme_id && THEME_ID_TO_NAME[a.default_theme_id]) {
+            setThemeId(THEME_ID_TO_NAME[a.default_theme_id])
           }
           // Prefer resolved accent (parent inheritance) over the raw secondary_color.
           const resolvedAccent = a.resolved_accent_color || a.secondary_color

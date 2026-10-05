@@ -1149,6 +1149,59 @@ it.**
   verification run afterwards rather than trusting the restore. `git status --porcelain` after
   a restore costs nothing and shows `??` for exactly the files the restore could not touch.
 
+- **A LIST OF NAMES IN A TEST IS A COPY OF THE REGISTRY, AND IT GOES STALE SILENTLY OR LOUDLY,
+  NEVER USEFULLY.** *Added 2026-10-05, from the theme cut — five instances in one change.*
+
+  Five tests named their subjects in a literal: `parametrize("theme", ["classic", "bold"])` twice,
+  `for theme in ("classic", "bold")`, `THEME_DARK_BG = {five entries}`, and
+  `assert set(THEMES) == {five names}`. Cutting two themes made three of them raise `KeyError`
+  (loud, and the message said "classic is missing" rather than "this list is a copy") and one
+  pass while covering less. **A literal list of the things under test cannot distinguish "this
+  one went away" from "this one was never supposed to be here".**
+
+  Replaced with the property each list was standing for, found by parsing: *themes whose cover
+  line references `agent.license`*, *themes whose brand sits on a dark surface*, *the themes the
+  registry declares*. Each now moves with the registry, and each is paired with a guard that the
+  derived set is **non-empty** — because a derived set that comes back empty makes every test
+  over it pass.
+
+  **And deriving the set found a case the literal had been hiding.** The dark-brand list had been
+  `("classic", "bold")`; derived, it includes **elegant**, whose brand is `#1A1A1A` — a pure
+  neutral. The assertion was `chroma_of(on_dark) > 100`, unmeetable for an achromatic brand by
+  construction, so the literal list was not an abbreviation of the property, it was *excluding a
+  counterexample to the assertion*. The guard now states the actual property — saturation may be
+  spent, but only once value is at 1.0 — which is strictly stronger and applies to all three.
+
+- **A FLOOR SIZED TO THE CORPUS IS A FLOOR THAT GETS LOWERED TO WHATEVER JUST RAN.**
+  *Added 2026-10-05. Two instances, same change.*
+
+  Two "the measurement actually ran" guards were written as corpus totals: `assert len(measured)
+  > 900` over five themes, and `> 8000` over ninety documents. Both are the right *kind* of guard
+  — zero findings and zero runs look identical from outside, which is the defect they exist for —
+  and both failed the moment the corpus legitimately got smaller.
+
+  **The failure is not the false alarm; it is what a false alarm invites.** The obvious response
+  to "only 576 text runs measured, expected > 900" is to change 900 to 500, and the next person
+  cannot tell a lowered floor from a measured one. Expressed per unit — `MIN_RUNS_PER_THEME * len(THEMES)`,
+  `MIN_RUNS_PER_DOCUMENT * len(docs)` — the guard moves with the corpus and the constant stays a
+  measurement. **Write the floor as a rate, and record the date and the measured value beside it.**
+
+- **A SELECTOR NAMED AFTER ONE INSTANCE DESCRIBES THAT INSTANCE, NOT THE CONSTRUCT.**
+  *Added 2026-10-05. The locator form of "a substring is not a construct", and the fourth
+  instance of that rule's family.*
+
+  `test_the_total_comps_badge_is_that_same_number` ran on teal alone, and said so:
+  *"Teal is the only theme that prints it."* **That was never true.** Every theme prints the
+  Total Comps badge; teal was the only one whose label carried `class="lbl"`, and the test's
+  regex matched the class. The docstring had turned a property of the *selector* into a stated
+  fact about the *product*, and it had been read and passed over at least twice.
+
+  It surfaced only because the cut deleted teal and the test failed with `found []` — which reads
+  as "the badge is gone from the product" and is really "the selector described one theme's
+  markup". **When a test runs on one member of a set, the docstring must say whether that is
+  because the others lack the behaviour or because the locator only fits one of them** — and the
+  way to know which is to point it at a second member before believing the first.
+
 ---
 
 ## Phase 0 — Security & Tooling

@@ -9,6 +9,7 @@ from ..services.email import send_limit_warning_email, send_limit_reached_email
 from ..cache import get_redis
 from ..crmls_cities import VALID_CITY_NAMES
 from ..verification import block_unverified_send, manual_emails
+from ..theme_registry import DEFAULT_THEME_ID
 
 _logger = logging.getLogger(__name__)
 
@@ -230,7 +231,13 @@ def create_report(
                 (account_id,),
             )
             acct_row = cur.fetchone()
-            theme_id = str(acct_row[0]) if acct_row and acct_row[0] else "1"
+            # Stringified because `report_generations.theme_id` is
+            # VARCHAR(20). The literal fallback here was "1" while the
+            # column DEFAULT said 4 and the builder said 4 — the SAME
+            # question with three answers. One answer now.
+            theme_id = str(
+                acct_row[0] if acct_row and acct_row[0] else DEFAULT_THEME_ID
+            )
         if not accent_color:
             cur.execute(
                 "SELECT secondary_color FROM accounts WHERE id = %s::uuid",
