@@ -5999,7 +5999,25 @@ and again at `:870` for comps, and again through `_safe_num(..., 0)` at `:1134` 
 
 **The comment states the intent and the intent is defensible** — six themes do arithmetic on these
 (`_macros.jinja2:467`: `property.bedrooms | default(0, true) | float`), and a None would raise
-mid-render. The cost is that every "no data" is indistinguishable from a real zero by the time a
+mid-render.
+
+> **THE BLOCKER IS STALE, AND IT WAS STALE WHEN IT WAS WRITTEN — 2026-10-05.**
+> `_base/_macros.jinja2` is in the dead tree (D-131). **No template that renders does arithmetic
+> on `property.bedrooms`, `bathrooms`, `sqft`, `lot_size` or `year_built`** — checked by grepping
+> the five live `*_report.jinja2` for a numeric filter, a comparison and an operator against each
+> of the five fields, and finding nothing. The `or 0` can carry absence through today without a
+> render error.
+>
+> So the engineering half of this entry is unblocked and small: the same move D-137 made for
+> `pool` and D-135 made for the money fields. **The copy half is not ours** — what a reader sees
+> where a bedroom count is unknown is a design decision, and Claude Design's absence rules
+> already answer it (`0 beds → "Studio"`, unknown → `—`). Doing the context half now and the copy
+> half later is the sequence that does not ship "Studio" to a house nobody counted the bedrooms
+> of, which is what the original revert was protecting against.
+>
+> Recorded rather than fixed, because the property report is held pending the theme decision.
+> **Found by the dead-tree review, not by looking at this entry** — a defect whose stated reason
+> for being unfixable points at a file that does not render is a defect nobody will re-examine. The cost is that every "no data" is indistinguishable from a real zero by the time a
 template sees it, in a report whose whole subject is one specific property.
 
 **Why this is filed rather than fixed.** D-108's market-side fix renders a 0 bed count as
