@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 51 | Real, unfixed |
+| `open` | 52 | Real, unfixed |
 | `fixed` | 105 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **161** | D-001 … D-161, contiguous, no duplicates |
+| **Total** | **162** | D-001 … D-162, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 13 · FRAGILE 13 · ROUGH 21. (Sums to 51, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 13 · ROUGH 21. (Sums to 52, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -7891,6 +7891,31 @@ D-159's comp gate is scoped to the live five for the reason this entry gives: co
 tree would have meant *fixing* it, and fixing dead code is how dead code survives another year.
 It still carries `comparables[:4]` in seven places.
 
+**THREE COSTS NOW, AND THE THIRD IS THE ARGUMENT FOR DELETING RATHER THAN LABELLING —
+2026-10-05.**
+
+Until this week the case for the dead tree was hypothetical: *the next person searching for that
+sentence finds ten hits*. It has now been paid three times, and the third one is different in
+kind.
+
+| | what it cost |
+|---|---|
+| **1 · Claude Design's property handoff** | every template-level instruction in it points at a file that does not render — "keep the font-trigger div in `base.jinja2`", "the `data_table` macro hides them", "`comp_grid` caps at 4". None of it is actionable |
+| **2 · Claude Design's market handoff** | named `apps/web/templates/trendy-*.html` as **the surface**, so two of the three things it reports removing were never in a customer's PDF — and it deleted a running head built four days earlier, because the legacy templates do not have one |
+| **3 · D-109, frozen** | its recorded reason for being unfixable is *"six themes do arithmetic on these"*, citing `_macros.jinja2:467`. **That is the dead tree.** No live template does arithmetic on `bedrooms`, `bathrooms`, `sqft`, `lot_size` or `year_built`. The blocker has never been true of the code that renders |
+
+**The third is the one that changes the recommendation.** The first two are outsiders misled by
+a repository nobody warned them about, and a label fixes that. The third is **this project's own
+defect board, blocked for a week by a citation to a file that renders nowhere** — and a label
+would not have helped, because the entry's author had already read the file and believed it. A
+dead file that is *reachable by grep* will keep being cited as evidence, and an entry whose
+stated impossibility looks sufficient is an entry nobody re-opens.
+
+**So: delete it, do not label it.** The labelling below is still worth doing as the cheap
+immediate step, and it is not the answer. One commit, seven files, and `git log -S` on each
+path to confirm nothing references them — the only open question is whether anyone is holding
+it as a staging ground for a redesign, which the redesign in flight now makes easy to ask.
+
 **FOR THE CLAUDE DESIGN HANDOVER — the cheap half of this, to be done before the redesign
 starts.** A redesign reads a second template tree as the current one; `teal.jinja2` looks exactly
 as current as `teal_report.jinja2` and is near-complete. The handover note must say, by name:
@@ -9851,6 +9876,71 @@ Design's *property* handoff adds status pills: Sold `#dc2626` on `#fee2e2` 3.95,
 `#d97706` on `#fef3c7` 2.86, Active `#059669` on `#d1fae5` 3.32 — declared "semantic and fixed",
 on a surface with no status badges today. One construct, two packages, opposite directions, and
 the net worse than either alone. See `docs/DESIGN_HANDOFF_REVIEW_2026-10-01.md` §8.3a and §9.2a.
+
+---
+
+### D-162 — two report types are both called "New Listings", and each has a second name elsewhere
+
+**Severity:** WRONG · **Affects:** the PDF title, the delivery email, three admin pages, four
+wizards and both branding pages · **Found during:** mapping Claude Design's seven market kinds
+onto the live eight
+**Status:** `open`
+
+`new_listings` and `new_listings_gallery` are **two separately selectable products** — the same
+listings as a table (the `analytics` layout) and as a photo grid (the `gallery` layout). The
+product cannot keep their names straight in either direction:
+
+> **"New Listings" names both of them. Each of them has a second name. Neither second name
+> appears on the document the customer receives.**
+
+**THE SAME LABEL FOR BOTH, IN THREE DICTIONARIES THAT EACH MAP ALL EIGHT TYPES.** Not a
+near-miss across distant files — in each of these the two keys sit on consecutive lines with
+identical values:
+
+| file | | |
+|---|---|---|
+| `worker/market_builder.py:437,444` | `new_listings_gallery: "New Listings"` | `new_listings: "New Listings"` |
+| `web/components/schedule-builder/types.ts:87,88` | same | same |
+| `web/components/shared/email-preview/preview-header.tsx:6,7` | same | same |
+
+The first is **the title printed on the PDF**. A customer who schedules both receives two
+different documents with the same name on them.
+
+**AND EACH TYPE HAS A SECOND NAME, USED IN DIFFERENT PARTS OF THE PRODUCT.** Counted across
+`apps/web`, `apps/worker` and `apps/api`:
+
+| type | name | occurrences | where |
+|---|---|---|---|
+| `new_listings_gallery` | **"New Listings"** | 5 | the PDF title, the email preview, the settings/company branding pages, `schedule-builder` |
+| | **"New Listings Gallery"** | 9 | the unified wizard, the schedule wizard, all three admin pages, `lib/templates.ts`, the branding preview |
+| `new_listings` | **"New Listings"** | 10 | the PDF title, the email, the schedule wizard, the branding preview |
+| | **"New Listings Analytics"** | 5 | the unified wizard, all three admin pages, the PDF preview |
+
+So an agent choosing from the **unified wizard** picks "New Listings Gallery" or "New Listings
+Analytics", and receives two PDFs both titled "New Listings". An agent choosing from the
+**branding page** is offered one option called "New Listings" and it is the gallery. An admin
+looking at the same two reports in the admin list sees the long names. **Three screens, three
+vocabularies, and the document agrees with none of them.**
+
+One more, smaller: the settings and company branding pages offer only
+`new_listings_gallery`, labelled "New Listings" — so the table variant has no preview on the
+surface where an affiliate checks what their branding looks like.
+
+**WHY THIS IS FILED SEPARATELY FROM THE DESIGN QUESTION.** Claude Design's market handoff has
+seven kinds against these eight types, and resolving that mapping is theirs (see
+`docs/design-corrections/03-SEND.md` §1). **This is ours either way.** If Design merges the two
+into one kind with a density switch, the naming still has to be decided and the strings still
+have to be unified; if they stay two, more so. It should not wait on a reply.
+
+**WHAT FIXING IT MEANS, so whoever takes it takes all of it.** There is no single source for a
+report type's display name — there are at least eight independent dictionaries. The fix is one
+mapping, exported once, consumed by the PDF builder, the email builder and every web surface,
+with a test asserting that **no two report types share a display name** and that every type has
+exactly one. That test is the part that makes it stay fixed; the strings are the easy half.
+
+**Not fixed here.** The naming itself is a product decision — "New Listings (Table)" and
+"New Listings (Gallery)" is the obvious shape and it is not ours to pick — and the market
+report surface is held pending the theme and mapping answers.
 
 ---
 
