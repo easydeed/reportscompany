@@ -135,3 +135,71 @@ def test_the_handover_names_the_six_colours_and_their_kinds():
         assert colour in text, f"{colour} is one of the six and is not named"
     for kind in ("literal", "brand default", "derived"):
         assert kind in text, f"the handover does not distinguish {kind!r}"
+
+
+# ── the correction documents' contrast claims ──────────────────────────────
+
+CORRECTIONS = REPO / "docs/design-corrections"
+
+
+def _ratio(fg: str, bg: str) -> float:
+    def lum(h):
+        h = h.lstrip("#")
+        c = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        c = [x / 12.92 if x <= 0.03928 else ((x + 0.055) / 1.055) ** 2.4 for x in c]
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+    a, b = sorted((lum(fg), lum(bg)), reverse=True)
+    return round((a + 0.05) / (b + 0.05), 2)
+
+
+#: (foreground, background, what the shared document states).
+#: The whole point of that document is that a contrast figure stated as an
+#: adjective was wrong by 1.2 in both of Design's READMEs. Stating ours as
+#: numbers and not computing them would be the same mistake with better
+#: manners.
+STATED = [
+    ("#8a8e95", "#ffffff", 3.29),
+    ("#5e636b", "#ffffff", 6.05),
+    ("#b9bbc1", "#ffffff", 1.92),
+    ("#dc2626", "#fee2e2", 3.95),
+    ("#d97706", "#fef3c7", 2.86),
+    ("#059669", "#d1fae5", 3.32),
+    ("#16a34a", "#e7f6ed", 2.95),
+    ("#ca8a04", "#faf3e5", 2.66),
+    ("#dc2626", "#fbe9e9", 4.12),
+]
+
+
+@pytest.mark.parametrize("fg,bg,stated", STATED)
+def test_every_ratio_in_the_corrections_is_the_ratio(fg, bg, stated):
+    actual = _ratio(fg, bg)
+    assert abs(actual - stated) < 0.015, (
+        f"the corrections say {fg} on {bg} is {stated}; it is {actual}"
+    )
+    text = (CORRECTIONS / "00-SHARED.md").read_text(encoding="utf-8")
+    assert f"{stated}" in text, f"{fg} on {bg} = {stated} is not stated in 00-SHARED.md"
+
+
+#: The semantic inks the shared document offers as a floor. Each must be the
+#: FIRST value clearing 4.5 that the stated derivation produces — a number
+#: that merely passes would hide a derivation that stopped working.
+SEMANTIC_INKS = [("#12873d", 4.61), ("#9e6c03", 4.57),
+                 ("#b26205", 4.52), ("#05875f", 4.53)]
+
+
+@pytest.mark.parametrize("ink,stated", SEMANTIC_INKS)
+def test_the_semantic_inks_clear_the_threshold(ink, stated):
+    actual = _ratio(ink, "#ffffff")
+    assert actual >= 4.5, f"{ink} is offered as a semantic ink and measures {actual}"
+    assert abs(actual - stated) < 0.015, f"{ink} is {actual}, stated as {stated}"
+    assert ink in (CORRECTIONS / "00-SHARED.md").read_text(encoding="utf-8")
+
+
+def test_the_corrections_name_the_live_templates_and_not_only_the_dead_ones():
+    """A correction document whose whole subject is "you read the wrong files"
+    has to name the right ones."""
+    text = (CORRECTIONS / "00-SHARED.md").read_text(encoding="utf-8")
+    for live in ("market/market.jinja2", "<theme>_report.jinja2"):
+        assert live in text, f"{live} is not named as a live template"
+    for dead in ("trendy-*.html", "_base/"):
+        assert dead in text, f"{dead} is not named as a dead one"
