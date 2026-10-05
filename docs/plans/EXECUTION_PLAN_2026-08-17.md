@@ -1102,6 +1102,31 @@ it.**
   cases it knows about cannot see a new case** — the rows are derived from the entries now, and
   must sum to the total.
 
+- **MOVING FORMATTING TOWARD THE DATA NARROWS EVERY AUDIT THAT READS THE DATA'S TYPE.**
+  *Added 2026-10-01.* D-125. Formatting seven numeric context fields in the builder instead of
+  in five templates is one change instead of 145, and it is the obviously better engineering
+  until you notice what else reads those fields. `numeric_leaf_names()` derives the set of
+  numeric fields by walking the built contexts; `1949` is a number and `"1949"` is not, so
+  `year_built`, `bedrooms`, `bathrooms`, `sqft`, `distance`, `lot_size` and `stories` left the
+  set and the zero-conditional audit stopped covering them. Nothing failed. The audit got
+  quieter.
+
+  **This is distinct from the derived-set rule, which is about the INPUT a set is derived
+  from.** Here the input was right and the *type* changed underneath it. A formatter looks
+  local — it changes how one value prints — and is not local at all when something downstream
+  dispatches on `isinstance`. Before moving a conversion toward the data, ask what reads the
+  data by type: audits, serialisers, comparisons, JSON dumps, `or 0` chains.
+
+  **Presentation belongs in the template, and the reason is not taste.** It is that the
+  context is the thing other code reasons about, and every conversion applied there is a
+  conversion those readers have to know about.
+
+  *And the evidence that the rule alone is not enough:* this was caught by the derived-set
+  guard written after D-119 — a guard that fails when a name it expects stops appearing. That
+  is now the **second** time a guard left by a previous defect has caught the same defect
+  recurring in the work that fixed a later one. The guards are doing more work than the rules,
+  which is the argument for writing a guard every time rather than a rule every time.
+
 ---
 
 ## Phase 0 — Security & Tooling
