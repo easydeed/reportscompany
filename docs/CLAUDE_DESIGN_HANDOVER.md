@@ -12,7 +12,7 @@ both are corrected below and in `DEFECT_LIST.md`.
 
 ## 0 · Read this first: there are two template trees and one of them renders nowhere
 
-**`<theme>/<theme>.jinja2` and everything in `_base/` render nowhere. Do not read them, do not
+**`<theme>/<theme>.jinja2` and everything in `templates/property/_base/` render nowhere. Do not read them, do not
 port them, do not take their copy as current.** (D-131.)
 
 > **UPDATED 2026-10-05 — THE THEME SET IS NOW THREE.** Jerry cut the themes to
@@ -37,7 +37,14 @@ port them, do not take their copy as current.** (D-131.)
 
 **There is still more dead property-template code than live.** 5,570 lines against 2,284 —
 the ratio got *worse*, because the cut deleted one live file and one dead file per retired
-theme while `_base/` (2,821 lines, none of it rendered) stayed exactly where it was.
+theme while `templates/property/_base/` (2,821 lines, none of it rendered) stayed exactly where it was.
+
+> **`templates/market/_base/` IS LIVE and is a different directory.** `market/market.jinja2` is one
+> line — `{% extends '_base/base.jinja2' %}` — and that base imports `_base/macros.jinja2`. The two
+> builders give their Jinja loaders different directories, so the same string names two different
+> files depending on which surface is rendering. Every `_base/` in this document means the property
+> one. (`docs/design-corrections/00-SHARED.md` already had this right: its table is per surface and
+> lists `market/_base/` in the LIVE column.)
 
 The dead three are near-complete copies of the live three and `bold.jinja2` looks exactly as
 current as `bold_report.jinja2`. They are stale in ways you cannot see by reading them: they

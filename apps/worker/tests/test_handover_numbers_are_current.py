@@ -115,10 +115,10 @@ def test_both_template_trees_are_the_size_the_handover_says():
     def total(paths):
         return sum(len(p.read_text(encoding="utf-8").splitlines()) for p in paths)
 
-    # One dead file per theme plus the two in `_base/`. Derived, so the next
+    # One dead file per theme plus the two in `property/_base/`. Derived, so the next
     # cut moves it: the literal 7 here went stale on the theme cut and the
     # failure read as "the dead tree changed" when it was "a theme left".
-    # One dead twin per theme plus the two in `_base/`. A theme moving to the
+    # One dead twin per theme plus the two in `property/_base/`. A theme moving to the
     # shared architecture does not change this: its `<theme>.jinja2` twin
     # stays dead and its entry file stays live.
     expected_dead = len(THEME_TEMPLATES) + 2
@@ -217,5 +217,9 @@ def test_the_corrections_name_the_live_templates_and_not_only_the_dead_ones():
     text = (CORRECTIONS / "00-SHARED.md").read_text(encoding="utf-8")
     for live in ("market/market.jinja2", "<theme>_report.jinja2"):
         assert live in text, f"{live} is not named as a live template"
-    for dead in ("trendy-*.html", "_base/"):
+    # `property/_base/`, QUALIFIED. `00-SHARED.md` already says it per
+    # surface — its table lists `market/_base/` in the LIVE column — and this
+    # assertion is what keeps that true, because `"_base/" in text` would also
+    # be satisfied by a rewrite that called the market base dead.
+    for dead in ("trendy-*.html", "property/_base/"):
         assert dead in text, f"{dead} is not named as a dead one"

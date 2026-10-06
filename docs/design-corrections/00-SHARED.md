@@ -145,8 +145,18 @@ package and an architectural decision in the other, so here is the answer once.
 
 | surface | **renders** | **does not render** |
 |---|---|---|
-| property | `apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2` — 5 files, 5,767 lines | `<theme>/<theme>.jinja2` and everything in `_base/` — 7 files, **7,715 lines** |
+| property | `apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2` — 5 files, 5,767 lines | `<theme>/<theme>.jinja2` and everything in `property/_base/` — 7 files, **7,715 lines** |
 | market | `apps/worker/src/worker/templates/market/market.jinja2` + `market/_base/` — 2,479 lines | `apps/web/templates/trendy-*.html` + `apps/web/app/print/[runId]/page.tsx` — the **legacy** path |
+
+> **NUMBERS IN THIS TABLE ARE AS SENT (2026-10-05) AND HAVE MOVED SINCE.** The theme cut retired
+> classic and teal and bold moved onto the shared architecture, so the property row is now 4 live
+> files / 2,284 lines and 5 dead / 5,570. Left as sent, with the current figures derivable from
+> `scripts/derive_template_reachability.py`, because a document already in someone else's hands is
+> a record of what they were told.
+>
+> The `property/` qualifier on the dead column was added 2026-10-06. The table was right — it is
+> per surface and lists `market/_base/` as LIVE — but the phrase "everything in `_base/`" appeared
+> unqualified in eight other places, and one of them was the handover.
 
 The property dead tree is larger than the live one, and `teal.jinja2` looks exactly as current
 as `teal_report.jinja2`. The market legacy path is named LEGACY in the repository's own

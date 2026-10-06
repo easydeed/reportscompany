@@ -4,6 +4,36 @@
 # A RATCHET: this file may only shrink. A (family, selector, foreground,
 # background) combination that is not listed here fails the build.
 #
+# EXCEPT WHEN A SURFACE IS REPLACED, AND THAT IS A POLICY, NOT AN EXCUSE.
+# Jerry, 2026-10-06: *"regenerate per surface as each lands. My 'nothing
+# re-baselined' was right for one theme and wrong as a standing rule — a
+# baseline cannot describe a document that no longer exists. The diff is the
+# review artefact; the rule stays that it is never regenerated casually, and a
+# template replacement is not casual."*
+#
+# The reason, stated in the units this file is keyed in: an entry is
+# `(family, selector, fg, bg)`, and a redesign changes the selector AND the
+# background. So a replaced surface produces N new keys and N orphans with
+# ZERO overlap, and the forward and reverse checks both report every one of
+# them. That is not 2N regressions; it is the file comparing two different
+# documents and reporting the difference.
+#
+# WHAT "PER SURFACE" MEANS IN PRACTICE
+#   * regenerate the replaced family's entries only — `property__<theme>` or
+#     `market__<type>` — and leave every other line byte-identical, so the
+#     diff still says that nothing else moved
+#   * the diff is the review: a reviewer reads which pairings the new document
+#     introduces, which is the question, instead of a wall of orphans
+#   * a surface that was NOT replaced is still a ratchet, and a new failure on
+#     it is still a failure. Regeneration is scoped to the thing that was
+#     rebuilt
+#
+# bold, 2026-10-06, is the worked example and it did NOT need this: 13 new
+# pairings, all 13 fixed in the template, and 37 orphans deleted by key with
+# every surviving line untouched. One theme on one surface was small enough to
+# fix rather than regenerate. The next one may not be, and the policy says
+# what to do then.
+#
 # Keyed on the selector and the two colours, NOT on a file path, so a
 # replacement template set inherits the entries whose selectors it reuses
 # and earns a failure for every new pairing it introduces.

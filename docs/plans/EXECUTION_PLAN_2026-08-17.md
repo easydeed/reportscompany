@@ -1317,6 +1317,55 @@ it.**
   eleven were applied to this change and two came back SILENT, which is a two-in-eleven rate of
   gates that would have reported green on their own subject.
 
+- **A BASELINE CANNOT DESCRIBE A DOCUMENT THAT NO LONGER EXISTS, AND "NEVER REGENERATE" IS A RULE
+  ABOUT CASUALNESS, NOT ABOUT REPLACEMENT.** *Added 2026-10-06, as a policy correction from Jerry.*
+
+  The contrast ratchet keys on `(family, selector, foreground, background)`. A redesign changes the
+  selector **and** the background, so a replaced surface produces N new keys and N orphans with
+  **zero overlap**, and both directions of the check fire on all of them. The output reads as 2N
+  regressions. It is one fact: the file is comparing two different documents.
+
+  "Nothing re-baselined" is right when a surface is being *fixed* — bold's 13 new pairings were all
+  template defects and all 13 were fixed, with 37 orphans deleted by key and every surviving line
+  byte-identical. It is wrong as a standing rule when a surface is being *replaced*, because then
+  the baseline has no subject left.
+
+  **The policy: regenerate per surface as each lands, and the diff is the review artefact.** Scoped
+  to the family that was rebuilt, with every other line untouched, so the diff still carries the
+  claim that nothing else moved. A surface that was not replaced is still a ratchet.
+
+  **The general shape, which is not about contrast.** A baseline is a comparison to a prior state,
+  so it has a precondition nobody writes down: *that there is still a prior state to compare to.*
+  Every ratchet in this project needs the question asked before its output is read — is this
+  reporting a regression, or reporting that its subject was replaced? The two look identical and
+  lead to opposite actions.
+
+- **THE SCOPE OF A REACHABILITY CHECK IS PART OF ITS CLAIM, AND THE SECOND TIME IS AS EASY TO GET
+  WRONG AS THE FIRST.** *Added 2026-10-06. D-131, and then D-131's own correction.*
+
+  D-131 classified a dead property-template tree correctly and produced the sentence **"everything
+  in `_base/` render nowhere"** — unqualified, copied into nine places including the handover Design
+  received. There are two `_base/` directories; `templates/market/_base/base.jinja2` is extended by
+  `market/market.jinja2` and is the whole of every market report. Acting on "delete the `_base/`
+  tree" would have deleted it. **The method was not wrong. The sentence omitted its own scope**, and
+  a classification that omits its scope reads as a classification of everything.
+
+  Then the derivation written to fix it **made the same mistake in the other direction.** Following
+  only Jinja `extends`/`include`/`import`/`from`, it reported the market running head and footer —
+  217 lines — as dead. They are reached from Python: `env.get_template("_base/page_header.jinja2")`.
+  A template can be a root with nothing in Jinja referencing it. That near-miss was one commit from
+  being filed as a new defect.
+
+  **So derive both ends.** Roots from the code that renders (every `get_template` literal, parsed
+  with Python's own parser), edges from the templates, and the answer reported **per surface** —
+  because the same template name resolves to different files under different loaders. And the gate
+  that keeps it honest asserts the positive: `market/_base/` **is live**, by name. A gate that only
+  ever says "this is dead" cannot catch a live file being called dead, which is the failure that
+  mattered here.
+
+  The one document that got it right, `00-SHARED.md`, did so structurally rather than by care: its
+  table has **one row per surface**, so there was nowhere to write an unqualified `_base/`.
+
 ---
 
 ## Phase 0 — Security & Tooling

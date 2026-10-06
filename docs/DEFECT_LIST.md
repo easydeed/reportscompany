@@ -6002,7 +6002,7 @@ and again at `:870` for comps, and again through `_safe_num(..., 0)` at `:1134` 
 mid-render.
 
 > **THE BLOCKER IS STALE, AND IT WAS STALE WHEN IT WAS WRITTEN — 2026-10-05.**
-> `_base/_macros.jinja2` is in the dead tree (D-131). **No template that renders does arithmetic
+> `property/_base/_macros.jinja2` is in the dead tree (D-131). **No template that renders does arithmetic
 > on `property.bedrooms`, `bathrooms`, `sqft`, `lot_size` or `year_built`** — checked by grepping
 > the five live `*_report.jinja2` for a numeric filter, a comparison and an operator against each
 > of the five fields, and finding nothing. The `or 0` can carry absence through today without a
@@ -7860,7 +7860,8 @@ owner block.
 **IT IS SEVEN FILES, NOT FIVE, AND 15,628 LINES — 2026-10-01, folded in from D-160.**
 
 The five `<theme>/<theme>.jinja2` all `{% extends '_base/base.jinja2' %}`, and that file
-`{% import '_base/_macros.jinja2' as macros %}`. Both are reachable **only** from the dead five,
+`{% import '_base/_macros.jinja2' as macros %}` — resolved against `templates/property/`, which is
+the dead one. Both are reachable **only** from the dead five,
 so the tree is seven files, not five:
 
 | | files | lines | rendered |
@@ -7919,9 +7920,86 @@ it as a staging ground for a redesign, which the redesign in flight now makes ea
 **FOR THE CLAUDE DESIGN HANDOVER — the cheap half of this, to be done before the redesign
 starts.** A redesign reads a second template tree as the current one; `teal.jinja2` looks exactly
 as current as `teal_report.jinja2` and is near-complete. The handover note must say, by name:
-**`<theme>/<theme>.jinja2` and everything in `_base/` render nowhere — do not read them, do not
-port them, do not take their copy as live.** That removes the trap while the files survive, and
-costs a paragraph rather than the deletion decision this entry is still waiting on.
+**`<theme>/<theme>.jinja2` and everything in `templates/property/_base/` render nowhere — do not
+read them, do not port them, do not take their copy as live.** That removes the trap while the
+files survive, and costs a paragraph rather than the deletion decision this entry is still
+waiting on.
+
+### CORRECTION — 2026-10-06. THE SENTENCE ABOVE WAS MISSING ONE WORD, NINE TIMES.
+
+**There are two `_base/` directories and only one of them is dead.**
+
+| | |
+|---|---|
+| `templates/property/_base/` | **dead.** Nothing reaches it. This entry's subject |
+| `templates/market/_base/` | **LIVE.** `market/market.jinja2` is one line — `{% extends '_base/base.jinja2' %}` — and that base imports `_base/macros.jinja2`. 2,262 lines, and it is the whole of every market report |
+
+Jinja resolves a template name against the **loader's** directory, and the two builders give their
+loaders different ones. So the string `'_base/base.jinja2'` names two different files depending on
+which surface is rendering, and `market/market.jinja2` — one of the files
+`docs/design-corrections/00-SHARED.md` lists as LIVE — consists of nothing but an `extends` into a
+directory eight other documents and gates called dead.
+
+**Acting on "delete the `_base/` tree" would have deleted the base of every market report.** This
+entry has been cited three times as a reason to delete.
+
+#### How the classification missed it
+
+It did not miss a live dependency. **It missed its own scope.**
+
+The check was: *"grepping every `.py` and `.jinja2` in the repository for each name: zero hits"* —
+and that was correct, for the five filenames it was about (`teal.jinja2`, `bold.jinja2`, and so
+on). The two `property/_base/` files were then added by reading what the dead five `extends`, which
+is also correct. Nothing in the method was wrong.
+
+What was wrong is the **sentence**: the work was done inside `templates/property/`, so "everything
+in `_base/`" meant the property one to the person writing it and means the repository to anyone
+reading it. A classification that omits its own scope reads as a classification of everything —
+and this one was copied verbatim into the handover Design received, where a designer had no way to
+know there were two.
+
+`docs/design-corrections/00-SHARED.md` is the one document that got it right, and the reason is
+structural rather than lucky: its table has **one row per surface**, so there was nowhere to write
+an unqualified `_base/`. A per-surface table could not make this mistake.
+
+#### Reachability is derived now, not asserted
+
+`scripts/derive_template_reachability.py` walks from the roots each builder actually renders —
+`THEME_TEMPLATES` for the property reports, `market.jinja2` for the market ones — and reports live
+and dead **per surface**. `tests/test_template_reachability.py` asserts three things:
+
+* `templates/market/_base/` **is live**, by name. A gate that only ever says "this is dead" cannot
+  catch a live file being classified dead, which is exactly what nearly happened here.
+* `templates/property/_base/` is dead — this entry's claim, still true and now derived.
+* **no document or gate calls `_base/` dead without saying which one.** Nine did. All nine are
+  qualified, and the gate is what keeps them that way.
+
+#### THE DERIVATION MADE THIS ENTRY'S MISTAKE AGAIN, ONE DAY AFTER CORRECTING IT
+
+Its first version followed `extends` / `include` / `import` / `from` and reported
+`market/_base/page_header.jinja2` and `page_footer.jinja2` — **217 lines** — as dead. A second
+dead tree, on the other surface, found the moment reachability was computed. It was written up as
+D-173 and very nearly filed.
+
+**They are live.** `MarketReportBuilder.render_page_header_html` does
+`self.env.get_template("_base/page_header.jinja2")`, `tasks.py:1781` passes both to `render_pdf`,
+and they are PDFShift's native header and footer on every page of every market report. They are
+the §7.1 variant-A running head — the change that recovered 1.07in of every page.
+
+**A template can be a root with no Jinja referencing it.** That is this entry's mistake with the
+surfaces swapped: a reachability claim that misses a dependency because it only looked at one kind
+of reference. Grepping for `page_header` finds ten files and would have shown it; following only
+Jinja edges did not.
+
+So the ROOTS are derived too. `python_roots()` parses every `get_template("...")` literal in the
+worker's Python — with Python's own parser, because a `get_template` in a docstring is not a call
+— and feeds them in alongside `THEME_TEMPLATES`. With that, the market surface has **2,479 live
+lines and zero dead**, which is exactly the figure
+`docs/design-corrections/00-SHARED.md` has carried since it was sent.
+
+**No D-173 was filed, because there was nothing to file.** The near-miss is recorded here instead,
+because it is better evidence for this entry's lesson than the original finding was: the scope of a
+reachability check is part of its claim, and the second time is as easy to get wrong as the first.
 
 ---
 
