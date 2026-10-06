@@ -127,3 +127,78 @@ def test_the_document_still_names_the_one_thing_that_makes_it_cheap(text):
     direction that matters."""
     assert "D-164" in text
     assert "read by nothing" in text.lower()
+
+
+# ─── THE ACCRUAL RATCHET ──────────────────────────────────────────────────────
+#
+# Jerry, 2026-10-06: defer the rename until the three designs are rendered and
+# comparable. The scope document says that is affordable. **The risk of
+# deferring is not that the answer changes — it is that new call sites accrue
+# quietly while the templates land**, so that the decision taken in three weeks
+# is taken against a number measured today.
+#
+# So it is a ratchet. The count may SHRINK freely. It may grow only by editing
+# the number below, which puts the growth in a diff next to the file that
+# caused it. That is the whole mechanism: adding a call site is allowed, adding
+# one silently is not.
+#
+# Measured 2026-10-06, on `main` at the theme cut.
+MAX_FILES_NAMING_A_THEME = 16
+MAX_NAME_OCCURRENCES = 82
+
+
+def test_the_number_of_places_naming_a_theme_has_not_grown(derived):
+    """A rename's cost is this number. It may fall; it may not drift up."""
+    files = derived["name_in_code_files"]
+    occurrences = derived["name_in_code_total"]
+    assert files <= MAX_FILES_NAMING_A_THEME, (
+        f"{files} files name a theme, against the {MAX_FILES_NAMING_A_THEME} "
+        f"measured when the rename was deferred. Each one is a site a rename "
+        f"has to visit. Raise MAX_FILES_NAMING_A_THEME deliberately and say "
+        f"which file was added — or derive the name from the registry instead, "
+        f"which is what the other fifteen do.\n"
+        f"Current: {chr(10).join(f'  {n:3d}  {f}' for f, n in derived['name_in_code'].items())}"
+    )
+    assert occurrences <= MAX_NAME_OCCURRENCES, (
+        f"{occurrences} theme-name occurrences, against "
+        f"{MAX_NAME_OCCURRENCES} when the rename was deferred"
+    )
+
+
+def test_a_shrink_is_recorded_rather_than_tolerated(derived):
+    """The other half of a ratchet, and the half that usually rots.
+
+    A ratchet nobody tightens stops constraining anything — the same reason
+    `pdf_contrast_baseline.txt` and `template_color_baseline.txt` both carry a
+    staleness test. If the count has fallen, the two constants above are stale
+    and the rename just got cheaper than the document claims.
+    """
+    files = derived["name_in_code_files"]
+    assert files == MAX_FILES_NAMING_A_THEME, (
+        f"{files} files name a theme, fewer than the "
+        f"{MAX_FILES_NAMING_A_THEME} recorded. That is progress: tighten the "
+        f"constant and update docs/THEME_RENAME_SCOPE.md, so the decision is "
+        f"taken against what is true now."
+    )
+
+
+def test_no_live_template_has_gained_a_theme_named_css_variable(derived):
+    """The one thing that would make a rename expensive rather than cheap.
+
+    `teal_report.jinja2` carried 39 `--teal-*` custom properties; renaming THAT
+    theme would have been a sweep through its own stylesheet. The three
+    survivors have none, and §2 of the scope document rests on it. Design's
+    rewrite is the moment this could change, which is exactly when the estimate
+    would quietly stop being true.
+    """
+    offenders = {
+        name: v["css_custom_properties"]
+        for name, v in derived["inside_live_templates"].items()
+        if v["css_custom_properties"]
+    }
+    assert not offenders, (
+        f"{offenders} — a live template now names a CSS custom property after "
+        f"its own theme. A rename is no longer four edits and three file moves; "
+        f"re-derive docs/THEME_RENAME_SCOPE.md §2 before anyone takes the "
+        f"decision against it."
+    )

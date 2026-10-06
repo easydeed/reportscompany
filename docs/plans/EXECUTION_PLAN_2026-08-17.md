@@ -1202,6 +1202,50 @@ it.**
   because the others lack the behaviour or because the locator only fits one of them** — and the
   way to know which is to point it at a second member before believing the first.
 
+- **BEFORE REMOVING A VALUE FROM AN ENUMERATED SET, ENUMERATE WHAT DEFAULTS TO IT.** *Added
+  2026-10-06, from the theme cut. The removal counterpart of the missing-row rule, and the same
+  error with the sign flipped: reading a property of the data as a property of the system.*
+
+  **A value's reachability is what is STORED union what is DEFAULTED TO, and a query over the
+  table sees only the first half.** The theme cut was planned from the stored counts — 41 accounts
+  on teal, none on classic, migrate the 41 — and teal had **five** routes, of which the migration
+  covered one. `report_data.get("theme", 4)`, the `else` arm for anything unrecognised,
+  `THEME_TEMPLATES.get(name, …["teal"])` at render time, and `DEFAULT_THEME_ID = 4` on the
+  consumer lead-capture path. Four of the five are invisible to
+  `SELECT … WHERE default_theme_id = 4`.
+
+  Deleting the template while any of them still named it would have left a live path asking the
+  renderer for a file that is not there — and the route that would have hit it first is the one a
+  **stranger** sees. The migration is correct; what it cannot say is what it does not cover, and
+  nothing about reading it suggests the question.
+
+  **Found by rendering, not by reading** — resolving a theme for every input a caller can supply
+  (`None`, `0`, `1`, `4`, `"4"`, `"teal"`, `True`, `99`, `"nonsense"`) and reading the answers.
+  That is the render-to-verify rule applied to a *removal* rather than to a fix, which is a case
+  it had not been applied to before. See **D-166**.
+
+  The structural half: a fallback should name a value the registry *declares*, so that a registry
+  which disagrees with itself fails at import rather than one report at a time — and a gate should
+  parse every fallback and refuse one naming a value the set does not have.
+
+- **A DEFERRED DECISION NEEDS A RATCHET, NOT A DOCUMENT.** *Added 2026-10-06.*
+
+  "Decide later, it is cheap" is a measurement with an expiry date on it. The theme rename was
+  scoped at **16 files and 82 occurrences**, deferred until Design's three templates land — and the
+  thing that would invalidate that is not a change of mind, it is **new call sites accruing quietly
+  while the templates land**, so the decision gets taken in three weeks against a number measured
+  today.
+
+  A scoping document cannot hold that line; it is prose, and prose does not fail. The count is now
+  a ratchet with both halves — it may shrink freely, it may grow only by editing the constant, and
+  a *shrink* also fails, because a ratchet nobody tightens stops constraining anything. Plus a
+  guard on the one thing that would change the answer's kind rather than its size: a live template
+  gaining a CSS custom property named after its own theme, which is what made teal expensive and
+  which Design's rewrite is the moment it could come back. All three seen to fire.
+
+  **The general form: when you defer a decision on the strength of a measurement, gate the
+  measurement.** Otherwise the deferral quietly converts a fact into a memory.
+
 ---
 
 ## Phase 0 — Security & Tooling

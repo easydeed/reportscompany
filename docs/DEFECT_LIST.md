@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 54 | Real, unfixed |
-| `fixed` | 106 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 107 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **165** | D-001 … D-165, contiguous, no duplicates |
+| **Total** | **166** | D-001 … D-166, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 13 · ROUGH 23. (Sums to 54, the open total.)
 
@@ -9992,6 +9992,19 @@ without error.
 names**, and the same account gets two different documents depending on which path created the
 report.
 
+**AND THE USER DOES NOT HAVE TO DO ANYTHING WRONG TO HIT IT.** The wrong map is used for the
+*pre-selection*, not only for the submit — `setThemeId(THEME_ID_MAP[a.default_theme_id])` runs on
+load. So the wizard opens showing a theme the account is not on, and **accepting what it offers
+changes your theme.** The two accounts on id 3 render `elegant` everywhere else and the wizard
+hands them `classic` — a different design, not a renamed one.
+
+That is why it survived: **both names existed.** A wizard offering `classic` is not obviously
+wrong, because classic was a real theme that rendered a real document. Nothing compared what the
+two paths produced, and the only thing that could have — a render of both — was never run against
+the same account. The cut is what makes this unmissable in future: a picker offering a name the
+renderer does not have now fails
+`test_theme_registry_is_single_sourced::test_every_web_theme_list_offers_exactly_the_live_themes`.
+
 **AND IT CHANGES THE THEME-CUT ANALYSIS, WHICH IS WHY IT WAS LOOKED FOR.** "Nobody is on
 classic" is true of the stored ids and false of what renders: the **2 accounts on theme 3 are
 being sent `classic`** by the wizard today — a theme Claude Design proposes deleting. The 41
@@ -10052,6 +10065,26 @@ the *string* form of an id, and `report_generations.theme_id` is VARCHAR — `ro
 writes `str(default_theme_id)` into it. `"5"` fell through both arms and silently defaulted while
 looking like a choice. See D-164.
 
+### THE RENAME DECISION RIDES ON THIS ENTRY'S FIX — recorded 2026-10-06
+
+Jerry, 2026-10-06: **defer renaming until the three designs are rendered and comparable.** That is
+affordable *because of* the id/name split this fix established, and the split is what has to be
+kept intact while the templates land:
+
+| | |
+|---|---|
+| **a theme NAME lives in** | 3 Python sites (`themes.json`, and the two generated registries it generates) + the display map in `web/lib/themes.generated.ts` + one `key:` per theme in `property-report-assets.ts` + the template directory name |
+| **a theme ID lives in** | `accounts.default_theme_id`, `property_reports.theme`, `property_report_stats.theme_<name>`, and every web picker |
+| **the database stores** | **no theme name that anything reads.** `report_generations.theme_id` holds names and is read by nothing (D-164) |
+
+So a rename is four edits and three file moves, no migration — `docs/THEME_RENAME_SCOPE.md` has the
+derivation.
+
+**The risk of deferring is not that the answer changes; it is that new call sites accrue quietly
+while the templates land.** That is now a ratchet rather than a hope:
+`tests/test_rename_scope_numbers_are_current.py` fails if the number of files naming a theme grows
+beyond what the scope document states. Adding one is allowed — it is not allowed to be silent.
+
 ---
 
 ### D-164 — the market path resolves, logs and passes a theme id that nothing reads
@@ -10104,6 +10137,86 @@ actually chosen (the accent colour).
 `docs/THEME_RENAME_SCOPE.md` §3. If `theme_id` ever gains a consumer, that scoping changes from
 "nothing" to "a data migration", which is why the scope document's gate asserts this entry is
 still cited.
+
+---
+
+### D-166 — a value's reachability is what is stored UNION what is defaulted to, and a migration only sees the first half
+
+**Severity:** FRAGILE · **Affects:** the theme cut, and every future removal of a value from an
+enumerated set · **Found during:** rendering the cut rather than reading the migration
+**Status:** `fixed` — 2026-10-05, in the theme cut (`feat/theme-cut`, #145)
+
+**The general statement first, because the specific case is already fixed and the shape is not.**
+
+Deciding whether a value is still in use by querying for rows that hold it answers *"who stored
+it"*. It does not answer *"who gets it"*. Anything that falls back to a value reaches it without
+ever being stored, and no query over the table will show that. **A removal planned against stored
+rows alone deletes something still reachable.**
+
+#### The specific case
+
+The cut's plan was built from the stored counts: 41 accounts on 4 (teal), 2 on 3, 1 on 5, none on
+1 or 2. Read as "nobody is on classic, 41 are on teal, migrate the 41." **Teal had three routes,
+and the migration covers one of them.**
+
+```python
+# property_builder.py, before the cut
+theme_input = report_data.get("theme", 4)              # route 2 — the arg default
+...
+else:
+    self.theme_name = "teal"                           # route 3 — anything unrecognised
+    self.theme_number = 4
+...
+template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])   # route 4
+```
+
+```python
+# consumer_report_data.py, before the cut
+DEFAULT_THEME_ID = 4                                   # route 5 — every lead-capture report
+```
+
+| route | reaches teal when | the migration sees it |
+|---|---|---|
+| stored `default_theme_id = 4` | the account is on teal | **yes** |
+| `report_data.get("theme", 4)` | the caller passes no theme at all | no |
+| the `else` arm | the value is NULL, `0`, `6`, a stale id, or a string the map has no key for | no |
+| `THEME_TEMPLATES.get(name, …["teal"])` | the resolved name has no template | no |
+| `DEFAULT_THEME_ID = 4` | a stranger requests a report on a lead page and the account set no theme | no |
+
+**Four of the five are invisible to `SELECT ... WHERE default_theme_id = 4`.** Deleting
+`teal_report.jinja2` while any of them still said `"teal"` would have left a live code path asking
+the renderer for a file that is not there — and the one that would have hit it first is the
+consumer lead-capture path, which is the one a stranger sees.
+
+#### Why reading the migration could not have found it
+
+The migration is correct. It does exactly what it says and it says what it does. **The thing it
+cannot say is what it does not cover**, and nothing about reading it suggests the question. The
+routes were found by resolving a theme through the builder for every input a caller can supply —
+`None`, `0`, `1`, `4`, `"4"`, `"teal"`, `True`, `99`, `"nonsense"` — and reading the answer, which
+is the render-to-verify rule applied to a *removal* rather than to a fix.
+
+#### What was done
+
+Every route resolves through `theme_registry.resolve()`, whose fallback is the registry's declared
+default and therefore cannot name a retired theme by construction — the registry asserts
+`default_id in THEME_NUMBER_MAP` **at import**, so a registry that disagrees with itself fails the
+process that loaded it rather than one report. On top of that,
+`tests/test_theme_registry_is_single_sourced.py::test_no_python_fallback_names_a_theme_id_the_registry_does_not`
+parses every integer theme fallback in the worker and the API and fails on any that names an id the
+registry does not have. Applied as a regression — `theme_id or 1` restored — and it fired.
+
+#### Status note
+
+Filed as `fixed` rather than `closed-not-live` because **it was live**: the fallbacks did point at
+teal, and the deletion did happen. What makes it not a customer-facing defect is only the order the
+two were done in. Had the templates been deleted first, this would be a BROKEN entry about the lead
+page. **Severity FRAGILE records the structure, not the outcome.**
+
+#### The rule, for §0.6
+
+*Before removing a value from an enumerated set, enumerate what defaults to it.* A stored-value
+query is half the answer, and it is the half that looks complete.
 
 ---
 

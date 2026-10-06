@@ -126,6 +126,16 @@ have no way to tell a rename from a colour regression.
 
 ## 6 · Is deferring cheap?
 
+> **DECIDED 2026-10-06 — Jerry: defer until the three designs are rendered and comparable.**
+> The numbers below are what that decision was taken against, so they are a **ratchet**, not a
+> snapshot. `tests/test_rename_scope_numbers_are_current.py` fails if the count of files naming a
+> theme grows past **16**, fails if it falls (because a ratchet nobody tightens stops constraining
+> anything), and fails if a live template gains a CSS custom property named after its own theme —
+> the one thing that would change this answer's *kind* rather than its size, and the thing Design's
+> rewrite is the moment it could come back. All three have been seen to fire.
+>
+> Adding a theme-name call site is allowed. Adding one silently is not.
+
 **Yes, and the cost does not grow with the designs landing — with one caveat.**
 
 What makes it cheap is the single-sourced registry, which exists now and is gated. Nothing about
