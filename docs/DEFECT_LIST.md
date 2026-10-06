@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 52 | Real, unfixed |
+| `open` | 53 | Real, unfixed |
 | `fixed` | 105 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **162** | D-001 … D-162, contiguous, no duplicates |
+| **Total** | **163** | D-001 … D-163, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 13 · ROUGH 21. (Sums to 52, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 15 · FRAGILE 13 · ROUGH 21. (Sums to 53, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9941,6 +9941,75 @@ exactly one. That test is the part that makes it stay fixed; the strings are the
 **Not fixed here.** The naming itself is a product decision — "New Listings (Table)" and
 "New Listings (Gallery)" is the obvious shape and it is not ours to pick — and the market
 report surface is held pending the theme and mapping answers.
+
+---
+
+### D-163 — the web wizard's theme-id map is wrong on all five ids, so an account's theme setting selects a different theme
+
+**Severity:** WRONG · **Affects:** every report created through `/app/reports/new`,
+`/app/schedules/new`, `/app/schedules/[id]/edit` and onboarding — which is the primary way
+reports are made · **Found during:** verifying the id→name mapping before the theme-cut decision
+**Status:** `open`
+
+There is **no themes table.** The id→name mapping exists only in code, in at least four places,
+and they do not agree.
+
+| source | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| **`property_builder.THEME_NUMBER_MAP`** — *the renderer* | classic | modern | elegant | **teal** | bold |
+| `api/services/property_stats.py:49` (`theme = 1 AS theme_classic`) | classic | — | — | — | — |
+| **`web/components/unified-wizard/index.tsx:29`** | **teal** | **bold** | **classic** | **elegant** | **modern** |
+| **`web/components/onboarding/guided-get-started.tsx:57`** | **teal** | **bold** | **classic** | **elegant** | **modern** |
+
+**The renderer and the analytics agree. The two web copies agree with each other and with
+nothing else — they are wrong on every id.**
+
+**It is not a display bug; the wrong value is submitted.** Both web copies do the same three
+things:
+
+```tsx
+// unified-wizard/index.tsx:132-133, and the same at guided-get-started.tsx:180-181
+if (a.default_theme_id && THEME_ID_MAP[a.default_theme_id]) {
+  setThemeId(THEME_ID_MAP[a.default_theme_id])      // id -> wrong name
+}
+...
+theme_id: themeId,                                   // :284 — the wrong name is submitted
+```
+
+`PropertyReportBuilder` accepts a theme *name* as well as a number, so the wrong name renders
+without error.
+
+**What each account actually gets**, against the 2026-10-05 counts:
+
+| stored `default_theme_id` | accounts | the renderer's theme | what the wizard submits |
+|---|---|---|---|
+| 4 | **41** | teal | **elegant** |
+| 3 | 2 | elegant | **classic** |
+| 5 | 1 | bold | **modern** |
+| 1 | 0 | classic | teal |
+
+**Every one of the 44 accounts receives a different theme through the wizard than its setting
+names**, and the same account gets two different documents depending on which path created the
+report.
+
+**AND IT CHANGES THE THEME-CUT ANALYSIS, WHICH IS WHY IT WAS LOOKED FOR.** "Nobody is on
+classic" is true of the stored ids and false of what renders: the **2 accounts on theme 3 are
+being sent `classic`** by the wizard today — a theme Claude Design proposes deleting. The 41
+default accounts receive `elegant` from the wizard and `teal` from every other path, so "41
+accounts are on teal" is true of the stored value and not of the output.
+
+The conclusion survives — **no account deliberately chose classic or teal**, because 41 of 44
+never chose anything and the three that did chose 3 and 5 — but it survives on the stored ids,
+not on the rendered output, and the two have to be reconciled before the cut.
+
+**The fix is not four corrected copies.** It is one mapping, owned on the server, with the web
+asking for it rather than restating it — the same shape as D-162's display names, found the same
+way, one day apart. Two independent copies of a five-line dict, both wrong in the same way, is
+what a constant with no owner looks like.
+
+**Not fixed here:** the theme set is about to change, and correcting a map of five themes that
+is about to become three is work done twice. It must be fixed **as part of** the theme cut, and
+the cut must not be planned against the stored ids alone.
 
 ---
 
