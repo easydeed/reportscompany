@@ -123,7 +123,25 @@ def consumer_property_data():
     return {k: LOOKUP[k] for k in keys}
 
 
-def consumer_report_data():
+from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES  # noqa: E402
+
+#: The theme the tests in this file that read the NINE-PAGE document's own
+#: markup must use.
+#:
+#: `build_consumer_report_data` sets the theme to the registry default, which
+#: is bold — and bold is on Design's six-page architecture, which has no
+#: contents page and no Area Sales Analysis table. So four tests here stopped
+#: finding surfaces they were written against, on the LIVE consumer path.
+#:
+#: They are pinned to a self-contained theme rather than deleted, because the
+#: properties they assert are still true of those two themes and are still
+#: worth asserting while they render. The same properties on the shared
+#: architecture are asserted at the end of this file, against the surfaces
+#: that replaced them.
+NINE_PAGE_THEME = SELF_CONTAINED_THEMES[0]
+
+
+def consumer_report_data(theme=None):
     """`report_data`, as `tasks.py`'s consumer branch builds it.
 
     IMPORTED, NOT MIRRORED — D-140, and the whole point of the extraction.
@@ -141,7 +159,7 @@ def consumer_report_data():
     from worker.consumer_report_data import build_consumer_report_data
 
     pd = consumer_property_data()
-    return build_consumer_report_data(
+    data = build_consumer_report_data(
         property_data=pd,
         prop_address=LOOKUP["street"],
         prop_city=LOOKUP["city"],
@@ -150,6 +168,17 @@ def consumer_report_data():
         comparables=COMPS,
         agent_name="Zoe Noelle",
     )
+    if theme:
+        # BOTH, and the page set is the half that matters. Setting `theme`
+        # alone left `selected_pages` as whatever the DEFAULT theme's
+        # architecture renders — so a test pinned to a nine-page theme got
+        # the six-page list and reported "4 pages, expected 7". The page set
+        # travels with the theme because the architecture does.
+        from worker.theme_registry import THEME_NAME_MAP
+        data["theme"] = theme
+        data["selected_pages"] = PropertyReportBuilder.default_page_set(
+            THEME_NAME_MAP.get(theme, theme), consumer=True)
+    return data
 
 
 def test_the_two_paths_render_the_same_property_page():
@@ -276,7 +305,7 @@ def test_the_consumer_report_carries_the_area_sales_analysis():
     requested by typing their address into a form asking what it is worth.
     """
     assert "analysis" in CONSUMER_PAGES
-    assert _analysis_table(_render(consumer_report_data())) is not None
+    assert _analysis_table(_render(consumer_report_data(NINE_PAGE_THEME))) is not None
 
 
 def test_the_subject_s_last_sale_reaches_the_consumer_report():
@@ -285,7 +314,7 @@ def test_the_subject_s_last_sale_reaches_the_consumer_report():
     print. "The page renders" is not "the figure is on it", so this asserts
     the value, in the row, in the table.
     """
-    table = _analysis_table(_render(consumer_report_data()))
+    table = _analysis_table(_render(consumer_report_data(NINE_PAGE_THEME)))
     price_row = [r for r in table.split("</tr>") if "369,000" in r]
     assert price_row, "the last-sale figure is not in the analysis table"
     cells = [re.sub("<[^>]+>", "", c).strip()
@@ -303,8 +332,9 @@ def test_the_subject_s_last_sale_reaches_the_consumer_report():
 def test_both_paths_render_the_same_analysis_table():
     """Not just present — the same. A consumer table built from a thinner
     context would pass the test above and still differ."""
-    agent = _analysis_table(_render(agent_report_data()))
-    consumer = _analysis_table(_render(consumer_report_data()))
+    agent = _analysis_table(_render({**agent_report_data(),
+                                     "theme": NINE_PAGE_THEME}))
+    consumer = _analysis_table(_render(consumer_report_data(NINE_PAGE_THEME)))
     def rows(t):
         return [[re.sub("<[^>]+>", "", c).strip()
                  for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", r, re.S)]
@@ -323,7 +353,7 @@ def test_contents_is_back_and_describes_a_consumer_report():
     comparables page.
     """
     assert "contents" in CONSUMER_PAGES
-    html = _render(consumer_report_data())
+    html = _render(consumer_report_data(NINE_PAGE_THEME))
     labels = re.findall(r'class="(?:contents-text|name)">\s*([^<]*?)\s*<', html)
     assert labels, "the contents page rendered no rows"
     # Every label must be a heading that exists in this document.
@@ -360,10 +390,124 @@ def test_the_page_set_is_a_maximum_not_a_guarantee(
     output, which is the whole error this defect is made of.
     """
     from worker.compute.market_trends import SAMPLE_MARKET_TRENDS
-    data = consumer_report_data()
+    data = consumer_report_data(NINE_PAGE_THEME)
     if supply_trends:
         data["market_trends_data"] = SAMPLE_MARKET_TRENDS
     if supply_overview:
         data["overview_text"] = "A short executive summary."
     html = PropertyReportBuilder(data).render_html()
     assert len(re.findall(r'<section class="', html)) == expected_sections
+
+
+# ── the same properties on the shared architecture ────────────────────────
+#
+# The four tests above are pinned to a self-contained theme because they read
+# the nine-page document's markup. The LIVE consumer path is bold — the
+# registry default — so pinning them without replacing them would have left
+# the path a stranger actually receives untested for exactly those properties.
+
+def _v2_doc(data):
+    """The `doc` context for a report, without rendering it."""
+    builder = PropertyReportBuilder(data)
+    ctx = {
+        "property": builder._build_property_context(),
+        "agent": builder._build_agent_context(),
+        "stats": builder._build_stats_context(),
+        "comparables": builder._build_comparables_context(),
+        "audience": data.get("audience") or "agent",
+        "prepared_for": (data.get("prepared_for") or "").strip(),
+    }
+    return builder, builder._build_v2_context(ctx, list(builder.V2_PAGE_ORDER))
+
+
+@pytest.mark.parametrize("theme", SHARED_THEMES)
+def test_the_subjects_last_sale_reaches_the_consumer_report_on_the_new_pages(theme):
+    """D-118's figure, on the surfaces that replaced the analysis table.
+
+    The nine-page document carries it in one place — the analysis table's
+    Sale price row. The six-page one carries it in THREE: page 2's "Last
+    sale" row, page 4's "Your home" column, and the range band's marker
+    label. All three are asserted, because the failure D-118 was is a figure
+    wired through four layers and landing on a page the path did not print,
+    and three surfaces is three chances to catch the next one.
+    """
+    data = {**consumer_report_data(theme), "audience": "consumer"}
+    _, doc = _v2_doc(data)
+
+    last_sale = next(r for g in doc["detail_groups"] for r in g["rows"]
+                     if r["label"] == "Last sale")
+    assert "369,000" in last_sale["value"], (
+        f"{theme}: page 2's Last sale row reads {last_sale['value']!r}"
+    )
+    sale_row = next(r for r in doc["compare_rows"] if r["label"] == "Sale price")
+    assert "369,000" in sale_row["subject"], (
+        f"{theme}: the compare table's subject column reads "
+        f"{sale_row['subject']!r}"
+    )
+    assert "369,000" in doc["last_sale_label"], (
+        f"{theme}: the range band's marker label reads "
+        f"{doc['last_sale_label']!r}"
+    )
+
+
+@pytest.mark.parametrize("theme", SHARED_THEMES)
+def test_both_paths_compare_the_same_figures(theme):
+    """The analysis-table parity test's replacement.
+
+    The compare table is the only place the two paths could disagree about a
+    number, since everything else on the new pages is either the same context
+    or deliberately different (the report kind, the "Prepared for" block, the
+    owner row). Asserted on the ROWS rather than the rendered cells, so a
+    divergence shows up as which figure differs rather than as a diff of two
+    HTML blobs.
+    """
+    _, agent_doc = _v2_doc({**agent_report_data(), "theme": theme})
+    _, consumer_doc = _v2_doc(
+        {**consumer_report_data(theme), "audience": "consumer"})
+    assert agent_doc["compare_rows"] == consumer_doc["compare_rows"], (
+        f"{theme}: the two paths compare different figures"
+    )
+    for key in ("range_low", "range_mid", "range_high", "closed_count"):
+        assert agent_doc[key] == consumer_doc[key], (
+            f"{theme}: {key} is {agent_doc[key]!r} on the agent path and "
+            f"{consumer_doc[key]!r} on the consumer path"
+        )
+
+
+@pytest.mark.parametrize("theme", SHARED_THEMES)
+def test_the_six_page_set_is_a_maximum_not_a_guarantee(theme):
+    """D-142, on the new page set.
+
+    `market_trends` is the one conditional page left — `notes` and `range`
+    render unconditionally, and `overview` and `contents` are gone — so the
+    document is five pages when SimplyRETS does not answer and six when it
+    does. Counted from the RENDER, for the same reason as the nine-page
+    version: `render_html` prunes a local copy and leaves `self.page_set` at
+    its original value, so asserting on the attribute measures the intent.
+    """
+    from worker.compute.market_trends import SAMPLE_MARKET_TRENDS
+    from worker.theme_registry import DEFAULT_THEME_NAME
+    # NO `selected_pages` OVERRIDE. `consumer_report_data(theme)` sets one, so
+    # this test passed with `consumer_report_data.py` restored to its own copy
+    # of the nine-page list — the fixture was supplying the very value the
+    # test exists to check. A regression run is the only thing that says so:
+    # the gate was green against the defect it was written for.
+    assert theme == DEFAULT_THEME_NAME, (
+        "this test reads the consumer path's OWN page set, so it only means "
+        "anything for the theme that path actually uses"
+    )
+    for supply, expected in ((False, 5), (True, 6)):
+        data = {**consumer_report_data(), "audience": "consumer"}
+        if supply:
+            data["market_trends_data"] = SAMPLE_MARKET_TRENDS
+        builder = PropertyReportBuilder(data)
+        html = builder.render_html()
+        sheets = re.findall(r'<section class="sheet sheet-(\w+)"', html)
+        assert len(sheets) == expected, (
+            f"{theme}: market data {'supplied' if supply else 'withheld'} → "
+            f"{len(sheets)} pages ({sheets}), expected {expected}"
+        )
+        if not supply:
+            assert builder.pages_dropped == ["market_trends"], (
+                f"{theme}: the drop was not reported — {builder.pages_dropped}"
+            )

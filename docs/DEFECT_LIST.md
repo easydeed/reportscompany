@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 54 | Real, unfixed |
-| `fixed` | 107 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 58 | Real, unfixed |
+| `fixed` | 109 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **166** | D-001 … D-166, contiguous, no duplicates |
+| **Total** | **172** | D-001 … D-172, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 13 · ROUGH 23. (Sums to 54, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 13 · ROUGH 24. (Sums to 58, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -10217,6 +10217,272 @@ page. **Severity FRAGILE records the structure, not the outcome.**
 
 *Before removing a value from an enumerated set, enumerate what defaults to it.* A stored-value
 query is half the answer, and it is the half that looks complete.
+
+---
+
+### D-167 — three market metric groups have no producer at all, and a bare `except` has been hiding it
+
+**Severity:** WRONG · **Affects:** every property report's market page — three of its four headline
+numbers · **Found during:** wiring Design's page 5, which asks for all three
+**Status:** `open`
+
+```python
+# compute/market_trends.py:347
+try:
+    from worker.report_builders import (
+        compute_price_cut_stats,
+        compute_dom_distribution,
+        compute_timeline_metrics,
+    )
+    price_cut_stats  = compute_price_cut_stats(active_listings)
+    dom_distribution = compute_dom_distribution(current_dom_vals)
+    timeline_metrics = compute_timeline_metrics(current_closed)
+except (ImportError, Exception) as _b_exc:
+    logger.info("market_trends: B1-B3 helpers unavailable (%s) — page will render without extended metrics")
+```
+
+**None of the three functions exists.** `worker.report_builders` defines no name containing
+`compute`, `price_cut`, `dom_` or `timeline`:
+
+```
+$ python3 -c "from worker.report_builders import compute_price_cut_stats"
+ImportError: cannot import name 'compute_price_cut_stats' from 'worker.report_builders'
+```
+
+So the import raises on every call, `except (ImportError, Exception)` swallows it, and
+`price_cut_stats`, `dom_distribution` and `timeline_metrics` are `None` **every time, and have
+been since they were written.**
+
+**`tests/test_new_metrics.py` DEFINES ITS OWN COPIES and tests those.** Lines 22 and 47 are
+complete, working implementations of `compute_price_cut_stats` and `compute_dom_distribution`,
+living in the test file, with a docstring saying "Prompt 3C — Unit tests for new metric
+computations". The tests pass. They are testing code that nothing imports. That is D-140's
+mirrored-literal trap in its purest form: **a gate that reimplements what it guards is green
+whatever the product does.** `compute_timeline_metrics` exists nowhere at all.
+
+**What it costs on Design's page.** Three of the four stat cells:
+
+| cell | source | status |
+|---|---|---|
+| Median sale price · ▲ x% | `median_sale_price` | **has a producer** |
+| Days to contract | `timeline_metrics.avg_marketing_days` | no producer |
+| Sold in 30 days or less | `dom_distribution.under_30` | no producer |
+| Took a price cut · median $x | `price_cut_stats.rate` / `.median_cut` | no producer |
+
+They render **"no data"**, which is Design's own absence rule (§3.6, *"Metric with no data → 'no
+data'"*) and the honest output — but it is three quarters of a page saying nothing, and nobody
+knew.
+
+**Two things are wrong and the second is worse.** The functions are missing, and
+`except (ImportError, Exception)` at `info` is what let that be true for months. `except Exception`
+already catches `ImportError`; naming both reads as deliberate breadth. A missing producer is not a
+degraded mode, and `info` is not where you look for one.
+
+**Not fixed here.** Promoting the two implementations out of the test file is a product change —
+that code has never run against a real feed and was written as test scaffolding — and
+`compute_timeline_metrics` has to be written from scratch. The page is wired to render what has a
+producer and say "no data" for what does not, which makes the gap visible on the document instead
+of in a log line nobody reads.
+
+---
+
+### D-168 — seven numeric comp fields collapse "absent" to 0, so a missing bedroom count is a studio
+
+**Severity:** WRONG · **Affects:** every comparable on every property report, both paths ·
+**Found during:** implementing Design's absence rules on the comp cards
+**Status:** `open` (recoverable half worked around; `days_on_market` is not recoverable)
+
+```python
+# property_builder._build_comparables_context
+"days_on_market": comp.get("days_on_market") or comp.get("dom") or 0,
+"price_per_sqft":  self._calc_price_per_sqft(raw_price, comp_sqft) or 0,
+"bedrooms":        comp.get("bedrooms") or 0,
+"bathrooms":       comp.get("bathrooms") or 0,
+"year_built":      comp.get("year_built") or 0,
+"lot_size":        comp.get("lot_size") or 0,
+"lot_display":     comp.get("lot_display") or "",
+"hoa_frequency":   comp.get("hoa_frequency") or "",
+"distance_miles":  float(distance_raw) if isinstance(distance_raw, (int, float)) else 0,
+```
+
+**Nine fields, and by the time a template sees them an absent value and a zero are the same
+value.** This is D-137 exactly — *"`or False` and `.get(k, "No") == "Yes"` both turn the third
+case into the second, which is how a report came to tell people their home has no pool"* — and the
+file applies the lesson to `pool` **eleven lines below**, with a comment explaining the tri-state,
+while nine fields beside it collapse.
+
+**What it renders.** Design's absence rules (§3.6) cannot be implemented on comps:
+
+* `year_built: 0` → a compare-table column reading **0 / 0 / 0**, which is "every comparable was
+  built in year zero". Caught by a gate written for that table on its first run.
+* `bathrooms: 0` → "0 ba" on a card, for a house with bathrooms nobody recorded.
+* `distance_miles: 0` → a comparable at the subject's own address.
+* `days_on_market: 0` → **"New"**, by Design's own rule. A comp with no DOM reads as one that
+  sold the day it listed.
+
+**Five of the nine are recoverable and `days_on_market` is not.** No house has zero bedrooms, zero
+bathrooms, zero living area, year built zero, a zero price per sq ft, or sits zero miles from
+itself, so `_v2_comp_value` reads those zeros back as absence. **Zero days on market is a real
+value**, so a comp with no DOM is indistinguishable from one that sold immediately, and nothing
+downstream can tell them apart. That half needs the producer fixed.
+
+**The fix is at the producer**, and it is the same shape as `_tri_state_bool`: write `None`
+through, and let the one place that formats a value decide what absence looks like. The workaround
+in `_v2_comp_value` is a reader guessing which zeros are real, which is exactly the thing this
+entry says not to do — it is there because the alternative was shipping 0/0/0 in a table.
+
+---
+
+### D-169 — the agent's job title renders nowhere on the redesigned report, and is still computed and still defaulted
+
+**Severity:** ROUGH · **Affects:** the property report's agent panel on the shared architecture ·
+**Found during:** the cover-title gate failing at collection with "found 0"
+**Status:** `open` — [JERRY]: it is a copy decision, not a bug
+
+`_build_agent_context` computes `title`, defaulting it to the string `"Real Estate Agent"` when
+the agent has not entered one (`property_builder.py:1077`). Design's architecture has no agent role
+line: the cover carries the report kind, the brand, the address, four stats, the hero photo,
+"Prepared for" and "In short"; page 6's agent panel carries name, brand, licence, a blurb, phone
+and email. **`agent.title` appears in no live template on that architecture.**
+
+Sixth member of the write-with-no-consumer family (D-009, D-113, D-133, D-135, D-164), and the
+first created by a redesign rather than found in old code.
+
+**The decision it hides.** D-067 recorded that every theme's per-theme role copy — "Luxury
+Property Specialist", "Real Estate Specialist" — has never rendered, because the Python default
+substitutes first; the entry called that "a design call". **Design's answer is to drop the line.**
+That may well be right — a job title under an agent's name on a document they sent is close to
+nothing — but it is an answer to a question Jerry has not been asked, and it arrives as the absence
+of a line rather than as a decision.
+
+`test_theme_cover_title.py` now asserts BOTH sides: the themes with a role line still satisfy
+D-066 and D-067, and a theme **without** one must not print the title some other way. So the line
+coming back is a deliberate act with a test attached, rather than a quiet reversal.
+
+---
+
+### D-170 — `primary_ink` cleared AA on white and not on `tint`, which is half its own definition
+
+**Severity:** WRONG · **Affects:** every surface putting brand text on a tint panel — two of the
+six corpus brands · **Found during:** the pixel contrast gate on the redesigned report
+**Status:** `fixed` — 2026-10-06 (`feat/wire-bold`)
+
+§3.1 defines `primary_ink` as the brand value usable as text **on white or on `tint`**.
+`themes._ink` darkened in 6% steps "until the result clears AA on white" — one surface — and its
+docstring said so, so the code and its comment agreed with each other and both disagreed with the
+spec. Measured:
+
+| brand | ink | on white | on its own tint |
+|---|---|---|---|
+| `#0D9488` teal | `#0b8378` | 4.63 | **4.33** |
+| `#DC2626` red | `#dc2626` | 4.83 | **4.41** |
+
+A tint is 6% brand over white, so it is always slightly darker than white and the tint condition
+is always the binding one. **Every ink that fails, fails there** — which is why five thousand
+random colours passing the white check established nothing about the half nobody tested.
+
+**It took a render to find.** The redesigned property report is the first surface to put
+`primary_ink` on `tint` — the "In short" panel, the confidence pill, the next-steps cards — and
+the pixel gate reported `span.label` and `span.conf-pill` failing on exactly those two brands.
+Reading `themes.py` would not have found it.
+
+**The fix is monotone**, which is what made it safe: adding a condition can only make the loop run
+further, so every ink either stays or gets darker, and darker on tint is darker on white. Four of
+sixteen brands move, each by one step. No contrast-baseline entry's foreground changes.
+`golden/themes.json` moves two values and the diff is two lines.
+
+**Two gates were asserting the old rule and are re-pointed, not relaxed.**
+`test_the_ink_property_is_not_satisfied_by_going_black` checked that one step lighter fails AA *on
+white*, which after the fix accused the derivation of overshooting on every brand.
+`test_the_three_themes_that_already_pass_are_not_touched` listed `#DC2626` as a brand that already
+passes — it never did, on the two-surface rule. And the property itself now has a five-thousand
+colour test of its own, because reverting the fix does **not** fail the three-input degenerate
+test: `#000000`, `#ffffff` and `#ffff00` all have tints that behave specially.
+
+---
+
+### D-171 — [JERRY] the cover band's white display text was decided on a premise that is false for two of six brands
+
+**Severity:** WRONG · **Affects:** the redesigned property report's cover, on amber and lime ·
+**Found during:** the pixel contrast gate, first render of the redesigned document
+**Status:** `open` — **[JERRY]**, and the slot is built with the safe value in it
+
+Design's package specifies `#FFFFFF` for the cover's display lines — street, city, the four 30px
+stat values — "**by owner decision**", on the stated grounds that it "passes the 3.0 large-text
+threshold for the street and stat values", with the 22px city line as "the recorded exception".
+
+**Measured on the rendered document, white on each corpus brand's `primary` fill:**
+
+| brand | ratio | large text (3.0) | AA (4.5) |
+|---|---|---|---|
+| violet `#7c3aed` | 5.57 | pass | pass |
+| cyan `#0e7490` | 4.72 | pass | pass |
+| red `#dc2626` | 4.26 | pass | fail |
+| teal `#0d9488` | 3.74 | pass | fail — **the recorded exception** |
+| amber `#f59e0b` | **2.15** | **fail** | fail |
+| lime `#84cc16` | **1.98** | **fail** | fail |
+
+**The grounds do not hold for amber or lime.** The decision was not "this is a deliberate
+exception on every brand" — it was "it clears 3.0" — and on two of six it clears neither threshold.
+This is the same claim flagged in `docs/design-corrections/00-SHARED.md` before the package was
+sent, confirmed here from the other direction: measured on output rather than computed from hexes.
+
+**Built as a slot with the safe value in it, not decided.** `--cover-display` defaults to
+`on_primary` — the token that exists for text on a brand fill, white or near-black by whichever
+has more contrast — so the cover is near-black on teal, amber and lime, white on the other three,
+and passes on all six. **Taking Design's decision as written is a one-line change** to `#FFFFFF`,
+and it widens the recorded exception from one brand to four.
+
+That is Jerry's call. It is not being made here, and the measurement is attached so it can be made
+on the numbers rather than on the premise.
+
+**A second instance, not covered by the exception at all.** Design's file also sets `#FFFFFF` on
+page 6's agent-panel name, which is a 32px display line on the same brand fill. Nothing recorded an
+exception for it, so it uses `on_primary` outright — measured at 1.98:1 on lime and 2.15:1 on amber
+before the change. The `opacity: 0.85` / `0.9` / `0.92` values Design sets on text over the band
+are dropped for the related reason: a translucent `on_primary` over `primary` is a colour neither
+token measured, and the gate reports it as a pairing nobody chose.
+
+---
+
+### D-172 — the theme cut's own gate did not scan the worker's tests, and seven stale `"teal"` literals went on passing
+
+**Severity:** FRAGILE · **Affects:** seven tests in `apps/worker/tests` between 2026-10-05 and
+2026-10-06 · **Found during:** a continuation-page test asking for teal while wiring bold
+**Status:** `fixed` — 2026-10-06 (`feat/wire-bold`)
+
+`test_theme_registry_is_single_sourced::test_no_live_code_path_names_a_retired_theme` was written
+with the theme cut, and its message is exactly right: *"a retired theme's name in code is a path
+that can still ask the renderer for a template that was deleted."* Its `TREES` tuple listed
+`"tests"`, which matches the **root** suite only. `apps/worker/tests` and `apps/api/tests` were
+not scanned.
+
+**Seven call sites in the worker's own tests still named teal:**
+
+```
+test_a_dropped_page_is_reported.py:64    def render(theme="teal", pages=None)
+test_a_dropped_page_is_reported.py:151   data = dict(report_data("teal"))
+test_no_invented_demographics.py:60      def render_context(theme="teal")
+test_one_comp_set.py:305                 html = agent_html("teal", COMP_SET_MAX)
+test_property_production_render.py:226   data = report_data("teal")
+test_property_production_render.py:435   data = report_data("teal")
+test_property_production_render.py:494   _aged("teal", 20, 1100)
+```
+
+**They did not fail.** `theme_registry.resolve()` returns the default for a retired name — by
+design, because a stored row can still hold one (D-166) — so seven tests claimed to measure teal
+and measured bold. Silent, green, and wrong about what they covered for a day.
+
+**The lesson is about the gate, not the literals.** A gate's scope is part of its claim, and this
+one claimed "no live code path" while reading six of eight source trees. The two missing ones were
+not a judgement call — they were an oversight, and the thing they were missing is the kind of
+mistake the gate exists for. Verified by applying `STALE = "teal"` to
+`apps/worker/tests/test_one_comp_set.py` after widening `TREES`: it fires and names the file and
+line.
+
+The seven literals now read `DEFAULT_THEME_NAME` or `SELF_CONTAINED_THEMES[0]`, whichever the test
+actually needs — which is itself the finding, because two of the seven needed a self-contained
+theme and had been getting bold.
 
 ---
 

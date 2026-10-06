@@ -235,26 +235,55 @@ def _on_dark(value: str) -> str:
 
 def _ink(value: str) -> str:
     """
-    Darken in 6% steps until the result clears AA on white.
+    Darken in 6% steps until the result clears AA on white **and on `tint`**.
+
+    BOTH SURFACES, AND IT USED TO BE ONE. §3.1 defines `primary_ink` as the
+    brand value usable as text "on white/tint", and this loop only ever
+    checked white — so for a brand whose ink lands just over 4.5 on white, the
+    same ink on the 6% tint came out BELOW it. Measured on the property
+    report's tint panels, 2026-10-06:
+
+        #0D9488 (teal)   ink #0b8378   4.63 on white   **4.33 on tint**
+        #DC2626 (red)    ink #dc2626   4.83 on white   **4.41 on tint**
+
+    Found by rendering: the redesigned property report puts `primary_ink` on
+    tint in three places (the "In short" panel, the confidence pill, the
+    next-steps cards) and the pixel contrast gate reported `span.label` and
+    `span.conf-pill` failing on exactly those two brands. Reading the function
+    would not have found it — the docstring and the code agreed with each
+    other, and both disagreed with the spec.
+
+    THE FIX IS MONOTONE. Adding a condition can only make the loop run
+    further, so every ink either stays put or gets darker, and darker on tint
+    is darker on white. Nothing that passed before can fail now. Measured over
+    sixteen brands including all six corpus samples: four change, each by one
+    step. No existing contrast-baseline entry moves, because no entry's
+    foreground is an ink that changes.
+
+    `tint` is recomputed here from the same input rather than passed in, so
+    this function cannot be handed a tint belonging to a different brand.
 
     TERMINATION. Each step multiplies every channel by 0.94, so luminance is
-    strictly decreasing toward black, whose contrast on white is 21:1 — the
-    condition is reachable from every sRGB colour. Two inputs make that claim
-    worth stating rather than assuming:
+    strictly decreasing toward black; black clears AA on white (21:1) and on
+    any tint, since a tint is always lighter than its brand. The condition is
+    reachable from every sRGB colour. Two inputs make that claim worth stating
+    rather than assuming:
 
       #000000 exits on the first check having darkened nothing.
-      #ffff00 is the slowest chromatic case at 12 steps, landing on #797900 —
-              a dark olive that still reads as the colour it came from. It does
-              NOT bottom out at black, which is the failure mode the spec calls
-              "looping to the floor".
+      #ffff00 is the slowest chromatic case, landing on a dark olive that
+              still reads as the colour it came from. It does NOT bottom out
+              at black, which is the failure mode the spec calls "looping to
+              the floor".
 
     Integer rounding means a step can fail to change a very dark colour at all.
     That is harmless (such a colour already passes) but it would be an infinite
     loop without the bound, so there is a bound.
     """
     current = normalize_hex(value)
+    tint = _flatten_over_white(current, _TINT_ALPHA)
     for _ in range(_MAX_STEPS):
-        if contrast(current, WHITE) >= AA_NORMAL:
+        if (contrast(current, WHITE) >= AA_NORMAL
+                and contrast(current, tint) >= AA_NORMAL):
             return current
         stepped = _scale(current, _STEP)
         if stepped == current:

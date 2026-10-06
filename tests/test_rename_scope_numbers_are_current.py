@@ -98,13 +98,43 @@ def test_the_baseline_row_counts_match(derived, text):
 
 
 def test_the_self_reference_count_inside_a_template_matches(derived, text):
-    counts = {v["self_references"] for v in derived["inside_live_templates"].values()}
-    assert len(counts) == 1, (
-        f"the live templates no longer agree on how often they name themselves: "
-        f"{derived['inside_live_templates']} — the document states one number"
+    """TWO NUMBERS NOW, one per architecture, and that is the finding.
+
+    Every theme named itself 9 times while all of them were self-contained.
+    bold's chain names it 3 — its entry file's own commentary, with the
+    `<title>` moved into the shared file and built from the context. So the
+    one-number assertion this replaces was correct until the moment a theme
+    migrated, and it failed with "the live templates no longer agree", which
+    is true and is the thing worth saying.
+    """
+    inside = derived["inside_live_templates"]
+    self_contained = {k: v["self_references"] for k, v in inside.items()
+                      if v["files"] == 1}
+    shared = {k: v["self_references"] for k, v in inside.items()
+              if v["files"] > 1}
+
+    if self_contained:
+        counts = set(self_contained.values())
+        assert len(counts) == 1, (
+            f"the self-contained templates disagree on how often they name "
+            f"themselves: {self_contained}"
+        )
+        n = counts.pop()
+        assert f"**{n} times**" in text, (
+            f"a self-contained theme names itself {n} times; the document "
+            f"states something else"
+        )
+    if shared:
+        counts = set(shared.values())
+        assert len(counts) == 1, f"the shared-architecture themes disagree: {shared}"
+        n = counts.pop()
+        assert f"names itself {n} times" in text, (
+            f"a theme on the shared architecture names itself {n} times; the "
+            f"document states something else"
+        )
+    assert all(v["title_tag"] for v in inside.values()), (
+        f"a theme's chain has no <title> at all: {inside}"
     )
-    n = counts.pop()
-    assert f"**{n} times**" in text, f"each theme names itself {n} times"
     custom = {v["css_custom_properties"] for v in derived["inside_live_templates"].values()}
     assert custom == {0}, (
         f"a live template has gained theme-named CSS custom properties "
@@ -142,9 +172,12 @@ def test_the_document_still_names_the_one_thing_that_makes_it_cheap(text):
 # caused it. That is the whole mechanism: adding a call site is allowed, adding
 # one silently is not.
 #
-# Measured 2026-10-06, on `main` at the theme cut.
+# Measured 2026-10-06. 16/82 at the theme cut; 16/85 once bold moved to the
+# shared architecture — one new occurrence in `property_builder`'s migration
+# seam and two in the single-source gate. The ratchet refused the change until
+# this number was edited, which is what it is for.
 MAX_FILES_NAMING_A_THEME = 16
-MAX_NAME_OCCURRENCES = 82
+MAX_NAME_OCCURRENCES = 85
 
 
 def test_the_number_of_places_naming_a_theme_has_not_grown(derived):

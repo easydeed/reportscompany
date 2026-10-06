@@ -50,6 +50,8 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import THEME_TEMPLATES, PropertyReportBuilder  # noqa: E402
+from worker.theme_registry import DEFAULT_THEME_NAME  # noqa: E402
+from _template_chain import SELF_CONTAINED_THEMES  # noqa: E402
 
 from test_property_production_render import report_data  # noqa: E402
 
@@ -61,7 +63,10 @@ THEMES = sorted(THEME_TEMPLATES)
 DROPPABLE = ("market_trends", "overview")
 
 
-def render(theme="teal", pages=None):
+def render(theme=DEFAULT_THEME_NAME, pages=None):
+    # The default theme by NAME, not a literal. This said "teal" until
+    # 2026-10-06; `resolve()` returns the default for a retired name, so
+    # every test in this file had been measuring bold while saying teal.
     data = dict(report_data(theme))
     if pages is not None:
         data["selected_pages"] = list(pages)
@@ -148,7 +153,11 @@ def test_an_added_page_is_not_reported_as_a_drop():
     """`comparables_all` is ADDED to the page set, not dropped from it
     (D-159). A difference taken the wrong way round would report every
     multi-comp report as having lost a page."""
-    data = dict(report_data("teal"))
+    # A SELF-CONTAINED THEME, because the added page this asserts on is the
+    # comparables continuation — and the shared architecture has none: page 4
+    # lists every comp, so there is nothing to continue. Using the default
+    # theme here asked bold for a page Design removed.
+    data = dict(report_data(SELF_CONTAINED_THEMES[0]))
     data["comparables"] = [
         {**data["comparables"][0], "address": f"{i} Added Way",
          "sale_price": 500_000 + i * 1000} for i in range(8)

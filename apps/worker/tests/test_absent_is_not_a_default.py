@@ -41,6 +41,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from api.services.sitex import PropertyData  # noqa: E402
+from _template_chain import chain  # noqa: E402
 from worker.property_builder import (  # noqa: E402
     ABSENT, PropertyReportBuilder, THEME_TEMPLATES, _tri_state_bool,
 )
@@ -146,8 +147,11 @@ def test_the_allowed_list_does_not_outlive_the_code():
     live = set()
     for module in ("property_builder.py", "consumer_report_data.py"):
         live |= {v for _, v in _string_defaults_in(SRC / module)}
-    for t in THEME_TEMPLATES.values():
-        live |= set(_template_defaults_in(TEMPLATES / t))
+    # The CHAIN, so a default in the shared architecture still counts as
+    # live. Reading only the entry files would have declared every
+    # default in `_v2/report.jinja2` stale on the day bold moved.
+    for path in {p for theme in THEME_TEMPLATES for p in chain(theme)}:
+        live |= set(_template_defaults_in(path))
     stale = sorted(set(ALLOWED) - live)
     assert not stale, f"ALLOWED excuses defaults that no longer exist: {stale}"
 
@@ -156,7 +160,7 @@ def test_the_allowed_list_does_not_outlive_the_code():
 
 @pytest.mark.parametrize("theme", sorted(THEME_TEMPLATES))
 def test_no_template_default_asserts_a_fact_about_the_property(theme):
-    found = sorted({d for d in _template_defaults_in(TEMPLATES / THEME_TEMPLATES[theme])
+    found = sorted({d for p in chain(theme) for d in _template_defaults_in(p)
                     if d not in HONEST and d not in ALLOWED})
     assert not found, (
         f"{theme} renders `| default({found})`. Fixing only the builder leaves "

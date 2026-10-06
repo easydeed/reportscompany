@@ -292,20 +292,37 @@ class TestHTMLStructure:
         assert ">None<" not in html, f"{theme}: bare 'None' in output"
 
     @pytest.mark.parametrize("theme", THEMES)
-    def test_has_seven_pages(self, theme):
+    def test_renders_one_page_per_declared_page(self, theme):
         """
         The old version counted `class="page ` — WITH a trailing space — and
-        fell back to `class="page"` only when that returned zero. teal uses both
-        (5 spaced, 2 bare), so the fallback never fired and it reported 5 of 7.
-        teal has always rendered seven pages.
+        fell back to `class="page"` only when that returned zero. teal used
+        both (5 spaced, 2 bare), so the fallback never fired and it reported
+        5 of 7.
 
-        Counting both, and asserting against the builder's declared page set
-        rather than a literal 7, so the two cannot drift apart.
+        A THIRD SPELLING SINCE 2026-10-06: a theme on Design's shared
+        architecture labels its pages `class="sheet sheet-<page>"` and renders
+        six, not seven. Counted by all three and asserted against the
+        builder's declared page set rather than a literal, so the count and
+        the architecture cannot drift apart — which is why this test is no
+        longer named after the number seven.
         """
-        html = render(theme, FULL_REPORT_DATA)
-        pages = html.count('class="page ') + html.count('class="page"')
-        assert pages >= len(DEFAULT_PAGE_SET), (
-            f"{theme}: expected {len(DEFAULT_PAGE_SET)} pages, found {pages}"
+        builder = PropertyReportBuilder({**FULL_REPORT_DATA, "theme": theme})
+        html = builder.render_html()
+        pages = (html.count('class="page ')
+                 + html.count('class="page"')
+                 + html.count('class="sheet sheet-'))
+        # `builder.page_set` is the MAXIMUM — `render_html` drops a page whose
+        # data did not arrive and leaves the attribute alone (D-142) — so this
+        # is `<=`, and the exact-equality version belongs to the tests that
+        # control the data. What it catches is a page set the template cannot
+        # render at all, which is what six-vs-nine was.
+        assert 0 < pages <= len(builder.page_set), (
+            f"{theme}: declared {len(builder.page_set)} pages "
+            f"({builder.page_set}), rendered {pages}"
+        )
+        assert pages >= len(builder.page_set) - len(builder.CONDITIONAL_PAGES), (
+            f"{theme}: declared {len(builder.page_set)} pages and rendered "
+            f"only {pages} — more were dropped than the conditional ones"
         )
 
 

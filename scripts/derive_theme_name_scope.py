@@ -101,15 +101,44 @@ def main() -> int:
 
     # ── C. the NAME inside a live template ──────────────────────────────
     tdir = ROOT / "apps/worker/src/worker/templates/property"
+    # THE CHAIN, resolved by parsing, because a theme on the shared
+    # architecture is an entry file plus `_v2/report.jinja2`. Reading the
+    # entry file alone reported bold at 3 self-references and no `<title>`,
+    # which is true of thirty-four lines of `{% set %}` and not of the
+    # document they render.
+    def _chain(path):
+        from jinja2 import Environment, nodes
+        out, stack = [], [path]
+        while stack:
+            cur = stack.pop(0)
+            if cur in out:
+                continue
+            out.append(cur)
+            tree = Environment().parse(cur.read_text(encoding="utf-8"))
+            for kind in (nodes.Include, nodes.Extends, nodes.Import,
+                         nodes.FromImport):
+                for node in tree.find_all(kind):
+                    value = getattr(getattr(node, "template", None), "value", None)
+                    for name in ([value] if isinstance(value, str)
+                                 else list(value or [])):
+                        if isinstance(name, str):
+                            stack.append(tdir / name)
+        return out
+
     tmpl = {}
     for t in reg["themes"]:
-        f = tdir / t["template"]
-        text = f.read_text(encoding="utf-8")
+        # `chain_files`, not `files` — the local shadowed the module-level
+        # `files()` generator and the sweep above it raised
+        # UnboundLocalError. Python's scoping, not a logic error, and the
+        # kind a name chosen for brevity buys.
+        chain_files = _chain(tdir / t["template"])
+        text = "\n".join(f.read_text(encoding="utf-8") for f in chain_files)
         own = re.compile(rf"\b{t['name']}\b", re.I)
         tmpl[t["name"]] = {
+            "files": len(chain_files),
             "self_references": len(own.findall(text)),
             "css_custom_properties": len(re.findall(rf"--{t['name']}\b", text, re.I)),
-            "title_tag": bool(re.search(rf"<title>[^<]*{t['name']}", text, re.I)),
+            "title_tag": "<title>" in text,
         }
     report["inside_live_templates"] = tmpl
 

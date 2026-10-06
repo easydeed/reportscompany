@@ -68,11 +68,31 @@ from . import theme_registry as _registry
 #: way it REMOVES `market_trends` and `overview` when their data does not
 #: arrive. A page whose presence depends on the data belongs to the builder,
 #: not to a page list written before the data exists (D-159).
+#: THE NINE-PAGE SET ONLY, and the consumer path no longer reaches for it
+#: directly — see `consumer_pages()` below. Kept because the two tests that
+#: assert the maximum by name read it, and because the list's own commentary
+#: above is about this architecture.
 CONSUMER_PAGES = [
     "cover", "contents", "aerial", "property", "analysis",
     "comparables", "range",
     "market_trends", "overview",
 ]
+
+
+def consumer_pages(theme_id) -> List[str]:
+    """The consumer path's page set, for whichever architecture renders it.
+
+    ASKS THE BUILDER. `CONSUMER_PAGES` is the nine-page list and was handed
+    to every theme, so a theme on Design's six-page architecture got four
+    pages that do not exist there and lost the one page it always renders.
+    The builder owns which pages an architecture has; this function is the
+    consumer path asking rather than keeping its own copy.
+
+    Imported lazily: `property_builder` imports this module, so a top-level
+    import here is a cycle.
+    """
+    from worker.property_builder import PropertyReportBuilder
+    return PropertyReportBuilder.default_page_set(theme_id, consumer=True)
 
 DEFAULT_PRIMARY = "#1B365D"
 DEFAULT_ACCENT = "#B8860B"
@@ -188,5 +208,5 @@ def build_consumer_report_data(
             "primary_color": primary_color or DEFAULT_PRIMARY,
             "accent_color": secondary_color or DEFAULT_ACCENT,
         },
-        "selected_pages": list(CONSUMER_PAGES),
+        "selected_pages": consumer_pages(theme_id or DEFAULT_THEME_ID),
     }

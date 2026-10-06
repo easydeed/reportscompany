@@ -23,13 +23,19 @@ port them, do not take their copy as current.** (D-131.)
 
 | tree | files | lines | rendered |
 |---|---|---|---|
-| `templates/property/<theme>/<theme>_report.jinja2` | 3 | **2,860** | **yes** — `THEME_TEMPLATES` maps to exactly these |
+| `templates/property/_v2/report.jinja2` | 1 | **735** | **yes** — the shared page architecture |
+| `templates/property/<theme>/<theme>_report.jinja2` | 3 | **1,549** | **yes** — `THEME_TEMPLATES` maps to exactly these |
 | `templates/property/<theme>/<theme>.jinja2` | 3 | 2,749 | **no** |
 | `templates/property/_base/base.jinja2` | 1 | 2,146 | **no** |
 | `templates/property/_base/_macros.jinja2` | 1 | 675 | **no** |
 | | **5 dead** | **5,570** | |
 
-**There is still more dead property-template code than live.** 5,570 lines against 2,860 —
+> **UPDATED AGAIN 2026-10-06 — BOLD IS ON YOUR ARCHITECTURE.** `bold_report.jinja2` is now
+> **34 lines** — eight `{% set %}`s and an `{% include %}` — and the six pages live in
+> `_v2/report.jinja2`, shared. elegant (720) and modern (795) are still self-contained and move
+> next. The 1,549 in the table is those two plus bold's 34.
+
+**There is still more dead property-template code than live.** 5,570 lines against 2,284 —
 the ratio got *worse*, because the cut deleted one live file and one dead file per retired
 theme while `_base/` (2,821 lines, none of it rendered) stayed exactly where it was.
 
@@ -47,7 +53,8 @@ thing to change deliberately, not to work around.
 **The only files to open:**
 
 ```
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2
+apps/worker/src/worker/templates/property/_v2/report.jinja2          <- the six pages
+apps/worker/src/worker/templates/property/bold/bold_report.jinja2    <- bold's type only
 apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2
 apps/worker/src/worker/templates/property/modern/modern_report.jinja2
 ```
