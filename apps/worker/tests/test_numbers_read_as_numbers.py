@@ -52,6 +52,8 @@ from test_property_production_render import COMPS, report_data  # noqa: E402
 
 THEMES = sorted(THEME_TEMPLATES)
 
+from _template_chain import SHARED_THEMES  # noqa: E402
+
 #: A cell's whole text, so `$1,949.00` and a decimal inside prose are not
 #: matched. The defect is a lone number in a table cell wearing a `.0`.
 TRAILING_ZERO_CELL = re.compile(r">\s*(-?[\d,]+\.0)\s*<")
@@ -154,3 +156,46 @@ def test_format_measure_does_not_group_thousands():
     user. Living Area and Lot Size keep `format_number`, which groups."""
     assert format_measure(1949) == "1949"
     assert format_measure(12345.0) == "12345"
+
+
+# ── per surface, not just per document ─────────────────────────────────────
+
+@pytest.mark.parametrize("theme", SHARED_THEMES)
+def test_a_genuine_half_survives_on_every_surface_that_shows_it(theme):
+    """`test_a_genuine_half_survives` asserts "1.5 is SOMEWHERE in the document".
+
+    That is the right property and it is not enough. The redesigned document
+    shows bathrooms twice — the cover's 30px stat cell and page 2's detail row
+    — and reverting the COVER's formatter to the integer one left the document
+    still containing "1.5" on page 2, so the gate stayed green while the first
+    number a reader sees was wrong. Found by running the regression, not by
+    reading the test.
+
+    So each surface is asserted separately. Added 2026-10-06.
+    """
+    from worker.property_builder import PropertyReportBuilder
+    from test_property_production_render import report_data
+
+    data = dict(report_data(theme))
+    data["sitex_data"] = {**data["sitex_data"], "bathrooms": 1.5}
+    builder = PropertyReportBuilder(data)
+    doc = builder._build_v2_context(
+        {"property": builder._build_property_context(),
+         "agent": builder._build_agent_context(),
+         "stats": builder._build_stats_context(),
+         "comparables": builder._build_comparables_context(),
+         "audience": "agent", "prepared_for": ""},
+        list(builder.V2_PAGE_ORDER))
+
+    cover = next((s for s in doc["hero_stats"] if s["label"] == "Bathrooms"), None)
+    assert cover is not None, f"{theme}: bathrooms is not one of the cover stats"
+    assert cover["value"] == "1.5", (
+        f"{theme}: the cover's bathrooms cell reads {cover['value']!r} — the "
+        f"half was truncated on the largest number on the page"
+    )
+
+    row = next(r for g in doc["detail_groups"] for r in g["rows"]
+               if r["label"] == "Bathrooms")
+    assert row["value"] == "1.5", (
+        f"{theme}: page 2's bathrooms row reads {row['value']!r}"
+    )

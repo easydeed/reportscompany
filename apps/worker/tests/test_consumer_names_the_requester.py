@@ -96,10 +96,24 @@ def test_no_assessor_owner_name_reaches_a_consumer_report(theme):
         )
 
 
+def _text(html: str) -> str:
+    """Rendered text with tags removed and whitespace collapsed.
+
+    ASSERTED ON TEXT, NOT MARKUP. `"Prepared for Dana Ortiz" in html` worked
+    while every theme put the label and the name in one element; the shared
+    architecture puts them in two sibling spans, and the gate failed on a
+    document that says exactly the right thing. The property is "the label and
+    the name read as one line to a person", and a person does not see the
+    tags.
+    """
+    import re
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html)).strip()
+
+
 @pytest.mark.parametrize("theme", THEMES)
 def test_the_consumer_report_is_addressed_to_whoever_asked(theme):
     html = consumer_html(theme)
-    assert f"Prepared for {REQUESTER}" in html, (
+    assert f"Prepared for {REQUESTER}" in _text(html), (
         f"{theme}: the requester's name is not on the cover"
     )
 
@@ -110,7 +124,16 @@ def test_with_no_name_on_the_form_there_is_no_line_and_no_substitute(theme):
     fallback. "Prepared for HERNANDEZ GERARDO J" would be worse than nothing
     by a wide margin."""
     html = consumer_html(theme, requester=None)
-    assert "Prepared for" not in html, f"{theme}: an empty 'Prepared for' rendered"
+    # THE LABEL ELEMENT, not the phrase. Design's consumer disclaimer reads
+    # "Prepared for the person who requested it and addressed to them by
+    # name…", so `"Prepared for" not in html` matched the disclosure that
+    # exists BECAUSE of this rule and reported the rule broken. Eleventh
+    # outing for substring-is-not-a-construct, and the first where the
+    # false positive was the fix's own copy.
+    labels = re.findall(
+        r'<(?:span|div) class="(?:label|cover-prepared-for)"[^>]*>\s*'
+        r'Prepared for', html)
+    assert not labels, f"{theme}: an empty 'Prepared for' label rendered"
     assert "HERNANDEZ" not in html.upper(), (
         f"{theme}: with no requester name, the report fell back to the owner"
     )
@@ -125,7 +148,12 @@ def test_the_agent_report_does_carry_the_owner_of_record(theme):
         f"{theme}: the agent report has no owner of record — the consumer "
         f"gate above would pass whether or not the block exists"
     )
-    assert "Owner of Record" in html
+    # Case-insensitive on the LABEL only. The shared architecture writes
+    # "Owner of record"; v1 wrote "Owner of Record". The capital R is not the
+    # property — the name being there is, and that is asserted above with
+    # `OWNER in html`. Matching the old casing exactly failed a document
+    # carrying the block correctly.
+    assert "owner of record" in html.lower()
     assert "Prospective Property Owner" not in html, (
         f"{theme}: the old heading came back with the block"
     )

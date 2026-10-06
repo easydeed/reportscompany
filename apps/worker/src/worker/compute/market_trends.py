@@ -356,6 +356,24 @@ def _compute_trends(
     except (ImportError, Exception) as _b_exc:
         logger.info("market_trends: B1-B3 helpers unavailable (%s) — page will render without extended metrics", _b_exc)
 
+    # ── the six-month median series ───────────────────────────────────────────
+    monthly_median = None
+    try:
+        from worker.compute.monthly_trend import median_series
+        from worker.vendors.simplyrets import MAX_RESULTS as _FETCH_CEILING
+        monthly_median = median_series(
+            current_closed + prior_closed,
+            months=6,
+            truncated=len(raw_closed) >= _FETCH_CEILING,
+        )
+    except Exception as _ms_exc:
+        # Non-fatal and NAMED. The bare `except (ImportError, Exception)` two
+        # blocks down logs at `info` and is why three metric groups have been
+        # silently None since they were written (D-167) — so this one says
+        # which series failed, at `warning`, and the page renders without a
+        # chart rather than with an empty one.
+        logger.warning("market_trends: monthly median series failed — %s", _ms_exc)
+
     # ── Build the full context dict ───────────────────────────────────────────
     now = datetime.now()
     return {
@@ -418,6 +436,21 @@ def _compute_trends(
         # another. The templates already guard on `current is not none`, and
         # `pace_label` is what the page says the number is measured against.
         "months_of_inventory": describe_moi(moi),
+
+        # Monthly median series for the property report's market page.
+        #
+        # SIX MONTHS, which is exactly the window this function already
+        # fetches — `minclosedate` is 180 days back and nothing beyond it is
+        # ever read, so asking for twelve would silently draw six empty
+        # months. The series comes from `compute.monthly_trend.median_series`,
+        # the SAME producer the market report's chart uses, so the two cannot
+        # disagree about what a month's median is. `median_series` returns
+        # None rather than a one-point "trend" and refuses a truncated fetch
+        # outright (D-078), which is why truncation is passed rather than
+        # assumed: 1000 rows is `fetch_properties`' ceiling, and a median over
+        # an arbitrary 1000 of a market's sales is a wrong number that looks
+        # like a right one.
+        "monthly_median": monthly_median,
 
         # Market condition badge
         "market_condition": condition_info,

@@ -57,8 +57,19 @@ ALL_NAMES = ("teal", "bold", "classic", "modern", "elegant")
 
 #: Source trees worth scanning. `output/` holds generated HTML and PDFs and
 #: `_intake/` holds a vendored starter app; neither ships.
-TREES = ("apps/api/src", "apps/web", "apps/worker/src", "apps/worker/scripts",
-         "scripts", "db/migrations", "tests")
+#:
+#: `apps/worker/tests` AND `apps/api/tests` WERE MISSING, and that was not a
+#: judgement call — it was an oversight, and it cost exactly what the gate
+#: exists to prevent. Seven call sites in the worker's own tests still said
+#: `report_data("teal")` and `render(theme="teal")` after the cut. They did
+#: not fail: `theme_registry.resolve()` quietly returns the default for a
+#: retired name, so seven tests claimed to measure teal and measured bold.
+#: `tests` matched only the ROOT suite, which is why a gate whose message is
+#: "a retired theme's name in code is a path that can still ask the renderer
+#: for a template that was deleted" said nothing about seven such paths.
+TREES = ("apps/api/src", "apps/api/tests", "apps/web", "apps/worker/src",
+         "apps/worker/scripts", "apps/worker/tests", "scripts",
+         "db/migrations", "tests")
 SKIP_PARTS = ("node_modules", ".next", "dist", "build", "__pycache__", ".git")
 
 

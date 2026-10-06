@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 54 | Real, unfixed |
-| `fixed` | 106 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 58 | Real, unfixed |
+| `fixed` | 109 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **165** | D-001 … D-165, contiguous, no duplicates |
+| **Total** | **172** | D-001 … D-172, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 13 · ROUGH 23. (Sums to 54, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 13 · ROUGH 24. (Sums to 58, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9992,6 +9992,19 @@ without error.
 names**, and the same account gets two different documents depending on which path created the
 report.
 
+**AND THE USER DOES NOT HAVE TO DO ANYTHING WRONG TO HIT IT.** The wrong map is used for the
+*pre-selection*, not only for the submit — `setThemeId(THEME_ID_MAP[a.default_theme_id])` runs on
+load. So the wizard opens showing a theme the account is not on, and **accepting what it offers
+changes your theme.** The two accounts on id 3 render `elegant` everywhere else and the wizard
+hands them `classic` — a different design, not a renamed one.
+
+That is why it survived: **both names existed.** A wizard offering `classic` is not obviously
+wrong, because classic was a real theme that rendered a real document. Nothing compared what the
+two paths produced, and the only thing that could have — a render of both — was never run against
+the same account. The cut is what makes this unmissable in future: a picker offering a name the
+renderer does not have now fails
+`test_theme_registry_is_single_sourced::test_every_web_theme_list_offers_exactly_the_live_themes`.
+
 **AND IT CHANGES THE THEME-CUT ANALYSIS, WHICH IS WHY IT WAS LOOKED FOR.** "Nobody is on
 classic" is true of the stored ids and false of what renders: the **2 accounts on theme 3 are
 being sent `classic`** by the wizard today — a theme Claude Design proposes deleting. The 41
@@ -10052,6 +10065,26 @@ the *string* form of an id, and `report_generations.theme_id` is VARCHAR — `ro
 writes `str(default_theme_id)` into it. `"5"` fell through both arms and silently defaulted while
 looking like a choice. See D-164.
 
+### THE RENAME DECISION RIDES ON THIS ENTRY'S FIX — recorded 2026-10-06
+
+Jerry, 2026-10-06: **defer renaming until the three designs are rendered and comparable.** That is
+affordable *because of* the id/name split this fix established, and the split is what has to be
+kept intact while the templates land:
+
+| | |
+|---|---|
+| **a theme NAME lives in** | 3 Python sites (`themes.json`, and the two generated registries it generates) + the display map in `web/lib/themes.generated.ts` + one `key:` per theme in `property-report-assets.ts` + the template directory name |
+| **a theme ID lives in** | `accounts.default_theme_id`, `property_reports.theme`, `property_report_stats.theme_<name>`, and every web picker |
+| **the database stores** | **no theme name that anything reads.** `report_generations.theme_id` holds names and is read by nothing (D-164) |
+
+So a rename is four edits and three file moves, no migration — `docs/THEME_RENAME_SCOPE.md` has the
+derivation.
+
+**The risk of deferring is not that the answer changes; it is that new call sites accrue quietly
+while the templates land.** That is now a ratchet rather than a hope:
+`tests/test_rename_scope_numbers_are_current.py` fails if the number of files naming a theme grows
+beyond what the scope document states. Adding one is allowed — it is not allowed to be silent.
+
 ---
 
 ### D-164 — the market path resolves, logs and passes a theme id that nothing reads
@@ -10104,6 +10137,352 @@ actually chosen (the accent colour).
 `docs/THEME_RENAME_SCOPE.md` §3. If `theme_id` ever gains a consumer, that scoping changes from
 "nothing" to "a data migration", which is why the scope document's gate asserts this entry is
 still cited.
+
+---
+
+### D-166 — a value's reachability is what is stored UNION what is defaulted to, and a migration only sees the first half
+
+**Severity:** FRAGILE · **Affects:** the theme cut, and every future removal of a value from an
+enumerated set · **Found during:** rendering the cut rather than reading the migration
+**Status:** `fixed` — 2026-10-05, in the theme cut (`feat/theme-cut`, #145)
+
+**The general statement first, because the specific case is already fixed and the shape is not.**
+
+Deciding whether a value is still in use by querying for rows that hold it answers *"who stored
+it"*. It does not answer *"who gets it"*. Anything that falls back to a value reaches it without
+ever being stored, and no query over the table will show that. **A removal planned against stored
+rows alone deletes something still reachable.**
+
+#### The specific case
+
+The cut's plan was built from the stored counts: 41 accounts on 4 (teal), 2 on 3, 1 on 5, none on
+1 or 2. Read as "nobody is on classic, 41 are on teal, migrate the 41." **Teal had three routes,
+and the migration covers one of them.**
+
+```python
+# property_builder.py, before the cut
+theme_input = report_data.get("theme", 4)              # route 2 — the arg default
+...
+else:
+    self.theme_name = "teal"                           # route 3 — anything unrecognised
+    self.theme_number = 4
+...
+template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])   # route 4
+```
+
+```python
+# consumer_report_data.py, before the cut
+DEFAULT_THEME_ID = 4                                   # route 5 — every lead-capture report
+```
+
+| route | reaches teal when | the migration sees it |
+|---|---|---|
+| stored `default_theme_id = 4` | the account is on teal | **yes** |
+| `report_data.get("theme", 4)` | the caller passes no theme at all | no |
+| the `else` arm | the value is NULL, `0`, `6`, a stale id, or a string the map has no key for | no |
+| `THEME_TEMPLATES.get(name, …["teal"])` | the resolved name has no template | no |
+| `DEFAULT_THEME_ID = 4` | a stranger requests a report on a lead page and the account set no theme | no |
+
+**Four of the five are invisible to `SELECT ... WHERE default_theme_id = 4`.** Deleting
+`teal_report.jinja2` while any of them still said `"teal"` would have left a live code path asking
+the renderer for a file that is not there — and the one that would have hit it first is the
+consumer lead-capture path, which is the one a stranger sees.
+
+#### Why reading the migration could not have found it
+
+The migration is correct. It does exactly what it says and it says what it does. **The thing it
+cannot say is what it does not cover**, and nothing about reading it suggests the question. The
+routes were found by resolving a theme through the builder for every input a caller can supply —
+`None`, `0`, `1`, `4`, `"4"`, `"teal"`, `True`, `99`, `"nonsense"` — and reading the answer, which
+is the render-to-verify rule applied to a *removal* rather than to a fix.
+
+#### What was done
+
+Every route resolves through `theme_registry.resolve()`, whose fallback is the registry's declared
+default and therefore cannot name a retired theme by construction — the registry asserts
+`default_id in THEME_NUMBER_MAP` **at import**, so a registry that disagrees with itself fails the
+process that loaded it rather than one report. On top of that,
+`tests/test_theme_registry_is_single_sourced.py::test_no_python_fallback_names_a_theme_id_the_registry_does_not`
+parses every integer theme fallback in the worker and the API and fails on any that names an id the
+registry does not have. Applied as a regression — `theme_id or 1` restored — and it fired.
+
+#### Status note
+
+Filed as `fixed` rather than `closed-not-live` because **it was live**: the fallbacks did point at
+teal, and the deletion did happen. What makes it not a customer-facing defect is only the order the
+two were done in. Had the templates been deleted first, this would be a BROKEN entry about the lead
+page. **Severity FRAGILE records the structure, not the outcome.**
+
+#### The rule, for §0.6
+
+*Before removing a value from an enumerated set, enumerate what defaults to it.* A stored-value
+query is half the answer, and it is the half that looks complete.
+
+---
+
+### D-167 — three market metric groups have no producer at all, and a bare `except` has been hiding it
+
+**Severity:** WRONG · **Affects:** every property report's market page — three of its four headline
+numbers · **Found during:** wiring Design's page 5, which asks for all three
+**Status:** `open`
+
+```python
+# compute/market_trends.py:347
+try:
+    from worker.report_builders import (
+        compute_price_cut_stats,
+        compute_dom_distribution,
+        compute_timeline_metrics,
+    )
+    price_cut_stats  = compute_price_cut_stats(active_listings)
+    dom_distribution = compute_dom_distribution(current_dom_vals)
+    timeline_metrics = compute_timeline_metrics(current_closed)
+except (ImportError, Exception) as _b_exc:
+    logger.info("market_trends: B1-B3 helpers unavailable (%s) — page will render without extended metrics")
+```
+
+**None of the three functions exists.** `worker.report_builders` defines no name containing
+`compute`, `price_cut`, `dom_` or `timeline`:
+
+```
+$ python3 -c "from worker.report_builders import compute_price_cut_stats"
+ImportError: cannot import name 'compute_price_cut_stats' from 'worker.report_builders'
+```
+
+So the import raises on every call, `except (ImportError, Exception)` swallows it, and
+`price_cut_stats`, `dom_distribution` and `timeline_metrics` are `None` **every time, and have
+been since they were written.**
+
+**`tests/test_new_metrics.py` DEFINES ITS OWN COPIES and tests those.** Lines 22 and 47 are
+complete, working implementations of `compute_price_cut_stats` and `compute_dom_distribution`,
+living in the test file, with a docstring saying "Prompt 3C — Unit tests for new metric
+computations". The tests pass. They are testing code that nothing imports. That is D-140's
+mirrored-literal trap in its purest form: **a gate that reimplements what it guards is green
+whatever the product does.** `compute_timeline_metrics` exists nowhere at all.
+
+**What it costs on Design's page.** Three of the four stat cells:
+
+| cell | source | status |
+|---|---|---|
+| Median sale price · ▲ x% | `median_sale_price` | **has a producer** |
+| Days to contract | `timeline_metrics.avg_marketing_days` | no producer |
+| Sold in 30 days or less | `dom_distribution.under_30` | no producer |
+| Took a price cut · median $x | `price_cut_stats.rate` / `.median_cut` | no producer |
+
+They render **"no data"**, which is Design's own absence rule (§3.6, *"Metric with no data → 'no
+data'"*) and the honest output — but it is three quarters of a page saying nothing, and nobody
+knew.
+
+**Two things are wrong and the second is worse.** The functions are missing, and
+`except (ImportError, Exception)` at `info` is what let that be true for months. `except Exception`
+already catches `ImportError`; naming both reads as deliberate breadth. A missing producer is not a
+degraded mode, and `info` is not where you look for one.
+
+**Not fixed here.** Promoting the two implementations out of the test file is a product change —
+that code has never run against a real feed and was written as test scaffolding — and
+`compute_timeline_metrics` has to be written from scratch. The page is wired to render what has a
+producer and say "no data" for what does not, which makes the gap visible on the document instead
+of in a log line nobody reads.
+
+---
+
+### D-168 — seven numeric comp fields collapse "absent" to 0, so a missing bedroom count is a studio
+
+**Severity:** WRONG · **Affects:** every comparable on every property report, both paths ·
+**Found during:** implementing Design's absence rules on the comp cards
+**Status:** `open` (recoverable half worked around; `days_on_market` is not recoverable)
+
+```python
+# property_builder._build_comparables_context
+"days_on_market": comp.get("days_on_market") or comp.get("dom") or 0,
+"price_per_sqft":  self._calc_price_per_sqft(raw_price, comp_sqft) or 0,
+"bedrooms":        comp.get("bedrooms") or 0,
+"bathrooms":       comp.get("bathrooms") or 0,
+"year_built":      comp.get("year_built") or 0,
+"lot_size":        comp.get("lot_size") or 0,
+"lot_display":     comp.get("lot_display") or "",
+"hoa_frequency":   comp.get("hoa_frequency") or "",
+"distance_miles":  float(distance_raw) if isinstance(distance_raw, (int, float)) else 0,
+```
+
+**Nine fields, and by the time a template sees them an absent value and a zero are the same
+value.** This is D-137 exactly — *"`or False` and `.get(k, "No") == "Yes"` both turn the third
+case into the second, which is how a report came to tell people their home has no pool"* — and the
+file applies the lesson to `pool` **eleven lines below**, with a comment explaining the tri-state,
+while nine fields beside it collapse.
+
+**What it renders.** Design's absence rules (§3.6) cannot be implemented on comps:
+
+* `year_built: 0` → a compare-table column reading **0 / 0 / 0**, which is "every comparable was
+  built in year zero". Caught by a gate written for that table on its first run.
+* `bathrooms: 0` → "0 ba" on a card, for a house with bathrooms nobody recorded.
+* `distance_miles: 0` → a comparable at the subject's own address.
+* `days_on_market: 0` → **"New"**, by Design's own rule. A comp with no DOM reads as one that
+  sold the day it listed.
+
+**Five of the nine are recoverable and `days_on_market` is not.** No house has zero bedrooms, zero
+bathrooms, zero living area, year built zero, a zero price per sq ft, or sits zero miles from
+itself, so `_v2_comp_value` reads those zeros back as absence. **Zero days on market is a real
+value**, so a comp with no DOM is indistinguishable from one that sold immediately, and nothing
+downstream can tell them apart. That half needs the producer fixed.
+
+**The fix is at the producer**, and it is the same shape as `_tri_state_bool`: write `None`
+through, and let the one place that formats a value decide what absence looks like. The workaround
+in `_v2_comp_value` is a reader guessing which zeros are real, which is exactly the thing this
+entry says not to do — it is there because the alternative was shipping 0/0/0 in a table.
+
+---
+
+### D-169 — the agent's job title renders nowhere on the redesigned report, and is still computed and still defaulted
+
+**Severity:** ROUGH · **Affects:** the property report's agent panel on the shared architecture ·
+**Found during:** the cover-title gate failing at collection with "found 0"
+**Status:** `open` — [JERRY]: it is a copy decision, not a bug
+
+`_build_agent_context` computes `title`, defaulting it to the string `"Real Estate Agent"` when
+the agent has not entered one (`property_builder.py:1077`). Design's architecture has no agent role
+line: the cover carries the report kind, the brand, the address, four stats, the hero photo,
+"Prepared for" and "In short"; page 6's agent panel carries name, brand, licence, a blurb, phone
+and email. **`agent.title` appears in no live template on that architecture.**
+
+Sixth member of the write-with-no-consumer family (D-009, D-113, D-133, D-135, D-164), and the
+first created by a redesign rather than found in old code.
+
+**The decision it hides.** D-067 recorded that every theme's per-theme role copy — "Luxury
+Property Specialist", "Real Estate Specialist" — has never rendered, because the Python default
+substitutes first; the entry called that "a design call". **Design's answer is to drop the line.**
+That may well be right — a job title under an agent's name on a document they sent is close to
+nothing — but it is an answer to a question Jerry has not been asked, and it arrives as the absence
+of a line rather than as a decision.
+
+`test_theme_cover_title.py` now asserts BOTH sides: the themes with a role line still satisfy
+D-066 and D-067, and a theme **without** one must not print the title some other way. So the line
+coming back is a deliberate act with a test attached, rather than a quiet reversal.
+
+---
+
+### D-170 — `primary_ink` cleared AA on white and not on `tint`, which is half its own definition
+
+**Severity:** WRONG · **Affects:** every surface putting brand text on a tint panel — two of the
+six corpus brands · **Found during:** the pixel contrast gate on the redesigned report
+**Status:** `fixed` — 2026-10-06 (`feat/wire-bold`)
+
+§3.1 defines `primary_ink` as the brand value usable as text **on white or on `tint`**.
+`themes._ink` darkened in 6% steps "until the result clears AA on white" — one surface — and its
+docstring said so, so the code and its comment agreed with each other and both disagreed with the
+spec. Measured:
+
+| brand | ink | on white | on its own tint |
+|---|---|---|---|
+| `#0D9488` teal | `#0b8378` | 4.63 | **4.33** |
+| `#DC2626` red | `#dc2626` | 4.83 | **4.41** |
+
+A tint is 6% brand over white, so it is always slightly darker than white and the tint condition
+is always the binding one. **Every ink that fails, fails there** — which is why five thousand
+random colours passing the white check established nothing about the half nobody tested.
+
+**It took a render to find.** The redesigned property report is the first surface to put
+`primary_ink` on `tint` — the "In short" panel, the confidence pill, the next-steps cards — and
+the pixel gate reported `span.label` and `span.conf-pill` failing on exactly those two brands.
+Reading `themes.py` would not have found it.
+
+**The fix is monotone**, which is what made it safe: adding a condition can only make the loop run
+further, so every ink either stays or gets darker, and darker on tint is darker on white. Four of
+sixteen brands move, each by one step. No contrast-baseline entry's foreground changes.
+`golden/themes.json` moves two values and the diff is two lines.
+
+**Two gates were asserting the old rule and are re-pointed, not relaxed.**
+`test_the_ink_property_is_not_satisfied_by_going_black` checked that one step lighter fails AA *on
+white*, which after the fix accused the derivation of overshooting on every brand.
+`test_the_three_themes_that_already_pass_are_not_touched` listed `#DC2626` as a brand that already
+passes — it never did, on the two-surface rule. And the property itself now has a five-thousand
+colour test of its own, because reverting the fix does **not** fail the three-input degenerate
+test: `#000000`, `#ffffff` and `#ffff00` all have tints that behave specially.
+
+---
+
+### D-171 — [JERRY] the cover band's white display text was decided on a premise that is false for two of six brands
+
+**Severity:** WRONG · **Affects:** the redesigned property report's cover, on amber and lime ·
+**Found during:** the pixel contrast gate, first render of the redesigned document
+**Status:** `open` — **[JERRY]**, and the slot is built with the safe value in it
+
+Design's package specifies `#FFFFFF` for the cover's display lines — street, city, the four 30px
+stat values — "**by owner decision**", on the stated grounds that it "passes the 3.0 large-text
+threshold for the street and stat values", with the 22px city line as "the recorded exception".
+
+**Measured on the rendered document, white on each corpus brand's `primary` fill:**
+
+| brand | ratio | large text (3.0) | AA (4.5) |
+|---|---|---|---|
+| violet `#7c3aed` | 5.57 | pass | pass |
+| cyan `#0e7490` | 4.72 | pass | pass |
+| red `#dc2626` | 4.26 | pass | fail |
+| teal `#0d9488` | 3.74 | pass | fail — **the recorded exception** |
+| amber `#f59e0b` | **2.15** | **fail** | fail |
+| lime `#84cc16` | **1.98** | **fail** | fail |
+
+**The grounds do not hold for amber or lime.** The decision was not "this is a deliberate
+exception on every brand" — it was "it clears 3.0" — and on two of six it clears neither threshold.
+This is the same claim flagged in `docs/design-corrections/00-SHARED.md` before the package was
+sent, confirmed here from the other direction: measured on output rather than computed from hexes.
+
+**Built as a slot with the safe value in it, not decided.** `--cover-display` defaults to
+`on_primary` — the token that exists for text on a brand fill, white or near-black by whichever
+has more contrast — so the cover is near-black on teal, amber and lime, white on the other three,
+and passes on all six. **Taking Design's decision as written is a one-line change** to `#FFFFFF`,
+and it widens the recorded exception from one brand to four.
+
+That is Jerry's call. It is not being made here, and the measurement is attached so it can be made
+on the numbers rather than on the premise.
+
+**A second instance, not covered by the exception at all.** Design's file also sets `#FFFFFF` on
+page 6's agent-panel name, which is a 32px display line on the same brand fill. Nothing recorded an
+exception for it, so it uses `on_primary` outright — measured at 1.98:1 on lime and 2.15:1 on amber
+before the change. The `opacity: 0.85` / `0.9` / `0.92` values Design sets on text over the band
+are dropped for the related reason: a translucent `on_primary` over `primary` is a colour neither
+token measured, and the gate reports it as a pairing nobody chose.
+
+---
+
+### D-172 — the theme cut's own gate did not scan the worker's tests, and seven stale `"teal"` literals went on passing
+
+**Severity:** FRAGILE · **Affects:** seven tests in `apps/worker/tests` between 2026-10-05 and
+2026-10-06 · **Found during:** a continuation-page test asking for teal while wiring bold
+**Status:** `fixed` — 2026-10-06 (`feat/wire-bold`)
+
+`test_theme_registry_is_single_sourced::test_no_live_code_path_names_a_retired_theme` was written
+with the theme cut, and its message is exactly right: *"a retired theme's name in code is a path
+that can still ask the renderer for a template that was deleted."* Its `TREES` tuple listed
+`"tests"`, which matches the **root** suite only. `apps/worker/tests` and `apps/api/tests` were
+not scanned.
+
+**Seven call sites in the worker's own tests still named teal:**
+
+```
+test_a_dropped_page_is_reported.py:64    def render(theme="teal", pages=None)
+test_a_dropped_page_is_reported.py:151   data = dict(report_data("teal"))
+test_no_invented_demographics.py:60      def render_context(theme="teal")
+test_one_comp_set.py:305                 html = agent_html("teal", COMP_SET_MAX)
+test_property_production_render.py:226   data = report_data("teal")
+test_property_production_render.py:435   data = report_data("teal")
+test_property_production_render.py:494   _aged("teal", 20, 1100)
+```
+
+**They did not fail.** `theme_registry.resolve()` returns the default for a retired name — by
+design, because a stored row can still hold one (D-166) — so seven tests claimed to measure teal
+and measured bold. Silent, green, and wrong about what they covered for a day.
+
+**The lesson is about the gate, not the literals.** A gate's scope is part of its claim, and this
+one claimed "no live code path" while reading six of eight source trees. The two missing ones were
+not a judgement call — they were an oversight, and the thing they were missing is the kind of
+mistake the gate exists for. Verified by applying `STALE = "teal"` to
+`apps/worker/tests/test_one_comp_set.py` after widening `TREES`: it fires and names the file and
+line.
+
+The seven literals now read `DEFAULT_THEME_NAME` or `SELF_CONTAINED_THEMES[0]`, whichever the test
+actually needs — which is itself the finding, because two of the seven needed a self-contained
+theme and had been getting bold.
 
 ---
 

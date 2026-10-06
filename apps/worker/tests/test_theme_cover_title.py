@@ -64,20 +64,56 @@ TEMPLATES = pathlib.Path(__file__).resolve().parents[1] / "src" / "worker" / "te
 # Located by content rather than by line number: a line number is a selector
 # that retargets silently the moment anything above it moves (§0.6).
 from worker.theme_registry import THEME_TEMPLATES as THEMES  # noqa: E402
+from _template_chain import chain  # noqa: E402
 COVER_CLASSES = ("cover-agent-title", "agent-role")
 
 
-def _cover_line(theme):
-    """The one cover title line in this theme, asserted unique."""
-    path = TEMPLATES / THEMES[theme]
-    hits = [
-        line for line in path.read_text().splitlines()
+#: Themes whose cover carries an agent role line at all.
+#:
+#: DESIGN'S PACKAGE DROPS IT. The redesigned cover is report kind, brand,
+#: street, city, four stats, hero photo, "Prepared for" and "In short" — and
+#: no agent role. The agent appears on page 6 as name, brand and licence. So
+#: `agent.title` renders NOWHERE on a theme using the shared architecture,
+#: while `_build_agent_context` still computes it and still defaults it to
+#: "Real Estate Agent" (D-169).
+#:
+#: FOUND by looking for the line, not by listing which themes are on which
+#: architecture — a theme that regains a role line is covered without this
+#: file being edited, and that is the case that needs covering, because
+#: reintroducing the line reintroduces D-066 and D-067 with it.
+def _has_cover_line(theme) -> bool:
+    return bool(_cover_lines(theme))
+
+
+def _cover_lines(theme):
+    return [
+        line
+        for path in chain(theme)
+        for line in path.read_text(encoding="utf-8").splitlines()
         if "agent.title" in line and any(c in line for c in COVER_CLASSES)
     ]
+
+
+def _cover_line(theme):
+    """The one cover title line rendering this theme, asserted unique.
+
+    SEARCHES THE CHAIN, not the entry file. A theme on the shared
+    architecture (`_v2/report.jinja2`) has an entry file of nothing but
+    `{% set %}`, and reading that file alone found zero cover lines and took
+    the whole worker suite down at COLLECTION — hiding every other result
+    until it was fixed. See `_template_chain`.
+    """
+    hits = _cover_lines(theme)
     assert len(hits) == 1, (
-        f"{THEMES[theme]}: expected exactly one cover title line, found {len(hits)}"
+        f"{theme}: expected exactly one cover title line across "
+        f"{[p.name for p in chain(theme)]}, found {len(hits)}"
     )
     return hits[0].strip()
+
+
+#: The themes this file's structural half can speak about.
+COVER_LINE_THEMES = sorted(t for t in THEMES if _has_cover_line(t))
+NO_COVER_LINE_THEMES = sorted(t for t in THEMES if not _has_cover_line(t))
 
 
 def _render_cover(theme, agent_row):
@@ -108,7 +144,7 @@ def _text(html):
     return "".join(out).strip()
 
 
-@pytest.mark.parametrize("theme", sorted(THEMES))
+@pytest.mark.parametrize("theme", COVER_LINE_THEMES)
 @pytest.mark.parametrize(
     "agent_row,why",
     [
@@ -126,7 +162,7 @@ def test_a_missing_title_renders_something_a_person_would_accept(agent_row, why,
     assert "Realtor" not in rendered, f"{theme} ({why}): asserts the REALTOR® mark (D-066)"
 
 
-@pytest.mark.parametrize("theme", sorted(THEMES))
+@pytest.mark.parametrize("theme", COVER_LINE_THEMES)
 def test_an_agents_own_title_is_never_overridden(theme):
     assert "Broker Associate" in _render_cover(theme, {"title": "Broker Associate"})
     # A member who legitimately holds the mark typed it themselves; nothing here
@@ -138,16 +174,75 @@ def test_an_agents_own_title_is_never_overridden(theme):
 #: listed: the two `parametrize(["classic", "bold"])` lists this replaces both
 #: went stale the moment classic was deleted, and a theme that GAINS a
 #: separator would not have been added to either.
-SEPARATOR_THEMES = sorted(t for t in THEMES if "agent.license" in _cover_line(t))
+SEPARATOR_THEMES = sorted(
+    t for t in COVER_LINE_THEMES if "agent.license" in _cover_line(t))
 
 
-def test_some_theme_still_puts_the_licence_on_the_cover():
-    """Otherwise the two tests below are vacuously green on an empty list."""
-    assert SEPARATOR_THEMES, (
-        "no theme's cover line references agent.license, so the dangling-"
-        "separator defect has nowhere left to happen — delete the two tests "
-        "below rather than leaving them passing over nothing"
+def test_no_cover_line_carries_an_unconditional_separator():
+    """THE DEFECT ITSELF, asserted directly rather than through its surface.
+
+    The reachable half of D-067 was `{{ title }} • {{ license }}` with the
+    bullet outside any condition, so every agent without a licence number on
+    file got a cover reading "Real Estate Agent • ". Classic and bold were
+    the two themes with that form.
+
+    Both are gone now — classic was retired by the theme cut and bold moved
+    to an architecture with no cover role line at all — so `SEPARATOR_THEMES`
+    is empty and the two tests below have nothing to run on. The previous
+    guard said so by FAILING, with a message telling the reader to delete
+    those tests. That is the right instinct and the wrong mechanism: deleting
+    them removes the only thing that would notice the form coming back.
+
+    So the guard is inverted. Instead of "some theme must have a licence on
+    its cover", this asserts the thing that must never be true of any cover
+    line on any theme — a separator glyph that is not inside a condition —
+    and it holds whether zero themes or all of them print a licence.
+    """
+    import re as _re
+
+    def _literal_text(line: str) -> str:
+        """The line with every Jinja expression and tag removed.
+
+        `|` IS JINJA'S FILTER PIPE. The first version of this check looked for
+        it as a separator glyph and reported elegant and modern as offenders
+        on `{{ (agent.title or '') | trim | default(...) }}` — a gate matching
+        an operator inside the construct it was meant to be reading. Tenth
+        outing for substring-is-not-a-construct in this project, and the first
+        one in a test written the same hour.
+
+        `{% if %}` blocks are kept as markers so the conditional test below
+        still sees them; only their contents go.
+        """
+        line = _re.sub(r"\{\{.*?\}\}", "", line)
+        line = _re.sub(r"\{%\s*if\b.*?%\}", "{%if%}", line)
+        return _re.sub(r"\{%.*?%\}", "", line)
+
+    offenders = {}
+    for theme in COVER_LINE_THEMES:
+        literal = _literal_text(_cover_line(theme))
+        for glyph in ("•", "·", "—", "–"):
+            if glyph not in literal:
+                continue
+            # The glyph must sit after a `{% if %}` on the same line. Crude,
+            # and that is the point: a separator split across lines is not a
+            # form this project has produced, and widening the check to the
+            # whole template would match the running head's own bullets.
+            if "{%if%}" not in literal.split(glyph)[0]:
+                offenders.setdefault(theme, []).append(glyph)
+    assert not offenders, (
+        f"cover lines with a separator outside any condition: {offenders}. "
+        f"`license` is the empty string for every agent who has not entered "
+        f"one, so this renders a trailing glyph with nothing after it (D-067)."
     )
+
+
+@pytest.mark.skipif(not SEPARATOR_THEMES,
+                    reason="no theme puts the licence on the cover; "
+                           "test_no_cover_line_carries_an_unconditional_separator "
+                           "is what guards the form coming back")
+def test_the_licence_tests_below_have_a_subject():
+    """Named, so the skip above is visible as a result rather than a silence."""
+    assert SEPARATOR_THEMES
 
 
 @pytest.mark.parametrize("theme", SEPARATOR_THEMES)
@@ -171,7 +266,40 @@ def test_the_licence_still_appears_when_there_is_one(theme):
     assert "•" in text, "the separator disappeared along with the empty case"
 
 
-@pytest.mark.parametrize("theme", sorted(THEMES))
+def test_a_theme_without_a_cover_role_line_does_not_print_one_anyway():
+    """The other side of the architecture change, asserted on the RENDER.
+
+    A theme whose template has no `agent.title` must also not have the title
+    reach the page some other way — through the narrative, the footer, or a
+    context key a later edit wires up. Checked by rendering and looking for
+    the value, because the structural half above can only say the line is not
+    in the template.
+
+    `agent.title` defaults to "Real Estate Agent" in `_build_agent_context`,
+    so this asserts on a DISTINCTIVE title rather than the default: finding
+    the words "Real Estate Agent" would prove nothing, since the disclaimer
+    and the explainers are full of ordinary prose.
+    """
+    if not NO_COVER_LINE_THEMES:
+        pytest.skip("every theme still carries a cover role line")
+    from test_property_production_render import report_data
+    for theme in NO_COVER_LINE_THEMES:
+        # THE WHOLE DOCUMENT, not `_render_cover` — that helper renders the
+        # cover LINE, and a theme with no cover line has none to render. The
+        # first version of this test called it and failed with "expected
+        # exactly one cover title line, found 0", which is the helper
+        # reporting the premise of the test it was being used to run.
+        data = dict(report_data(theme))
+        data["agent"] = {**(data.get("agent") or {}), "title": "Broker Associate"}
+        rendered = PropertyReportBuilder(data).render_html()
+        assert "Broker Associate" not in rendered, (
+            f"{theme} has no cover role line in its templates and still "
+            f"renders the agent's title. If that is intended, the line has "
+            f"come back and D-066's REALTOR mark rule applies to it again."
+        )
+
+
+@pytest.mark.parametrize("theme", COVER_LINE_THEMES)
 def test_every_cover_uses_the_boolean_default_or_an_explicit_condition(theme):
     """
     `default(x)` fires only on undefined; `default(x, true)` fires on any falsy
@@ -197,7 +325,10 @@ def test_the_per_theme_fallback_strings_are_currently_unreachable():
     voice work, this test fails and points at the decision rather than letting
     it happen quietly.
     """
-    distinct = {_text(_render_cover(theme, {"title": None})) for theme in THEMES}
+    if not COVER_LINE_THEMES:
+        pytest.skip("no theme carries a cover role line any more")
+    distinct = {_text(_render_cover(theme, {"title": None}))
+                for theme in COVER_LINE_THEMES}
     assert distinct == {"Real Estate Agent"}, (
         "the per-theme cover copy has become reachable (or diverged): "
         f"{sorted(distinct)} — see D-067, this is a design decision, not a bug"

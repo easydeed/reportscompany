@@ -21,11 +21,13 @@ import os
 import re
 import logging
 import colorsys
+import math
 from datetime import date
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from worker import theme_registry as _registry
+from worker.themes import derive_theme
 from worker.template_filters import (
     format_currency as _fmt_currency,
     format_currency_short as _fmt_currency_short,
@@ -821,8 +823,14 @@ class PropertyReportBuilder:
         selected_pages = report_data.get("selected_pages")
         if selected_pages and isinstance(selected_pages, list) and len(selected_pages) > 0:
             self.page_set = selected_pages
+        elif self.theme_name in self.V2_THEMES:
+            # Six pages, not nine. `notes` is new and is NOT conditional —
+            # it carries the agent panel and the disclaimers, so a report
+            # without it is a report with no one to call and no statement
+            # that it is not an appraisal.
+            self.page_set = [p for p in self.V2_PAGE_ORDER]
         else:
-            self.page_set = ["cover", "contents", "aerial", "property", "analysis", "comparables", "range"]
+            self.page_set = list(self.DEFAULT_PAGE_SET)
 
         #: D-142: pages the caller asked for that the render could not produce.
         #: Set by `render_html`; empty until then, never `None`, so a caller
@@ -1887,6 +1895,810 @@ class PropertyReportBuilder:
             "transaction": {},
         }
     
+
+    # ── The redesigned document (Design's 2026-10-05 package) ─────────────
+    #
+    # Everything below serves `_v2/report.jinja2`, the one page architecture
+    # that replaces the per-theme templates. It is ADDITIVE: elegant and modern
+    # still render their old self-contained files and never see these keys, so
+    # one theme can go end to end without the other two moving.
+    #
+    # The design's own logic class (`Property Report.dc.html`) computes these
+    # values in JavaScript. Every number here is the same computation; where it
+    # differs it is because the design was working from invented sample data
+    # and the real context has an absence the sample did not.
+
+    #: Pages, in order. `market_trends` is conditional and `notes` is new.
+    #: `overview`, `contents`, `aerial` and `analysis` are gone — aerial is a
+    #: photo plate on page 2 and analysis folded into the range page.
+    V2_PAGE_ORDER = ("cover", "property", "comparables", "range",
+                     "market_trends", "notes")
+
+    #: THE MIGRATION SEAM, and it is temporary by construction.
+    #:
+    #: Design's package replaces nine pages with six. That is a BUILDER-level
+    #: change — the page set is shared — so migrating one theme at a time
+    #: means the default page set has to depend on which architecture the
+    #: theme renders. A theme in this set gets `V2_PAGE_ORDER`; a theme
+    #: outside it keeps `DEFAULT_PAGE_SET` and its own self-contained
+    #: template.
+    #:
+    #: Without this, wiring bold would have silently taken `contents`,
+    #: `aerial` and `analysis` away from elegant and modern — three pages
+    #: those two templates still render and three gates still assert on.
+    #:
+    #: DELETE THIS, and the branch below it, when the set is all three
+    #: themes. `test_the_migration_seam_is_still_needed` fails when it is,
+    #: so the seam cannot outlive its reason the way an excuse in an
+    #: allowed-list does.
+    V2_THEMES = frozenset({"bold"})
+
+    #: The nine-page set the un-migrated themes render.
+    DEFAULT_PAGE_SET = ["cover", "contents", "aerial", "property", "analysis",
+                        "comparables", "range"]
+
+    #: The two conditional pages of the nine-page architecture. The agent
+    #: wizard's default leaves them out — an agent picks pages — and the
+    #: consumer path includes them, because a stranger picks nothing and
+    #: should get everything the data supports.
+    CONDITIONAL_PAGES = ["market_trends", "overview"]
+
+    @classmethod
+    def default_page_set(cls, theme, consumer: bool = False) -> List[str]:
+        """The pages this theme's architecture renders, as a MAXIMUM.
+
+        The one producer. `consumer_report_data.CONSUMER_PAGES` was a second
+        copy of the nine-page list, written before the architecture could
+        differ by theme — so the consumer path handed bold a `selected_pages`
+        containing `contents`, `aerial`, `analysis` and `overview`, which the
+        six-page architecture does not render, and NOT containing `notes`,
+        which it always does.
+
+        The visible failure was a four-page consumer report with no agent
+        panel and no disclaimer. It was caught by a test asserting the page
+        COUNT, not by anything looking at the list — and the list is where
+        the mistake was.
+
+        `consumer` exists because the two paths have DIFFERENT maxima on the
+        nine-page architecture: 7 for the agent, 9 for the consumer. Writing
+        one function and discovering that was the second half of the same
+        mistake — the first version returned the agent's set for both and
+        reported "7 pages, expected 9". The six-page architecture has one
+        maximum for both, because `overview` is a panel on the cover rather
+        than a page and `market_trends` is in the order already.
+        """
+        name, _ = _registry.resolve(theme)
+        if name in cls.V2_THEMES:
+            return list(cls.V2_PAGE_ORDER)
+        pages = list(cls.DEFAULT_PAGE_SET)
+        if consumer:
+            pages += list(cls.CONDITIONAL_PAGES)
+        return pages
+
+    #: The nearest N comps get a photo. All of them appear in "Each sale".
+    V2_COMPS_PICTURED = 6
+
+    #: Cover title size by street-address length. The box is a fixed 78px with
+    #: `overflow: hidden`, so the ladder is what keeps a long address inside it
+    #: rather than silently clipping (§3.3, and the same failure the market
+    #: masthead had).
+    V2_TITLE_LADDER = ((18, 64), (24, 54), (30, 46), (38, 38))
+    V2_TITLE_MIN_PX = 32
+
+    #: The one dark surface on the document. `primary_on_dark` is guaranteed
+    #: against this and nothing else, which is why there is only one.
+    V2_DARK = "#0f172a"
+
+    #: Fields with no producer anywhere in the pipeline. They are named in the
+    #: "Not on record" strip rather than shown as empty rows — the owner's
+    #: choice on the nineteen orphans (JERRY_PROPERTY_FIELDS_DECISION.md).
+    V2_NO_PRODUCER = ("Fireplace", "Total rooms", "Use code", "Census tract",
+                      "Neighborhood", "School district", "Elementary",
+                      "Middle", "High school")
+
+    #: Comp fields where `0` cannot be a real value, so a zero IS an absence.
+    #:
+    #: `_build_comparables_context` writes `comp.get(k) or 0` for seven numeric
+    #: fields, so by the time a template sees them an absent bedroom count and
+    #: a zero bedroom count are the same number (D-168). For these five the
+    #: distinction is recoverable, because no house has zero bedrooms, zero
+    #: bathrooms, zero living area, year built zero or a zero price per sq ft.
+    #:
+    #: `days_on_market` is NOT on this list and cannot be: 0 days on market is
+    #: a real value and the design renders it "New". A comp with no DOM is
+    #: indistinguishable from one that sold the day it listed, and nothing
+    #: downstream can recover it. That is the half of D-168 this cannot fix.
+    #: `distance_miles` is on the list because `_build_comparables_context`
+    #: writes `float(distance_raw) if isinstance(...) else 0` — a comp with no
+    #: distance becomes one at the subject's own address. 0 is not a real
+    #: distance for a comparable: the subject is not its own comp.
+    V2_ZERO_IS_ABSENT = ("bedrooms", "bathrooms", "sqft", "year_built",
+                         "price_per_sqft", "lot_size", "distance_miles")
+
+    @classmethod
+    def _v2_comp_value(cls, comp: Dict[str, Any], key: str):
+        """A comp field, with a recoverable zero read back as absence."""
+        value = comp.get(key)
+        if key in cls.V2_ZERO_IS_ABSENT:
+            try:
+                if value is not None and float(value) == 0:
+                    return None
+            except (TypeError, ValueError):
+                return None
+        return value
+
+    @staticmethod
+    def _v2_dash(value: Any) -> bool:
+        """Is this value absent, in the sense the document means by a dash?
+
+        `0` IS present — a studio has zero bedrooms, a new listing has zero
+        days on market, and an HOA-free home has a zero fee. The absence rules
+        turn on exactly this distinction (§3.6), so it is one function rather
+        than a `{% if %}` repeated per row, which is how the zero-conditional
+        sweep found the first batch.
+        """
+        return value is None or value == "" or value == ABSENT
+
+    #: Rows whose value is too long for one nowrap line.
+    V2_WRAPPING_ROWS = ("Legal description",)
+
+    def _v2_row(self, label: str, value: Any, fmt=None) -> Dict[str, Any]:
+        """One label/value row, carrying its own absence state.
+
+        The weight and colour travel with the row because the design makes the
+        dash visually quieter than a value (400 / #5E636B against 600 /
+        #14161A). Deciding that in the template would need the same
+        `_v2_dash` test in three places.
+        """
+        absent = self._v2_dash(value)
+        return {
+            "label": label,
+            "value": ABSENT if absent else (fmt(value) if fmt else str(value)),
+            "absent": absent,
+            "wrap": label in self.V2_WRAPPING_ROWS and not absent,
+        }
+
+    def _v2_title_size(self, street: str) -> int:
+        for limit, size in self.V2_TITLE_LADDER:
+            if len(street or "") <= limit:
+                return size
+        return self.V2_TITLE_MIN_PX
+
+    @staticmethod
+    def _v2_short_money(value: Any) -> str:
+        """`$641K` / `$1.24M`. The range headline is 60px and must not wrap."""
+        try:
+            v = float(value)
+        except (TypeError, ValueError):
+            return ABSENT
+        if abs(v) >= 1_000_000:
+            return f"${v / 1_000_000:.2f}".rstrip("0").rstrip(".") + "M"
+        return f"${round(v / 1000):,.0f}K"
+
+    def _v2_closed_prices(self, comps: List[Dict[str, Any]]) -> List[float]:
+        """Closed sales only, ascending.
+
+        THE RANGE IS CLOSED-ONLY AND THE OLD ONE WAS NOT. `stats.price_low` /
+        `price_high` are computed over every comp the builder returns,
+        including pending and active listings — an asking price, which is a
+        hope, sitting in a range the document calls "what recent sales
+        support". Design made this explicit (§4) and it is a behaviour change,
+        not a layout one, so it is computed separately here and the old keys
+        are left alone for the two themes still rendering them.
+        """
+        out = []
+        for c in comps:
+            if str(c.get("status") or "").strip().lower() not in ("closed", "sold"):
+                continue
+            price = c.get("sale_price") if c.get("sale_price") else c.get("price")
+            try:
+                out.append(float(price))
+            except (TypeError, ValueError):
+                continue
+        return sorted(out)
+
+    @staticmethod
+    def _v2_median(values: List[float]) -> Optional[float]:
+        """Upper median, matching the design's `a[floor(len/2)]`.
+
+        NOT the mean of the two middle values: on an even-length set that
+        produces a price no comparable sold at, in a cell the reader can check
+        against the list below it.
+        """
+        return values[len(values) // 2] if values else None
+
+    def _build_v2_context(self, context: Dict[str, Any], page_set: List[str]) -> Dict[str, Any]:
+        """The redesigned document's own context, computed from the shared one.
+
+        Takes the already-built `context` rather than rebuilding anything, so
+        there is exactly one producer for every property fact and this layer
+        can only ever re-present them. That is the D-139 lesson: a second
+        assembly of the same data is a second place for a field to go missing.
+        """
+        prop = context["property"]
+        agent = context["agent"]
+        stats = context["stats"]
+        comps = list(context["comparables"])
+        consumer = context["audience"] != "agent"
+
+        street = prop.get("street_address") or prop.get("street") or ""
+        city = prop.get("city") or ""
+        state = prop.get("state") or ""
+        zip_code = prop.get("zip_code") or ""
+        city_line = ", ".join(x for x in (city, " ".join(
+            y for y in (state, zip_code) if y)) if x)
+
+        # ── the cover's four stat cells ──────────────────────────────────
+        # Candidates in priority order; the first four that are KNOWN render.
+        # Bathrooms is absent on a real market's rows often enough that the
+        # design made the row drop and backfill rather than show a dash in
+        # 30px type on the brand band.
+        # `_fmt_measure` ON BATHROOMS, NOT `_fmt_number`. `format_number`
+        # truncates to an integer, so 1.5 baths rendered "1" — a real half
+        # bath erased on the cover of the document. That is D-125 exactly, in
+        # new code, and the gate that caught it
+        # (`test_numbers_read_as_numbers::test_a_genuine_half_survives`) is
+        # the one D-125 left behind. `format_measure` keeps a genuine
+        # fraction and drops a trailing `.0`.
+        #
+        # Bedrooms and year keep the integer formatter because a half bedroom
+        # is not a thing and a fractional year is a parse error; sq ft and lot
+        # keep it for the thousands separator, which `format_measure` does
+        # not add.
+        candidates = [
+            ("Bedrooms", prop.get("bedrooms"),
+             lambda v: "Studio" if float(v) == 0 else _fmt_number(v)),
+            ("Bathrooms", prop.get("bathrooms"), _fmt_measure),
+            ("Sq ft", prop.get("sqft"), _fmt_number),
+            ("Built", prop.get("year_built"), lambda v: str(int(float(v)))),
+            ("Lot sq ft", prop.get("lot_size"), _fmt_number),
+        ]
+        hero_stats = []
+        for label, value, fmt in candidates:
+            if self._v2_dash(value):
+                continue
+            try:
+                hero_stats.append({"label": label, "value": fmt(value)})
+            except (TypeError, ValueError):
+                continue
+            if len(hero_stats) == 4:
+                break
+
+        # ── page 2, the two detail groups ───────────────────────────────
+        home_rows = [
+            self._v2_row("Bedrooms", prop.get("bedrooms"),
+                         lambda v: "Studio" if float(v) == 0 else _fmt_number(v)),
+            self._v2_row("Bathrooms", prop.get("bathrooms"), _fmt_measure),
+            self._v2_row("Living area", prop.get("sqft"),
+                         lambda v: f"{_fmt_number(v)} sq ft"),
+            self._v2_row("Lot size", prop.get("lot_size"),
+                         lambda v: f"{_fmt_number(v)} sq ft"),
+            self._v2_row("Year built", prop.get("year_built"),
+                         lambda v: str(int(float(v)))),
+            self._v2_row("Property type", prop.get("property_type")),
+            self._v2_row("Stories", prop.get("stories")),
+            # SiteX writes the STRING "None" for a house without one, and
+            # writes nothing at all when it does not know — the distinction
+            # D-137 is about. `_tri_state_bool` already keeps the three apart;
+            # rendering `prop["pool"]` straight put the word "None" in a value
+            # cell, which the design forbids because a reader cannot tell it
+            # from a missing answer. That was the first render's output.
+            self._v2_row(
+                "Pool / spa",
+                _tri_state_bool(prop.get("pool")),
+                lambda v: "Yes" if v else "No",
+            ),
+        ]
+        record_rows = []
+        # D-116 / D-157: the owner of record is on the AGENT path only. Built
+        # by not appending it, not by hiding it — the consumer context must not
+        # carry the name at all, so a template edit cannot reveal it.
+        if not consumer:
+            owner = prop.get("owner_name")
+            second = prop.get("secondary_owner")
+            both = " & ".join(x for x in (owner, second)
+                              if x and not self._v2_dash(x))
+            record_rows.append(self._v2_row("Owner of record", both or None))
+        record_rows += [
+            self._v2_row("APN", prop.get("apn")),
+            self._v2_row("County", prop.get("county")),
+            # D-116: Jerry kept APN, county, LEGAL DESCRIPTION, tax and
+            # assessment when the owner block came out. Design's table does
+            # not list it, and leaving it off dropped a field the owner
+            # decided to keep — caught by
+            # `test_the_kept_parcel_fields_are_still_there`, which renders and
+            # looks for the value rather than reading the template.
+            self._v2_row("Legal description", prop.get("legal_description")),
+            # `_fmt_date` on the date half: SiteX returns `2015-12-23` and
+            # the row rendered it verbatim beside a formatted currency, which
+            # is the one cell on the page carrying two different conventions.
+            self._v2_row(
+                "Last sale",
+                None if self._v2_dash(prop.get("last_sale_price")) else (
+                    prop.get("last_sale_price"), prop.get("last_sale_date")),
+                lambda v: " · ".join(
+                    x for x in (_fmt_currency(v[0]), self._fmt_date(v[1]))
+                    if x and not self._v2_dash(x))),
+            self._v2_row("Assessed value", prop.get("assessed_value"), _fmt_currency),
+            self._v2_row(
+                "Land / improvements",
+                None if self._v2_dash(prop.get("land_value")) else (
+                    prop.get("land_value"), prop.get("improvement_value")),
+                lambda v: " / ".join(_fmt_currency(x) for x in v)),
+            self._v2_row(
+                "Annual tax",
+                None if self._v2_dash(prop.get("tax_amount")) else (
+                    prop.get("tax_amount"), prop.get("tax_year")),
+                lambda v: " · ".join(
+                    x for x in (_fmt_currency(v[0]), str(v[1]) if v[1] else "")
+                    if x and not self._v2_dash(x))),
+            self._v2_row("Tax status", prop.get("tax_status")),
+            self._v2_row("Zoning", prop.get("zoning")),
+            self._v2_row("Garage", prop.get("garage")),
+        ]
+        detail_groups = [
+            {"title": "The home", "rows": home_rows},
+            {"title": "Record & taxes", "rows": record_rows},
+        ]
+        unknown = [r["label"] for g in detail_groups for r in g["rows"] if r["absent"]]
+        unknown += list(self.V2_NO_PRODUCER)
+
+        # ── page 3, the pictured comps ──────────────────────────────────
+        def _dist(c):
+            try:
+                return float(c.get("distance_miles"))
+            except (TypeError, ValueError):
+                return float("inf")
+
+        pictured = sorted(comps, key=_dist)[: self.V2_COMPS_PICTURED]
+        for c in pictured:
+            # The bathrooms SEGMENT is omitted, not dashed: "3 bd · — ba ·
+            # 1,590 sq ft" reads as a measurement of nothing. 301 rows of a
+            # real market had no bathroom count.
+            _beds = self._v2_comp_value(c, "bedrooms")
+            _baths = self._v2_comp_value(c, "bathrooms")
+            _sqft = self._v2_comp_value(c, "sqft")
+            c["v2_specs"] = " · ".join(x for x in (
+                None if self._v2_dash(_beds) else f"{_fmt_number(_beds)} bd",
+                None if self._v2_dash(_baths) else f"{_fmt_measure(_baths)} ba",
+                None if self._v2_dash(_sqft) else f"{_fmt_number(_sqft)} sq ft",
+            ) if x)
+            # THE MEASURED DISTANCE, not the producer's one-decimal display
+            # string. `_build_comparables_context` writes
+            # `f"{distance_raw:.1f} mi"`, so a comp 0.58 miles away renders
+            # "0.6 mi" — and on the nine-page themes the exact value survives
+            # in the analysis table's Distance row. Design's compare table has
+            # no Distance row, so rounding here would be the only copy of the
+            # number and 0.58 would be gone from the document.
+            #
+            # Caught by `test_numbers_read_as_numbers::test_a_genuine_half
+            # _survives`, which asserts "0.58" appears SOMEWHERE — a gate on
+            # the document rather than on a cell, which is why it survived the
+            # table being replaced.
+            _dist_raw = self._v2_comp_value(c, "distance_miles")
+            c["v2_dist"] = (
+                c.get("distance") or ABSENT if self._v2_dash(_dist_raw)
+                else f"{_fmt_measure(_dist_raw)} mi"
+            )
+            _ppsf = self._v2_comp_value(c, "price_per_sqft")
+            c["v2_ppsf"] = (
+                ABSENT if self._v2_dash(_ppsf) else f"{_fmt_currency(_ppsf)} /sq ft")
+            # `lot_display` is "" when absent and `lot_size` is 0, so both
+            # halves of this need the absence test rather than a `or`.
+            _lot = c.get("lot_display") or None
+            if not _lot:
+                _raw = self._v2_comp_value(c, "lot_size")
+                _lot = None if self._v2_dash(_raw) else f"{_fmt_number(_raw)} sq ft"
+            c["v2_lot"] = f"Lot {_lot}" if _lot else f"Lot {ABSENT}"
+            c["v2_hoa"] = (
+                "HOA —" if self._v2_dash(c.get("hoa_fee"))
+                else "No HOA" if float(c["hoa_fee"]) == 0
+                else f"HOA {_fmt_currency(c['hoa_fee'])}/{c.get('hoa_frequency') or 'mo'}"
+            )
+            closed = str(c.get("status") or "").strip().lower() in ("closed", "sold")
+            c["v2_closed"] = closed
+            # `sold_date_label` is the WORD ("Sold" / "Listed") and
+            # `sold_date` is the formatted date — set as a pair by
+            # `_build_comparables_context`. Reading the label as the date
+            # rendered "Sold Sold" on every closed comp, which is what the
+            # first render of this page actually produced.
+            c["v2_when"] = (
+                f"{c['sold_date_label']} {c['sold_date']}"
+                if closed and c.get("sold_date") and c.get("sold_date_label")
+                else f"{c.get('status') or 'Listed'} · listed {c.get('list_date')}"
+                if c.get("list_date")
+                else (c.get("status") or ABSENT)
+            )
+
+        closed_prices = self._v2_closed_prices(comps)
+        low = closed_prices[0] if closed_prices else None
+        high = closed_prices[-1] if closed_prices else None
+        mid = self._v2_median(closed_prices)
+
+        # ── page 4, the range band's fixed axis ─────────────────────────
+        # THE AXIS MUST CONTAIN THE MARKER IT DRAWS, which the spec\'s
+        # `floor(low x 0.92) .. ceil(high x 1.06)` does not guarantee.
+        #
+        # Design\'s sample has the subject\'s last sale ($612K in 2019) inside
+        # the comp range. The production fixture does not: a 2015 sale at
+        # $369,000 against closed comps of $470K-$635K puts the marker at
+        # **-26%** of the axis — off the left edge of a band whose own label
+        # says "your home\'s last recorded sale". A marker outside its own
+        # axis is not a small visual defect; it is a value the document claims
+        # to be showing and is not.
+        #
+        # Widened to include it rather than clamped, because clamping would
+        # put the marker AT the low end and read as "your home sold at the
+        # bottom of the range" — a false statement rather than a missing one.
+        # This is a deliberate deviation from the written spec; see the report.
+        axis_low = axis_high = None
+        if low is not None and high is not None:
+            axis_low = math.floor(low * 0.92 / 1000) * 1000
+            axis_high = math.ceil(high * 1.06 / 1000) * 1000
+            if not self._v2_dash(last_sale_in := prop.get("last_sale_price")):
+                try:
+                    subject = float(last_sale_in)
+                    axis_low = min(axis_low, math.floor(subject * 0.98 / 1000) * 1000)
+                    axis_high = max(axis_high, math.ceil(subject * 1.02 / 1000) * 1000)
+                except (TypeError, ValueError):
+                    pass
+
+        def _pct(value):
+            """Position on the fixed axis, as a CSS percentage.
+
+            Returns None rather than 0 when the axis could not be computed, so
+            a template cannot render a marker at the left edge and have it read
+            as a real position.
+            """
+            if axis_low is None or value is None or axis_high == axis_low:
+                return None
+            return round((float(value) - axis_low) / (axis_high - axis_low) * 1000) / 10
+
+        last_sale = prop.get("last_sale_price")
+        last_sale_year = None
+        if not self._v2_dash(prop.get("last_sale_date")):
+            found = re.search(r"(19|20)\d{2}", str(prop["last_sale_date"]))
+            last_sale_year = found.group(0) if found else None
+
+        def _closed(key, cast=float):
+            """Closed comps' values for one field, ascending, absences out.
+
+            THROUGH `_v2_comp_value`, not `c.get(key)`. The producer collapses
+            seven numeric comp fields to 0, so reading them raw put a column
+            of 0/0/0 in the compare table for a field no comp carried — "every
+            comparable was built in year zero". Caught by this file's own new
+            gate on the first run, which is the half of writing a gate that
+            usually gets skipped.
+            """
+            out = []
+            for c in comps:
+                if str(c.get("status") or "").strip().lower() not in ("closed", "sold"):
+                    continue
+                value = self._v2_comp_value(c, key)
+                if self._v2_dash(value):
+                    continue
+                try:
+                    out.append(cast(value))
+                except (TypeError, ValueError):
+                    continue
+            return sorted(out)
+
+        # `_v2_comp_value` on the sqft half for the same reason as `_closed`:
+        # a comp with no living area has `sqft == 0`, and `p / 0` would raise
+        # rather than be excluded. `if p and sq` happened to guard the raise
+        # and not the absence.
+        ppsf = sorted(
+            p / sq for p, sq in (
+                (c.get("sale_price") or c.get("price"),
+                 self._v2_comp_value(c, "sqft")) for c in comps
+                if str(c.get("status") or "").strip().lower() in ("closed", "sold"))
+            if p and sq
+        )
+        subject_ppsf = None
+        if not self._v2_dash(last_sale) and not self._v2_dash(prop.get("sqft")):
+            try:
+                subject_ppsf = float(last_sale) / float(prop["sqft"])
+            except (TypeError, ValueError, ZeroDivisionError):
+                subject_ppsf = None
+
+        def _triple(values, fmt):
+            if not values:
+                return {"low": ABSENT, "mid": ABSENT, "high": ABSENT}
+            return {"low": fmt(values[0]), "mid": fmt(self._v2_median(values)),
+                    "high": fmt(values[-1])}
+
+        _year = lambda v: str(int(float(v)))
+        subject_sale = ABSENT
+        if not self._v2_dash(last_sale):
+            subject_sale = _fmt_currency(last_sale) + (
+                f" ({last_sale_year})" if last_sale_year else "")
+        compare_rows = [
+            {"label": "Sale price", "subject": subject_sale,
+             **_triple(closed_prices, _fmt_currency)},
+            {"label": "Price per sq ft",
+             "subject": ABSENT if subject_ppsf is None else (
+                 _fmt_currency(subject_ppsf) + (f" ({last_sale_year})" if last_sale_year else "")),
+             **_triple(ppsf, _fmt_currency)},
+            {"label": "Living area",
+             "subject": ABSENT if self._v2_dash(prop.get("sqft"))
+                        else f"{_fmt_number(prop['sqft'])} sq ft",
+             **_triple(_closed("sqft"), _fmt_number)},
+            {"label": "Year built",
+             "subject": ABSENT if self._v2_dash(prop.get("year_built"))
+                        else _year(prop["year_built"]),
+             **_triple(_closed("year_built"), _year)},
+            {"label": "Bedrooms",
+             "subject": ABSENT if self._v2_dash(prop.get("bedrooms"))
+                        else _fmt_number(prop["bedrooms"]),
+             **_triple(_closed("bedrooms"), _fmt_number)},
+        ]
+
+        bars = []
+        bar_max = max((float(c.get("sale_price") or c.get("price") or 0)
+                       for c in comps), default=0)
+        for c in sorted(comps, key=lambda c: -float(c.get("sale_price") or c.get("price") or 0)):
+            price = c.get("sale_price") or c.get("price")
+            if self._v2_dash(price):
+                continue
+            closed = str(c.get("status") or "").strip().lower() in ("closed", "sold")
+            bars.append({
+                "address": (c.get("address") or ABSENT) + ("" if closed else " · pending"),
+                "width": round(float(price) / bar_max * 100, 1) if bar_max else 0,
+                "price": _fmt_currency(price),
+            })
+
+        # ── page 6, the agent panel ─────────────────────────────────────
+        initials = "".join(w[0] for w in (agent.get("name") or "").split() if w)[:2].upper()
+
+        grade = (context.get("comp_confidence_grade")
+                 or self.report_data.get("comp_confidence_grade") or "A")
+        reason = (context.get("comp_confidence_reason")
+                  or self.report_data.get("comp_confidence_reason") or "")
+        default_labels = {"A": "Strict match", "B": "Relaxed match",
+                          "C": "Broad match", "D": "Thin market"}
+        conf_label = reason if (grade in ("B", "C") and reason) else default_labels.get(grade, "")
+
+        pictured_note = (
+            f"nearest {self.V2_COMPS_PICTURED} pictured, all {len(comps)} on the next page"
+            if len(comps) > self.V2_COMPS_PICTURED else "all pictured"
+        )
+
+        return {
+            # type and radius come from the theme's own entry file
+            "dark": self.V2_DARK,
+            "pages": [p for p in self.V2_PAGE_ORDER if p in page_set],
+            "consumer": consumer,
+            "report_kind": "Home value report" if consumer else "Seller's report",
+            "street": street,
+            "city_line": city_line,
+            "city_name": city,
+            "title_size": self._v2_title_size(street),
+            "hero_stats": hero_stats,
+            "detail_groups": detail_groups,
+            "unknown_list": " · ".join(unknown),
+            "has_unknowns": bool(unknown),
+            "pictured": pictured,
+            "pictured_note": pictured_note,
+            "comp_count": len(comps),
+            # `stats.max_distance` is a bare number (0.6) and `_comps_window`
+            # returns a DICT. The first render put `within 0.6` and the
+            # repr of a five-key dict into the page — both because the
+            # template reached for the context value rather than a sentence.
+            "comp_radius": (
+                ABSENT if self._v2_dash(stats.get("max_distance"))
+                else f"{stats['max_distance']} mi"),
+            "comp_window": (context.get("comps_window") or {}).get("pill") or ABSENT,
+            "closed_count": len(closed_prices),
+            "conf_grade": grade,
+            "conf_label": conf_label,
+            "range_low": self._v2_short_money(low),
+            "range_high": self._v2_short_money(high),
+            "range_mid": self._v2_short_money(mid),
+            "axis_low": self._v2_short_money(axis_low),
+            "axis_high": self._v2_short_money(axis_high),
+            "band_left": _pct(low),
+            "band_right": None if _pct(high) is None else round(100 - _pct(high), 1),
+            "subject_x": _pct(last_sale),
+            "last_sale_label": (
+                ABSENT if self._v2_dash(last_sale) else
+                _fmt_currency(last_sale) + (f" in {last_sale_year}" if last_sale_year else "")
+            ),
+            "compare_rows": compare_rows,
+            "bars": bars,
+            "bar_height": 14 if len(bars) > 8 else 22,
+            "bar_gap": 5 if len(bars) > 8 else 10,
+            "initials": initials,
+            # `context["prepared_for"]`, NOT `report_data["requester_name"]`.
+            # `build_consumer_report_data` reads the row's `requester_name`
+            # and writes it out as `prepared_for`; reaching past that for the
+            # raw key found nothing on the consumer path, and the cover
+            # rendered the label over an empty name. Two producers for one
+            # value is D-139's shape, and this is the version where the
+            # second one is simply wrong.
+            "prepared_for": (
+                (context.get("prepared_for") or "").strip() if consumer
+                else (context.get("prepared_for") or "").strip()
+                     or (f"The owners of {street}" if street else "")
+            ),
+            "prepared_note": (
+                f"Requested from {agent.get('company_name') or 'our'} home-value page"
+                if consumer else
+                f"Prepared at the request of {agent.get('name') or 'your agent'}"
+            ),
+            "agent_blurb": (
+                "You asked what your home is worth. Here's what nearby sales say. "
+                "When you're ready, I'll walk you through what a listing could look like."
+                if consumer else
+                "Happy to walk through this with you and talk about timing, pricing "
+                f"and what buyers in {city or 'your area'} are looking for right now."
+            ),
+            "consumer_disclosure": (
+                "Prepared for the person who requested it and addressed to them by "
+                "name; it does not contain owner-of-record information."
+                if consumer else ""
+            ),
+            "next_steps": [
+                {"n": "1", "title": "A walkthrough",
+                 "body": "20 minutes at the house so the range reflects your home, "
+                         "not just the record."},
+                {"n": "2", "title": "A pricing plan",
+                 "body": "Where to list, and what the first two weeks should look like."},
+                {"n": "3", "title": "A timeline",
+                 "body": "When to prepare, when to go live, and what to expect at "
+                         "each step."},
+            ],
+        }
+
+
+    #: What a metric cell says when the metric has no producer or no data.
+    #: Design §3.6: "Metric with no data -> 'no data'". NOT a dash, which this
+    #: document uses for a property fact the public record is silent about —
+    #: two different absences, and collapsing them would tell a reader the
+    #: assessor does not know the city's median sale price.
+    V2_NO_DATA = "no data"
+
+    @staticmethod
+    def _v2_delta(metric: Optional[Dict[str, Any]], suffix: str = "") -> str:
+        """`▲ 4.2%` / `▼ 3`, or "" when the move is under 1%.
+
+        Arrows are TEXT, never colour: a red number on a market page reads as
+        a warning about the reader's house. Design §5 is explicit, and the
+        existing market templates were already doing it this way.
+
+        `change_pct` is signed and `direction` is the factual movement;
+        `sentiment` is deliberately NOT read here — a falling days-on-market
+        is good for a seller and still an arrow pointing down.
+        """
+        if not metric or metric.get("change_pct") is None:
+            return ""
+        change = metric["change_pct"]
+        if abs(change) < 1:
+            return ""
+        arrow = "▲" if change > 0 else "▼"
+        if suffix == "%":
+            return f" · {arrow} {abs(change)}%"
+        delta = metric.get("current")
+        prior = metric.get("prior")
+        if delta is None or prior is None:
+            return f" · {arrow} {abs(change)}%"
+        return f" · {arrow} {abs(round(delta - prior))}"
+
+    def _build_v2_market(self, trends: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Design's page 5, from `fetch_and_compute_market_trends`.
+
+        THREE OF THE FOUR STAT CELLS HAVE NO PRODUCER. `market_trends.py`
+        imports `compute_price_cut_stats`, `compute_dom_distribution` and
+        `compute_timeline_metrics` from `worker.report_builders`, where none of
+        them is defined — the import raises every time and is swallowed by a
+        bare `except (ImportError, Exception)` logging at `info`. So
+        `price_cut_stats`, `dom_distribution` and `timeline_metrics` are
+        always None, and have been since they were written. D-167.
+
+        They are rendered as "no data" rather than omitted, because a cell
+        that disappears is indistinguishable from a page that never had it —
+        and a reader comparing two reports would see a different number of
+        cells with nothing saying why.
+        """
+        if not trends:
+            return None
+
+        median = trends.get("median_sale_price") or {}
+        timeline = trends.get("timeline_metrics") or {}
+        dom = trends.get("dom_distribution") or {}
+        cuts = trends.get("price_cut_stats") or {}
+
+        def _cell(value, label):
+            return {"value": self.V2_NO_DATA if value in (None, "") else value,
+                    "label": label}
+
+        marketing_days = timeline.get("avg_marketing_days")
+        under_30 = dom.get("under_30")
+        cut_rate = cuts.get("rate")
+        median_cut = cuts.get("median_cut")
+
+        stats = [
+            # `_v2_short_money`, not `formatted_current`: the cell is 44px
+            # display type in a four-column grid and "$660,000" is nine
+            # glyphs. Design's own sample reads "$660K".
+            _cell(None if median.get("current") is None
+                  else self._v2_short_money(median["current"]),
+                  "Median sale price" + self._v2_delta(median, "%")),
+            _cell(None if marketing_days is None else str(round(marketing_days)),
+                  "Days to contract" + self._v2_delta(trends.get("avg_days_on_market"))),
+            _cell(None if under_30 is None else f"{round(under_30)}%",
+                  "Sold in 30 days or less"),
+            _cell(None if cut_rate is None else f"{round(cut_rate)}%",
+                  "Took a price cut" + (
+                      f" · median {_fmt_currency(median_cut)}" if median_cut else "")),
+        ]
+
+        # ── months of inventory ─────────────────────────────────────────
+        moi = (trends.get("months_of_inventory") or {}).get("current")
+        if moi is None:
+            headline = "Inventory is not measurable here"
+            note = ("There were not enough recent sales to work out how long "
+                    "the homes for sale would take to sell.")
+            cells = [False] * 8
+        else:
+            headline = ("It's a seller's market" if moi < 4
+                        else "The market is balanced" if moi <= 6
+                        else "Buyers have the edge")
+            months = f"{moi:.1f}".rstrip("0").rstrip(".")
+            note = (
+                f"{months} months of inventory. At this pace every home for sale "
+                f"in {self.report_data.get('property_city') or 'this area'} would "
+                f"be gone in "
+                + ("under three months." if moi < 3
+                   else "under six months." if moi < 6
+                   else "more than six months.")
+            )
+            # Eight cells, one a month. A market at 11 months fills all eight
+            # rather than overflowing the grid — the cap is stated here
+            # because the template cannot clamp what it is handed.
+            filled = max(0, min(8, round(moi)))
+            cells = [i < filled for i in range(8)]
+
+        # ── the six-month chart ─────────────────────────────────────────
+        series = trends.get("monthly_median")
+        months_out, y_top, y_mid, y_bot = [], None, None, None
+        if series:
+            drawn = [p["value"] for p in series if p["value"] is not None]
+            if drawn:
+                top = max(drawn) * 1.06
+                bottom = min(drawn) * 0.94
+                # Rounded outward to a round $25K, so the axis labels are
+                # numbers a person would write down.
+                top = math.ceil(top / 25000) * 25000
+                bottom = math.floor(bottom / 25000) * 25000
+                span = top - bottom or 1
+                y_top = self._v2_short_money(top)
+                y_mid = self._v2_short_money((top + bottom) / 2)
+                y_bot = self._v2_short_money(bottom)
+                for point in series:
+                    value = point["value"]
+                    months_out.append({
+                        "label": point["label"],
+                        # A month with too few closings to have a median
+                        # draws NO bar and says so, rather than a zero-height
+                        # bar that reads as "nothing sold".
+                        "value": self._v2_short_money(value) if value is not None
+                                 else self.V2_NO_DATA,
+                        "height": round((value - bottom) / span * 100, 1)
+                                  if value is not None else 0,
+                    })
+
+        return {
+            "window_label": trends.get("period_label") or "",
+            "v2_stats": stats,
+            "v2_moi_headline": headline,
+            "v2_moi_note": note,
+            "v2_moi_cells": cells,
+            "v2_months": months_out,
+            "v2_y_top": y_top,
+            "v2_y_mid": y_mid,
+            "v2_y_bot": y_bot,
+        }
+
     def render_html(self) -> str:
         """
         Render the complete HTML report using the unified template system.
@@ -1995,7 +2807,19 @@ class PropertyReportBuilder:
 
         # ── AI Executive Summary (optional page) ──────────────────────────
         overview_text = self.report_data.get("overview_text")  # allow pre-injection
-        if overview_text is None and "overview" in page_set:
+        # THE NARRATIVE OUTLIVED THE PAGE IT WAS WRITTEN FOR.
+        #
+        # `overview` is a page in the nine-page set and a bounded panel on the
+        # six-page one ("In short", four lines, `max-height: 81px`). Gating
+        # generation on the PAGE being in the set left that panel empty on
+        # every v2 render — the first bold render had `<p class="inshort-text">
+        # </p>` and nothing failed, because an empty paragraph is valid HTML.
+        #
+        # `_wants_narrative` is the condition, not the page name.
+        _wants_narrative = (
+            "overview" in page_set or self.theme_name in self.V2_THEMES
+        )
+        if overview_text is None and _wants_narrative:
             try:
                 from worker.ai_overview import generate_overview
                 overview_text = generate_overview(
@@ -2012,6 +2836,12 @@ class PropertyReportBuilder:
             page_set = [p for p in page_set if p != "overview"]
             context["page_set"] = page_set
             logger.info("ai_overview: page removed from page_set (no API key or generation failed)")
+        elif overview_text is None and self.theme_name in self.V2_THEMES:
+            # No page to drop — the panel is on the cover, and a cover is not
+            # optional. It renders the one thing that is true without the
+            # model, which is where the numbers came from. Said rather than
+            # left blank: an empty panel reads as a rendering fault.
+            logger.info("ai_overview: no narrative; the In short panel states the source")
 
         context["overview_text"] = overview_text or ""
 
@@ -2024,8 +2854,20 @@ class PropertyReportBuilder:
         # The DECISION lives here and only here. The templates render the page
         # when it is in the set and do not ask how many comps there are — one
         # place deciding, which is the whole of what D-159 was about.
+        # NOT ON THE SHARED ARCHITECTURE. Design's page 4 lists every comp in
+        # "Each sale" with a bar each, 15 of them at the compressed row height,
+        # so there is nothing for a continuation page to continue. Adding it
+        # anyway put `comparables_all` in the page set, then dropped it again
+        # because `V2_PAGE_ORDER` has no such page — and the drop was reported
+        # as a page the reader asked for and did not get (D-142), which is a
+        # true statement about a page nobody asked for.
         _comps = context.get("comparables") or []
-        if "comparables" in page_set and len(_comps) > CARDS_PER_COMPARABLES_PAGE:
+        _wants_continuation = (
+            self.theme_name not in self.V2_THEMES
+            and "comparables" in page_set
+            and len(_comps) > CARDS_PER_COMPARABLES_PAGE
+        )
+        if _wants_continuation:
             page_set = page_set + ["comparables_all"]
             context["page_set"] = page_set
             logger.info(
@@ -2078,6 +2920,19 @@ class PropertyReportBuilder:
                 ",".join(pages_dropped), len(requested_pages), len(page_set),
                 self.theme_name,
             )
+
+        # ── the redesigned document ──────────────────────────────────────
+        # AFTER both conditional drops and the pagination, because `pages` is
+        # derived from the final page set — the same reason D-121 put
+        # `paginate` here. Additive: elegant and modern never read these keys.
+        context.update(derive_theme(theme_color))
+        context["doc"] = self._build_v2_context(context, page_set)
+        # Merged onto the trends dict rather than nested beside it, so the
+        # template reads one object and a page cannot render half of a market.
+        _v2_market = self._build_v2_market(market_trends_data)
+        if _v2_market and isinstance(context.get("market_trends"), dict):
+            context["market_trends"] = {**context["market_trends"], **_v2_market}
+        context["generated_label"] = date.today().strftime("%b %-d, %Y")
 
         logger.info("Final page_set: %s", page_set)
         logger.info("Pagination: %s", page_numbers)

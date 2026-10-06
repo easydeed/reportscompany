@@ -160,6 +160,53 @@ def test_ink_clears_aa_on_white_for_5000_random_colours():
     )
 
 
+def test_ink_clears_aa_on_its_own_tint_for_5000_random_colours():
+    """
+    THE SECOND HALF OF THE SAME PROPERTY, and it had no test at all.
+
+    §3.1 defines `primary_ink` as the brand value usable as text on white OR
+    on `tint`. Only the white half was ever asserted — over five thousand
+    random colours, which is why "it is thoroughly tested" was true and
+    insufficient. The tint is darker than white, so the tint condition is the
+    binding one: every ink that fails does so here and not above.
+
+    Measured before the fix: teal's ink was 4.33 on its own tint and red's
+    4.41, both from brands whose white margin looked comfortable. It took a
+    RENDER of the redesigned property report's tint panels to surface, because
+    nothing in this file was looking.
+
+    Regression-checked: reverting `_ink` to the one-surface condition fails
+    this test on roughly a fifth of the sample. The three-input degenerate
+    test does NOT fail on that revert — #000000, #ffffff and #ffff00 all have
+    tints that behave specially — which is why this property needs its own
+    five-thousand-colour pass rather than a corner-case list.
+    """
+    bad = []
+    for hexv in random_hexes():
+        t = derive_theme(hexv)
+        ratio = contrast(t["primary_ink"], t["tint"])
+        if ratio < AA_NORMAL:
+            bad.append((hexv, t["primary_ink"], t["tint"], round(ratio, 3)))
+    assert not bad, (
+        f"{len(bad)} of {SAMPLE} colours produced an ink below {AA_NORMAL}:1 "
+        f"on their own tint; first five: {bad[:5]}"
+    )
+
+
+def _clears_both(value: str) -> bool:
+    """`primary_ink`'s whole contract, in one place.
+
+    Both surfaces, because the token is defined as the brand value usable as
+    text on white OR on tint. The tint is recomputed from the candidate, which
+    is what `_ink` does — a tint is always lighter than its own brand, so the
+    tint condition is the binding one and white alone is not the rule.
+    """
+    from worker.themes import _TINT_ALPHA, _flatten_over_white
+    tint = _flatten_over_white(value, _TINT_ALPHA)
+    return (contrast(value, WHITE) >= AA_NORMAL
+            and contrast(value, tint) >= AA_NORMAL)
+
+
 def test_the_ink_property_is_not_satisfied_by_going_black():
     """
     THE GUARD ON THE PROPERTY ABOVE. `primary_ink = "#000000"` passes it for
@@ -168,6 +215,13 @@ def test_the_ink_property_is_not_satisfied_by_going_black():
     Two claims:
       - the ink keeps the hue it came from, so it still reads as the brand
       - the ink is no darker than it has to be: one step lighter fails AA
+        ON AT LEAST ONE OF THE TWO SURFACES. `primary_ink` must clear 4.5
+        against white AND against its own tint (§3.1), so "no darker than it
+        has to be" means the previous step fails one of them — not that it
+        fails white. Checking white alone accused the derivation of
+        overshooting on every brand whose white margin is wider than its
+        tint margin, which is all of them: the tint is darker than white, so
+        the tint condition is the binding one.
 
     HUE TOLERANCE, MEASURED. Scaling all three channels by one factor preserves
     hue exactly in real arithmetic; the drift is entirely 8-bit rounding, twelve
@@ -216,13 +270,13 @@ def test_the_ink_property_is_not_satisfied_by_going_black():
                     f"{hexv}: ink {ink} is not on the 6% darkening sequence at "
                     f"all, so it was not produced by the specified derivation"
                 )
-            if prev is not None and contrast(prev, WHITE) >= AA_NORMAL:
+            if prev is not None and _clears_both(prev):
                 overshot.append((hexv, ink, prev))
     assert not off_hue, f"ink lost the source hue for {off_hue[:5]}"
     assert not overshot, (
         f"ink is darker than the rule requires for {overshot[:5]} — one 6% step "
-        f"lighter would still have cleared AA, so the loop is not stopping at "
-        f"the first passing value"
+        f"lighter would still have cleared AA on BOTH white and its tint, so "
+        f"the loop is not stopping at the first passing value"
     )
 
 
@@ -404,6 +458,17 @@ def test_degenerate_inputs_return_usable_values(hexv):
     t = derive_theme(hexv)
     assert tuple(t) == TOKENS
     assert contrast(t["primary_ink"], WHITE) >= AA_NORMAL
+    # ON TINT TOO, which is half of `primary_ink`'s contract and was not
+    # asserted anywhere until 2026-10-06. §3.1 defines the token as the brand
+    # value usable as text on white OR tint, and the derivation only checked
+    # white — so teal's ink was 4.33 on its own tint and nothing failed. It
+    # surfaced from a RENDER (the redesigned report's tint panels), not from
+    # this file, which is the argument for the pixel gate existing at all.
+    assert contrast(t["primary_ink"], t["tint"]) >= AA_NORMAL, (
+        f"{hexv}: primary_ink {t['primary_ink']} is "
+        f"{contrast(t['primary_ink'], t['tint']):.2f} on its own tint "
+        f"{t['tint']}"
+    )
     assert contrast(t["on_primary"], t["primary"]) >= ON_PRIMARY_ACHIEVABLE
 
 
@@ -413,6 +478,8 @@ def test_white_does_not_become_black():
     to AA. It should stop on arrival at a mid grey, not continue to the floor.
     """
     t = derive_theme("#FFFFFF")
+    # White's tint IS white, so the added tint condition is the same condition
+    # and the landing point does not move.
     assert t["primary_ink"] == "#727272"
     assert contrast(t["primary_ink"], WHITE) == pytest.approx(4.81, abs=0.01)
     assert t["on_primary"] == NEAR_BLACK
@@ -609,7 +676,12 @@ def test_luxury_estates_is_fixed_specifically():
         "before trusting anything else in this test"
     )
     assert contrast(t["primary_ink"], WHITE) >= AA_NORMAL
-    assert t["primary_ink"] == "#0b8378"
+    # #0b8378 until 2026-10-06. It cleared 4.63 on white and **4.33 on its
+    # own tint**, which is below AA on a surface the token is defined for —
+    # found by rendering the redesigned property report's tint panels, not by
+    # reading this file. One further 6% step clears both.
+    assert t["primary_ink"] == "#0a7b71"
+    assert contrast(t["primary_ink"], t["tint"]) >= AA_NORMAL
     assert hue_gap(hue_of(t["primary_ink"]), hue_of("#0d9488")) < 2.0, (
         "the readable value is no longer the affiliate's teal"
     )
@@ -619,16 +691,33 @@ def test_luxury_estates_is_fixed_specifically():
 
 def test_the_three_themes_that_already_pass_are_not_touched():
     """
-    A ships invisibly. Demo Title, Coastal and Violet clear AA as they are, so
-    their ink must be their primary unchanged — nudging a passing colour would
-    be a visible change with no defect behind it.
+    A ships invisibly. Coastal and Violet clear AA on BOTH surfaces as they
+    are, so their ink must be their primary unchanged — nudging a passing
+    colour would be a visible change with no defect behind it.
+
+    DEMO TITLE (#DC2626) WAS IN THIS LIST AND SHOULD NOT HAVE BEEN. It clears
+    4.83 on white and measured **4.41 on its own tint**, so it was never one
+    of the themes that "already passes" — the list was assembled against the
+    one-surface rule. It is now asserted the other way, as a brand that must
+    move, with the measurement that says why.
     """
-    for hexv in ("#DC2626", "#0E7490", "#7C3AED"):
+    for hexv in ("#0E7490", "#7C3AED"):
         t = derive_theme(hexv)
         assert t["primary_ink"] == normalize_hex(hexv), (
-            f"{hexv} already passes at {contrast(hexv, WHITE):.2f}:1 and was "
-            f"darkened anyway"
+            f"{hexv} already passes on white ({contrast(hexv, WHITE):.2f}:1) "
+            f"and on its tint, and was darkened anyway"
         )
+
+    # The one that does not pass untouched, pinned by name for the same reason
+    # luxury_estates is: a property test over random colours can pass without
+    # generating it.
+    demo = derive_theme("#DC2626")
+    assert contrast("#dc2626", demo["tint"]) == pytest.approx(4.41, abs=0.01), (
+        "#DC2626's ink-on-own-tint no longer measures 4.41:1 — re-read the "
+        "measurement before trusting the rest of this test"
+    )
+    assert demo["primary_ink"] == "#cf2424"
+    assert _clears_both(demo["primary_ink"])
 
 
 # ---------------------------------------------------------------------------

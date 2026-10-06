@@ -43,6 +43,8 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import THEME_TEMPLATES, PropertyReportBuilder  # noqa: E402
+from worker.theme_registry import DEFAULT_THEME_NAME  # noqa: E402
+from _template_chain import source  # noqa: E402
 
 from test_property_production_render import report_data  # noqa: E402
 
@@ -56,7 +58,7 @@ THEMES = sorted(THEME_TEMPLATES)
 INVENTED = ("51.5", "48.5", "0.1 mi", "0.5 mi", "1.2 mi")
 
 
-def render_context(theme="teal"):
+def render_context(theme=DEFAULT_THEME_NAME):
     """The dict `render_html` hands the template, captured at the handover.
 
     `render_html` builds it inline and returns a string, so there is nothing
@@ -139,7 +141,7 @@ def test_no_template_reads_a_demographic_context(theme):
     """The other end. The builders are gone; a template referencing them
     would now render empty rather than fabricated — which is better and
     still not something to ship."""
-    src = (TEMPLATES / THEME_TEMPLATES[theme]).read_text(encoding="utf-8")
+    src = source(theme)
     hits = re.findall(r"\b(?:neighborhood|area_analysis)\.\w+", src)
     assert not hits, (
         f"{theme} reads {sorted(set(hits))}. Nothing produces these (D-135, "

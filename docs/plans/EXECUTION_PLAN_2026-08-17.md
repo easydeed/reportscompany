@@ -1202,6 +1202,121 @@ it.**
   because the others lack the behaviour or because the locator only fits one of them** — and the
   way to know which is to point it at a second member before believing the first.
 
+- **BEFORE REMOVING A VALUE FROM AN ENUMERATED SET, ENUMERATE WHAT DEFAULTS TO IT.** *Added
+  2026-10-06, from the theme cut. The removal counterpart of the missing-row rule, and the same
+  error with the sign flipped: reading a property of the data as a property of the system.*
+
+  **A value's reachability is what is STORED union what is DEFAULTED TO, and a query over the
+  table sees only the first half.** The theme cut was planned from the stored counts — 41 accounts
+  on teal, none on classic, migrate the 41 — and teal had **five** routes, of which the migration
+  covered one. `report_data.get("theme", 4)`, the `else` arm for anything unrecognised,
+  `THEME_TEMPLATES.get(name, …["teal"])` at render time, and `DEFAULT_THEME_ID = 4` on the
+  consumer lead-capture path. Four of the five are invisible to
+  `SELECT … WHERE default_theme_id = 4`.
+
+  Deleting the template while any of them still named it would have left a live path asking the
+  renderer for a file that is not there — and the route that would have hit it first is the one a
+  **stranger** sees. The migration is correct; what it cannot say is what it does not cover, and
+  nothing about reading it suggests the question.
+
+  **Found by rendering, not by reading** — resolving a theme for every input a caller can supply
+  (`None`, `0`, `1`, `4`, `"4"`, `"teal"`, `True`, `99`, `"nonsense"`) and reading the answers.
+  That is the render-to-verify rule applied to a *removal* rather than to a fix, which is a case
+  it had not been applied to before. See **D-166**.
+
+  The structural half: a fallback should name a value the registry *declares*, so that a registry
+  which disagrees with itself fails at import rather than one report at a time — and a gate should
+  parse every fallback and refuse one naming a value the set does not have.
+
+- **A DEFERRED DECISION NEEDS A RATCHET, NOT A DOCUMENT.** *Added 2026-10-06.*
+
+  "Decide later, it is cheap" is a measurement with an expiry date on it. The theme rename was
+  scoped at **16 files and 82 occurrences**, deferred until Design's three templates land — and the
+  thing that would invalidate that is not a change of mind, it is **new call sites accruing quietly
+  while the templates land**, so the decision gets taken in three weeks against a number measured
+  today.
+
+  A scoping document cannot hold that line; it is prose, and prose does not fail. The count is now
+  a ratchet with both halves — it may shrink freely, it may grow only by editing the constant, and
+  a *shrink* also fails, because a ratchet nobody tightens stops constraining anything. Plus a
+  guard on the one thing that would change the answer's kind rather than its size: a live template
+  gaining a CSS custom property named after its own theme, which is what made teal expensive and
+  which Design's rewrite is the moment it could come back. All three seen to fire.
+
+  **The general form: when you defer a decision on the strength of a measurement, gate the
+  measurement.** Otherwise the deferral quietly converts a fact into a memory.
+
+- **A GATE THAT REIMPLEMENTS WHAT IT GUARDS IS GREEN WHATEVER THE PRODUCT DOES.** *Added
+  2026-10-06. Second instance, and this one had been green for months.*
+
+  `compute/market_trends.py` imports three metric functions from `worker.report_builders`. None of
+  them exists there. The import raises every time, a bare `except (ImportError, Exception)` logs it
+  at `info`, and three market metric groups have been `None` since they were written —
+  **`tests/test_new_metrics.py` defines its own working copies of two of them, at lines 22 and 47,
+  and tests those.** The tests pass. They test code nothing imports. D-167.
+
+  D-140 was the same shape one layer out: a gate that MIRRORED a dict literal because the literal
+  lived inside a Celery task and there was nothing to import. That one was caught because a
+  regression failed. This one was caught by trying to USE the functions, two years of green behind
+  it.
+
+  **Import what you are testing, or the test is a second implementation with a passing grade.** If
+  it cannot be imported, that is the finding — extract it until it can be. And a bare
+  `except Exception` over an import is not a degraded mode: a missing producer is a defect, and
+  `info` is not where anyone looks for one.
+
+- **A PER-ITEM GATE BECOMES A PER-ARCHITECTURE GATE THE MOMENT TWO ITEMS STOP BEING ALIKE.**
+  *Added 2026-10-06, from wiring one of three themes onto a shared template.*
+
+  Twelve test files parametrised over themes and read `THEME_TEMPLATES[theme]` as the file for that
+  theme. Moving ONE theme onto a shared page architecture broke that in two different ways, and the
+  first was loud in the worst place: `test_theme_cover_title` failed at **collection** with
+  "expected exactly one cover title line, found 0", which took the whole worker suite down and hid
+  every other result until it was fixed.
+
+  The shapes, all of them from the same cause:
+
+  | the gate assumed | what the shared architecture does |
+  |---|---|
+  | a theme is one file | a theme is an entry file plus the shared one |
+  | the page's markup is in the theme's file | it is in the shared file |
+  | every theme has nine pages | this one has six |
+  | this surface exists on every theme | the contents page, the analysis table and the Total Comps badge exist on none of them |
+  | `class="page"` | `class="sheet sheet-<page>"` |
+
+  **Resolved by one shared resolver, `_template_chain`, that parses each theme's includes rather
+  than holding a list of which themes are on which architecture** — a list would be a fourth copy
+  of the thing D-163 was about. Everything else derives from it: `SHARED_THEMES`,
+  `SELF_CONTAINED_THEMES`, and each gate asking which it is looking at.
+
+  **The cost is real and it is paid once.** 55 failures on the first full run after the template
+  landed, every one of them a gate correctly reporting that the document changed. Four were defects
+  in the new build; the rest were re-points. Theme two and three pay none of it.
+
+  **And re-pointing is not relaxing.** Every property whose surface disappeared was re-asserted on
+  the surface that replaced it — "the contents agrees with the document" became "the footers run
+  1..N and N is the number of sheets rendered"; "the analysis note states the comp count" became
+  "Each sale · N and the comps header agree with the set"; "the chart draws as many bars as the
+  table counts" became "there is exactly one bar per comp", which is stronger. A gate narrowed to
+  fewer themes without a replacement is coverage quietly withdrawn.
+
+- **A FIXTURE THAT SUPPLIES THE VALUE UNDER TEST CANNOT FAIL.** *Added 2026-10-06. Found by a
+  regression run, not by reading the test.*
+
+  `test_the_six_page_set_is_a_maximum_not_a_guarantee` asserts that the consumer path renders five
+  pages without market data and six with it. Its fixture set `selected_pages` itself — so when
+  `consumer_report_data.py` was reverted to its own stale copy of the nine-page list, **the test
+  stayed green.** The gate was passing against the exact defect it was written for.
+
+  The same run found a second one: reverting the cover's bathroom formatter to the integer one left
+  "1.5" elsewhere in the document, so a gate asserting "1.5 is somewhere in the output" passed
+  while the largest number on page one was wrong. Fixed by asserting **per surface**, not per
+  document.
+
+  **Both were invisible to reading and obvious to a regression.** This is why every gate gets one:
+  eleven were applied to this change and two came back SILENT, which is a two-in-eleven rate of
+  gates that would have reported green on their own subject.
+
 ---
 
 ## Phase 0 — Security & Tooling

@@ -42,6 +42,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import THEME_TEMPLATES  # noqa: E402
+from _template_chain import chain  # noqa: E402
 
 HANDOVER = REPO / "docs/CLAUDE_DESIGN_HANDOVER.md"
 JERRY = REPO / "docs/JERRY_PROPERTY_FIELDS_DECISION.md"
@@ -92,7 +93,7 @@ def test_every_field_jerry_is_asked_about_is_still_an_orphan():
 
 
 def test_both_template_trees_are_the_size_the_handover_says():
-    """5,570 dead across five files, 2,860 live across three.
+    """5,570 dead across five files, 2,284 live across four.
 
     THE FIRST VERSION OF THIS NUMBER WAS 15,628, FROM A `wc -l` WHOSE GLOB
     LISTED ONE FILE TWICE. It went into two defect entries, a pull request
@@ -103,7 +104,11 @@ def test_both_template_trees_are_the_size_the_handover_says():
     If somebody deletes the dead tree — which is the right outcome — this
     fails, and the handover's section 0 goes with it. That is the point.
     """
-    live_paths = {TEMPLATES / v for v in THEME_TEMPLATES.values()}
+    # THE CHAIN, so the shared architecture counts as live. Reading only the
+    # entry files put `_v2/report.jinja2` — the file that renders bold's six
+    # pages — in the DEAD column, beside D-131's tree, which is the one
+    # distinction this test exists to keep straight.
+    live_paths = {p for t in THEME_TEMPLATES for p in chain(t)}
     dead = sorted(p for p in TEMPLATES.rglob("*.jinja2") if p not in live_paths)
     text = HANDOVER.read_text(encoding="utf-8")
 
@@ -113,6 +118,9 @@ def test_both_template_trees_are_the_size_the_handover_says():
     # One dead file per theme plus the two in `_base/`. Derived, so the next
     # cut moves it: the literal 7 here went stale on the theme cut and the
     # failure read as "the dead tree changed" when it was "a theme left".
+    # One dead twin per theme plus the two in `_base/`. A theme moving to the
+    # shared architecture does not change this: its `<theme>.jinja2` twin
+    # stays dead and its entry file stays live.
     expected_dead = len(THEME_TEMPLATES) + 2
     assert len(dead) == expected_dead, (
         f"{len(dead)} dead templates, expected {expected_dead} "

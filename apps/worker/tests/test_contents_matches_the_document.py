@@ -60,7 +60,24 @@ from worker.property_builder import (  # noqa: E402
 
 from test_property_production_render import report_data  # noqa: E402
 
-THEMES = sorted(THEME_TEMPLATES)
+from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES  # noqa: E402
+
+#: SELF-CONTAINED THEMES ONLY, for everything in this file that reads a
+#: contents page.
+#:
+#: Design's architecture has no contents page — six pages, and a table of
+#: contents for six is a page spent telling the reader there are five others.
+#: So the numbering property this file is about ("the contents agrees with the
+#: document") has no subject on the shared architecture, and the property that
+#: REPLACES it is asserted in `test_the_shared_architecture_numbers_its_own
+#: _pages` below: the footers run 1..N with no gaps, N is the number of sheets,
+#: and no sheet claims to be a contents page.
+#:
+#: Narrowed rather than skipped: a `pytest.skip` on a theme would leave the
+#: file silent about half the themes, and the reason it is silent would live
+#: in a skip message nobody reads.
+THEMES = SELF_CONTAINED_THEMES
+ALL_THEMES = sorted(THEME_TEMPLATES)
 
 #: A rendered page. Themes differ in the trailing classes, never in the first.
 SECTION = re.compile(r'<section class="page[ "]')
@@ -394,4 +411,48 @@ def test_the_same_page_is_numbered_differently_in_the_three_sets(theme, renders,
     assert len(set(seen.values())) == 3, (
         f"{theme}: the same page got the same number in every set, so these "
         f"renders cannot tell a derived number from a literal"
+    )
+
+
+# ── the shared architecture's own numbering property ───────────────────────
+
+import pytest  # noqa: E402  (already imported above; harmless and explicit)
+
+
+@pytest.mark.parametrize("theme", SHARED_THEMES)
+def test_the_shared_architecture_numbers_its_own_pages(theme):
+    """What replaces "the contents agrees with the document".
+
+    There is no contents page to agree with, so the assertion is on the thing
+    a reader actually uses to tell whether a page is missing: the footer.
+
+    Four claims, and the fourth is the one that would have caught D-121:
+      1. every sheet carries a "Page n of N" footer
+      2. the n values are 1..N with no gaps and no repeats
+      3. N equals the number of sheets rendered
+      4. no sheet is a contents page
+
+    (3) is the half D-121 was about — a total computed before the conditional
+    drops names a document that is not the one being rendered.
+    """
+    html = PropertyReportBuilder(report_data(theme)).render_html()
+    sheets = re.findall(r'<section class="sheet sheet-(\w+)"', html)
+    feet = re.findall(r"Page (\d+) of (\d+)", html)
+
+    assert len(feet) == len(sheets), (
+        f"{theme}: {len(sheets)} sheets and {len(feet)} page footers"
+    )
+    numbers = [int(n) for n, _ in feet]
+    totals = {int(t) for _, t in feet}
+    assert numbers == list(range(1, len(sheets) + 1)), (
+        f"{theme}: page numbers are {numbers}, not 1..{len(sheets)}"
+    )
+    assert totals == {len(sheets)}, (
+        f"{theme}: the footers claim {sorted(totals)} pages and "
+        f"{len(sheets)} rendered — a total computed before the conditional "
+        f"drops names a different document (D-121)"
+    )
+    assert "contents" not in sheets, (
+        f"{theme} rendered a contents page. The shared architecture has none; "
+        f"if one came back, this file's other gates apply to it again."
     )

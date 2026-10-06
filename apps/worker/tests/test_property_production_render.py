@@ -39,8 +39,22 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import PropertyReportBuilder, THEME_TEMPLATES  # noqa: E402
+from worker.theme_registry import DEFAULT_THEME_NAME  # noqa: E402
 
-THEMES = sorted(THEME_TEMPLATES)
+from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES  # noqa: E402
+
+#: EVERY theme, for the floor — `test_all_five_themes_render_through_the
+#: _production_path` is the assertion the rest of this file stands on and it
+#: must cover all of them.
+ALL_THEMES = sorted(THEME_TEMPLATES)
+
+#: SELF-CONTAINED THEMES, for everything keyed on the nine-page document's
+#: own markup: the contents page, the Area Sales Analysis table, the
+#: `.analysis-row` cells. Design's architecture has none of those, and the
+#: properties they carry are re-asserted on the new surfaces in
+#: `test_analysis_table_columns.py` and
+#: `test_contents_matches_the_document.py`.
+THEMES = SELF_CONTAINED_THEMES
 
 # `sitex_data` as SiteX returns it, including the two details that matter:
 # `pool` is the STRING "None" for a house without one, and there is no
@@ -131,12 +145,16 @@ def renders():
 
 @pytest.fixture(scope="module")
 def builders():
-    return {t: PropertyReportBuilder(report_data(t)) for t in THEMES}
+    # EVERY theme, not `THEMES` — which is now the self-contained ones. The
+    # page-set test below asserts on both architectures and got a KeyError
+    # for bold, which is a fixture narrowed by a module-level rename rather
+    # than by a decision.
+    return {t: PropertyReportBuilder(report_data(t)) for t in ALL_THEMES}
 
 
 # ── the floor ───────────────────────────────────────────────────────────────
 
-def test_all_five_themes_render_through_the_production_path(renders):
+def test_every_theme_renders_through_the_production_path(renders):
     """Every theme produces a document. Nothing below means anything without this."""
     for theme in THEMES:
         assert len(renders[theme]) > 10_000, f"{theme} rendered {len(renders[theme])} chars"
@@ -144,10 +162,19 @@ def test_all_five_themes_render_through_the_production_path(renders):
 
 def test_the_default_page_set_is_the_seven_pages_the_rest_of_this_file_assumes(builders):
     """`overview` and `market_trends` are NOT in it — the premise of D-121."""
-    for theme in THEMES:
+    for theme in SELF_CONTAINED_THEMES:
         assert builders[theme].page_set == [
             "cover", "contents", "aerial", "property",
             "analysis", "comparables", "range",
+        ]
+    # The six-page set, stated here too rather than only in the builder, so
+    # that the two architectures' page sets are both written down in one
+    # place a reader of this file will find. D-121's premise holds for both:
+    # neither default set contains a page whose data can fail.
+    for theme in SHARED_THEMES:
+        assert builders[theme].page_set == [
+            "cover", "property", "comparables", "range",
+            "market_trends", "notes",
         ]
 
 
@@ -223,7 +250,7 @@ def test_sitex_s_own_ratio_is_used_where_it_differs_from_a_derived_one():
     addition. A row that disagrees with itself is worse than one slightly
     stale.
     """
-    data = report_data("teal")
+    data = report_data(DEFAULT_THEME_NAME)
     data["sitex_data"] = {**SITEX, "last_sale_price_per_sqft": 527.1}
     piq = PropertyReportBuilder(data)._build_stats_context()["piq"]
     assert piq["price_per_sqft"] == 527.1, (
@@ -432,7 +459,7 @@ def test_active_comps_are_not_described_as_sales(theme):
 
 
 def test_the_empty_case_claims_nothing():
-    data = report_data("teal")
+    data = report_data(DEFAULT_THEME_NAME)
     data["comparables"] = []
     window = PropertyReportBuilder(data)._comps_window()
     assert "No comparable properties" in window["label"]
@@ -491,7 +518,7 @@ def test_a_comp_from_the_widened_window_is_stated_as_twelve(theme):
 def test_a_comp_older_than_any_ladder_window_is_reported_not_rounded_down():
     """Legacy rows and hand-edited comps exist. Understating their age is the
     D-117 failure with a smaller number."""
-    assert _aged("teal", 20, 1100)._comps_window()["subtitle"] == \
+    assert _aged(DEFAULT_THEME_NAME, 20, 1100)._comps_window()["subtitle"] == \
         "SALES IN THE PAST 36 MONTHS"
 
 

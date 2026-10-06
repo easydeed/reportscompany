@@ -78,14 +78,23 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import PropertyReportBuilder, THEME_TEMPLATES  # noqa: E402
+from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES, chain  # noqa: E402
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "src/worker/templates/property"
 THEMES = sorted(THEME_TEMPLATES)
 
-#: The five files a theme actually renders. Every other template under
-#: `templates/property/` is a partial or a base, and none of them may carry
-#: the block — there is nowhere in a partial to know the audience.
-REPORT_TEMPLATES = {TEMPLATES / p for p in THEME_TEMPLATES.values()}
+#: Every file a theme actually renders — entry files AND the shared
+#: architecture they include. Resolved by parsing, so a theme moving onto the
+#: shared file does not quietly drop out of this set.
+#:
+#: WHY THE SHARED FILE IS IN HERE AND NOT EXCLUDED AS A "PARTIAL". The old
+#: comment said a partial may never carry the owner block, "because there is
+#: nowhere in a partial to know the audience". `_v2/report.jinja2` is not a
+#: partial — it is the document, and `audience` is in its context. What must
+#: stay true is that the block is reachable only under an audience test,
+#: which is exactly what the gate below asserts and which does not care
+#: whether the file is one theme's or three themes'.
+REPORT_TEMPLATES = {p for t in THEME_TEMPLATES for p in chain(t)}
 
 #: Allowed, but only behind an audience test.
 CONDITIONAL = ("owner_name", "secondary_owner")
@@ -178,18 +187,91 @@ def test_an_owner_identity_field_is_only_reachable_on_the_agent_path(path):
     )
 
 
-@pytest.mark.parametrize("path", sorted(REPORT_TEMPLATES), ids=lambda p: p.name)
-def test_every_theme_actually_has_the_owner_block(path):
+@pytest.mark.parametrize("theme", SELF_CONTAINED_THEMES)
+def test_every_self_contained_theme_actually_has_the_owner_block(theme):
     """Otherwise the test above is satisfied by deleting the block.
 
-    Jerry asked for it back on the agent path in all five themes, not in
-    whichever ones somebody got to.
+    Jerry asked for it back on the agent path in every theme, not in whichever
+    ones somebody got to.
+
+    SELF-CONTAINED THEMES ONLY, because a theme on the shared architecture
+    does not gate the block in its TEMPLATE at all — see the test below.
     """
-    refs = _refs(parse(path), CONDITIONAL)
+    refs = {r for p in chain(theme) for r in _refs(parse(p), CONDITIONAL)}
     assert refs, (
-        f"{path.relative_to(TEMPLATES)} has no owner-of-record block. The "
-        "gate above passes trivially for a template that renders nothing, so "
-        "this is the half that says the restore happened here too."
+        f"{theme} has no owner-of-record block. The gate above passes "
+        "trivially for a template that renders nothing, so this is the half "
+        "that says the restore happened here too."
+    )
+
+
+@pytest.mark.parametrize("theme", SHARED_THEMES)
+def test_the_shared_architecture_gates_the_owner_block_in_PYTHON(theme):
+    """And that is STRONGER than an audience test in the template.
+
+    Design's one page architecture builds page 2's rows in
+    `_build_v2_context`, and the owner row is APPENDED only when the audience
+    is the agent. So the consumer context does not contain the name —
+    there is nothing for a template edit to reveal, and nothing for a flipped
+    operator to leak. The `{% if audience %}` form this replaces was one
+    character from a disclosure with every structural test green, which is
+    what the big warning at the top of this file is about.
+
+    Asserted as THREE things, because "the template does not mention it" alone
+    would also be true of a build that dropped the owner of record entirely:
+
+      1. no live template references an owner identity field at all
+      2. the CONSUMER context carries no owner identity value
+      3. the AGENT context does carry it
+
+    1 is structural; 2 and 3 are read off the builder, not off a render, so
+    they fail even if some future template stops printing what it is handed.
+    """
+    for path in chain(theme):
+        refs = _refs(parse(path), CONDITIONAL)
+        assert not refs, (
+            f"{path.relative_to(TEMPLATES)} references {sorted(refs)}. On the "
+            f"shared architecture the owner block is built in Python and the "
+            f"template is handed finished rows; a template that names the "
+            f"field has reintroduced the audience branch the file above "
+            f"describes, and must then satisfy that gate instead."
+        )
+
+    from test_property_production_render import report_data
+
+    def rows(audience):
+        data = {**report_data(theme), "audience": audience}
+        builder = PropertyReportBuilder(data)
+        ctx = {
+            "property": builder._build_property_context(),
+            "agent": builder._build_agent_context(),
+            "stats": builder._build_stats_context(),
+            "comparables": builder._build_comparables_context(),
+            "audience": audience,
+            "prepared_for": "",
+        }
+        doc = builder._build_v2_context(ctx, list(builder.V2_PAGE_ORDER))
+        return [r for g in doc["detail_groups"] for r in g["rows"]]
+
+    owner = report_data(theme)["sitex_data"].get("owner_name") or \
+        report_data(theme).get("owner_name")
+    consumer_rows = rows("consumer")
+    agent_rows = rows("agent")
+
+    labels = {r["label"].lower() for r in consumer_rows}
+    assert "owner of record" not in labels, (
+        f"{theme}: the consumer context carries an owner-of-record row"
+    )
+    values = " ".join(str(r["value"]) for r in consumer_rows)
+    for name in (owner, report_data(theme)["sitex_data"].get("secondary_owner")):
+        if name:
+            assert name not in values, (
+                f"{theme}: {name!r} is in the consumer context's property rows"
+            )
+
+    assert "owner of record" in {r["label"].lower() for r in agent_rows}, (
+        f"{theme}: the AGENT context has no owner-of-record row either, so "
+        f"the assertion above is passing on a build that dropped the block"
     )
 
 
@@ -265,14 +347,30 @@ FIELD_LABELS = (
 )
 
 
-def property_page(html: str) -> str:
-    """The one <section> carrying the property page's own heading.
+#: The shared architecture labels every page on its own `<section>`, which
+#: is a better locator than a heading and is used when it is there.
+SHEET_CLASS = re.compile(r'class="sheet sheet-property"')
 
-    Matched on the heading INSIDE its title element, because every theme's
-    contents page also contains the string "Property Information" — the
-    accidental-selector trap, hit while writing this file.
+
+def property_page(html: str) -> str:
+    """The one <section> that is the property page.
+
+    TWO LOCATORS, AND THE FIRST ONE IS THE GOOD ONE. A theme on the shared
+    architecture names each page on its `<section>`; a self-contained theme
+    does not, so for those the page is matched on the heading INSIDE its title
+    element — because every v1 theme's CONTENTS page also contains the string
+    "Property Information", which is the accidental-selector trap this
+    function was written for.
+
+    Exactly one match either way, asserted, so a locator that stops matching
+    fails here rather than passing an empty string to the caller — which is
+    how "expected one property page, found 0" came to be the FIRST thing the
+    architecture change reported, and the right thing for it to report.
     """
-    pages = [p for p in html.split("<section") if PAGE_HEADING.search(p)]
+    sections = html.split("<section")
+    pages = [s for s in sections if SHEET_CLASS.search(s)]
+    if not pages:
+        pages = [s for s in sections if PAGE_HEADING.search(s)]
     assert len(pages) == 1, f"expected one property page, found {len(pages)}"
     return pages[0]
 
