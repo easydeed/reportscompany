@@ -31,6 +31,7 @@
 | [modules/property-routes-comparables.md](./modules/property-routes-comparables.md) | Property search + comparables fallback ladder (L0–L5) | `routes/property.py` |
 | [modules/admin-metrics-routes.md](./modules/admin-metrics-routes.md) | Platform analytics endpoints | `routes/admin_metrics.py` |
 | [property-type-data-contract.md](./property-type-data-contract.md) | SiteX UseCode → SimplyRETS type/subtype mapping | `schemas/property.py` |
+| [simplyrets-integration-report.md](./simplyrets-integration-report.md) | Current SimplyRETS integration, payload fields, and calculations (2026-09-01 audit) | vendor + extract + report_builders + comps ladder |
 
 ## Worker (`apps/worker/src/worker/`)
 
