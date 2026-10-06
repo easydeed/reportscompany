@@ -5,6 +5,11 @@
 # listed here; retiring one means deleting its line. Regenerate with
 #     python3 scripts/lint_template_colors.py --write-baseline
 # and never to make a failing check pass — a new violation is the point.
+#
+# 2026-10-05, THE THEME CUT. The classic and teal entries were DELETED,
+# not regenerated: the four files they named no longer exist. A ratchet
+# may only shrink and this is a shrink; nothing in any surviving file's
+# entries was touched.
 
 apps/web/templates/social/social-closed.html	BRAND-ADJACENT	#92400e
 apps/web/templates/social/social-closed.html	BRAND-ROLE	#7c3aed
@@ -53,18 +58,6 @@ apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#15
 apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#4a54a0
 apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#6b73c4
 apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#ffffff
-apps/worker/src/worker/templates/property/classic/classic.jinja2	BRAND-ADJACENT	#1b365d
-apps/worker/src/worker/templates/property/classic/classic.jinja2	BRAND-ADJACENT	#5c6670
-apps/worker/src/worker/templates/property/classic/classic.jinja2	BRAND-ROLE	#1b365d
-apps/worker/src/worker/templates/property/classic/classic.jinja2	BRAND-ROLE	#2c4a7c
-apps/worker/src/worker/templates/property/classic/classic.jinja2	BRAND-ROLE	#8b7355
-apps/worker/src/worker/templates/property/classic/classic.jinja2	BRAND-ROLE	#a89070
-apps/worker/src/worker/templates/property/classic/classic_report.jinja2	BRAND-ADJACENT	#5c6670
-apps/worker/src/worker/templates/property/classic/classic_report.jinja2	BRAND-ROLE	#1b365d
-apps/worker/src/worker/templates/property/classic/classic_report.jinja2	BRAND-ROLE	#1b365d
-apps/worker/src/worker/templates/property/classic/classic_report.jinja2	BRAND-ROLE	#5a7199
-apps/worker/src/worker/templates/property/classic/classic_report.jinja2	BRAND-ROLE	#5a7199
-apps/worker/src/worker/templates/property/classic/classic_report.jinja2	BRAND-ROLE	#ffffff
 apps/worker/src/worker/templates/property/elegant/elegant.jinja2	BRAND-ROLE	#1a1a1a
 apps/worker/src/worker/templates/property/elegant/elegant.jinja2	BRAND-ROLE	#333333
 apps/worker/src/worker/templates/property/elegant/elegant.jinja2	BRAND-ROLE	#b8977e
@@ -88,19 +81,3 @@ apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE
 apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ff9e94
 apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ffb199
 apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ffffff
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ADJACENT	#0c1436
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ADJACENT	#0c1436
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ADJACENT	#0f1a45
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ADJACENT	#6b7280
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ADJACENT	#dff6f3
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ROLE	#18235c
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ROLE	#21c7b7
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ROLE	#2a3875
-apps/worker/src/worker/templates/property/teal/teal.jinja2	BRAND-ROLE	#34d1c3
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2	BRAND-ADJACENT	#dff6f3
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2	BRAND-ROLE	#1abaae
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2	BRAND-ROLE	#21c7b7
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2	BRAND-ROLE	#34d1c3
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2	BRAND-ROLE	#34d1c3
-apps/worker/src/worker/templates/property/teal/teal_report.jinja2	BRAND-ROLE	#7fe3da

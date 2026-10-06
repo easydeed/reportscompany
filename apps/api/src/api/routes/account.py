@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, Field, constr
+from pydantic import BaseModel, Field, constr, field_validator
 from typing import Optional
 from ..db import db_conn, set_rls, fetchone_dict
 from .reports import require_account_id  # reuse temporary shim
@@ -16,6 +16,7 @@ from ..services.usage import (
 )
 from ..services.plans import get_plan_catalog
 from ..services.brand_resolver import resolve_brand
+from ..theme_registry import SELECTABLE_THEME_IDS
 
 router = APIRouter(prefix="/v1")
 
@@ -73,8 +74,22 @@ class BrandingPatch(BaseModel):
     # Colors
     primary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
     secondary_color: Optional[constr(pattern=r'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$')] = None
-    # Theme
-    default_theme_id: Optional[int] = Field(None, ge=1, le=5)
+    # Theme. `ge=1, le=5` accepted 1 and 4, which the cut to three themes
+    # retired — an account set to either would render in the default and show
+    # no selection in the picker. A literal set, not a range, because the
+    # surviving ids are 2, 3 and 5 and the gaps are deliberate: ids are never
+    # reused, so history stays readable. See worker/themes.json.
+    default_theme_id: Optional[int] = Field(None)
+
+    @field_validator("default_theme_id")
+    @classmethod
+    def _theme_is_selectable(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v not in SELECTABLE_THEME_IDS:
+            raise ValueError(
+                f"default_theme_id must be one of {SELECTABLE_THEME_IDS}; "
+                f"got {v}"
+            )
+        return v
 
 
 def build_contact_lines(first_name: str, last_name: str, job_title: str, 

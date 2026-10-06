@@ -34,6 +34,8 @@ keeps every field the report needs visible in one signature.
 """
 from typing import Any, Dict, List, Optional
 
+from . import theme_registry as _registry
+
 #: The consumer CMA's page set.
 #:
 #: D-141. This diverged from the agent default by ACCIDENT, not by decision —
@@ -74,8 +76,12 @@ CONSUMER_PAGES = [
 
 DEFAULT_PRIMARY = "#1B365D"
 DEFAULT_ACCENT = "#B8860B"
+# teal's brand colour, kept as the fallback ACCENT after teal itself was
+# retired: a lead page with no brand colour set still needs one, and
+# changing what strangers see was not part of the theme cut.
 DEFAULT_THEME_ACCENT = "#34d1c3"
-DEFAULT_THEME_ID = 4
+#: Re-exported, not restated. Was the literal 4 (teal) until the cut.
+DEFAULT_THEME_ID = _registry.DEFAULT_THEME_ID
 
 
 def build_consumer_report_data(

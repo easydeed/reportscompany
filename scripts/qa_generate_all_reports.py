@@ -40,7 +40,11 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "apps/worker/src"))
+from worker import theme_registry as _theme_registry  # noqa: E402
 
 try:
     import requests
@@ -68,7 +72,9 @@ REPORT_TYPES = [
 DEFAULT_API_BASE = "https://reportscompany-api.onrender.com"
 DEFAULT_CITY = "Irvine"
 DEFAULT_LOOKBACK = 30
-DEFAULT_THEME_ID = 1            # 1 = teal
+# Was `1  # 1 = teal`, wrong twice: 1 was classic, and classic is retired.
+# Read from the renderer so a QA run uses the theme a customer would get.
+DEFAULT_THEME_ID = _theme_registry.DEFAULT_THEME_ID
 DEFAULT_TIMEOUT_SECONDS = 120   # per-report poll budget
 POLL_INTERVAL_SECONDS = 5
 

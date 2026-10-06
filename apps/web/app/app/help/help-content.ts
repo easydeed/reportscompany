@@ -154,7 +154,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           },
           {
             title: "Choose your template",
-            body: "Pick from 5 designer templates: Bold, Classic, Elegant, Modern, or Teal. Each template includes your branding, aerial maps, and a QR code that links to a branded lead capture page.",
+            body: "Pick from 3 designer templates: Bold, Elegant, or Modern. Each template includes your branding, aerial maps, and a QR code that links to a branded lead capture page.",
             screenshot: "Template selection gallery with previews",
           },
           {

@@ -23,6 +23,7 @@ import { SharedPDFPreview } from "@/components/shared/pdf-preview"
 import { PREVIEW_DEFAULT_ACCENT, PREVIEW_DEFAULT_PRIMARY } from "@/components/shared/email-preview"
 import { queryKeys } from "@/hooks/use-api"
 import { cn } from "@/lib/utils"
+import { THEME_ID_TO_NAME, themeName, DEFAULT_THEME_ID } from "@/lib/themes.generated"
 import type { Recipient } from "@/lib/types/recipients"
 
 type SubmitState = "idle" | "creating" | "polling" | "complete" | "error"
@@ -53,14 +54,6 @@ const STEPS = [
 const REPORT_TYPE = "market_snapshot"
 const LOOKBACK_DAYS = 30
 const DEFAULT_TIMEZONE = "America/Los_Angeles"
-
-const THEME_ID_MAP: Record<number, string> = {
-  1: "teal",
-  2: "bold",
-  3: "classic",
-  4: "elegant",
-  5: "modern",
-}
 
 function mapRecipientsForApi(recipients: Recipient[]) {
   return recipients.map((recipient) => {
@@ -124,7 +117,7 @@ export function GuidedGetStarted() {
     email: "agent@example.com",
     photoUrl: null as string | null,
   })
-  const [themeId, setThemeId] = useState("teal")
+  const [themeId, setThemeId] = useState(themeName(DEFAULT_THEME_ID))
 
   const hasDeliverablePeople = recipients.some((recipient) => recipient.type !== "group" || recipient.memberCount > 0)
   const hasEmptyGroupSelected = recipients.some((recipient) => recipient.type === "group" && recipient.memberCount === 0)
@@ -177,8 +170,9 @@ export function GuidedGetStarted() {
 
       if (accountRes.ok) {
         const data = await accountRes.json()
-        if (data.default_theme_id && THEME_ID_MAP[data.default_theme_id]) {
-          setThemeId(THEME_ID_MAP[data.default_theme_id])
+        // Second of the two copies that were wrong on every id (D-163).
+        if (data.default_theme_id && THEME_ID_TO_NAME[data.default_theme_id]) {
+          setThemeId(THEME_ID_TO_NAME[data.default_theme_id])
         }
         setBranding((prev) => ({
           ...prev,

@@ -10,6 +10,48 @@ Provides stats at three levels:
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
+from ..theme_registry import (
+    RETIRED_NUMBER_MAP as _RETIRED_NUMBER_MAP,
+    THEME_NUMBER_MAP as _THEME_NUMBER_MAP,
+)
+
+
+# ─── Theme count columns ──────────────────────────────────────────────────────
+#
+# `property_reports.theme` holds the id a report was GENERATED with, so these
+# counts span live and retired themes alike. The theme cut retired 1 (classic)
+# and 4 (teal), and 41 of 44 accounts had been defaulting to 4 — so most of the
+# history in this chart is a retired theme, and dropping those two series would
+# produce a dashboard saying those reports never happened.
+#
+# Built from the registry rather than written out. Five hand-written copies of
+# the id/name pairing existed and two were wrong on every id (D-163); this file
+# held a sixth, in SQL, three times over. The `theme_<name>` aliases match the
+# column names in `db/migrations/0037_property_report_stats.sql`.
+_ALL_THEMES = dict(sorted({**_THEME_NUMBER_MAP, **_RETIRED_NUMBER_MAP}.items()))
+
+#: `COUNT(*) FILTER (...) AS theme_<name>` for every theme ever selectable,
+#: interpolated into the three aggregate queries below. The ids come from the
+#: registry and are integers, and the names are `[a-z]+` from the same file, so
+#: there is nothing here any caller can reach.
+_THEME_COUNT_COLUMNS = ",\n".join(
+    f"COUNT(*) FILTER (WHERE theme = {int(tid)}) AS theme_{name}"
+    for tid, name in _ALL_THEMES.items()
+)
+assert all(name.isalpha() for name in _ALL_THEMES.values()), (
+    "a theme name is not plain alphabetic; it is interpolated into SQL as an "
+    "identifier and must stay that way"
+)
+
+
+def _theme_counts(row: dict) -> dict:
+    """{theme name: count} for every theme, 0 where the row has no column.
+
+    Takes `{}` for the empty-dashboard shape, so the populated and empty
+    returns cannot drift apart — which is what the four hand-written copies of
+    this dict did.
+    """
+    return {name: (row or {}).get(f"theme_{name}", 0) for name in _ALL_THEMES.values()}
 
 
 def get_agent_stats(account_id: str, from_date: Optional[datetime] = None, to_date: Optional[datetime] = None) -> Dict[str, Any]:
@@ -46,11 +88,7 @@ def get_agent_stats(account_id: str, from_date: Optional[datetime] = None, to_da
                 COUNT(*) FILTER (WHERE status = 'processing') AS processing,
                 COUNT(*) FILTER (WHERE report_type = 'seller') AS seller_reports,
                 COUNT(*) FILTER (WHERE report_type = 'buyer') AS buyer_reports,
-                COUNT(*) FILTER (WHERE theme = 1) AS theme_classic,
-                COUNT(*) FILTER (WHERE theme = 2) AS theme_modern,
-                COUNT(*) FILTER (WHERE theme = 3) AS theme_elegant,
-                COUNT(*) FILTER (WHERE theme = 4) AS theme_teal,
-                COUNT(*) FILTER (WHERE theme = 5) AS theme_bold,
+                """ + _THEME_COUNT_COLUMNS + """,
                 COALESCE(SUM(view_count), 0) AS total_views,
                 COALESCE(SUM(unique_visitors), 0) AS unique_visitors,
                 COUNT(*) FILTER (WHERE is_active = TRUE AND (expires_at IS NULL OR expires_at > NOW())) AS active_landing_pages
@@ -145,11 +183,7 @@ def get_agent_stats(account_id: str, from_date: Optional[datetime] = None, to_da
                 "buyer": period_stats.get("buyer_reports", 0)
             },
             "themes": {
-                "classic": period_stats.get("theme_classic", 0),
-                "modern": period_stats.get("theme_modern", 0),
-                "elegant": period_stats.get("theme_elegant", 0),
-                "teal": period_stats.get("theme_teal", 0),
-                "bold": period_stats.get("theme_bold", 0)
+                **_theme_counts(period_stats),
             },
             "engagement": {
                 "total_views": period_stats.get("total_views", 0),
@@ -221,13 +255,7 @@ def get_affiliate_stats(affiliate_account_id: str, from_date: Optional[datetime]
                 "period": {"from": from_date.isoformat(), "to": to_date.isoformat()},
                 "summary": {"total_agents": 0, "active_agents": 0, "inactive_agents": 0},
                 "aggregate": {},
-                "themes": {
-                    "classic": 0,
-                    "modern": 0,
-                    "elegant": 0,
-                    "teal": 0,
-                    "bold": 0,
-                },
+                "themes": _theme_counts({}),
                 "leaderboard": [],
                 "agents": [],
                 "inactive_agents": []
@@ -241,11 +269,7 @@ def get_affiliate_stats(affiliate_account_id: str, from_date: Optional[datetime]
                 COUNT(*) FILTER (WHERE status = 'failed') AS failed,
                 COALESCE(SUM(view_count), 0) AS total_views,
                 COALESCE(SUM(unique_visitors), 0) AS unique_visitors,
-                COUNT(*) FILTER (WHERE theme = 1) AS theme_classic,
-                COUNT(*) FILTER (WHERE theme = 2) AS theme_modern,
-                COUNT(*) FILTER (WHERE theme = 3) AS theme_elegant,
-                COUNT(*) FILTER (WHERE theme = 4) AS theme_teal,
-                COUNT(*) FILTER (WHERE theme = 5) AS theme_bold,
+                """ + _THEME_COUNT_COLUMNS + """,
                 COUNT(DISTINCT account_id) AS agents_with_reports
             FROM property_reports
             WHERE account_id = ANY(%s) AND created_at >= %s AND created_at < %s
@@ -353,11 +377,7 @@ def get_affiliate_stats(affiliate_account_id: str, from_date: Optional[datetime]
                 "conversion_rate": conversion_rate
             },
             "themes": {
-                "classic": aggregate.get("theme_classic", 0),
-                "modern": aggregate.get("theme_modern", 0),
-                "elegant": aggregate.get("theme_elegant", 0),
-                "teal": aggregate.get("theme_teal", 0),
-                "bold": aggregate.get("theme_bold", 0)
+                **_theme_counts(aggregate),
             },
             "leaderboard": leaderboard,
             "inactive_agents": inactive_agents
@@ -399,11 +419,7 @@ def get_platform_stats(from_date: Optional[datetime] = None, to_date: Optional[d
                 COALESCE(SUM(unique_visitors), 0) AS unique_visitors,
                 COUNT(*) FILTER (WHERE is_active = TRUE) AS active_landing_pages,
                 COUNT(DISTINCT account_id) AS accounts_with_reports,
-                COUNT(*) FILTER (WHERE theme = 1) AS theme_classic,
-                COUNT(*) FILTER (WHERE theme = 2) AS theme_modern,
-                COUNT(*) FILTER (WHERE theme = 3) AS theme_elegant,
-                COUNT(*) FILTER (WHERE theme = 4) AS theme_teal,
-                COUNT(*) FILTER (WHERE theme = 5) AS theme_bold
+                """ + _THEME_COUNT_COLUMNS + """
             FROM property_reports
             WHERE created_at >= %s AND created_at < %s
         """, (from_date, to_date))
@@ -561,11 +577,7 @@ def get_platform_stats(from_date: Optional[datetime] = None, to_date: Optional[d
                 "affiliate": by_account_type.get("affiliate", 0)
             },
             "themes": {
-                "classic": period_stats.get("theme_classic", 0),
-                "modern": period_stats.get("theme_modern", 0),
-                "elegant": period_stats.get("theme_elegant", 0),
-                "teal": period_stats.get("theme_teal", 0),
-                "bold": period_stats.get("theme_bold", 0)
+                **_theme_counts(period_stats),
             },
             "top_affiliates": top_affiliates,
             "top_agents": top_agents,

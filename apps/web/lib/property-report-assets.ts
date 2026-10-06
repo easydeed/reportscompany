@@ -5,6 +5,8 @@
  * Used by ThemeSelector to show real page previews instead of placeholders.
  */
 
+import { DEFAULT_THEME_ID, themeName } from "@/lib/themes.generated";
+
 // Base URL for R2-hosted assets
 // Update this to your actual R2 public URL or custom domain
 export const R2_BASE_URL = process.env.NEXT_PUBLIC_ASSETS_URL || "https://assets.trendyreports.com";
@@ -53,31 +55,15 @@ const UNIFIED_PAGES: PageConfig[] = [
   { id: "range", name: "Range of Sales", description: "Price range visualization", previewNumber: 7 },
 ];
 
-// All themes now reference the unified pages
-const THEME_1_PAGES: PageConfig[] = UNIFIED_PAGES;  // Classic
-const THEME_2_PAGES: PageConfig[] = UNIFIED_PAGES;  // Modern
-const THEME_3_PAGES: PageConfig[] = UNIFIED_PAGES;  // Elegant
-const THEME_4_PAGES: PageConfig[] = UNIFIED_PAGES;  // Teal
-const THEME_5_PAGES: PageConfig[] = UNIFIED_PAGES;  // Bold
+// Five aliases for UNIFIED_PAGES existed here, one per theme, all five
+// identical and four of them unreferenced. Removed with the theme cut; the
+// entries below point at UNIFIED_PAGES directly.
 
 // ============================================
 // THEME DEFINITIONS
 // ============================================
 
 export const THEMES: ThemeConfig[] = [
-  {
-    id: 1,
-    key: "classic",
-    name: "Classic",
-    description: "Traditional & trustworthy",
-    defaultColor: "#1B365D",
-    secondaryColor: "#4A90A4",
-    pageCount: 7,
-    previewBg: "bg-gradient-to-br from-slate-800 to-sky-900",
-    fontStyle: "font-serif",
-    targetAudience: "Traditional market",
-    pages: UNIFIED_PAGES,
-  },
   {
     id: 2,
     key: "modern",
@@ -105,19 +91,6 @@ export const THEMES: ThemeConfig[] = [
     pages: UNIFIED_PAGES,
   },
   {
-    id: 4,
-    key: "teal",
-    name: "Teal",
-    description: "Clean & professional",
-    defaultColor: "#34d1c3",
-    secondaryColor: "#18235c",
-    pageCount: 7,
-    previewBg: "bg-gradient-to-br from-teal-400 to-indigo-900",
-    fontStyle: "font-sans",
-    targetAudience: "General market",
-    pages: THEME_4_PAGES,
-  },
-  {
     id: 5,
     key: "bold",
     name: "Bold",
@@ -128,7 +101,7 @@ export const THEMES: ThemeConfig[] = [
     previewBg: "bg-gradient-to-br from-indigo-900 to-amber-700",
     fontStyle: "font-sans",
     targetAudience: "Luxury/confident",
-    pages: THEME_5_PAGES,
+    pages: UNIFIED_PAGES,
   },
 ];
 
@@ -166,21 +139,24 @@ export function getTheme(themeIdOrKey: number | string): ThemeConfig | undefined
  * Get theme key by ID
  */
 export function getThemeKey(themeId: number): string {
-  return getTheme(themeId)?.key || "teal";
+  // Fell back to the literal "teal", a name the renderer no longer has a
+  // template for — a retired id would have produced a request the worker
+  // could only default, with nothing saying so.
+  return getTheme(themeId)?.key || themeName(DEFAULT_THEME_ID);
 }
 
 /**
  * Get theme ID by key
  */
 export function getThemeId(themeKey: string): number {
-  return getTheme(themeKey)?.id || 4;
+  return getTheme(themeKey)?.id || DEFAULT_THEME_ID;
 }
 
 /**
  * Get pages for a specific theme
  */
 export function getThemePages(themeId: number): PageConfig[] {
-  return getTheme(themeId)?.pages || THEMES[0].pages;
+  return getTheme(themeId)?.pages || UNIFIED_PAGES;
 }
 
 /**
@@ -192,6 +168,18 @@ export function getPageConfig(themeId: number, pageId: string): PageConfig | und
 
 /**
  * Check if theme is compact (fewer pages)
+ *
+ * D-165. This is an ORDERING ASSUMPTION ON IDS standing in for a per-theme
+ * fact, and the fact no longer has a producer: `PropertyReportBuilder` uses
+ * one `page_set` for every theme, so no theme renders fewer pages than
+ * another. `pageCount` says 7 in this file and 9 in
+ * `components/property-wizard/types.ts`; both are guesses.
+ *
+ * Left behaving as it did, because changing what the picker shows was not
+ * part of the theme cut and the Design rewire replaces this metadata. It is
+ * still an ordering assumption: the cut left ids 2, 3 and 5, so `>= 4` means
+ * bold alone — which happens to match the old table, and would not have if
+ * the surviving ids had been different.
  */
 export function isCompactTheme(themeId: number): boolean {
   return themeId >= 4;

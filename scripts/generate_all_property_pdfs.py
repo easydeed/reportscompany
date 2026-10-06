@@ -31,19 +31,18 @@ import os
 # ============================================================================
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "apps/worker/src/worker/templates"
+sys.path.insert(0, str(Path(__file__).parent.parent / "apps/worker/src"))
 OUTPUT_DIR = Path(__file__).parent.parent / "output" / "property_reports_v2"
 
 # Check both env var names (production uses PDFSHIFT_API_KEY, template shows PDF_API_KEY)
 PDFSHIFT_API_KEY = os.getenv("PDFSHIFT_API_KEY") or os.getenv("PDF_API_KEY", "")
 PDFSHIFT_API_URL = "https://api.pdfshift.io/v3/convert/pdf"
 
-THEME_TEMPLATES = {
-    "teal": "property/teal/teal_report.jinja2",
-    "bold": "property/bold/bold_report.jinja2",
-    "classic": "property/classic/classic_report.jinja2",
-    "modern": "property/modern/modern_report.jinja2",
-    "elegant": "property/elegant/elegant_report.jinja2",
-}
+# A copy of the renderer's map with `property/` prefixed. Derived now, so a
+# theme cut does not leave this script rendering a deleted file.
+from worker.theme_registry import THEME_TEMPLATES as _LIVE  # noqa: E402
+
+THEME_TEMPLATES = {name: f"property/{path}" for name, path in _LIVE.items()}
 
 # ============================================================================
 # Custom Jinja2 Filters (must match production)

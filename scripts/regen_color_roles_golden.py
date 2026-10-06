@@ -3,7 +3,7 @@
 Regenerate apps/worker/tests/golden/color_roles.json.
 
 `compute_color_roles` feeds every property PDF and every market PDF. This file
-locks what each of the five property themes and the six picker presets actually
+locks what each of the three live property themes and the six picker presets
 render — **and the contrast each role achieves**, which is the part D-099 was
 about: the old helpers claimed AA in their docstrings, enforced 3.0 in their
 code, and nothing wrote the achieved number down anywhere.
@@ -23,12 +23,11 @@ from worker.themes import contrast  # noqa: E402
 
 WHITE = "#ffffff"
 
-#: The five property themes, each with the dark surface its own templates use
+#: The live property themes, each with the dark surface its own templates use
 #: (`PropertyReportBuilder._THEME_DARK_BG`) and the brand colour it defaults to.
+#: `teal` and `classic` left with the theme cut on 2026-10-05.
 PROPERTY_THEMES = (
-    ("teal", "#34D1C3", "#18235c"),
     ("modern", "#FF6B5B", "#1A1F36"),
-    ("classic", "#1B365D", "#1B365D"),
     ("bold", "#0F1629", "#15216E"),
     ("elegant", "#1A1A1A", "#1a1a1a"),
 )

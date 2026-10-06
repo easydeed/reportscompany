@@ -25,6 +25,7 @@ from datetime import date
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from worker import theme_registry as _registry
 from worker.template_filters import (
     format_currency as _fmt_currency,
     format_currency_short as _fmt_currency_short,
@@ -706,22 +707,15 @@ def paginate(page_set):
     return page_numbers, contents_keys
 
 
-THEME_TEMPLATES = {
-    "teal": "teal/teal_report.jinja2",
-    "bold": "bold/bold_report.jinja2",
-    "classic": "classic/classic_report.jinja2",
-    "modern": "modern/modern_report.jinja2",
-    "elegant": "elegant/elegant_report.jinja2",
-}
-
-# Theme number to name mapping (for backward compatibility)
-THEME_NUMBER_MAP = {
-    1: "classic",
-    2: "modern",
-    3: "elegant",
-    4: "teal",
-    5: "bold",
-}
+# Both re-exported from `theme_registry`, which reads `themes.json`. They were
+# literals here until the cut to three themes; the pairing is stated once now
+# because five copies of it existed and two disagreed on every id (D-163).
+# Kept as module-level names because twelve test files and six scripts import
+# them from here.
+THEME_TEMPLATES = _registry.THEME_TEMPLATES
+THEME_NUMBER_MAP = _registry.THEME_NUMBER_MAP
+DEFAULT_THEME_ID = _registry.DEFAULT_THEME_ID
+DEFAULT_THEME_NAME = _registry.DEFAULT_THEME_NAME
 
 # Configuration from environment
 ASSETS_BASE_URL = os.getenv("ASSETS_BASE_URL", "https://assets.trendyreports.com")
@@ -811,18 +805,13 @@ class PropertyReportBuilder:
         self.accent_color = report_data.get("accent_color")
         self.language = report_data.get("language", "en")
         
-        # Resolve theme: accept either theme name (str) or theme number (int)
-        theme_input = report_data.get("theme", 4)  # Default to teal
-        if isinstance(theme_input, str) and theme_input in THEME_TEMPLATES:
-            self.theme_name = theme_input
-            self.theme_number = {v: k for k, v in THEME_NUMBER_MAP.items()}.get(theme_input, 4)
-        elif isinstance(theme_input, int) and theme_input in THEME_NUMBER_MAP:
-            self.theme_name = THEME_NUMBER_MAP[theme_input]
-            self.theme_number = theme_input
-        else:
-            # Default to teal
-            self.theme_name = "teal"
-            self.theme_number = 4
+        # Resolve theme: a name, an id, or the stringified id that
+        # `report_generations.theme_id` (VARCHAR) hands back. The three-arm
+        # if/elif this replaces did not accept the string form, so `"5"` fell
+        # through to the default while looking like a choice (D-164).
+        self.theme_name, self.theme_number = _registry.resolve(
+            report_data.get("theme", DEFAULT_THEME_ID)
+        )
         
         # Legacy compatibility: keep self.theme as the number
         self.theme = self.theme_number
@@ -1826,20 +1815,29 @@ class PropertyReportBuilder:
     
     # Per-theme default accent colours (must match the CSS defaults inside
     # each standalone *_report.jinja2 template).
+    #: One entry per live theme. `teal` (#34d1c3) and `classic` (#1B365D)
+    #: left with the cut. Teal's is still the platform default accent in
+    #: `consumer_report_data.DEFAULT_THEME_ACCENT`, where it is a colour
+    #: rather than a theme — a lead page with no brand colour needs one, and
+    #: changing what strangers see was not part of the theme cut.
     _THEME_DEFAULT_COLORS = {
-        "teal":    "#34d1c3",
         "modern":  "#FF6B5B",
-        "classic": "#1B365D",
         "bold":    "#15216E",
         "elegant": "#1a1a1a",
     }
 
     # Per-theme dark background colour — used by compute_color_roles() to
     # guarantee the "on_dark" variant has enough contrast.
+    #: The dark surface each theme's own templates paint. One entry per live
+    #: theme; `teal` (#18235c) and `classic` (#1B365D) left with the cut.
+    #:
+    #: The `.get(..., "#18235c")` fallback below still names teal's navy. It
+    #: is kept on purpose: `theme_registry.resolve` guarantees `theme_name` is
+    #: a live theme, so the fallback is unreachable, and the colour is the
+    #: platform default dark that the market reports and the six picker
+    #: presets are all measured against — not a theme's private value.
     _THEME_DARK_BG = {
-        "teal":    "#18235c",  # --navy
         "modern":  "#1A1F36",  # --midnight
-        "classic": "#1B365D",  # --navy
         "bold":    "#15216E",  # --navy
         "elegant": "#1a1a1a",  # --charcoal
     }
@@ -2090,7 +2088,7 @@ class PropertyReportBuilder:
         )
 
         try:
-            template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES["teal"])
+            template_path = THEME_TEMPLATES.get(self.theme_name, THEME_TEMPLATES[DEFAULT_THEME_NAME])
             full_template_path = TEMPLATES_DIR / template_path
             logger.warning("[DIAGNOSTIC] Using template: %s, exists: %s", full_template_path, full_template_path.exists())
 

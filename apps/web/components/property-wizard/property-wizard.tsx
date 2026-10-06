@@ -20,6 +20,7 @@ import { StepProperty } from "./step-property";
 import { StepComparables } from "./step-comparables";
 import { StepTheme } from "./step-theme";
 import { StepGenerate } from "./step-generate";
+import { DEFAULT_THEME_ID, THEME_ID_TO_NAME } from "@/lib/themes.generated";
 import type { PropertyData, Comparable } from "./types";
 import { THEMES, COMPACT_PAGES, FULL_PAGES } from "./types";
 
@@ -73,9 +74,12 @@ export function PropertyWizard() {
         const res = await fetch("/api/proxy/v1/account", { cache: "no-store" });
         if (!res.ok) return;
         const data = await res.json();
-        let themeId = 4;
+        // Was `themeId = 4` with a 1..5 range check, which accepted the two
+        // ids the cut retired and would have asked the renderer for a
+        // template that no longer exists.
+        let themeId: number = DEFAULT_THEME_ID;
         let accent = "#34d1c3";
-        if (data.default_theme_id && data.default_theme_id >= 1 && data.default_theme_id <= 5) {
+        if (data.default_theme_id && THEME_ID_TO_NAME[data.default_theme_id]) {
           themeId = data.default_theme_id;
           const theme = THEMES.find((t) => t.id === themeId);
           if (theme) accent = theme.accentDefault;
@@ -99,7 +103,8 @@ export function PropertyWizard() {
   const [currentStage, setCurrentStage] = useState(0);
 
   const selectedTheme = useMemo(
-    () => THEMES.find((t) => t.id === selectedThemeId) || THEMES[3],
+    () => THEMES.find((t) => t.id === selectedThemeId) ||
+          THEMES.find((t) => t.id === DEFAULT_THEME_ID)!,
     [selectedThemeId]
   );
 
@@ -121,7 +126,7 @@ export function PropertyWizard() {
         case 1:
           return selectedCompIds.length >= 4 && selectedCompIds.length <= 8;
         case 2:
-          return selectedThemeId >= 1 && selectedThemeId <= 5;
+          return !!THEME_ID_TO_NAME[selectedThemeId];
         case 3:
           return true;
         default:

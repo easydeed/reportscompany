@@ -112,11 +112,21 @@ def measured():
     return pixel.score(pixel.measure(out))
 
 
+#: Text runs a working measurement finds in ONE theme's document, floored.
+#: Measured 2026-10-05 after the theme cut: 192 runs a theme, 576 over three.
+#: Expressed per theme rather than as a total, because the total form said
+#: "> 900 ... across five themes" and the theme cut turned a correct
+#: measurement into a failure — a guard that has to be re-derived every time
+#: the corpus changes size is a guard that gets lowered to whatever just ran.
+MIN_RUNS_PER_THEME = 150
+
+
 def test_the_measurement_looked_at_something(measured):
     """Zero findings and zero runs look identical from outside."""
-    assert len(measured) > 900, (
-        f"only {len(measured)} text runs measured across five themes — the "
-        f"measurement is broken, not the documents clean"
+    floor = MIN_RUNS_PER_THEME * len(THEMES)
+    assert len(measured) > floor, (
+        f"only {len(measured)} text runs measured across {len(THEMES)} themes "
+        f"(floor {floor}) — the measurement is broken, not the documents clean"
     )
     assert len({r["doc"] for r in measured}) == len(THEMES)
 

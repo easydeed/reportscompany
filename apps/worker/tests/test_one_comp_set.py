@@ -123,19 +123,30 @@ def test_every_count_in_the_document_is_the_same_count(theme, n):
         )
 
 
+@pytest.mark.parametrize("theme", THEMES)
 @pytest.mark.parametrize("n", SIZES)
-def test_the_total_comps_badge_is_that_same_number(n):
-    """Teal is the only theme that prints it, so this is not parametrised over
-    themes — but it is the same `stats.total_comps` all five compute.
+def test_the_total_comps_badge_is_that_same_number(theme, n):
+    """Every theme prints it, on the range page.
+
+    THIS USED TO RUN ON TEAL ALONE, and the docstring said teal was the only
+    theme that printed the badge. That was never true — it was the only theme
+    whose label carried `class="lbl"`. The selector was theme-specific; the
+    badge is not. When the cut deleted teal the test failed with "found []",
+    which read as "the badge is gone from the product" and is really "the
+    selector described one theme's markup". §0.6, substring is not a
+    construct, in its locator form.
 
     The badge is `'%02d' | format`, so the string is zero-padded; the number
-    is what is asserted, not the padding.
+    is what is asserted, not the padding. One match per theme is asserted so
+    a future markup change cannot pass this by matching nothing.
     """
-    html = agent_html("teal", n)
-    badge = re.findall(r'>(\d+)</div><div class="lbl">Total Comps', html)
-    assert len(badge) == 1, f"expected one Total Comps badge, found {badge}"
+    html = agent_html(theme, n)
+    badge = re.findall(
+        r'>(\d+)</div><div class="range-stat-label">Total Comps', html
+    )
+    assert len(badge) == 1, f"{theme}: expected one Total Comps badge, found {badge}"
     assert int(badge[0]) == n, (
-        f"Total Comps reads {badge[0]} with {n} comps in the set"
+        f"{theme}: Total Comps reads {badge[0]} with {n} comps in the set"
     )
 
 

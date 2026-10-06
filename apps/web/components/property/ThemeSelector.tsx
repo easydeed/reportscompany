@@ -15,6 +15,21 @@ import {
   type ThemeConfig,
   type PageConfig,
 } from "@/lib/property-report-assets";
+import { DEFAULT_THEME_ID, THEME_REGISTRY, RETIRED_THEME_IDS } from "@/lib/themes.generated";
+
+/** "Modern or Elegant" / "Modern, Elegant, or Bold" — the live themes
+ *  that are not compact, read off the registry rather than typed out.
+ *  `isCompactTheme` is an id-range guess over metadata that no longer
+ *  has a producer (every theme renders the same seven pages); see
+ *  D-165. This at least stops the sentence naming a retired theme. */
+const FULL_REPORT_THEME_LABELS = (() => {
+  const labels = THEME_REGISTRY.filter(
+    (t) => !RETIRED_THEME_IDS.includes(t.id) && !isCompactTheme(t.id),
+  ).map((t) => t.label);
+  if (labels.length <= 1) return labels[0] ?? "another theme";
+  if (labels.length === 2) return `${labels[0]} or ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, or ${labels[labels.length - 1]}`;
+})();
 
 interface ThemeSelectorProps {
   selectedTheme: number;
@@ -49,7 +64,9 @@ export function ThemeSelector({
   const [livePreviewLoading, setLivePreviewLoading] = useState(false);
   const [livePreviewExpanded, setLivePreviewExpanded] = useState(false);
 
-  const currentTheme = getTheme(selectedTheme) || THEMES[0];
+  // `|| THEMES[0]` meant classic by position; classic is retired and
+  // index 0 is now whichever theme sorts first.
+  const currentTheme = getTheme(selectedTheme) || getTheme(DEFAULT_THEME_ID)!;
   const availablePages = getThemePages(selectedTheme);
   
   // Fetch live preview HTML
@@ -361,7 +378,10 @@ export function ThemeSelector({
         {isCompactTheme(selectedTheme) && (
           <p className="text-sm text-amber-600 dark:text-amber-400 mt-4 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
             ℹ️ {currentTheme.name} theme uses a compact {currentTheme.pageCount}-page format.
-            Switch to Classic, Modern, or Elegant for a full report.
+            {/* Named Classic and Teal until the theme cut retired both.
+                Built from the registry so the next cut cannot leave a
+                retired theme's name in the copy. */}
+            Switch to {FULL_REPORT_THEME_LABELS} for a full report.
           </p>
         )}
       </div>

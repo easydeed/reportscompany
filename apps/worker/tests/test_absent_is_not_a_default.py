@@ -64,13 +64,15 @@ PROPERTY_HOLDERS = ("sitex_data", "comp", "property", "stats", "area", "piq")
 #: Property-field defaults that are asserted anyway, each with its reason.
 ALLOWED = {
     "Single Family":
-        "property_type's fallback in four themes; teal spells it in full. "
-        "See the entry below.",
-    "Single Family Residential":
-        "property_type's template fallback. It IS produced by both paths "
-        "(D-135), so the default is unreachable — recorded rather than "
-        "removed, because removing an unreachable default is churn and "
-        "leaving it undocumented is how the next reader assumes it fires.",
+        "property_type's template fallback, in all three themes. It IS "
+        "produced by both paths (D-135), so the default is unreachable — "
+        "recorded rather than removed, because removing an unreachable "
+        "default is churn and leaving it undocumented is how the next reader "
+        "assumes it fires.",
+    # "Single Family Residential" WAS EXCUSED HERE as "teal spells it in
+    # full". The theme cut deleted teal, so the only template writing the
+    # long form is gone and this test said so on the first run after the
+    # deletion — the same half of a baseline that usually rots quietly.
     "Active":
         "comp status. Written by the API's projection AND the wizard's "
         "payload, so this is a genuine last resort rather than the only "

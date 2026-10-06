@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 53 | Real, unfixed |
-| `fixed` | 105 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 54 | Real, unfixed |
+| `fixed` | 106 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **163** | D-001 … D-163, contiguous, no duplicates |
+| **Total** | **165** | D-001 … D-165, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 15 · FRAGILE 13 · ROUGH 21. (Sums to 53, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 14 · FRAGILE 13 · ROUGH 23. (Sums to 54, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -9949,7 +9949,7 @@ report surface is held pending the theme and mapping answers.
 **Severity:** WRONG · **Affects:** every report created through `/app/reports/new`,
 `/app/schedules/new`, `/app/schedules/[id]/edit` and onboarding — which is the primary way
 reports are made · **Found during:** verifying the id→name mapping before the theme-cut decision
-**Status:** `open`
+**Status:** `fixed` — 2026-10-05, as part of the theme cut, as this entry required
 
 There is **no themes table.** The id→name mapping exists only in code, in at least four places,
 and they do not agree.
@@ -10010,6 +10010,135 @@ what a constant with no owner looks like.
 **Not fixed here:** the theme set is about to change, and correcting a map of five themes that
 is about to become three is work done twice. It must be fixed **as part of** the theme cut, and
 the cut must not be planned against the stored ids alone.
+
+### FIXED — 2026-10-05, in the theme cut
+
+**There were eighteen statements of the pairing, not four.** The count in this entry was made by
+grepping for the constants whose names I already knew. The structural gate written as part of the
+fix found two more by construction: `scripts/qa_generate_all_reports.py:71`
+(`DEFAULT_THEME_ID = 1  # 1 = teal`, wrong about the mapping as well — 1 was classic), and
+`scripts/gen_market_reports.py:85` — whose slugs run **`1: teal, 2: bold, 3: classic, 4: elegant,
+5: modern`**. That is, *exactly*, the wrong map the two web copies carried.
+
+**So the wrong map has a provenance.** It is a market-report QA script's arbitrary colour-preset
+numbering, lifted into the product as if it were the renderer's. Market reports have no per-theme
+template at all (D-164), so those five numbers never meant anything; they were five colour pairs
+with theme names attached. The presets are now named after their colours and the script says why.
+
+**The fix is one canonical file and two generated ones.**
+
+| | |
+|---|---|
+| `apps/worker/src/worker/themes.json` | canonical; live set, retired set, default. Read at runtime by the worker |
+| `apps/worker/src/worker/theme_registry.py` | loads it; exports `THEME_TEMPLATES`, `THEME_NUMBER_MAP`, `THEME_LABELS`, `resolve()` |
+| `apps/api/src/api/theme_registry.py` | **generated** |
+| `apps/web/lib/themes.generated.ts` | **generated** |
+| `scripts/gen_theme_registries.py` | generates both; `--check` fails if either is stale |
+
+Three statements, two of them machine-checked, replacing eighteen hand-written ones. It is not one
+statement because a FastAPI process and a browser bundle cannot read a Python package's data file —
+the one place the API does reach into the worker (`branding_tools._load_market_report_builder`)
+caches the ImportError and carries on without it, which is exactly the fallback a theme default must
+not have.
+
+**The gate is `tests/test_theme_registry_is_single_sourced.py`.** It fails any file stating two or
+more id/name pairs, any web picker whose id set differs from the renderer's, any retired theme name
+in a live code path, any integer theme fallback naming an id the registry does not have, and the two
+generated files going stale. Thirteen regressions were applied and every one fired, including this
+defect itself — flipping `themes.generated.ts` back to the wrong map.
+
+**`resolve()` also fixes a second arm.** The three-branch `isinstance` it replaces did not accept
+the *string* form of an id, and `report_generations.theme_id` is VARCHAR — `routes/reports.py`
+writes `str(default_theme_id)` into it. `"5"` fell through both arms and silently defaulted while
+looking like a choice. See D-164.
+
+---
+
+### D-164 — the market path resolves, logs and passes a theme id that nothing reads
+
+**Severity:** ROUGH · **Affects:** every market report — the value is inert, so nothing a customer
+sees · **Found during:** tracing `report_generations.theme_id` for the theme-rename scope
+**Status:** `open`
+
+`tasks.py` reads `report_generations.theme_id`, resolves a default for it, logs it, and hands it to
+the builder:
+
+```python
+effective_theme_id = theme_id or 1              # :1696, before the cut
+...
+builder_data["theme_id"] = effective_theme_id   # :1747
+```
+
+**`MarketReportBuilder` never reads it.** Neither does any market template:
+
+```
+$ grep -rn "theme_id" apps/worker/src/worker/market_builder.py       apps/worker/src/worker/templates/market/
+(nothing)
+```
+
+Market reports are coloured by `accent_color` and the brand, not by a theme — there is one
+`market.jinja2`, no per-theme tree. The fifth member of the read-with-no-producer /
+write-with-no-consumer family (D-009, D-113, D-133, D-135, `comp_confidence_grade`), and the first
+on the market side.
+
+**Three costs, all paid.**
+
+1. **The comment above it was wrong twice.** *"Reports created without an explicit theme_id default
+   to theme 1 (teal)"* — 1 was classic, not teal, and the builder reads no theme at all. A comment
+   nobody could check against behaviour, because the behaviour is nothing.
+2. **It is one of the four disagreeing fallbacks.** `theme_id or 1` here, `COALESCE(default_theme_id,
+   1)` in `schedules_tick`, `default_theme_id = 4` later in the same file, and `DEFAULT 4` on the
+   column itself. Four answers to one question, and the one that reached the market path was the one
+   nobody could notice was wrong, because it changed nothing.
+3. **The column holds a mix of names and ids.** The market wizard POSTs `"bold"`; `routes/reports.py`
+   writes `"5"`. Both land in the same VARCHAR(20). Nothing reads either, so nothing failed.
+
+**What was done, and what was not.** The fallback now resolves through the registry, and the comment
+says what is true. **The write is left in place.** Removing it is the right outcome, but it is a
+column with rows in it and a log line operators read to tell a defaulted run from a chosen one, and
+deleting a write while something still logs the value is how a read-with-no-producer becomes a
+read-of-stale-data. It wants the market-wiring step, with the log line moved to the thing that is
+actually chosen (the accent colour).
+
+**It is also the one fact that keeps a theme rename off the migration list** — see
+`docs/THEME_RENAME_SCOPE.md` §3. If `theme_id` ever gains a consumer, that scoping changes from
+"nothing" to "a data migration", which is why the scope document's gate asserts this entry is
+still cited.
+
+---
+
+### D-165 — `isCompactTheme` is an ordering assumption on theme ids, over a fact with no producer
+
+**Severity:** ROUGH · **Affects:** the property wizard's theme step — one advisory sentence and a
+page list · **Found during:** the theme cut, auditing every id-range test
+**Status:** `open`
+
+```ts
+// apps/web/lib/property-report-assets.ts
+export function isCompactTheme(themeId: number): boolean {
+  return themeId >= 4;
+}
+```
+
+**Two problems, and the second is the real one.**
+
+`>= 4` is an ordering assumption on ids. Before the cut it meant teal and bold; after it means bold
+alone, which happens to match the old table — and would not have if the surviving ids had been
+different. The cut left 2, 3 and 5 for history's sake, so `>= 4` is now one accident away from
+being wrong in a way no test would see.
+
+**But the fact it is standing in for no longer has a producer.** `PropertyReportBuilder` uses one
+`page_set` for every theme; no theme renders fewer pages than another. The two `pageCount` values in
+the web app disagree — **7** in `property-report-assets.ts`, **9** in
+`components/property-wizard/types.ts` — and both are guesses. `isCompactTheme` is a read with no
+producer, which the renderer silently stopped supplying when the page set was unified.
+
+The user-visible consequence is one sentence, which until the cut read *"Switch to Classic, Modern,
+or Elegant for a full report"* — naming two themes that no longer exist. That half is fixed: the
+sentence is built from the registry's labels, so a future cut cannot leave a retired name in the
+copy. **The function's behaviour is unchanged on purpose.** Deciding whether a compact theme exists
+is a product question about what the three rewired themes do, and Design's packages replace this
+metadata; inventing a `compact` flag now would be asserting a fact to keep a function company.
 
 ---
 
