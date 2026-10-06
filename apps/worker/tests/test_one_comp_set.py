@@ -322,7 +322,8 @@ LIVE_TEMPLATES = {p for t in THEME_TEMPLATES for p in chain(t)}
 #: The one directory a live template may reach into.
 SHARED_DIR = "_v2"
 
-#: The directory it may not. `_base/` is D-131's dead tree — 5,570 lines that
+#: The directory it may not. `templates/property/_base/` is D-131's dead tree —
+#: 5,570 lines that
 #: render nowhere and that three separate pieces of work read as if they did.
 DEAD_DIR = "_base"
 
@@ -337,7 +338,9 @@ def test_a_live_template_reaches_only_the_shared_architecture():
 
     It used to forbid `extends`, `import`, `include` and `from` outright. That
     was never the property — it was a proxy for it. `templates/property/`
-    holds TWO template trees and the one under `_base/` renders nowhere, so
+    holds TWO template trees and the one under `property/_base/` renders nowhere
+    (NOT `market/_base/`, which is the base of every market report — the two
+    builders resolve the same name against different directories), so
     what matters is which tree a live file reaches. Design's package
     introduces a THIRD thing, `_v2/report.jinja2`, which is neither: it is the
     document, shared by every theme on the new architecture, and it is

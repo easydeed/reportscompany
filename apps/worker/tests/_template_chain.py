@@ -24,7 +24,7 @@ later includes a partial of its own, this follows it without being edited.
 
 WHAT IT DELIBERATELY DOES NOT DO
 --------------------------------
-It does not resolve `_base/`. Nothing live includes it and
+It does not resolve `property/_base/`. Nothing live includes that one and
 `test_one_comp_set::test_the_live_template_set_reaches_only_the_shared_v2_file`
 is what keeps that true — this module would happily follow an include into
 the dead tree, so it is not the thing standing between a live template and
