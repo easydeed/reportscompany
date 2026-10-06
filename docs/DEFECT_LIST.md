@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 58 | Real, unfixed |
+| `open` | 59 | Real, unfixed |
 | `fixed` | 109 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **172** | D-001 … D-172, contiguous, no duplicates |
+| **Total** | **173** | D-001 … D-173, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 13 · ROUGH 24. (Sums to 58, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 13 · ROUGH 24. (Sums to 59, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -10561,6 +10561,82 @@ line.
 The seven literals now read `DEFAULT_THEME_NAME` or `SELF_CONTAINED_THEMES[0]`, whichever the test
 actually needs — which is itself the finding, because two of the seven needed a self-contained
 theme and had been getting bold.
+
+---
+
+### D-173 — the branding preview is built from a fixture that is missing what the builder reads, so it shows a shorter document than the customer's recipients get
+
+**Severity:** WRONG · **Affects:** `/v1/branding/sample` — every branding preview, on both of the
+two report types that draw a trend chart · **Found during:** a systematic comparison of
+`get_sample_data` against the builder, which had never been done
+**Status:** `open`
+
+`routes/branding_tools._render_sample_html` renders **the real `MarketReportBuilder`** against
+`services/sample_report_data.get_sample_data`. That is the right design — the preview is the
+production renderer, not a mock — and it means the fixture is load-bearing: a key the builder reads
+and the fixture does not supply is a section missing from the document a customer is judging their
+branding by.
+
+**`closed_history` is absent from all eight sample report types.** It is what
+`_build_monthly_trend` needs, and `TREND_SERIES` maps exactly two types to a chart. Measured by
+rendering each one twice:
+
+| report type | preview | with `closed_history` supplied | delta |
+|---|---|---|---|
+| `market_snapshot` | 47,574 chars | 50,327 | **+2,753** |
+| `inventory` | 48,371 chars | 51,104 | **+2,733** |
+
+So the preview for both is ~2,750 characters shorter than the report, and the missing 2,750 is the
+monthly trend chart. A customer approves their logo and colours against a document with no chart,
+and their recipients receive one with a chart nobody looked at.
+
+`price_bands_note` — the caveat under the price-bands chart — is missing on all eight types for the
+same reason. `closed_history_truncated` is absent too, which is harmless: absent reads as "not
+truncated", and a fixture is not truncated.
+
+**Three keys go the other way.** `filters_label`, `period_label` and `report_date` are returned by
+`get_sample_data` and appear in **neither the builder nor any market template**. The
+write-with-no-consumer family (D-009, D-113, D-133, D-135, D-164) in a fixture, which is its
+harmless end: they cost a reader working out whether a preview field is missing or was never wired.
+
+#### Why nobody had noticed
+
+Nothing compared them. The builder's contract with its input is implicit — fifteen keys read off
+`report_data`, no schema — and the production path (`tasks.py`) supplies `closed_history` while the
+preview path does not. **Both paths work.** One of them works on a different document, and the only
+way to see that is to diff the key sets or to render both and compare, neither of which anything
+did.
+
+This is the fixture-encodes-the-defect shape at one remove: not a fixture that encodes a bug, but a
+fixture that encodes an **older contract**, so every test built on the preview path is green about a
+document that is not the one being sent.
+
+#### What is gated now
+
+`scripts/derive_sample_vs_builder.py` walks the builder's AST for keys taken directly off
+`report_data` and compares them against what `get_sample_data` returns, per type.
+`tests/test_sample_data_matches_the_builder.py` ratchets both directions:
+
+* a **fourth** hole fails the build — the builder learning to read something the preview has no
+  producer for is a section silently lost
+* a **filled** hole fails the build until the list is tightened, because an allowance nobody
+  rechecks is how `ALLOWED` in `test_absent_is_not_a_default` went stale
+* a sample key **gaining** a consumer fails until the dead set shrinks
+
+Each of the three recorded holes carries what its absence costs, measured. A hole with a
+measurement is a decision; a hole without one is a section nobody knows is missing.
+
+**The scan counts a read only when `report_data` is the DIRECT receiver.** Its first version
+treated `(self.report_data.get("branding") or {}).get("agent_name")` as a top-level read and
+reported `agent_name` and `company_name` as missing — two false positives out of seven, in a script
+written to find a divergence.
+
+#### Not fixed here
+
+Supplying `closed_history` means generating twelve months of plausible closings in the fixture, and
+a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
+same question as the nineteen orphans. The hole is recorded with its measurement so the decision
+can be taken on the number.
 
 ---
 
