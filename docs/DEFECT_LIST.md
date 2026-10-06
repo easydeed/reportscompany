@@ -10594,10 +10594,11 @@ and their recipients receive one with a chart nobody looked at.
 same reason. `closed_history_truncated` is absent too, which is harmless: absent reads as "not
 truncated", and a fixture is not truncated.
 
-**Three keys go the other way.** `filters_label`, `period_label` and `report_date` are returned by
-`get_sample_data` and appear in **neither the builder nor any market template**. The
-write-with-no-consumer family (D-009, D-113, D-133, D-135, D-164) in a fixture, which is its
-harmless end: they cost a reader working out whether a preview field is missing or was never wired.
+**~~Three keys go the other way.~~ CORRECTED 2026-10-06 — ALL THREE ARE READ.** The original entry
+said `filters_label`, `period_label` and `report_date` "appear in **neither the builder nor any
+market template**" and filed them as write-with-no-consumer (D-009, D-113, D-133, D-135, D-164).
+That was wrong on all three, and the gate shipped asserting it. See *"The reverse half was wrong in
+two different ways"* below.
 
 #### Why nobody had noticed
 
@@ -10630,6 +10631,80 @@ measurement is a decision; a hole without one is a section nobody knows is missi
 treated `(self.report_data.get("branding") or {}).get("agent_name")` as a top-level read and
 reported `agent_name` and `company_name` as missing — two false positives out of seven, in a script
 written to find a divergence.
+
+#### The reverse half was wrong in two different ways, and the gate shipped asserting both
+
+Found the next day, scoping whether the fixture could be derived from the builder rather than
+maintained beside it. Neither error was found by a test; both were found by asking a different
+question of the same code.
+
+**1. The fix for those false positives bought a false negative.** Narrowing a read to a DIRECT
+receiver makes `market_builder.py:452` invisible: `_build_header_context` does
+`data = self.report_data` at line 435 and then reads `data.get("filters_label", "")` as **the
+masthead subtitle of every market report**. So `filters_label` is read, by the builder, on the
+primary surface — and the entry called it unconsumed while the test pinned it. The builder's read
+set is **16 keys, not 15**.
+
+The pair is the whole lesson: narrowing a scan to kill false positives moves the error to the other
+side of the ledger, and only measuring both directions catches it. Reads now follow local aliases
+of `report_data`, scoped per function, and
+`test_the_alias_rule_still_finds_the_aliased_read` fails by name if the rule is narrowed again —
+because every other test in that file passed while the scan was wrong.
+
+**2. A one-surface scan was published as a repo-wide verdict. This is D-131, nine days later.** The
+reverse half scanned `templates/market/**/*.jinja2` and named its output
+`supplied_read_by_nothing_at_all`. `period_label` and `report_date` are read **seven times** in
+`apps/web/lib/templates.ts` — the legacy print/social surface — and appear in seven
+`apps/web/templates/*.html` documents. That module's own docstring reads *"NOT DEAD CODE — do not
+delete… Two archived documents asserted this route had been removed. Both were wrong."*
+
+D-131 was the same mistake with the surfaces swapped, and it was cited three times as a reason to
+delete something live. The §0.6 rule written **when D-131 was corrected** — *the scope of a
+reachability check is part of its claim* — was then broken by the next reachability check written.
+A rule in a document is not a gate.
+
+So the consumer surfaces are now **enumerated by name** (market Jinja, the legacy print templates,
+the legacy print mapper), `surface_text()` **raises** if any glob matches no files, and the
+derivation reports **which surface reads each key** instead of whether "anything" does. The
+corrected count of keys read by no enumerated surface is **zero**.
+
+A note on what *is* true: `apps/web/**` renders no customer PDF, because `tasks.py:1775` always
+passes `html_content` and `pdf_engine`'s `/print/{run_id}` branch is therefore unreachable from the
+market path (D-101's fix). Unreachable-as-a-PDF-fallback and unread are different claims about the
+same files, and collapsing them is what both of these errors did.
+
+#### And the fixture's docstring was a copy of the builder's numbers
+
+Scoping the derivability question turned up the same shape in prose. `sample_report_data.py` opened
+with a seven-row table of `PDF_CONFIG` caps, explaining that listing counts were "deliberately set
+ABOVE the cap so the 'Showing N of M' and '+ K more' callouts have honest, non-zero numbers":
+
+| type | docstring cap | real cap | fixture listings | over cap? |
+|---|---|---|---|---|
+| `market_snapshot` | 8 | **9** | 50 | yes |
+| `new_listings` | 24 | **200** | 38 | **no** |
+| `closed` | 20 | **200** | 28 | **no** |
+| `inventory` | 20 | **200** | 30 | **no** |
+| `new_listings_gallery` | 24 | **200** | 30 | **no** |
+| `featured_listings` | 12 | 12 | 8 | no |
+| `price_bands` | 8 | 8 | 8 | no |
+| `open_houses` | *absent* | 100 | 18 | no |
+
+Five of seven figures stale, the eighth type never listed, the stated purpose holding for **one of
+eight** — and `more_template` is `None` for all eight, so the `+ N more` callout the table is
+written around does not exist in the builder. The builder moved catalog types to high caps and no
+callout on purpose (`market_builder.py:153`); its description in the fixture was never updated.
+
+The listing counts themselves were all correct. What had drifted was the **copy** of numbers
+another module owns — the same finding as the five copies of the theme map (D-163), in a docstring,
+where there is no reader that fails. The table is gone, the relationship is derived from
+`PDF_CONFIG`, and a live `cap=<n>` reappearing in that file now fails the build.
+
+**Pinned as a relationship, not a snapshot.** A `{type: cap}` dict in the test would be a fifth copy
+needing an update on the next builder change — and whoever updated it would update it to match,
+which is how the table went stale. What is pinned is the only thing the fixture claims: which types
+supply more listings than the builder will render (`market_snapshot`, alone). That is a decision
+about the sample document, so changing it should require one.
 
 #### Not fixed here
 
