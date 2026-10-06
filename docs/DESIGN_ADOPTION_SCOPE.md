@@ -186,7 +186,40 @@ would close it.
 
 ## 5 · The honest size
 
-### Property — 2 to 3 weeks
+> ## MEASURED AGAINST ONE THEME — 2026-10-06
+>
+> bold is wired and rendering through the production path (#146). The estimate below was made
+> before any of it was built, so the parts of it that are now **measured** rather than estimated
+> are recorded here. **The remaining two themes are not yet wired, so the total is not restated —
+> what follows is what one theme cost and what it implies, which is a different claim.**
+>
+> | line | estimated | what bold measured |
+> |---|---|---|
+> | one template replacing five, three themes | 3–4 days | **the shared file is 735 lines and written once.** bold's own entry file is **34 lines** — eight `{% set %}`s and an `{% include %}`, down from 1,290. The per-theme marginal cost is that file |
+> | `derive_theme` migration | 2 days | **already written.** `themes.derive_theme` produced the six tokens Design asks for before this started; the wiring was adding them to the context. The one real change was D-170 — `primary_ink` was below AA on its own `tint`, half its own definition |
+> | builder changes | 2–3 days | **done, in one pass**, plus four defects the render found that reading would not have |
+> | **re-deriving gate tests** | **4–6 days** | **55 failures, and this is the line the estimate got most wrong in shape.** Four were defects in the new build; the rest were re-points. The re-pointing made the gates **architecture-aware** — `_template_chain` resolves a theme's includes and every gate asks `SHARED_THEMES` / `SELF_CONTAINED_THEMES`. That work is **done once, not once per theme** |
+> | contrast baseline across 3 themes × 6 brands | 1–2 days | bold needed **no regeneration at all**: 13 new pairings, all 13 fixed in the template, 37 orphans deleted by key. It ended with **zero** baselined failures. elegant and modern carry 75 rows between them and will regenerate under the policy Jerry set on 2026-10-06 |
+> | theme migration for live accounts | 1 day + a decision | **done** (#145). 41 rows, one migration, and the decision was bold |
+>
+> **What the overstatement was made of, so far as one theme can show it.** The estimate priced the
+> gate re-pointing as proportional to the themes, because at the time a theme WAS a file and there
+> was no reason to think otherwise. It is proportional to the **architectures**, and there are two.
+> It also priced the `derive_theme` migration as work when it was already written, and priced a
+> baseline regeneration that the first theme did not need.
+>
+> **What it did not overstate.** The defects. Six were filed from wiring one theme (D-167 to
+> D-172), two of them — the three market metric functions that do not exist, and Design's cover
+> decision resting on a false premise — worth more than the wiring. Nothing in the estimate had a
+> line for "what the render tells you", and that is where the week went and where it was worth
+> going.
+>
+> **The remaining two themes are not measured.** The claim above is that their marginal cost is a
+> 34-line file plus a baseline regeneration, and the only thing that establishes it is wiring one of
+> them. Until then it is an inference from a sample of one, which is the error this document was
+> written to avoid making twice.
+
+### Property — 2 to 3 weeks (as estimated; see the box above)
 
 | | |
 |---|---|
