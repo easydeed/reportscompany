@@ -21,17 +21,24 @@ embed them as base64 — for sample rendering we just rely on the same
 `embed_images_as_base64()` pre-render step that production uses, so these
 external URLs are fetched and inlined too.
 
-Caps come from `MarketReportBuilder.PDF_CONFIG`. Listing counts here are
-deliberately set ABOVE the cap so the "Showing N of M" and "+ K more"
-callouts have honest, non-zero numbers in the sample PDF:
-  - market_snapshot:    cap=8  → 50 listings  ("+ 42 more")
-  - new_listings:       cap=24 → 38 listings  ("+ 14 more")
-  - closed:             cap=20 → 28 listings  ("+ 8 more")
-  - inventory:          cap=20 → 30 listings  ("+ 10 more")
-  - new_listings_gallery cap=24 → 30 listings  (no "+ more", template
-                                                says "Showing all")
-  - featured_listings:  cap=12 → 8 listings   (curated, under cap)
-  - price_bands:        cap=8  → 8 listings   (sample by band)
+CAPS ARE NOT RESTATED HERE, AND THAT IS DELIBERATE.
+This docstring used to carry a seven-row table of `PDF_CONFIG` caps, with the
+listing counts "deliberately set ABOVE the cap so the 'Showing N of M' and
+'+ K more' callouts have honest, non-zero numbers". Five of the seven figures
+were wrong by the time anyone looked (8 vs 9, and four 20-24s against a real
+200), `open_houses` was missing from the table entirely, and `more_template`
+is now `None` for every type — so the "+ K more" callout the table was written
+around does not exist in the builder at all. The builder had deliberately
+moved catalog types to high caps and no callout (`market_builder.py:153`); its
+description over here was never updated.
+
+The listing counts below are unchanged and still correct. What was wrong was
+the copy of the builder's numbers kept beside them, which is the whole shape:
+a copy of something another module owns is a thing that drifts, and nothing
+reads a docstring loudly enough to notice. So the relationship is DERIVED —
+`tests/test_sample_data_matches_the_builder.py` reads `PDF_CONFIG` and reports
+which types the fixture exceeds (currently `market_snapshot` alone) and fails
+if a cap figure reappears in this docstring.
 """
 
 from datetime import datetime, timedelta

@@ -24,11 +24,37 @@ metric functions). `scripts/derive_sample_vs_builder.py` reads the builder's
 AST for keys taken directly off `report_data` and compares them against what
 `get_sample_data` returns, per type.
 
-`report_data` must be the DIRECT receiver. `(self.report_data.get("branding")
+`report_data` must be the receiver. `(self.report_data.get("branding")
 or {}).get("agent_name")` is a `.get` whose chain contains `report_data`, and
 the inner key belongs to `branding` — counting it attributed `agent_name` and
 `company_name` to the top level and produced two false positives out of seven,
 in a script written to find a divergence.
+
+AND THE FIX FOR THOSE FALSE POSITIVES BOUGHT A FALSE NEGATIVE
+-------------------------------------------------------------
+Narrowing the rule to a DIRECT receiver made `market_builder.py:452` invisible:
+`_build_header_context` does `data = self.report_data` at 435 and then reads
+`data.get("filters_label", "")` as the masthead subtitle. The first version of
+this file therefore pinned `filters_label` as read by nothing, and the version
+that shipped asserted it. It is read, by the builder, on every market report.
+
+Reads are now followed through local aliases, and
+`test_the_alias_rule_still_finds_the_aliased_read` fails if that stops
+working — because the direct-receiver rule passed every other test in this
+file while being wrong.
+
+THE SCOPE OF THE REVERSE CHECK IS PART OF ITS CLAIM
+---------------------------------------------------
+The reverse half scanned the market Jinja tree and published the result as
+`read_by_nothing_at_all`. `period_label` and `report_date` are read seven
+times in `apps/web/lib/templates.ts` — the legacy print/social surface, whose
+own docstring says *"NOT DEAD CODE — do not delete… Two archived documents
+asserted this route had been removed. Both were wrong."*
+
+A one-surface scan published as a repo-wide verdict is D-131, which was cited
+three times as a reason to delete something live. The surfaces are now
+enumerated, each is asserted to match files, and the assertion below is about
+those surfaces by name rather than about "anything".
 """
 import importlib.util
 import io
@@ -115,24 +141,148 @@ def test_the_read_set_is_not_empty(derived):
     )
 
 
-def test_no_sample_key_is_read_by_nothing_at_all(derived):
-    """The reverse direction: sample data with no consumer.
+def test_every_supplied_key_has_a_named_consumer(derived):
+    """The reverse direction: sample data with no consumer, scoped honestly.
 
-    Three keys — `filters_label`, `period_label`, `report_date` — are returned
-    by `get_sample_data` and appear in neither the builder nor any market
-    template. They are the write-with-no-consumer family (D-009, D-113,
-    D-133, D-135, D-164) in a fixture, which is the harmless end of it: they
-    cost a reader working out whether a preview field is missing or was never
-    wired.
+    `period_label` and `report_date` are returned by `get_sample_data` and
+    read by neither the builder nor the market templates. They are NOT
+    unconsumed: `apps/web/lib/templates.ts` reads both, seven times, with a
+    fallback, for the legacy print and social surfaces.
 
-    Recorded rather than deleted, because deleting a key from a fixture that
-    three other callers may read is its own change.
+    So this does not assert that a key is read by "nothing". It asserts that
+    every key the fixture supplies is read by at least one ENUMERATED surface,
+    and the derivation reports which. A key with no surface is either newly
+    orphaned or a surface this list has not been told about, and the message
+    says so, because getting that distinction wrong is how D-131 happened.
     """
-    dead = set(derived["supplied_read_by_nothing_at_all"])
-    expected = {"filters_label", "period_label", "report_date"}
-    assert dead == expected, (
-        f"sample keys read by nothing changed: {sorted(dead)}, recorded as "
-        f"{sorted(expected)}. A NEW one is a field somebody added to the "
-        f"fixture and never wired; one GONE is progress and this set should "
-        f"shrink."
+    read_by = derived["supplied_not_read_by_builder_read_by"]
+    orphans = derived["supplied_read_by_no_enumerated_surface"]
+    assert not orphans, (
+        f"{orphans} is supplied by `get_sample_data` and read by none of "
+        f"{derived['consumer_surfaces']}. Before calling it dead: is there a "
+        f"surface missing from CONSUMER_SURFACES in "
+        f"scripts/derive_sample_vs_builder.py? `apps/web/lib/templates.ts` "
+        f"was missing once, and two live keys were filed as unconsumed."
+    )
+    # The non-empty guard (§0.6): a derivation that found no consumers for
+    # anything would pass the assertion above by measuring nothing.
+    assert read_by, (
+        "no key is supplied-but-not-read-by-the-builder, so this test "
+        "measured nothing. That is possible — but check the derivation before "
+        "believing it."
+    )
+    for key, where in read_by.items():
+        assert where, f"{key} reached the loop with no surface"
+
+
+def test_the_alias_rule_still_finds_the_aliased_read(derived):
+    """`filters_label` is the regression that shipped green.
+
+    A read off a local alias of `report_data` is invisible to a
+    direct-receiver scan, and every other test in this file passed while the
+    scan was wrong. So the alias path is asserted by name: if the rule is
+    narrowed again, this fails instead of the finding quietly reversing.
+    """
+    via = derived["builder_reads_via_alias"]
+    assert "filters_label" in via, (
+        f"`filters_label` is no longer found through an alias: {via}. Either "
+        f"`market_builder.py:435` stopped doing `data = self.report_data` — "
+        f"fine, and this test should be retired with it — or the alias rule "
+        f"was narrowed and the read went invisible again."
+    )
+    assert "filters_label" in derived["builder_reads"]
+
+
+def test_the_consumer_surfaces_all_exist(derived):
+    """An empty surface shrinks the read set silently.
+
+    `surface_text()` raises on a glob that matches nothing, so reaching here
+    with a surface list at all means each one matched. Asserted anyway,
+    because the failure mode is a scan that gets quieter rather than louder.
+    """
+    assert len(derived["consumer_surfaces"]) >= 3, (
+        f"only {derived['consumer_surfaces']} surfaces enumerated. A surface "
+        f"dropped from the list turns its keys into deletion candidates."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The cap relationship, derived rather than restated.
+#
+# `sample_report_data.py` carried a seven-row table of `PDF_CONFIG` caps in its
+# docstring. Five of seven figures were stale, `open_houses` was absent, and
+# the "+ K more" callout the table was written around had been removed from
+# every type. Nothing caught it because a docstring has no reader that fails.
+#
+# WHY A DERIVED RELATIONSHIP AND NOT A SNAPSHOT OF THE NUMBERS. A pinned
+# `{type: cap}` dict is the fourth copy of PDF_CONFIG and would need updating
+# on the next builder change — and whoever updated it would update it to match,
+# which is how the table got stale in the first place. What is pinned instead
+# is the only thing the fixture is claiming: WHICH types it supplies more
+# listings than the builder will render. That is a decision about the sample
+# document, so a change to it should need a decision.
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Types where the fixture deliberately supplies more listings than the cap,
+#: so the sample PDF's "a curated sample of N" copy has a real number under it.
+#: Everything else is under its cap and renders in full — which is correct, not
+#: a gap: the catalog types were moved to cap=200 and `more_template = None` on
+#: purpose (`market_builder.py:153`).
+EXERCISES_TRUNCATION = {"market_snapshot"}
+
+
+@pytest.fixture(scope="module")
+def caps():
+    sys.path.insert(0, str(REPO / "apps/worker/src"))
+    sys.path.insert(0, str(REPO / "apps/api/src"))
+    from api.services.sample_report_data import (  # noqa: E402
+        SUPPORTED_SAMPLE_REPORT_TYPES, get_sample_data,
+    )
+    from worker.market_builder import PDF_CONFIG  # noqa: E402
+
+    out = {}
+    for rt in SUPPORTED_SAMPLE_REPORT_TYPES:
+        data = get_sample_data(rt, city="Irvine", lookback_days=30)
+        listings = data.get("listings") or data.get("listings_sample") or []
+        out[rt] = (len(listings), PDF_CONFIG[rt]["cap"])
+    return out
+
+
+def test_the_fixture_exercises_truncation_on_exactly_the_recorded_types(caps):
+    """The relationship, derived from PDF_CONFIG on both sides."""
+    over = {rt for rt, (n, cap) in caps.items() if n > cap}
+    assert over == EXERCISES_TRUNCATION, (
+        f"the fixture now exceeds the builder's cap on {sorted(over)}, "
+        f"recorded as {sorted(EXERCISES_TRUNCATION)}. Measured: "
+        f"{ {rt: f'{n} listings vs cap {cap}' for rt, (n, cap) in sorted(caps.items())} }. "
+        f"A type that STOPPED exceeding its cap no longer exercises the "
+        f"'curated sample of N' copy in the sample PDF; a new one does. "
+        f"Either is a change to what a customer approves their branding "
+        f"against, so decide it rather than re-pinning it."
+    )
+
+
+def test_every_sample_type_supplies_listings(caps):
+    """The non-empty guard: a fixture that supplies none would pass above."""
+    empty = sorted(rt for rt, (n, _) in caps.items() if n == 0)
+    assert not empty, f"{empty} supply no listings, so their caps mean nothing"
+
+
+def test_no_cap_figure_is_restated_beside_the_fixture():
+    """The anti-copy gate.
+
+    `cap=N` in this module's source is a fifth copy of a number
+    `market_builder.PDF_CONFIG` owns. The prose above may DESCRIBE the stale
+    figures as history — that is the record of the defect — but a live
+    `cap=<n>` is the defect coming back.
+    """
+    import re
+    src = (REPO / "apps/api/src/api/services/sample_report_data.py").read_text(
+        encoding="utf-8")
+    restated = re.findall(r"cap\s*=\s*\d+", src)
+    assert not restated, (
+        f"{restated} restates a PDF_CONFIG cap in sample_report_data.py. "
+        f"Read it from `market_builder.PDF_CONFIG` instead — the seven-row "
+        f"table that used to live in that docstring went stale in five rows "
+        f"and nothing noticed, because a docstring has no reader that fails."
     )
