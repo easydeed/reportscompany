@@ -4,36 +4,6 @@
 # A RATCHET: this file may only shrink. A (family, selector, foreground,
 # background) combination that is not listed here fails the build.
 #
-# EXCEPT WHEN A SURFACE IS REPLACED, AND THAT IS A POLICY, NOT AN EXCUSE.
-# Jerry, 2026-10-06: *"regenerate per surface as each lands. My 'nothing
-# re-baselined' was right for one theme and wrong as a standing rule — a
-# baseline cannot describe a document that no longer exists. The diff is the
-# review artefact; the rule stays that it is never regenerated casually, and a
-# template replacement is not casual."*
-#
-# The reason, stated in the units this file is keyed in: an entry is
-# `(family, selector, fg, bg)`, and a redesign changes the selector AND the
-# background. So a replaced surface produces N new keys and N orphans with
-# ZERO overlap, and the forward and reverse checks both report every one of
-# them. That is not 2N regressions; it is the file comparing two different
-# documents and reporting the difference.
-#
-# WHAT "PER SURFACE" MEANS IN PRACTICE
-#   * regenerate the replaced family's entries only — `property__<theme>` or
-#     `market__<type>` — and leave every other line byte-identical, so the
-#     diff still says that nothing else moved
-#   * the diff is the review: a reviewer reads which pairings the new document
-#     introduces, which is the question, instead of a wall of orphans
-#   * a surface that was NOT replaced is still a ratchet, and a new failure on
-#     it is still a failure. Regeneration is scoped to the thing that was
-#     rebuilt
-#
-# bold, 2026-10-06, is the worked example and it did NOT need this: 13 new
-# pairings, all 13 fixed in the template, and 37 orphans deleted by key with
-# every surviving line untouched. One theme on one surface was small enough to
-# fix rather than regenerate. The next one may not be, and the policy says
-# what to do then.
-#
 # Keyed on the selector and the two colours, NOT on a file path, so a
 # replacement template set inherits the entries whose selectors it reuses
 # and earns a failure for every new pairing it introduces.
@@ -58,28 +28,8 @@
 # Regenerate after FIXING something (never to clear a new failure):
 #     python3 -m pytest apps/worker/tests/test_pdf_contrast.py --regen-contrast-baseline
 #
-# 613 failing runs, 176 combinations, worst 1.00:1, of 9486 runs measured.
+# 203 failing runs, 61 combinations, worst 1.06:1, of 7698 runs measured.
 # Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.
-#
-# 2026-10-05, THE THEME CUT. The 58 `property__classic` and
-# `property__teal` entries were DELETED, not regenerated: the documents
-# they recorded no longer exist. 29 classic + 29 teal, counted off the
-# family column. A ratchet may only shrink and this is a shrink; nothing
-# in the surviving 118 entries was touched, so a regression in bold,
-# elegant or modern still fails against the same numbers as before.
-#
-# 2026-10-06, BOLD ON THE SHARED ARCHITECTURE. 37 `property__bold`
-# entries were DELETED, not regenerated: they record selectors in bold's
-# old self-contained template, which no longer exists. The surviving
-# lines are byte-identical, so the diff is evidence that nothing in
-# elegant, modern or the market corpus moved.
-#
-# bold's NEW pairings are not here, and that is the point: the first
-# render of the redesigned document reported 13 failures and all 13 were
-# fixed in the template rather than added to this file. Two causes —
-# `primary_ink` below AA on its own tint (themes.py `_ink` now clears
-# both surfaces) and white display text on the cover band for amber and
-# lime (now `on_primary`).
 
 market__new_listings	span.listing-tier-badge.tier-high	#d97706	#fef1db
 market__new_listings	span.listing-tier-badge.tier-low	#2563eb	#e2ecfe
@@ -87,8 +37,6 @@ market__new_listings	span.listing-tier-badge.tier-median	#16a34a	#def6e7
 market__price_bands	span.status-badge.active	#16a34a	#e7f6ed
 market__price_bands	span.status-badge.closed	#dc2626	#fbe9e9
 market__price_bands	span.status-badge.pending	#ca8a04	#faf3e5
-property__elegant	div.contents-label	#0b8277	#faf7f2
-property__elegant	div.contents-label	#53810c	#faf7f2
 property__elegant	div.cover-agent-name	#ffffff	#58880e
 property__elegant	div.cover-agent-title	#e8d5a3	#58880e
 property__elegant	div.cover-agent-title	#e8d5a3	#a46a07
@@ -110,23 +58,11 @@ property__elegant	div.cover-logo	#c9a962	#517e0d
 property__elegant	div.cover-logo	#c9a962	#976107
 property__elegant	div.cover-street	#ffffff	#74b313
 property__elegant	div.cover-street	#ffffff	#d68a09
-property__elegant	div.num	#0b8277	#f2faf9
-property__elegant	div.num	#0b8277	#faf7f2
-property__elegant	div.num	#53810c	#faf7f2
-property__elegant	div.num	#dc2626	#fef4f4
-property__elegant	div.property-label	#0b8277	#faf7f2
-property__elegant	div.property-label	#53810c	#faf7f2
-property__elegant	div.property-section-title	#0b8277	#faf7f2
-property__elegant	div.property-section-title	#53810c	#faf7f2
 property__elegant	div.range-stat-label	#ffffff	#0d9488
 property__elegant	div.range-stat-label	#ffffff	#84cc16
 property__elegant	div.range-stat-label	#ffffff	#f59e0b
 property__elegant	h1.cover-title	#ffffff	#76b713
 property__elegant	h1.cover-title	#ffffff	#dc8e0a
-property__elegant	h3	#0b8277	#f2faf9
-property__elegant	h3	#dc2626	#fef4f4
-property__elegant	span	#0b8277	#faf7f2
-property__elegant	span	#53810c	#faf7f2
 property__elegant	span	#e8d5a3	#74b313
 property__elegant	span	#e8d5a3	#d98c09
 property__elegant	span	#ffffff	#57860e
@@ -139,9 +75,6 @@ property__elegant	th	#ffffff	#84cc16
 property__elegant	th	#ffffff	#f59e0b
 property__modern	div.brand	#94a3b8	#f1f5f9
 property__modern	div.brand	#94a3b8	#ffffff
-property__modern	div.contents-num	#0b8277	#f1f5f9
-property__modern	div.contents-num	#53810c	#f1f5f9
-property__modern	div.contents-num	#dc2626	#f1f5f9
 property__modern	div.cover-agent-title	#0d9488	#ffffff
 property__modern	div.cover-agent-title	#84cc16	#ffffff
 property__modern	div.cover-agent-title	#f59e0b	#ffffff
@@ -156,9 +89,6 @@ property__modern	h3	#0d9e91	#2b3045
 property__modern	h3	#0e94b8	#2b3045
 property__modern	h3	#a36fff	#2b3045
 property__modern	h3	#ff3d3d	#2b3045
-property__modern	span.pill	#0b8277	#f1f5f9
-property__modern	span.pill	#53810c	#f1f5f9
-property__modern	span.pill	#dc2626	#f1f5f9
 property__modern	td	#ffffff	#0d9488
 property__modern	td	#ffffff	#84cc16
 property__modern	td	#ffffff	#f59e0b
