@@ -214,3 +214,38 @@ def test_the_net_saving_is_what_the_document_claims():
         "the document no longer states the net. The per-kind rows are true "
         "individually and the sum is the finding."
     )
+
+
+def test_the_gallery_question_states_the_asymmetry_correctly():
+    """§6's two readings, recomputed.
+
+    The question to Design is only worth asking if the arithmetic behind it is
+    right: one reading of the spec changes nothing and the other adds six pages
+    to one kind and five to the other. Both numbers come from the same
+    measurement as everything else, so both are checked.
+    """
+    import math
+    body = text()
+    cases = {
+        "new_listings_gallery": (120, 14, 20),
+        "open_houses": (100, 12, 17),
+    }
+    for kind, (n, want_9, want_6) in cases.items():
+        page_1 = PAGE_1_CAPACITY[kind]["no_narrative"]
+        at_9 = math.ceil((n - page_1) / 9) + 1
+        at_6 = math.ceil((n - page_1) / 6) + 1
+        assert (at_9, at_6) == (want_9, want_6), (
+            f"{kind} at N={n}: a 3x3 continuation gives {at_9} pages and a 3x2 "
+            f"gives {at_6}; §6 says {want_9} and {want_6}."
+        )
+        assert OURS_CONTINUATION[kind] == 9, (
+            f"{kind}'s continuation is now "
+            f"{OURS_CONTINUATION[kind]}, not 9 — §6's 'unchanged from "
+            f"ours' reading no longer holds."
+        )
+    assert "**20 pages**, from 14" in body
+    assert "**17 pages**, from 12" in body
+    assert "is a gallery continuation page a 3×3 of the same card" in body, (
+        "§6 no longer asks the question. The arithmetic is the argument for "
+        "asking it, not a substitute for the ask."
+    )
