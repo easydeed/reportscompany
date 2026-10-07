@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 58 | Real, unfixed |
+| `open` | 59 | Real, unfixed |
 | `fixed` | 111 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **174** | D-001 … D-174, contiguous, no duplicates |
+| **Total** | **175** | D-001 … D-175, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 13 · ROUGH 24. (Sums to 58, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 14 · ROUGH 24. (Sums to 59, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -10786,6 +10786,58 @@ Supplying `closed_history` means generating twelve months of plausible closings 
 a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
 same question as the nineteen orphans. The hole is recorded with its measurement so the decision
 can be taken on the number.
+
+---
+
+### D-175 — the brand picker is two literals, and whichever a customer sees depends on which page they opened
+
+**Severity:** FRAGILE · **Affects:** `/app/settings/branding` and `/app/company/branding` — the six
+colour presets every affiliate chooses their brand from · **Found during:** measuring Design's
+market colour rule against the brands the product actually ships, which required finding out what
+those are
+**Status:** `open` — the divergence is now gated; the copy is not removed
+
+`COLOR_PRESETS` is declared twice, identically, at
+`apps/web/app/app/settings/branding/page.tsx:51` and
+`apps/web/app/app/company/branding/page.tsx:50`:
+
+```ts
+const COLOR_PRESETS = [
+  { name: "Indigo", primary: "#4F46E5", accent: "#F59E0B" },
+  { name: "Ocean", primary: "#0EA5E9", accent: "#10B981" },
+  ...
+]
+```
+
+Two lists, six presets each, twelve hex pairs, no shared source. **They agree today**, which is the
+only reason this is FRAGILE rather than WRONG — and agreeing today is what every instance of this
+family has had in common. D-163 was the theme map in five places and the five did not agree; the
+discrepancy had been live long enough that 41 of 44 accounts were on a theme the wizard did not
+pre-select.
+
+The failure mode here is unusually direct: an affiliate and a company admin pick their brand from
+different files, so a preset added, recoloured or removed on one page is simply absent from the
+other, and which palette a customer is offered depends on which route they took to the same
+setting.
+
+#### Why it was invisible
+
+Nothing read them. The presets are a UI constant consumed only by the component they sit in, so
+there was no consumer that could notice two answers — the read-with-no-producer family's mirror
+image, and the reason the five copies of the theme map survived as long as they did.
+
+`scripts/derive_brand_audit.py` is now a reader. It parses **both** files and **raises** if they
+differ, because an audit that describes one page's picker while the other offers something else is
+exactly the sample-is-not-the-product error the audit was written to point out — made by the audit.
+Seen to fail: changing `Ocean` on the settings page alone takes the whole gate down with the two
+lists printed side by side.
+
+#### Not fixed here
+
+Hoisting the list into a shared module is a frontend change in files this remediation has otherwise
+only read, and the gate removes the risk that matters — a silent divergence. The copy stays until
+someone is in those files for another reason. `accent` is **not** audited: nothing measures accent
+contrast on the market surface yet, and `accent_ink` is derived from whatever value arrives.
 
 ---
 
