@@ -176,8 +176,8 @@ def test_the_document_still_names_the_one_thing_that_makes_it_cheap(text):
 # shared architecture — one new occurrence in `property_builder`'s migration
 # seam and two in the single-source gate. The ratchet refused the change until
 # this number was edited, which is what it is for.
-MAX_FILES_NAMING_A_THEME = 16
-MAX_NAME_OCCURRENCES = 85
+MAX_FILES_NAMING_A_THEME = 15
+MAX_NAME_OCCURRENCES = 73
 
 
 def test_the_number_of_places_naming_a_theme_has_not_grown(derived):

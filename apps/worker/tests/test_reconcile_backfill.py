@@ -98,7 +98,7 @@ PSQL = shutil.which("psql")
 
 
 def run_backfill(conn, schema):
-    """
+    r"""
     Run the file THROUGH PSQL, which is how Jerry will run it.
 
     The first version of this helper split the file on `;` and fed the pieces to

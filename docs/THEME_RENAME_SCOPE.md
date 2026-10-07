@@ -30,7 +30,7 @@ was that nobody knew how many copies there were.
 
 ## 1 · Where a theme NAME appears, and where an ID appears
 
-**85 name occurrences across 16 files** (was 147 across 18 before the theme cut, and 82 after it).
+**73 name occurrences across 15 files** (was 147 across 18 before the theme cut, and 82 after it).
 Grouped by what a rename would have to do to them:
 
 > **+3 ON 2026-10-06, when bold moved to Design's shared architecture.** One in
@@ -39,15 +39,29 @@ Grouped by what a rename would have to do to them:
 > numbers were updated, which is the mechanism working: adding a call site is allowed, adding one
 > silently is not. **The rename also got cheaper**, see §2.
 
+> **−12 ACROSS 1 FILE ON 2026-10-07, AND THE EARLIER FIGURES WERE WRONG.** The derivation matched
+> ``["'`]name["'`]`` in every file type. **Python has no backtick string literal**, so every
+> backticked theme name in a Python comment — prose, in a sentence *about* the cut — was counted as
+> a site holding the name. Writing two such comments while recording D-174 pushed the count past
+> its own ceiling and failed the build, which is how it was found: the ratchet caught the
+> derivation rather than the change.
+>
+> So **85 across 16 was an overstatement, and so was every figure above it**. The real cost of the
+> deferred rename is 73 across 15, and the two files that drop out entirely —
+> `routes/property.py` and `gen_theme_registries.py` — hold no theme name at all. TypeScript keeps
+> its backticks, because a template literal is a real string there.
+>
+> Substring-is-not-a-construct, in the gate counting the other twelve instances of it.
+
 | group | files | occurrences | what a rename costs |
 |---|---|---|---|
 | **canonical** — `worker/themes.json` | 1 | 6 | **the edit itself** |
 | **generated** — `api/theme_registry.py`, `web/lib/themes.generated.ts` | 2 | 17 | **nothing** — one command |
-| **derives from the registry** — `property_builder`, `theme_registry`, `unified-wizard`, `wizard-types`, `gen_theme_registries`, `measure_pdf_contrast` | 6 | 18 | **nothing** — they import it |
+| **derives from the registry** — `property_builder`, `theme_registry`, `unified-wizard`, `wizard-types`, `measure_pdf_contrast` | 5 | 12 | **nothing** — they import it |
 | **historical, deliberately keeps retired names** — `affiliate/property-reports/page.tsx` | 1 | 10 | **nothing** — see §4 |
 | **per-theme presentation metadata** — `web/lib/property-report-assets.ts` | 1 | 11 | **one `key:` per theme** |
-| **the gate and the derivation** — `test_theme_registry_is_single_sourced.py`, `derive_theme_name_scope.py` | 2 | 14 | **nothing** — they read the registry |
-| **golden/corpus scripts naming themes to seed data** — `regen_color_roles_golden.py`, `test_property_templates.py`, `test_market_templates.py` | 3 | 9 | **one literal each** |
+| **the gate and the derivation** — `test_theme_registry_is_single_sourced.py`, `derive_theme_name_scope.py` | 2 | 10 | **nothing** — they read the registry |
+| **golden/corpus scripts naming themes to seed data** — `regen_color_roles_golden.py`, `test_property_templates.py`, `test_market_templates.py` | 3 | 7 | **one literal each** |
 
 The **ids** are what everything load-bearing actually keys on:
 `accounts.default_theme_id` (INTEGER), `property_reports.theme` (INTEGER, `CHECK 1..5`),
