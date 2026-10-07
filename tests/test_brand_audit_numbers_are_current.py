@@ -45,12 +45,27 @@ def test_the_overlap_is_what_the_document_says(derived, text):
     assert len(derived["shared_hexes"]) == 2, derived["shared_hexes"]
     assert len(derived["ours_not_sampled"]) == 4
     assert len(derived["sampled_not_ours"]) == 4
-    assert "Only two of the six brands are shared" in text, (
+    # Asserted on the claim, not on a heading string. The first version
+    # matched the heading text and failed when the document was reordered to
+    # lead with the finding instead of the correction — a gate on the wording
+    # of a sentence rather than on what it says.
+    assert "two-brand overlap" in text, (
         f"the overlap is now shared={derived['shared_hexes']}, "
         f"ours-only={derived['ours_not_sampled']}, "
-        f"theirs-only={derived['sampled_not_ours']} — the document's heading "
-        f"says something else."
+        f"theirs-only={derived['sampled_not_ours']} — and the document no "
+        f"longer states it as a two-brand overlap."
     )
+    assert "Four of those six were not in your sample" in text, (
+        "the document's lead is that the rule generalised to the brands "
+        "Design had not sampled. That is the finding; if the count changed, "
+        "the lead changed."
+    )
+    for hexv in derived["ours_not_sampled"] + derived["sampled_not_ours"]:
+        assert hexv in text, (
+            f"{hexv} is in one set and not the other, and the document does "
+            f"not list it. Design asked where the gap came from; the answer "
+            f"is the hexes."
+        )
 
 
 def test_every_measured_ratio_in_the_document_is_current(derived, text):

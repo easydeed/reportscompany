@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 59 | Real, unfixed |
+| `open` | 60 | Real, unfixed |
 | `fixed` | 111 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **175** | D-001 … D-175, contiguous, no duplicates |
+| **Total** | **176** | D-001 … D-176, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 14 · ROUGH 24. (Sums to 59, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 15 · ROUGH 24. (Sums to 60, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -10786,6 +10786,59 @@ Supplying `closed_history` means generating twelve months of plausible closings 
 a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
 same question as the nineteen orphans. The hole is recorded with its measurement so the decision
 can be taken on the number.
+
+---
+
+### D-176 — `teal` names a retired theme and a sample brand, and no gate can tell which it is looking at
+
+**Severity:** FRAGILE · **Affects:** `test_no_live_code_path_names_a_retired_theme`, and any future
+gate that reasons about theme names as strings · **Found during:** three separate changes in two
+days, each of which tripped the same gate on a value that was not a theme
+**Status:** `open` — the collision is structural; what is fixed is the convention and the reason
+
+Two namespaces share the word.
+
+* **Themes** — `classic`, `modern`, `elegant`, `teal`, `bold`. Ids 1-5; `teal` (4) and `classic` (1)
+  were retired on 2026-10-05, and their Jinja templates were deleted. A retired theme name in live
+  code is a path that can ask the renderer for a template that no longer exists, which is why
+  `test_no_live_code_path_names_a_retired_theme` exists and why it is strict.
+* **Brands** — `red`, `teal`, `cyan`, `violet`, `amber`, `lime`: Design's six sample brand colours,
+  of which `teal` is `#0D9488`. A brand is a *hex an affiliate chose*. The market surface has no
+  themes at all — it takes `primary` + `accent` — and the three surviving property themes carry no
+  hue of their own, so the two namespaces do not overlap in meaning anywhere.
+
+**The gate sees `"teal"` and cannot tell a deleted template from a customer's colour.** It is right
+to be strict and it is right to be wrong here; a string carries no namespace.
+
+#### Three trips in two days, and one of them was not ours
+
+| when | where | what `teal` meant |
+|---|---|---|
+| 2026-10-06 | a design package "listing four themes" | the six-brand **enum** `["red","teal","cyan",…]`, plus `brand: P.brand \|\| "teal"` — a colour default |
+| 2026-10-07 | `tests/test_display_ink.py` | one of the six corpus **brands** under test |
+| 2026-10-07 | `tests/test_brand_audit_numbers_are_current.py` | Design's name for the sample **brand** `#0D9488` |
+
+The first cost most: it is the whole reason a package was read as predating the theme cut. Design's
+`RESPONSE_2026-10-06` had to state *"if a file in your hands says classic or teal, it predates this
+package"* — and the files in our hands said `teal` four times, every one of them a brand.
+
+#### What was done, and what cannot be
+
+The gate **cannot be made smarter without being told which namespace it is in**, and the only honest
+place to put that is the identifier. So the convention is: **outside the theme registry and its
+generated files, a colour is named by the contrast corpus's name for it, never by its hue.**
+`#0D9488` is `luxury_estates`. Both test files now key it that way, which removes the literal and is
+also more accurate — it is one affiliate's brand, not a representative teal (see
+`docs/BRAND_AUDIT_FOR_DESIGN_2026-10-07.md` §3).
+
+`RETIRED_NAME_ALLOWED` was the alternative, and it is the wrong tool here: an allowance says *"this
+file may mention a retired theme"*, which is a claim about the file. The problem is a claim about the
+**word**, and an allowance would have made the next brand named `classic` invisible rather than
+caught.
+
+**Not fixed:** nothing stops a fourth instance. `teal` is a perfectly good name for a colour and
+somebody will reach for it. What is recorded is why the gate fires, so the next person spends a
+minute rather than an hour — and so that an allowance is not reached for instead.
 
 ---
 

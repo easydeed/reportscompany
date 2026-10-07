@@ -1,18 +1,32 @@
-# Your market colour rule, measured against the brands the product ships
+# Your colour rule generalised to four brands it had never seen
 
 **To:** Design · **Date:** 2026-10-07 · **Re:** `RESPONSE_2026-10-06.md`, colour roles
 
-**The rule is right. We measured it against our own brand set and are sending the numbers rather
-than a verdict, because the interesting part is where the two sets differ.**
+**`display_ink` holds on brands that were not in your sample.** That is the finding, and it is the
+reason we are sending measurements rather than a verdict.
 
-`display_ink` is in `themes.derive_theme` and wired on the property cover. Measured, your six
-figures reproduce exactly against our `themes.contrast` on your own hexes — red 4.83, teal 3.74,
-cyan 5.36, violet 5.70, amber 2.15, lime 1.98. Third round for this class of claim and the first
-where the method came back as a derivation rather than a corrected number. Noted and adopted.
+We adopted the rule, wired it on the property cover, and then measured it against the six brand
+presets the product actually offers. **Four of those six were not in your sample.** All four clear
+your stated thresholds, with the token resolving correctly on each:
+
+| brand not in your sample | hex | white on it | `display_ink` resolves to | clears |
+|---|---|---|---|---|
+| Indigo | `#4F46E5` | 6.29 | `#ffffff` | 3.0 and 4.5 |
+| Ocean | `#0EA5E9` | 2.77 | `#14151a` | 3.0 and 4.5 |
+| Forest | `#059669` | 3.77 | `#ffffff` | 3.0; sub-24px falls to `#14151a` at 4.84 |
+| Midnight | `#1E293B` | 14.63 | `#ffffff` | 3.0 and 4.5 |
+
+**A stated bound could not have done that.** "White clears 3.0 on the sample brands" is a fact about
+six hexes; `contrast(white, primary) >= 3.0 ? white : on_primary` is a fact about any hex, and it
+came out right on four we never discussed. Third round for this class of claim and the first where
+the method arrived rather than a corrected number.
+
+Your own six also reproduce exactly against our `themes.contrast` — red 4.83, teal 3.74, cyan 5.36,
+violet 5.70, amber 2.15, lime 1.98.
 
 ---
 
-## 1 · Only two of the six brands are shared
+## 1 · The two sets are two populations with a two-brand overlap
 
 Your rule was measured on six sample brands. The product's brand picker offers six presets
 (`apps/web/app/app/settings/branding/page.tsx:51`, duplicated in the company page). **Four of each
@@ -39,12 +53,11 @@ sides have measured it, but it is not a preset anyone can pick.
 So the sample and the product are two different populations with a two-brand overlap. That is the
 only thing here we would ask you to look at.
 
-## 2 · Both populations pass your own thresholds
+## 2 · Both populations pass your thresholds — all twelve brands
 
-We checked this before sending it, and the answer is the comfortable one. Your stated thresholds
-are 3.0 for display text ≥24px (`display_ink`) and **≥4.5 for everything under 24px on the band**
-(`on_primary`). `on_primary` always takes the better of white and `#14151a`, so the failure mode is
-a `primary` where **neither** clears 4.5.
+Your stated thresholds are 3.0 for display text ≥24px (`display_ink`) and **≥4.5 for everything
+under 24px on the band** (`on_primary`). `on_primary` always takes the better of white and
+`#14151a`, so the failure mode is a `primary` where **neither** clears 4.5.
 
 **Our six:**
 
@@ -62,7 +75,21 @@ a `primary` where **neither** clears 4.5.
 **Zero of twelve fall below 4.5.** Your rule holds on a population it was never measured on, which
 is the better outcome and worth saying plainly.
 
-## 3 · The one place the two sets behave differently
+## 3 · `#0D9488` is one affiliate's colour, not a preset
+
+This is the detail worth your attention, and it explains the other two sections.
+
+The brand your recorded exception is written around — and the brand both of us have now measured,
+exception-written and tolerance-derived against — **is not in the product's picker.** It is one
+affiliate's chosen colour (Luxury Estates). It is in our *contrast corpus*, which is why it keeps
+appearing in both sides' measurements, and it is the brand that produced the 3.74 figure the owner
+decision turned on.
+
+So the hex that has anchored three rounds of colour decisions is one nobody can select. A customer
+reaches it only by typing it into the custom field. Everything about it is correct; it is just not
+representative, and neither of us noticed we were treating it as though it were.
+
+## 4 · The one place the two sets behave differently
 
 `Forest` (`#059669`) is the only brand where `display_ink` and `on_primary` disagree in our set —
 white is 3.77, so display text keeps white while sub-24px text goes to `#14151a`. In your set the
@@ -73,9 +100,10 @@ written around is not one a customer can choose.
 `Ocean` (`#0EA5E9`, white 2.77) is the only preset where the owner's white-on-brand preference
 cannot be honoured at any size. Your sample has two such brands (amber, lime); ours has one.
 
-## 4 · On a fixed ink value
+## 5 · On a fixed ink value
 
-If a specific ink hex is on the table for text on light and tinted surfaces: we already derive one.
+If a specific ink hex is on the table for text on light and tinted surfaces: we already derive one,
+and we would rather reconcile the two than add a constant beside a rule that covers it.
 `primary_ink` darkens `primary` until it clears **4.5 on white and on the brand's own tint**
 (our D-170 — it used to clear white only, which is half of its own definition). Measured on the six
 presets, ink on white / on tint:
@@ -90,23 +118,22 @@ presets, ink on white / on tint:
 | Royal | `#7c3aed` | 5.70 | 5.21 |
 
 Worst case 4.58. A fixed hex would be one brand's answer; the derivation is every brand's, and it
-already ships. We would rather reconcile the two than add a constant beside a rule that covers it.
+already ships.
 
 ---
 
 ## The pattern, said once
 
-This is the third time a bound has come to us **derived from a sample and stated as a property of
-the surface** — `#8A8E95`, then the display-size exception, now the brand set behind both.
+Three bounds have now reached us **derived from a sample and stated as a property of the
+surface** — `#8A8E95`, then the display-size exception, now the brand set behind both.
 
-The difference matters: the first two were corrected because the *number* was wrong. **This time the
-method is sound and only the population is narrow.** Your rule survived contact with four brands it
-had never seen, which is what a derived rule is for and what a stated bound could not have done.
+The difference matters, and it is in your favour: the first two were corrected because the *number*
+was wrong. **This time the method is sound and only the population is narrow** — which is why the
+rule held anyway.
 
-We are not asking for a re-cut. We are asking whether the sample should be the product's six, so the
-next bound you derive is derived on the brands customers actually have — and so that
-`#0D9488`, which both of us keep measuring, is understood as one affiliate's colour rather than as a
-representative case.
+We are not asking for a re-cut. One question only: should the sample be the product's six? That
+would put the next bound you derive on the brands customers can actually pick, and it would stop
+`#0D9488` being read as a representative case when it is one affiliate's colour.
 
 ## What we are not asking
 
