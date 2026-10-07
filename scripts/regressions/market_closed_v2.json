@@ -47,5 +47,33 @@
     "old": "            return f\"${val / 1_000:.0f}{'K' if upper else 'k'}\"",
     "new": "            return f\"${val / 1_000:.0f}K\"",
     "test": "apps/worker/tests/test_market_v2_closed.py"
+  },
+  {
+    "name": "the band label takes display_ink again, which is 3.0 on a 22px line",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "    letter-spacing: -0.01em;\n    color: var(--on-primary);",
+    "new": "    letter-spacing: -0.01em;\n    color: var(--display-ink);",
+    "test": "apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs"
+  },
+  {
+    "name": "the pill takes the raw brand colour again, 1.98 on lime",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "    color: var(--primary-ink);",
+    "new": "    color: var(--primary);",
+    "test": "apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs"
+  },
+  {
+    "name": "the narrative suppression goes, so a v2 render pays for prose it discards",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        if self.report_type in V2_KINDS:\n            ai_insights = \"\"\n        elif not ai_insights:",
+    "new": "        if not ai_insights:",
+    "test": "apps/worker/tests/test_market_v2_closed.py"
+  },
+  {
+    "name": "a V2 kind falls back to the old page",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            V2_TEMPLATE_PATH if self.report_type in V2_KINDS else TEMPLATE_PATH)",
+    "new": "            TEMPLATE_PATH)",
+    "test": "apps/worker/tests/test_market_layout_map.py tests/test_template_reachability.py"
   }
 ]

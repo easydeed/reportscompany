@@ -10859,6 +10859,57 @@ right question to be asked. `_ratio_as_percent` returns `None` for zero, so the 
 template **cannot be 0**: falsy means absent and nothing else. The exemption is now a statement
 about the producer rather than about the world.
 
+#### What converging the fixtures would take, and what it would cost
+
+Asked for deliberately — *to know the price, not to pay it.* A fixture on a different scale from
+what production emits is the shape that produced this defect, so the price is worth knowing before
+the next consumer is written.
+
+**The fixtures do not just differ from production. They differ from each other.**
+
+| scale | where |
+|---|---|
+| **fraction** (`0.982`) | `apps/worker/tests/email_fixtures.py:32` · `test_email_contrast.py:72` · `test_market_layout_map.py:68` · `test_monthly_trend.py:398` · `test_narrative_guards.py:28` · `tests/test_market_templates.py:104` · `scripts/render_all_pdfs_for_review.py:110-111` |
+| **percent** (`99.2`, `99.1`) | `test_insight_paragraph_missing_metrics.py:76` · `test_sender_postal_address.py:57` |
+
+Six fixtures and a script on one scale, two fixtures on the other, and production on percent. So
+"converge the fixture" is eight files, not one, and two of them are already right.
+
+**On the market surface the change is free. Measured, not argued:**
+
+| report type | rendered with `0.982` | rendered with `98.2` | identical? |
+|---|---|---|---|
+| `closed` | `7b722cfd57fc77e9` | `7b722cfd57fc77e9` | **yes** |
+| `market_snapshot` | `385f2c23b2ca248c` | `385f2c23b2ca248c` | **yes** |
+
+Byte-identical HTML, because `_ratio_as_percent` now maps both scales to the same output — which is
+also what the template's `< 2` guess did. **Zero pagination re-measurement, zero baseline churn, no
+page counts move.**
+
+**The cost is on the email surface, and it is not re-measurement — it is a second defect.**
+`email/template._format_percent` is `f"{value:.1f}%"` with **no scale handling at all**:
+
+```
+0.982 -> "1.0%"      98.2 -> "98.2%"
+```
+
+Production is safe: `calc.py:54` emits percent and `tasks.py:595` copies it across unchanged, so
+customers' emails read "98.5%". But **the email fixtures render "1.0%", and the email tests are
+green about it** — including `test_email_contrast.py`, which measures contrast over that rendered
+HTML. D-173's shape on a surface nobody had looked at: a fixture encoding a contract production does
+not use.
+
+So converging the fixtures would **change rendered email output in the tests** from `1.0%` to
+`98.2%`, which is a different string length inside measured HTML and would need the email contrast
+figures re-taken. That is the whole price: **eight files, no market change, and one email
+re-measurement** — plus the decision of whether `_format_percent` should normalise the way
+`_ratio_as_percent` does, which is the actual fix and is a change to the email surface rather than
+to a fixture.
+
+**Not done here**, deliberately: it is the email surface, this branch is the market surface's first
+kind, and the two should not move in one change. Recorded so the next person spends the price
+knowingly.
+
 #### The harness found an untested case while this landed
 
 A mutation removing the `isinstance(lst, ...)` guard from the over-asking count came back

@@ -857,9 +857,27 @@ class MarketReportBuilder:
         band_start, band_end = self._masthead_band(primary_color, accent_color)
         color_roles = compute_color_roles(accent_color, (band_start, band_end))
 
-        # Resolve AI narrative: use pre-supplied value, otherwise generate
+        # Resolve AI narrative: use pre-supplied value, otherwise generate.
+        #
+        # EXCEPT ON THE `_v2` TABLE KINDS, where Design removes it: "this design
+        # renders no AI narrative on table or gallery kinds, so there is no
+        # narrative variant. Page-1 capacity is one state per kind."
+        #
+        # AND THIS SUPPRESSION IS NOT WHAT MAKES CAPACITY DETERMINISTIC — the
+        # `_v2` page has no narrative block, so the prose could not affect
+        # pagination even if it were generated. The first version of this
+        # comment claimed otherwise, and a mutation that removed the
+        # suppression came back DID NOT FIRE, which is how the claim got
+        # checked: nothing about the rendered document changes.
+        #
+        # What it does do is avoid PAYING for prose nobody will read: an OpenAI
+        # round trip, on every render of every v2 kind, whose output is
+        # discarded by the template. That is the whole of it, and it is worth
+        # doing — it is just a cost, not a correctness property.
         ai_insights = self.report_data.get("ai_insights") or ""
-        if not ai_insights:
+        if self.report_type in V2_KINDS:
+            ai_insights = ""
+        elif not ai_insights:
             try:
                 city = self.report_data.get("city", "")
                 narrative_data = self._build_narrative_data()
@@ -929,6 +947,38 @@ class MarketReportBuilder:
             "price_bands": self.report_data.get("price_bands") or [],
         }
 
+        if self.report_type in V2_KINDS:
+            # Design's page takes the brand colour DIRECTLY as the band fill,
+            # not the darkened two-stop band. That is safe here and was not
+            # before: `on_primary` and `display_ink` are derived from whatever
+            # fill they sit on, so the text adapts instead of the fill being
+            # bent to fit text hardcoded to white (D-112's defect). It also
+            # means the `_v2` band is solid — no gradient — which settles that
+            # question for this kind without asking it.
+            tokens = derive_theme(primary_color)
+            context.update({
+                "v2": True,
+                "v2_band": self._v2_band(),
+                "v2_table": self._v2_table(),
+                "on_primary": tokens["on_primary"],
+                "display_ink": tokens["display_ink"],
+                # The pill's text sits on WHITE, not on the brand fill, at
+                # 13px/600 — which is not large text, so it needs 4.5 and the
+                # raw brand colour does not have it (3.74 on teal, 2.15 on
+                # amber, 1.98 on lime). `primary_ink` is the brand darkened
+                # until it clears AA on white and on the tint (D-170, D-177).
+                "primary_ink": tokens["primary_ink"],
+                "tint": tokens["tint"],
+                "v2_muted": V2_MUTED,
+                # The rule colour follows which way `on_primary` resolved, per
+                # Design's band-rules row. One expression, not two literals.
+                "on_primary_rule": (
+                    "rgba(255,255,255,0.3)"
+                    if tokens["on_primary"].lower() == "#ffffff"
+                    else "rgba(20,21,26,0.25)"
+                ),
+            })
+
         logger.info(
             "Rendering market report: type=%s, layout=%s, primary=%s, accent=%s",
             self.report_type,
@@ -938,7 +988,8 @@ class MarketReportBuilder:
         )
 
         try:
-            template = self.env.get_template(TEMPLATE_PATH)
+            template = self.env.get_template(
+            V2_TEMPLATE_PATH if self.report_type in V2_KINDS else TEMPLATE_PATH)
             # Every URL-shaped value is scheme-checked here, at the one place
             # a context can become HTML. See sanitize_context_urls.
             html = template.render(**sanitize_context_urls(context))

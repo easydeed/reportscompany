@@ -1,0 +1,323 @@
+{# Design's market page — `design_handoff_market_reports/Report Page.dc.html`.
+
+   ONE PAGE, DISPATCHED ON KIND, which is their architecture and ours:
+   `market.jinja2` already dispatched on `LAYOUT_MAP`, and their README says so
+   ("`market.jinja2` already dispatches on layout; add the `listings` density
+   switch and the shared band/table partials"). This is the shared band plus the
+   table body; only the kinds in `market_builder.V2_KINDS` render it.
+
+   WHAT IS NOT HERE, AND WHY. No running head and no footer: those are PDFShift's
+   repeating `header` and `footer`, rendered by `_base/page_header.jinja2` and
+   `_base/page_footer.jinja2` at `start_at = 1`, and the 0.44in / 0.89in they
+   reserve is what gives this body its 9.67in. Design's mapping confirms the
+   placement and that our reservation already fits their 40px bar "with 2px to
+   spare — keep 0.44in, don't resize the head."
+
+   The masthead band below is BODY CONTENT, page 1 only, never a header — also
+   their mapping. It is why page 1 holds fewer rows than a continuation page, and
+   why their 3x2 gallery grid on page 1 is the band's cost rather than a grid
+   decision.
+
+   NO AI NARRATIVE. Design removes it from the table kinds so page-1 capacity is
+   one state per kind; `market_builder` suppresses it for `V2_KINDS` before the
+   generate call. Measured: 11 rows with it, 15 without. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ v2_band.title }}{% if header.city %} — {{ header.city }}{% endif %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* The brand colour AS THE FILL. Not the darkened two-stop band: every text
+       colour on it is derived from it, so the text adapts rather than the fill
+       being bent to fit text hardcoded to white (D-112). */
+    --primary: {{ primary_color }};
+    --on-primary: {{ on_primary }};
+    --display-ink: {{ display_ink }};
+    --primary-ink: {{ primary_ink }};
+    --accent: {{ accent_color }};
+    /* Design's `accent_ink`, which is our `accent_on_light` — one token, two
+       vocabularies, see docs/MARKET_TOKEN_MAPPING_2026-10-07.md. Guaranteed
+       >=4.5 on white AND on the tint since D-177. */
+    --accent-ink: {{ accent_on_light }};
+    --tint: {{ tint }};
+    --on-primary-rule: {{ on_primary_rule }};
+
+    /* Design's neutrals, with their measured contrast on white. */
+    --ink: #14161A;        /* 18.1:1 */
+    --body: #2A2D33;       /* 13.8:1 */
+    --muted: {{ v2_muted }};       /* 6.05:1 — the lightest text on the surface */
+    --rule: #ECECE8;
+    --rule-soft: #E4E4E0;
+
+    --font: 'Geist', system-ui, -apple-system, sans-serif;
+    --mono: 'Geist Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    color: var(--body);
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── The page-1 band (shared across kinds) ──────────────────────────────
+     FIXED HEIGHT BY CONSTRUCTION, which is Design's requirement: "band height
+     is therefore fixed: nothing in it grows with data." The label sits in a
+     50px box and steps its type size down by character count rather than
+     wrapping — `market_builder._v2_label_size`, their ladder. */
+  .band {
+    background: var(--primary);
+    color: var(--on-primary);
+    padding: 30px 52px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  .band-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .band-title {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--on-primary);
+  }
+  .band-logo { max-height: 44px; max-width: 200px; width: auto; object-fit: contain; }
+  .band-brand { font-size: 20px; font-weight: 700; color: var(--on-primary); }
+
+  .band-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .band-lead-left { display: flex; align-items: flex-end; gap: 18px; min-width: 0; }
+  .band-big {
+    font-size: 88px;
+    font-weight: 600;
+    line-height: 0.88;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--display-ink);
+  }
+  /* THE FIXED 50px BOX. The type steps, the box does not. */
+  .band-label-box {
+    height: 50px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    padding-bottom: 3px;
+    min-width: 0;
+  }
+  /* `on_primary`, NOT `display_ink`, AND THE PIXEL GATE IS WHY.
+     The ladder's largest step is 22px at weight 600 — which is NOT large text
+     by either of WCAG 1.4.3's definitions (>=24px, or >=18.66px at >=700), so
+     it needs 4.5 and `display_ink`'s threshold is 3.0. Design specifies white
+     here; measured, that is 3.74:1 on #0d9488. Every step of the ladder (22,
+     18, 15, 13) is below 24px, so the token is wrong for this element at every
+     size it can take.
+     This is `.cover-city` on the property surface, one day later, on a
+     different surface and from the same package. The 88px number and the 26px
+     stat values ARE large text and keep `display_ink`. */
+  .band-label {
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--on-primary);
+    white-space: pre-line;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .band-lead-right { text-align: right; flex-shrink: 0; }
+  /* `primary_ink`, NOT `primary`. Design specifies "white pill, `primary`
+     text" — the RAW BRAND COLOUR on white, at 13px/600, which is not large
+     text. Measured: 3.74:1 on teal, 2.15 on amber, 1.98 on lime. `primary_ink`
+     is the brand darkened until it clears AA on white and on the tint
+     (D-170, D-177), which is the token that exists for brand-coloured text on
+     a light surface. The FILL stays white and the brand stays recognisable. */
+  .band-pill {
+    display: inline-block;
+    background: #ffffff;
+    color: var(--primary-ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .band-pill-sub { font-size: 12px; font-weight: 500; color: var(--on-primary); margin-top: 6px; }
+
+  .band-stats {
+    display: grid;
+    grid-template-columns: repeat({{ v2_band.cells | length }}, minmax(0, 1fr));
+    border-top: 1px solid var(--on-primary-rule);
+    padding-top: 16px;
+  }
+  .band-stat { padding-right: 16px; }
+  .band-stat + .band-stat { border-left: 1px solid var(--on-primary-rule); padding-left: 16px; }
+  .band-stat-value {
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--display-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .band-stat-label { font-size: 11.5px; font-weight: 500; color: var(--on-primary); margin-top: 3px; }
+
+  /* ── The table ──────────────────────────────────────────────────────────
+     Design's grid: `1fr 64 72 108 72 44`. A GRID, not a <table>, because the
+     column widths are the spec and a table would negotiate them. */
+  .table { padding: 22px 52px 0; }
+  /* ROW HEIGHT IS DERIVED FROM DESIGN'S ROW COUNT, not chosen.
+     They state 13 rows on page 1 and 26 on a continuation page and do not state
+     a height. A market page's body is 9.67in = 928px, so 26 rows means
+     928 / 26 = 35.7px per row INCLUDING its rule. The first version used
+     `padding: 7px 0` with default line-heights, measured 19 rows per
+     continuation page, and would have cost two pages per report against their
+     spec. These values are what 26 requires:
+         address 13px x 1.15 = 15.0   +   hood 11.5px x 1.15 = 13.2
+       + padding 2 x 3px     =  6.0   +   rule 1px
+       = 35.2px  ->  26 rows = 915px of 928  (measured: 13 and 26)
+     MEASURED, AND DESIGN'S TWO NUMBERS DO NOT AGREE WITH EACH OTHER.
+     26 continuation rows requires a row of at most (928 - 22) / 26 = 34.8px.
+     13 page-1 rows at that height requires a page-1 chrome of 441-476px
+     (band + table padding + header row). Their band spec — padding 30/26,
+     gap 30, a 44px logo slot, an 88px number at line-height 0.88, a stats row
+     — computes to about 295px, and ours measures 265. So no single row height
+     satisfies both of their numbers against their own band: hitting 26 puts
+     page 1 at 17, and hitting 13 would put the continuation page at 19 and
+     cost two pages per report.
+
+     Resolved by hitting the CONTINUATION number, because that is the one that
+     drives page count on a 200-row report, and reporting the page-1 overshoot
+     with the arithmetic. 17 on page 1 is more rows than they specified, which
+     costs the customer nothing — it is fewer pages, not more. */
+  .trow {
+    display: grid;
+    grid-template-columns: 1fr 64px 72px 108px 72px 44px;
+    align-items: baseline;
+    gap: 0 12px;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .thead {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule-soft);
+    padding-bottom: 8px;
+  }
+  .tnum { text-align: right; font-variant-numeric: tabular-nums; }
+  .taddr { font-size: 13px; font-weight: 600; line-height: 1.05; color: var(--ink);
+           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .thood { font-size: 11.5px; font-weight: 400; line-height: 1.05; color: var(--muted); }
+  .tcell { font-size: 13px; font-weight: 400; line-height: 1.15; color: var(--body); }
+  /* Design: ">100% in `accent_ink` 600, else `#5E636B` 400". The boolean is
+     resolved in Python — a template cannot ask whether a ratio is above a
+     threshold without reimplementing the threshold. */
+  .tvs-over { color: var(--accent-ink); font-weight: 600; }
+  .tvs-under { color: var(--muted); font-weight: 400; }
+
+  .tshowing {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 52px 0;
+  }
+
+  /* Rows must not split across a page break; the paginator decides where the
+     break goes and the fit gate measures what that yields. */
+  .trow { break-inside: avoid; page-break-inside: avoid; }
+
+  @media print {
+    body { background: #ffffff; }
+    .band { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<section class="band">
+  <div class="band-top">
+    <div class="band-title">{{ v2_band.title }}</div>
+    {% if agent.logo_url %}
+    <img class="band-logo" src="{{ agent.logo_url }}" alt="">
+    {% elif agent.brand_name %}
+    <div class="band-brand">{{ agent.brand_name }}</div>
+    {% endif %}
+  </div>
+
+  <div class="band-lead">
+    <div class="band-lead-left">
+      <div class="band-big">{{ v2_band.big }}</div>
+      <div class="band-label-box">
+        <span class="band-label" style="font-size: {{ v2_band.label_px }}px">{{ v2_band.label }}</span>
+      </div>
+    </div>
+    {% if v2_band.pill %}
+    <div class="band-lead-right">
+      <span class="band-pill">{{ v2_band.pill }}</span>
+      {% if v2_band.pill_sub %}<div class="band-pill-sub">{{ v2_band.pill_sub }}</div>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="band-stats">
+    {% for cell in v2_band.cells %}
+    <div class="band-stat">
+      <div class="band-stat-value">{{ cell.value }}</div>
+      <div class="band-stat-label">{{ cell.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="table">
+  <div class="trow thead">
+    <div>Address</div>
+    <div class="tnum">Bd/Ba</div>
+    <div class="tnum">Sq ft</div>
+    <div class="tnum">Sold for</div>
+    <div class="tnum">vs. list</div>
+    <div class="tnum">Days</div>
+  </div>
+  {% for row in v2_table.rows %}
+  <div class="trow">
+    <div>
+      <div class="taddr">{{ row.address }}</div>
+      {% if row.hood %}<div class="thood">{{ row.hood }}</div>{% endif %}
+    </div>
+    <div class="tcell tnum">{{ row.beds_baths }}</div>
+    <div class="tcell tnum">{{ row.sqft }}</div>
+    <div class="tcell tnum">{{ row.price }}</div>
+    <div class="tnum {{ 'tvs-over' if row.vs_over else 'tvs-under' }}">{{ row.vs_list }}</div>
+    <div class="tcell tnum">{{ row.days }}</div>
+  </div>
+  {% endfor %}
+</section>
+
+{# "Showing a–b of N". The page number is NOT here: this document does not know
+   how the paginator will break it, and a page number written by the body would
+   be wrong on every page but one. PDFShift's footer carries `Page x of P`. #}
+<div class="tshowing">
+  {% if v2_table.showing < v2_table.total %}
+  Showing {{ v2_table.showing }} of {{ v2_table.total }}
+  {% else %}
+  {{ v2_table.total }} {{ 'sale' if v2_table.total == 1 else 'sales' }}
+  {% endif %}
+</div>
+
+</body>
+</html>

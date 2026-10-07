@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from worker.market_builder import (  # noqa: E402
     ALL_REPORT_TYPES,
     LAYOUT_MAP,
+    V2_KINDS,
     PDF_CONFIG,
     MarketReportBuilder,
 )
@@ -124,13 +125,21 @@ def test_every_report_type_is_covered_by_the_recorded_map():
     assert set(LAYOUT_MACRO) == set(ALL_REPORT_TYPES)
 
 
-@pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
+@pytest.mark.parametrize("report_type", sorted(set(ALL_REPORT_TYPES) - V2_KINDS))
 def test_the_layout_map_matches_the_macro_that_runs(report_type):
     """LAYOUT_MAP[t] + '_layout' must be the macro the render actually calls.
 
     base.jinja2 dispatches on `layout`, so a LAYOUT_MAP edit that does not
     match a branch there falls through to the `{% else %}` and renders the
     gallery — silently, and with output that still looks like a report.
+
+    EXCLUDES `V2_KINDS`, which render Design's `_v2` page and call no layout
+    macro at all. Excluded by SUBTRACTING the seam rather than by listing the
+    kinds that remain: a hand-written remainder is a second copy of
+    `V2_KINDS`, and it would go stale the moment a second kind moves — which
+    is the next thing to happen. `test_a_v2_kind_calls_no_layout_macro` below
+    covers them positively, because a kind dropping out of this test's
+    parameters and being asserted nowhere is how coverage disappears quietly.
     """
     called = macros_for(report_type)
     layout_macros = [m for m in called if m.endswith("_layout")]
@@ -144,6 +153,32 @@ def test_the_layout_map_matches_the_macro_that_runs(report_type):
     )
 
 
+@pytest.mark.parametrize("report_type", sorted(V2_KINDS))
+def test_a_v2_kind_calls_no_layout_macro_and_renders_the_v2_page(report_type):
+    """The other half of the seam, asserted rather than implied.
+
+    A kind in `V2_KINDS` leaves the macro dispatch entirely. Two ways that can
+    go wrong silently: it renders the old page anyway (the seam not taken), or
+    it renders the new page AND a macro (both, which would paginate as
+    neither). Both are caught by requiring the macro list to be empty and the
+    page's own marker to be present.
+    """
+    data = report_data(report_type)
+    data["ai_insights"] = None
+    builder = MarketReportBuilder(data)
+    with recording_macros() as seen:
+        html = builder.render_html()
+    layout_macros = [m for m in seen if m.endswith("_layout")]
+    assert layout_macros == [], (
+        f"{report_type} is in V2_KINDS and still called {layout_macros}. The "
+        f"seam is not taken, or it is taken twice."
+    )
+    assert 'class="band"' in html and 'class="trow thead"' in html, (
+        f"{report_type} called no layout macro and did not render the `_v2` "
+        f"page either — so it rendered neither document."
+    )
+
+
 def test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout():
     """Positive control: prove the assertion above can fail.
 
@@ -152,7 +187,10 @@ def test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout():
     report type at a layout base.jinja2 has no branch for and the fallback
     gallery must run instead.
     """
-    data = report_data("closed")
+    # `inventory`, not `closed`: closed renders the `_v2` page now and
+    # never reaches base.jinja2's dispatch, so it cannot exercise the
+    # fallback this control exists to prove is reachable.
+    data = report_data("inventory")
     builder = MarketReportBuilder(data)
     builder.layout = "no_such_layout"
     with recording_macros() as seen:
@@ -214,9 +252,17 @@ def test_the_more_listings_callout_cannot_emit_anything_today():
     """
     assert all(c["more_template"] is None for c in PDF_CONFIG.values())
     for report_type in ALL_REPORT_TYPES:
+        html = MarketReportBuilder(report_data(report_type)).render_html()
+        if report_type in V2_KINDS:
+            # Design's page has no such callout and calls no macros, so the
+            # "the call still happens on every render" half does not apply.
+            # The OUTPUT half still does, and matters more: a `_v2` page that
+            # started emitting the copy would be the same dishonest callout on
+            # a new document.
+            assert 'class="more-listings-note' not in html, report_type
+            continue
         called = macros_for(report_type)
         assert "more_listings_callout" in called, report_type
-        html = MarketReportBuilder(report_data(report_type)).render_html()
         # The bare class name also appears in a `.more-listings-note
         # { break-inside: avoid }` rule in the stylesheet, which is itself
         # unreachable today. Match the attribute so this asserts about MARKUP

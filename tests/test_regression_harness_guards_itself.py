@@ -103,8 +103,14 @@ def test_a_mutation_that_does_not_fire_exits_1(harness, tmp_path, capsys):
         "name": "lands, and nothing guards it",
         "file": str(target),
         "old": "ORIGINAL", "new": "MUTATED",
-        # A test that passes regardless — this very file, minus itself.
-        "test": "tests/test_regression_harness_guards_itself.py::test_the_spec_files_are_well_formed",
+        # A gate chosen to be INERT with respect to the mutation, and to be
+        # unconditionally green. The first version named
+        # `test_the_spec_files_are_well_formed`, which is a real gate — and
+        # when a recorded anchor moved, that gate started failing, the mutation
+        # "fired", and THIS test failed for a reason that had nothing to do
+        # with it. A self-test that borrows another test's status inherits its
+        # failures. `--collect-only` on one node runs no assertions at all.
+        "test": "--collect-only -q tests/test_regression_harness_guards_itself.py",
     }]), encoding="utf-8")
     # `file` is absolute here, so ROOT / abs == abs. Deliberate: the spec
     # format takes repo-relative paths, and an absolute one still resolves.

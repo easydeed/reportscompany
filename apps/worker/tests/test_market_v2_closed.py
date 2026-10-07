@@ -214,3 +214,43 @@ def test_every_row_has_every_column_design_specifies():
     assert rows
     for row in rows:
         assert set(row) == columns, sorted(set(row) ^ columns)
+
+
+def test_a_v2_render_does_not_pay_for_a_narrative_it_discards(monkeypatch):
+    """What the `V2_KINDS` narrative suppression actually buys.
+
+    Not determinism — the `_v2` page has no narrative block, so prose could not
+    move the pagination even if it were generated. A mutation removing the
+    suppression came back `DID NOT FIRE`, which is how that claim got checked
+    and corrected.
+
+    What it buys is not paying for it: an OpenAI round trip per render whose
+    output the template discards. So the assertion is about the CALL, which is
+    the thing that changes.
+    """
+    import worker.market_builder as mb
+
+    calls = []
+    monkeypatch.setattr(
+        mb, "generate_market_pdf_narrative",
+        lambda *a, **k: calls.append(a) or "some generated prose")
+
+    b = builder()
+    b.report_data["ai_insights"] = ""      # nothing pre-supplied
+    html = b.render_html()
+    assert calls == [], (
+        f"a v2 render called the narrative generator {len(calls)} time(s). "
+        f"The page discards the result, so this is a paid-for round trip with "
+        f"no output."
+    )
+    assert "some generated prose" not in html
+
+    # The control: a kind that has NOT moved still generates one, so this is
+    # not asserting that the generator is simply unreachable.
+    other = builder("inventory")
+    other.report_data["ai_insights"] = ""
+    other.render_html()
+    assert calls, (
+        "a non-v2 kind did not call the narrative generator either, so the "
+        "assertion above proves nothing about the seam."
+    )
