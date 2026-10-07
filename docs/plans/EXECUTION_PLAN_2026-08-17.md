@@ -1366,6 +1366,34 @@ it.**
   The one document that got it right, `00-SHARED.md`, did so structurally rather than by care: its
   table has **one row per surface**, so there was nowhere to write an unqualified `_base/`.
 
+- **A GATE ON A DOCUMENT MUST ASSERT ITS CLAIMS, NOT ITS TEXT — AND THE GATES WHOSE SUBJECT IS
+  STALENESS ARE THE ONES THAT GET THIS WRONG.** *Added 2026-10-07. Two instances in one day, both
+  in gates written to stop a document going stale.*
+
+  Two documents now leave this building for Design, and both are gated because three bounds have
+  arrived from them derived from a sample and stated as a property. Both gates were written against
+  the **words** rather than against what the words say, and both let a real change through:
+
+  * `test_the_overlap_is_what_the_document_says` matched the heading string `"Only two of the six
+    brands are shared"`. **Reordering the document broke it** — the lead was moved from the
+    correction to the finding, every number unchanged, and the gate failed. A gate that fails on a
+    rewrite teaches you to stop rewriting.
+  * `test_the_document_quotes_the_pinned_capacity` checked `str(rows) in text`. Moving a measured
+    capacity from 15 to **17 passed**, because the document contains `D-173` and `"17" in "D-173"`.
+    Substring-is-not-a-construct, instance fourteen, inside a staleness gate — which is the irony
+    that makes it worth a rule.
+
+  **The fix is the same in both directions: put the claim in a form the document and the gate can
+  both parse, then compare the parsed values.** §5 of the capacity document is now a fenced
+  ```capacity block of `kind.state = rows` lines, and the assertion is dict equality against
+  `PAGE_1_CAPACITY` — which catches a figure that moved, a figure that was dropped, and a figure
+  that was added, none of which a substring scan can distinguish from prose. The brand audit asserts
+  each hex **by value** and the lead's own count, not the sentence that carries them.
+
+  The general form: **a document's prose is for the reader and its data is for the gate, and they
+  have to be different regions of the file.** A gate reaching into prose is either brittle about
+  wording or blind about values, and there is no setting of it that is neither.
+
 ---
 
 ## Phase 0 — Security & Tooling

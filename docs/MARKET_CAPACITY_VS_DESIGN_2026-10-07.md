@@ -35,9 +35,42 @@ per-kind table — against ours:
 | Design's spec (13 + 26/page) | **6** |
 | ours, no narrative (15 + 29/page) | **5** |
 
-**One extra page per report**, on the highest-volume kind. Worth their confirmation that it is
-intended rather than a side effect of the row height, because it is the kind of thing that is cheap
-to adjust in a design file and expensive to discover after eight kinds are wired.
+One extra page on that kind. But `closed` alone is the wrong basis for the decision, so:
+
+## 2a · The same arithmetic on all eight kinds, which reverses the headline
+
+Each type at its own `PDF_CONFIG` cap (a `market_snapshot` never renders 120 listings — its cap is
+9), ours measured no-narrative, theirs from their per-kind spec:
+
+| type | cap | N | our pages | their pages | delta |
+|---|---|---|---|---|---|
+| `closed` | 200 | 120 | 5 | **6** | **+1** |
+| `inventory` | 200 | 120 | 5 | **6** | **+1** |
+| `new_listings` | 200 | 120 | **16** | **6** | **−10** |
+| `new_listings_gallery` | 200 | 120 | 14 | 3×2 grid, continuation not stated | — |
+| `open_houses` | 100 | 100 | 12 | 3×3 grid, continuation not stated | — |
+| `featured_listings` | 12 | 12 | 2 | 2×2 grid, one page | — |
+| `market_snapshot` | 9 | 9 | 2 | one page, no listings table | — |
+| `price_bands` | 8 | 8 | 2 | one page, 7 fixed band rows | — |
+| **the three stated kinds** | | | **26** | **18** | **−8** |
+
+**`new_listings` is the finding.** It runs on our `analytics` layout today at 3 rows on page 1 and 8
+on continuation — sixteen pages for 120 listings. Design puts it on the **table** layout at 13 and
+26, which is six. The two pages their density costs on `closed` and `inventory` are bought back four
+times over on one kind.
+
+So the trade is not "a page per report". Across the three kinds Design specifies row counts for, it
+is **eight pages saved**, and the two regressions are on the kinds whose current layout was already
+the dense one.
+
+**What we still need from them** is the continuation capacity for the two gallery kinds. Their
+package states the grids (3×2, 3×3) but not what a continuation page carries, and those are the two
+kinds where our current 14 and 12 pages are the largest absolute numbers on the surface. A 3×3 grid
+on continuation would be nine per page against our nine — no change; a 3×2 would be fourteen pages
+becoming twenty.
+
+Worth their confirmation that the `closed` row height is intended rather than a side effect, because
+it is cheap to adjust in a design file and expensive to discover after eight kinds are wired.
 
 ## 3 · The improvement their design brings, which is real
 
