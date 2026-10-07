@@ -60,9 +60,19 @@ def rel(p):
 def main() -> int:
     live, retired, reg = names()
     allnames = live + retired
-    quoted = re.compile(
-        r"[\"'`](" + "|".join(allnames) + r")[\"'`]"
-    )
+    # A BACKTICK IS NOT A STRING DELIMITER IN PYTHON, and counting it as one
+    # made this derivation report prose as code. A comment reading "the schema
+    # advertised `teal` as the default" is a sentence ABOUT the cut, not a
+    # fifth site holding the name — and two such comments, written while
+    # recording D-174, pushed the file count past its own ceiling and failed
+    # the build. Python has no backtick literal at all, so the only backticks
+    # in a `.py` file are prose. TypeScript's template literals are real, so
+    # `.ts`/`.tsx` keep theirs.
+    #
+    # Substring-is-not-a-construct, instance thirteen, in the gate written to
+    # count the other twelve.
+    quoted_py = re.compile(r"[\"'](" + "|".join(allnames) + r")[\"']")
+    quoted_web = re.compile(r"[\"'`](" + "|".join(allnames) + r")[\"'`]")
     bare_key = re.compile(r"\b(" + "|".join(allnames) + r")\s*:")
     report: dict = {
         "live": live,
@@ -81,6 +91,7 @@ def main() -> int:
         for n, line in enumerate(text.splitlines(), 1):
             if FONT_WEIGHT.search(line):
                 continue
+            quoted = quoted_py if p.suffix == ".py" else quoted_web
             for m in list(quoted.finditer(line)) + list(bare_key.finditer(line)):
                 hits.append((n, m.group(1)))
         if hits:

@@ -14,7 +14,7 @@ from math import radians, cos, sin, asin, sqrt
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # =============================================================================
@@ -36,6 +36,10 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return miles
 
 from ..db import db_conn, fetchall_dicts, fetchone_dict, set_rls
+from ..theme_registry import (
+    DEFAULT_THEME_ID, RETIRED_NUMBER_MAP, SELECTABLE_THEME_IDS,
+    THEME_NUMBER_MAP,
+)
 from ..services import get_full_plan_usage
 from ..services.sitex import (
     PropertyData,
@@ -339,8 +343,23 @@ class ComparablesResponse(BaseModel):
 class PropertyReportCreate(BaseModel):
     """Create a new property report"""
     report_type: Literal["seller", "buyer"] = "seller"
-    # Theme: accepts number (1-5) or name (classic, modern, elegant, teal, bold)
-    theme: Any = Field(default=4, description="Theme ID (1-5) or name (classic, modern, elegant, teal, bold)")
+    # D-174. This was `default=4` with a description naming five themes, two of
+    # which are retired — so the OpenAPI schema advertised `teal` as the
+    # default of a theme that no longer renders, three weeks after the cut.
+    # Nothing broke, because `theme_registry.resolve` sends every retired and
+    # unknown value to the default, which is exactly why nothing noticed.
+    #
+    # Derived, not restated: the id, the name list and the accepted set all
+    # come from `themes.json` through the generated registry.
+    theme: Any = Field(
+        default=DEFAULT_THEME_ID,
+        description=(
+            f"Theme id {SELECTABLE_THEME_IDS} or name "
+            f"({', '.join(THEME_NUMBER_MAP[i] for i in SELECTABLE_THEME_IDS)}). "
+            f"A retired id or an unrecognised name resolves to the default, "
+            f"{DEFAULT_THEME_ID}."
+        ),
+    )
     accent_color: str = Field(default="#0d294b", pattern=r"^#[0-9a-fA-F]{6}$")
     language: Literal["en", "es"] = "en"
     
@@ -410,7 +429,33 @@ class PropertyReportDetail(BaseModel):
 
 class PreviewRequest(BaseModel):
     """Request for live HTML preview of a report"""
-    theme: int = Field(default=4, ge=1, le=5, description="Theme ID (1-5)")
+    # D-174. Was `default=4, ge=1, le=5` — the retired default again, and a
+    # CONTIGUOUS RANGE over a set the cut made non-contiguous. The generated
+    # registry's own docstring says why that is wrong ("a plain `ge`/`le` range
+    # cannot express the gaps the cut left"), and `routes/account.py` had
+    # already replaced its range with a validator against the derived set. This
+    # model was missed.
+    #
+    # The accepted set is live + retired, not live alone: a historical row or a
+    # saved schedule can still hold id 1 or 4, and rejecting those would 422 a
+    # preview of a report that exists. What the id RESOLVES to is still the
+    # default — the coercion is the registry's job, not this validator's.
+    theme: int = Field(
+        default=DEFAULT_THEME_ID,
+        description=(
+            f"Theme id. Selectable: {SELECTABLE_THEME_IDS}. Retired ids "
+            f"{sorted(RETIRED_NUMBER_MAP)} are accepted for historical rows "
+            f"and resolve to {DEFAULT_THEME_ID}."
+        ),
+    )
+
+    @field_validator("theme")
+    @classmethod
+    def _theme_is_known(cls, v: int) -> int:
+        known = sorted({*THEME_NUMBER_MAP, *RETIRED_NUMBER_MAP})
+        if v not in known:
+            raise ValueError(f"theme must be one of {known}; got {v}")
+        return v
     accent_color: str = Field(default="#0d294b", pattern=r"^#[0-9a-fA-F]{6}$")
     
     # Property data

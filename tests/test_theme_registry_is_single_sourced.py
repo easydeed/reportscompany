@@ -459,3 +459,85 @@ def test_the_worker_registry_and_the_api_registry_agree():
     assert worker_reg.RETIRED_NUMBER_MAP == api_reg.RETIRED_NUMBER_MAP
     assert worker_reg.DEFAULT_THEME_ID == api_reg.DEFAULT_THEME_ID
     assert sorted(worker_reg.THEME_NUMBER_MAP) == api_reg.SELECTABLE_THEME_IDS
+
+
+def test_no_request_model_defaults_a_theme_field_to_a_retired_id():
+    """`test_no_python_fallback_names_a_theme_id_the_registry_does_not` is a
+    list of four SPELLINGS, and `theme: Any = Field(default=4)` is a fifth.
+
+    D-174. That regex matches `theme_id or N`, `default_theme_id = N`,
+    `COALESCE(default_theme_id, N)` and `DEFAULT_THEME_ID = N` — the four forms
+    that existed when it was written. Two Pydantic request models in
+    `routes/property.py` declared `default=4`, which is `teal`, retired by the
+    cut three weeks earlier; one of them also carried `ge=1, le=5`, a
+    CONTIGUOUS range over a set the cut made non-contiguous. Both were
+    invisible to the regex, and neither broke anything, because
+    `theme_registry.resolve` sends every retired and unknown value to the
+    default — which is precisely why nothing noticed.
+
+    §0.6: a selector named after one instance describes that instance. So this
+    one PARSES instead: every assignment to a theme-named field in every
+    class, whatever the spelling, with the value read out of the AST.
+    """
+    live = {t["id"] for t in registry()["themes"]}
+    bad = {}
+
+    def theme_named(name: str) -> bool:
+        return "theme" in name.lower()
+
+    def int_literal(node):
+        if isinstance(node, ast.Constant) and isinstance(node.value, int) \
+                and not isinstance(node.value, bool):
+            return node.value
+        return None
+
+    for path in source_files(".py"):
+        rel = str(path.relative_to(REPO))
+        if rel == "tests/test_theme_registry_is_single_sourced.py":
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="ignore"))
+        except SyntaxError:
+            continue
+        for cls in ast.walk(tree):
+            if not isinstance(cls, ast.ClassDef):
+                continue
+            for stmt in cls.body:
+                target = None
+                if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+                    target = stmt.target.id
+                elif isinstance(stmt, ast.Assign) and len(stmt.targets) == 1 \
+                        and isinstance(stmt.targets[0], ast.Name):
+                    target = stmt.targets[0].id
+                if target is None or not theme_named(target) or stmt.value is None:
+                    continue
+                where = f"{rel}:{stmt.lineno} ({cls.name}.{target})"
+
+                # `theme: int = 4`
+                direct = int_literal(stmt.value)
+                if direct is not None and direct not in live:
+                    bad[where] = f"= {direct}, not a live id"
+                    continue
+
+                # `theme: int = Field(default=4, ge=1, le=5)`
+                if isinstance(stmt.value, ast.Call):
+                    for kw in stmt.value.keywords:
+                        value = int_literal(kw.value)
+                        if value is None:
+                            continue
+                        if kw.arg == "default" and value not in live:
+                            bad[where] = f"Field(default={value}), not a live id"
+                        elif kw.arg in ("ge", "le", "gt", "lt"):
+                            bad[where] = (
+                                f"Field({kw.arg}={value}) — a contiguous bound "
+                                f"over {sorted(live)}, which has gaps"
+                            )
+
+    assert not bad, (
+        "theme fields whose declared value or bound disagrees with the "
+        "registry:\n"
+        + "\n".join(f"  {k}  {v}" for k, v in sorted(bad.items()))
+        + "\n\nDerive it: `DEFAULT_THEME_ID` for the value, "
+        "`SELECTABLE_THEME_IDS` (or a field_validator against it) for the set. "
+        "A range cannot express the gaps ids-are-never-reused leaves behind."
+    )
