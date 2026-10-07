@@ -63,3 +63,48 @@ are not yet wired onto the market surface: `display_ink` (on `property/_v2` only
   steps.
 
   The table above is the post-fix measurement. Pre-fix values are on the defect entry.
+
+---
+
+## Applying the heuristic before building: what each market kind closes
+
+D-171 closed zero and D-177 closed twenty, from the same shape of ticket, and the difference was
+*which surface the token lands on*. The rule that came out of it — **ask where it paints before
+estimating what it closes** — is a grep of the baseline, so it was run before writing any template.
+
+All six `market__*` baseline rows are **one construct**:
+
+```
+market__new_listings   span.listing-tier-badge.tier-high
+market__new_listings   span.listing-tier-badge.tier-low
+market__new_listings   span.listing-tier-badge.tier-median
+market__price_bands    span.status-badge.active
+market__price_bands    span.status-badge.closed
+market__price_bands    span.status-badge.pending
+```
+
+Six pairings, **66 failing text runs** of 5,058 — the 1.30% the whole market surface is held to. And
+Design's spec addresses exactly this construct, twice: *"No chips, no tinted fills behind semantic
+text — the live surface's only 66 failures are that construct"* and *"Semantic/delta colour:
+`accent_ink` text only, never fills."*
+
+So the contrast payoff of the market adoption is **all of it, and it is not on `closed`**:
+
+| kind | market baseline rows | what wiring it closes |
+|---|---|---|
+| `new_listings` | 3 (tier badges) | **3 pairings** |
+| `price_bands` | 3 (status badges) | **3 pairings** |
+| `closed` · `inventory` · `market_snapshot` · the three gallery kinds | **0** | **nothing, by construction** |
+
+**`closed` closes zero contrast failures**, and that was knowable before building it — the D-171
+situation again, caught this time by asking first rather than measuring after.
+
+That does **not** make `closed` the wrong first kind. It is first because it is the table kind with
+continuation pages, so it exercises `header.start_at = 1`, `footer.start_at = 1` and the row
+capacity together — the architectural risks, which if wrong invalidate the other seven. The contrast
+win is a separate axis and it sits on `new_listings` and `price_bands`.
+
+**Worth knowing for the order after `closed`:** `new_listings` is also the kind that saves ten pages
+by moving off the analytics layout. It carries both the largest page saving and half the contrast
+payoff, which makes it the obvious second rather than `inventory` (which is `closed`'s twin and
+closes nothing).

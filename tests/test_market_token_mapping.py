@@ -109,3 +109,33 @@ def test_the_tint_gap_is_recorded_as_found_and_fixed():
             f"measurement leaves a fix with no evidence it was needed."
         )
     assert "two implementations" in body
+
+
+def test_the_market_baseline_is_all_one_construct():
+    """The heuristic's input, asserted so the estimate cannot go stale.
+
+    "Ask where it paints before estimating what it closes" is only usable if
+    the baseline's market rows are what the document says they are. All six are
+    badge selectors on two kinds; `closed` has none, which is why wiring it
+    closes nothing and why that was knowable in advance.
+    """
+    baseline = (REPO / "apps/worker/tests/pdf_contrast_baseline.txt"
+                ).read_text(encoding="utf-8")
+    rows = [line.split("\t") for line in baseline.splitlines()
+            if line.startswith("market__")]
+    assert len(rows) == 6, f"{len(rows)} market baseline rows, expected 6"
+    by_kind = {}
+    for family, selector, *_ in rows:
+        by_kind.setdefault(family, []).append(selector)
+    assert set(by_kind) == {"market__new_listings", "market__price_bands"}, (
+        f"market baseline rows now span {sorted(by_kind)}. The document says "
+        f"the contrast payoff is on new_listings and price_bands only, and "
+        f"that `closed` closes nothing."
+    )
+    assert all("badge" in sel for sels in by_kind.values() for sel in sels), (
+        f"not every market baseline row is a badge selector: {by_kind}. "
+        f"Design's spec removes that construct; a non-badge row means the "
+        f"payoff estimate covers something their spec does not address."
+    )
+    body = DOC.read_text(encoding="utf-8")
+    assert "**`closed` closes zero contrast failures**" in body

@@ -10578,6 +10578,23 @@ They close when those two themes move to `_v2`, not from this token.
 What `display_ink` does is restore the owner's one accepted exception and make the two brands that
 failed impossible, derived, for any brand including ones nobody has picked yet.
 
+**AND THE COMPARISON THAT MAKES THAT NUMBER MEAN SOMETHING, ADDED 2026-10-07.** D-177 was the same
+shape of ticket — *adopt Design's token* — and it closed **twenty** baseline entries from one
+function with no template change. The difference is not the quality of either fix:
+
+| | token | where it paints | baseline rows closed |
+|---|---|---|---|
+| D-171 | `display_ink` | the cover of `property__bold` | **0** — bold's document already had none |
+| D-177 | `accent_ink` | accent text on tint panels, `elegant` + `modern` | **20** |
+
+`display_ink` closing nothing was **knowable before it was built**, because bold had zero baseline
+rows and the token only reaches bold's cover. So:
+
+> **Before estimating what a token adoption closes, ask where it paints.** A token on a surface with
+> no baseline rows closes nothing by construction, however correct it is; a token on the surface
+> carrying the rows closes them without a template change. The estimate is a property of the
+> selector list, not of the derivation — and it is a grep of the baseline, not a render.
+
 #### Two copies of the token set, found on the way
 
 * **`regen_theme_golden.py` enumerated the six token names** while `test_golden_file_lock` iterates
@@ -10819,12 +10836,39 @@ ship:
 Four of nine below 4.5 on the tint while every one of them cleared white. **Two of the four are
 shipping presets.**
 
-#### This is D-170, and the reason it recurred is that there are two implementations
+#### THE RECURRENCE MECHANISM: TWO IMPLEMENTATIONS, ONE FIXED, AND THE TELL WAS IN THE PAIR
 
-D-170 found `primary_ink` clearing AA on white and not on `tint` — *half its own definition* — and
-fixed `themes._ink`. `_ensure_readable_on_light` in `property_builder.py` is **a second
-implementation of the same derivation**, and it was not touched. One function got the fix; the other
-kept the defect, and the one that kept it is the one the accent flows through.
+This is the part worth carrying forward, because it is the reason a defect fixed on 2026-10-06 was
+still live on 2026-10-07 one function away.
+
+There are **two implementations of darken-until-readable**:
+
+| | fixed by D-170? | what flows through it |
+|---|---|---|
+| `themes._ink` | **yes** — cleared white only, corrected to white **and** `tint` | `primary_ink`, the brand colour |
+| `property_builder._ensure_readable_on_light` | **no** | `theme_color_on_light`, i.e. **the accent** |
+
+One function got the fix. The other kept the defect, and the one that kept it is the one the accent
+flows through — so D-170's correction was true of the primary and false of the accent, with nothing
+in either file saying which.
+
+**And the tell was available without measuring anything.** Thirty lines above
+`_ensure_readable_on_light`, in the same file, sits its mirror:
+
+```python
+def _ensure_readable_on_dark(hex_color: str, dark_bg) -> str:
+    # `dark_bg` may name several surfaces when the text sits on a gradient
+```
+
+`_ensure_readable_on_dark` has **always** taken several surfaces. Its light-side twin took one, with
+a default. A reader comparing the pair would have asked why one side of a symmetric pair is plural
+and the other singular; a reader of either one alone sees nothing wrong. **The asymmetry was the
+evidence, and it was one function apart from the defect the whole time.**
+
+So the general form, and the thing to do rather than remember: *when a derivation exists twice, a
+fix applied to one copy is a hypothesis about the other.* And when two functions are each other's
+mirror, **read them together** — the one that is wrong is usually the one whose signature is
+simpler than its twin's.
 
 The D-163 family again — five copies of the theme map, two of the brand picker (D-175), two counts
 of the token set (D-171) — this time as two copies of *darken-until-readable*, where the cost is not
@@ -10856,9 +10900,25 @@ Those twenty were accent text on tint panels — `div.num`, `h3`, `div.property-
 `#53810c on #faf7f2`, `#dc2626 on #fef4f4` and so on. The ratchet is a shrink, regenerated so the
 diff records it.
 
-Worth stating against D-171's note: `display_ink` closed **zero** baseline entries because
-`property__bold` had none. This closed **twenty**, on the two themes still on the old architecture,
-from one function.
+#### D-171 closed zero; this closed twenty. Same ticket, different surface.
+
+Both were *"adopt Design's token"*. `display_ink` (D-171) closed **zero** baseline entries, because
+it paints the cover of `property__bold` and bold's document already had none. `accent_ink` closed
+**twenty**, because it paints accent text on tint panels across `property__elegant` and
+`property__modern` — the two themes still on the old architecture, which is where the baseline rows
+live.
+
+The difference is not the quality of either fix. **It is which surface the token lands on**, and
+that was knowable before either was built:
+
+> **Before estimating what a token adoption closes, ask where it paints.** A token on a surface with
+> no baseline rows closes nothing by construction, however correct it is; a token on the surface
+> carrying the rows closes them without a template change. The estimate is a property of the
+> selector list, not of the derivation.
+
+For the remaining adoption work — the band rule, the `on_primary` roles, whatever the market kinds
+need — that is the question to ask first, and it is cheap: grep the baseline for the selectors the
+token reaches.
 
 #### The fallback branch is unreachable, and the harness said so
 
