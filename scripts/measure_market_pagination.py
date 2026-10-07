@@ -21,18 +21,37 @@ flowing them with the body:
 The body therefore flows in 11in - 1.33in = 9.67in on every page, and that is what
 this script reproduces with Chromium's own paginator: same format, same margins,
 header and footer left out because their space is what matters here, not their
-paint. Corroboration that the emulation is faithful: a production `closed.pdf`
-reviewed for the master plan carries 13 rows on page 1 and 25 on page 2, and
-this harness produces 13 then 25 from the same build.
+paint.
 
-PAGE 1 IS NOT A FIXED CAPACITY. Measured: shortening the AI narrative by one
-sentence (~48 characters) moves `closed` from 13 rows on page 1 to 14, and
-`new_listings` from 3 to 4. Continuation pages are unaffected at a stable 25
-and 7. The narrative is model-generated prose of no fixed length, so page 1's
-row count is a property of the copy and not only of the layout — which is worth
-knowing before any pagination target is set against a single observed number.
-The fixture below uses the longer narrative, the one that reproduces the
-reviewed production render.
+THE FIGURES IN THIS DOCSTRING WERE STALE, AND THE EMITTED DICT WAS NOT.
+It read: "a production `closed.pdf` reviewed for the master plan carries 13
+rows on page 1 and 25 on page 2, and this harness produces 13 then 25". As of
+2026-10-07 the same harness produces **11 then 29** for `closed`, because §7.1's
+running-head change recovered 1.07in of every page and the continuation pages
+took the gain. `PAGE_1_CAPACITY` in `test_narrative_box.py` is CURRENT — it was
+re-pinned from `--emit-capacity`, which is what that mode exists for — so the
+derived value was maintained and the prose beside it was not.
+
+That is the same finding this file's own docstring argues against, one level
+out: a number typed into a comment has no reader that fails. Measured figures
+below carry their date for that reason.
+
+PAGE 1 IS NOT A FIXED CAPACITY, and the size of the effect is larger than the
+old figures suggested. Measured 2026-10-07, 120 listings, `closed`:
+
+    with the narrative      11 rows on page 1
+    without it              15 rows on page 1   (+4, not +1)
+    continuation            29 rows, stable across both
+
+The narrative is model-generated prose of no fixed length, so page 1's row count
+is a property of the copy and not only of the layout. Design's market package
+removes the narrative from the table and gallery kinds for exactly this reason
+("Page-1 capacity is one state per kind"), which makes their page 1
+deterministic where ours is not — a real improvement, and the thing to measure
+their row counts against is therefore the no-narrative column, not the one
+production renders today.
+
+The fixture below uses the longer narrative, the one production renders.
 
     python3 scripts/measure_market_pagination.py [N_LISTINGS]
 """
