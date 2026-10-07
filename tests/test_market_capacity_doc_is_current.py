@@ -249,3 +249,60 @@ def test_the_gallery_question_states_the_asymmetry_correctly():
         "§6 no longer asks the question. The arithmetic is the argument for "
         "asking it, not a substitute for the ask."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The ask itself — `docs/ASK_DESIGN_GALLERY_CONTINUATION_2026-10-07.md`.
+#
+# A second document that leaves the building, so the same rule applies: its
+# data is for the gate. Both its tables are recomputed here rather than read.
+# ─────────────────────────────────────────────────────────────────────────────
+
+ASK = REPO / "docs/ASK_DESIGN_GALLERY_CONTINUATION_2026-10-07.md"
+
+
+def test_the_ask_to_design_carries_current_numbers():
+    """Every figure in the ask, recomputed from the pin and Design's spec."""
+    import math
+    body = ASK.read_text(encoding="utf-8")
+
+    # The gallery asymmetry — the question's whole argument.
+    for kind, n in (("new_listings_gallery", 120), ("open_houses", 100)):
+        page_1 = PAGE_1_CAPACITY[kind]["no_narrative"]
+        at_9 = math.ceil((n - page_1) / 9) + 1
+        at_6 = math.ceil((n - page_1) / 6) + 1
+        assert f"**{at_9} pages** — **unchanged" in body or \
+               f"{at_9} pages — **unchanged" in body, \
+            f"{kind}: a 3x3 continuation is {at_9} pages; the ask says otherwise"
+        assert f"**{at_6} pages**, up from {at_9}" in body, (
+            f"{kind}: a 3x2 continuation is {at_6} pages up from {at_9}; the "
+            f"ask states something else."
+        )
+
+    # The saving that makes the question urgent rather than tidy.
+    doc = _doc_table_rows()
+    stated = [(o, t) for _, _, o, t in doc.values() if t is not None]
+    ours, theirs = sum(o for o, _ in stated), sum(t for _, t in stated)
+    assert f"| | **{ours}** | **{theirs}** |" in body, (
+        f"the ask's totals must be {ours} and {theirs}, from the same "
+        f"measurement as the capacity document."
+    )
+    assert "saves us eight pages" in body
+    assert "eleven pages across two kinds" in body, (
+        "the ask no longer states what the 3x2 reading would cost. The "
+        "arithmetic is why the question is worth asking."
+    )
+
+
+def test_the_ask_actually_asks():
+    """A document of measurements with no question in it is a report.
+
+    §0.6: a deferred decision needs a ratchet, not a document — and a question
+    put to someone else needs to be a question. This one has been rewritten
+    once already to lead with the finding rather than a correction, so the ask
+    is asserted by name.
+    """
+    body = ASK.read_text(encoding="utf-8")
+    assert "**Is a gallery continuation page a 3×3 of the same card, or the " \
+           "kind's own page-1 grid repeated?**" in body
+    assert "Either answer is one line" in body
