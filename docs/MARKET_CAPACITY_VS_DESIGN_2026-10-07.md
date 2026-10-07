@@ -144,30 +144,28 @@ which is a reviewable fact rather than a surprise.
 
 ---
 
-## 6 · One question back: what does a gallery continuation page carry?
+## 6 · Gallery continuation: measured, and it is three rows
 
-**This is the only thing in the package we cannot measure from, and it lands on the two kinds with
-our largest page counts.**
+Design's spec left this unstated — the per-kind table gives the page-1 grids (`new_listings_gallery`
+3×2, `open_houses` 3×3 "same card as listings") and the continuation-pages section covers only the
+three table kinds. The two readings differed by **eleven pages across those two kinds**, so it was
+worth settling before wiring.
 
-The per-kind spec gives the page-1 grids — `new_listings_gallery` 3×2, `open_houses` 3×3,
-`featured_listings` 2×2 — and the continuation-pages section covers only `closed`, `inventory` and
-`new_listings` ("the table kinds"). So for the gallery kinds we know what page 1 holds and not what
-page 2 holds, and the difference is not small:
+**Settled by measuring, not by asking.** A market PDF page has 928px of body
+(11in − 0.44in header − 0.89in footer). The card is **258px**, the row gap **8px**:
 
-| if a gallery continuation page carries… | `new_listings_gallery` at 120 | `open_houses` at 100 |
-|---|---|---|
-| **9** (3×3, as page 1 on open houses) | 14 pages — unchanged from ours | 12 pages — unchanged |
-| **6** (3×2, as page 1 on new listings gallery) | **20 pages**, from 14 | **17 pages**, from 12 |
+| | px |
+|---|---|
+| three rows | **790** |
+| headroom | **138** — 0.53 of a card |
+| four rows | 1,056 — 128px over |
 
-Ours today is 9 on both. So one reading of the spec changes nothing and the other adds **six pages
-to one kind and five to the other** — on the two kinds that already carry the most pages on the
-surface, 14 and 12 against `closed`'s 5.
+**Three rows fit; four cannot.** Our build already does 9 per continuation page on both kinds, and
+Design's 3×2 on page 1 is the masthead's cost rather than a grid decision — their own spec puts nine
+of the same card on `open_houses` page 1, which carries the same fixed band. So the two numbers were
+never in conflict and the gallery kinds stay at 14 and 12 pages.
 
-For contrast, the three kinds you *did* specify come to **18 pages against our 26** — eight saved,
-because `new_listings` moves off our analytics layout (3 rows on page 1, 8 on continuation, sixteen
-pages) onto your table layout at 13 and 26, which is six. The density you chose is a clear win
-there. We would rather know the gallery number than infer it, because inferring the 3×2 reading
-would hand back most of that saving on two kinds and nobody would see it until the PDFs rendered.
-
-**Concretely: is a gallery continuation page a 3×3 of the same card, or the kind's own page-1
-grid repeated?** Either answer is one line and we will build to it.
+The card height is invariant to content (258px at 3 listings and at 40) and the photo reserves its
+180px in CSS, so a headless render without photos is faithful. Full working, including why Design's
+own reference file could not be measured in this container:
+`docs/GALLERY_CONTINUATION_MEASURED_2026-10-07.md`.
