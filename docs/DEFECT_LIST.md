@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 59 | Real, unfixed |
-| `fixed` | 110 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 58 | Real, unfixed |
+| `fixed` | 111 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **174** | D-001 … D-174, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 13 · ROUGH 24. (Sums to 59, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 13 · ROUGH 24. (Sums to 58, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -91,7 +91,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > imports the test's `parse()`, so there is one reader and it is the one CI runs. Two
 > implementations of "how to read this document" is a second answer waiting to be believed.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -10483,7 +10483,8 @@ test: `#000000`, `#ffffff` and `#ffff00` all have tints that behave specially.
 
 **Severity:** WRONG · **Affects:** the redesigned property report's cover, on amber and lime ·
 **Found during:** the pixel contrast gate, first render of the redesigned document
-**Status:** `open` — **[JERRY]**, and the slot is built with the safe value in it
+**Status:** `fixed` (`feat/display-ink-shared-token`) — **the [JERRY] decision was closed by Design
+deriving it**, 2026-10-07. See *"Closed by a third option"* below.
 
 Design's package specifies `#FFFFFF` for the cover's display lines — street, city, the four 30px
 stat values — "**by owner decision**", on the stated grounds that it "passes the 3.0 large-text
@@ -10520,6 +10521,79 @@ exception for it, so it uses `on_primary` outright — measured at 1.98:1 on lim
 before the change. The `opacity: 0.85` / `0.9` / `0.92` values Design sets on text over the band
 are dropped for the related reason: a translucent `on_primary` over `primary` is a colour neither
 token measured, and the gate reports it as a pairing nobody chose.
+
+---
+
+#### Closed by a third option, which neither side had proposed
+
+`RESPONSE_2026-10-06.md`. Design did not defend the claim and did not retreat to a narrower one —
+they replaced the assertion with a derivation:
+
+```
+display_ink = contrast(white, primary) >= 3.0 ? white : on_primary
+```
+
+**Third round for this class of claim, and the first where the method landed rather than the
+number.** `#8A8E95` was stated, then corrected. The inline ratios were stated, then computed. This
+one came back as a rule.
+
+**It is not `on_primary` with extra steps**, which is the question a reader will have, because the
+holding position in the template WAS `on_primary`. `on_primary` picks the strict winner between
+white and near-black, so on `luxury_estates` (#0D9488) it takes white OFF a brand where white is
+3.74 — and 3.74 was the exception the owner had actually accepted. Measured through
+`themes.derive_theme`:
+
+| brand | white | near-black | `on_primary` | `display_ink` |
+|---|---|---|---|---|
+| violet `#7C3AED` | 5.70 | 3.20 | `#ffffff` | `#ffffff` |
+| coastal `#0E7490` | 5.36 | 3.40 | `#ffffff` | `#ffffff` |
+| demo_title `#DC2626` | 4.83 | 3.77 | `#ffffff` | `#ffffff` |
+| luxury_estates `#0D9488` | 3.74 | 4.87 | `#14151a` | **`#ffffff`** |
+| amber `#F59E0B` | 2.15 | 8.49 | `#14151a` | `#14151a` |
+| lime `#84CC16` | 1.98 | 9.23 | `#14151a` | `#14151a` |
+
+One brand of six differs, and it is the one the decision was about. The note in the template had
+said taking Design's value as written would widen the exception from one brand to four, and the
+holding position narrowed it to zero. Neither was the answer.
+
+#### The threshold was right and the set of sites was one too wide
+
+Pointing all four cover display sites at the new token produced **one new pixel-gate failure**:
+`#ffffff on #0d9488` at 3.74 under `span.cover-city`. The city line is **22px at weight 500**,
+which is not large text by either of WCAG 1.4.3's definitions (≥24px, or ≥18.66px at ≥700), so it
+needs 4.5 and `display_ink`'s threshold is 3.0. The street line runs 32-64px and the stat values
+are 30px; those three are large text and take the token. The city line keeps `on_primary`.
+
+Design asked us to re-measure, and that is the measurement: **the rule is correct, and it was
+applied to one site more than the rule covers.** Found by the gate, not by reading.
+
+#### And the honest answer on how many failures it closes: none
+
+Design predicted this "should close the 42 of 45 remaining property failures". On our baseline it
+closes **zero**, and the number is not comparable. `property__bold` has **no baseline entries** —
+the shared-architecture document was already clean — and the 75 property failures that remain are
+`property__elegant` (50) and `property__modern` (25), both still on the old `_base` architecture.
+They close when those two themes move to `_v2`, not from this token.
+
+What `display_ink` does is restore the owner's one accepted exception and make the two brands that
+failed impossible, derived, for any brand including ones nobody has picked yet.
+
+#### Two copies of the token set, found on the way
+
+* **`regen_theme_golden.py` enumerated the six token names** while `test_golden_file_lock` iterates
+  `themes.TOKENS`. So a seventh token made the reader look for something the writer never emitted,
+  and **regenerating the golden file produced no diff and did not fix the failing test** — the
+  worst shape a regen script can have, because the failure message tells you to run it. Now derived
+  from `TOKENS`, with a gate on three-or-more quoted token names in a row.
+* **Three stale counts of the same set**: `derive_theme`'s docstring said "the five tokens", the
+  golden file's header said "the five derived tokens", and `TOKENS` held six. None of them is a
+  number any more.
+
+A footnote worth keeping, because every regression run in this project uses the same restore
+pattern: **restoring `_DISPLAY_MIN = 3.0` over `2.0` left Python running the old bytecode.** Same
+byte length, same second, and `.pyc` validation is (mtime, size) — so the harness reported a
+failure that the source did not have. It happened to fail safe this time. The same collision over a
+*passing* restore would have reported a false pass.
 
 ---
 

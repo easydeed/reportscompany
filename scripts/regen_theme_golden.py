@@ -16,7 +16,9 @@ import sys
 REPO = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "apps/worker/src"))
 
-from worker.themes import DARK_SURFACE, WHITE, contrast, derive_theme  # noqa: E402
+from worker.themes import (  # noqa: E402
+    DARK_SURFACE, TOKENS, WHITE, contrast, derive_theme,
+)
 
 #: The six themes whose primaries the master plan measured (§02, "Contrast of
 #: the current build, measured"). Names are the plan's, lowercased.
@@ -30,7 +32,7 @@ THEMES = (
 )
 
 HEADER = [
-    "GOLDEN FILE — the five derived tokens for the six themes that exist today.",
+    "GOLDEN FILE — every derived token, for the six themes that exist today.",
     "Regenerate with: python3 scripts/regen_theme_golden.py",
     "A diff here means derive_theme() changed what every affiliate on that theme sees.",
     "That is allowed, but never incidentally: the diff is the review.",
@@ -49,8 +51,15 @@ def build():
         t = derive_theme(hexv)
         themes[name] = collections.OrderedDict(
             [("input", hexv)]
-            + [(k, t[k]) for k in ("primary", "primary_dark", "primary_ink",
-                                   "on_primary", "tint", "primary_on_dark")]
+            # FROM `TOKENS`, NOT A LIST. This was a tuple of six names here
+            # while `test_golden_file_lock` iterated `themes.TOKENS` — so when
+            # `display_ink` became a seventh token, the reader looked for it,
+            # the writer never emitted it, and REGENERATING THE GOLDEN FILE
+            # PRODUCED NO DIFF AND DID NOT FIX THE FAILING TEST. A writer and a
+            # reader that disagree about the set is the same defect as the five
+            # copies of the theme map (D-163), in the one script whose output
+            # is a lock.
+            + [(k, t[k]) for k in TOKENS]
             + [
                 ("contrast_primary_on_white", round(contrast(t["primary"], WHITE), 2)),
                 ("contrast_ink_on_white", round(contrast(t["primary_ink"], WHITE), 2)),
