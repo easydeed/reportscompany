@@ -258,6 +258,25 @@
     }
 
     /* ===================== GALLERY GRID (Layout A) ===================== */
+    /* `flex: 1` HERE DOES NOT STRETCH THE ROWS, AND THE PAGE COUNTS DEPEND ON
+       THAT. A grid with `flex: 1` inside a page-height flex column could size
+       its rows to the space available — in which case "how many listings fit
+       on a page" would be a template decision wearing geometry's clothes, and
+       `.listing-card`'s height would be an output rather than an input.
+
+       Measured 2026-10-07 before trusting any of it: the card is 258px at 3, 6,
+       9, 12, 24 AND 40 listings, while this grid grows from 273px to 3,732px.
+       The rows do not stretch; the grid does. So the geometry governs, three
+       rows of 258 + 8 fit in a market page's 928px body with 138px spare, and
+       four (1,056px) cannot.
+
+       That is why a gallery continuation page carries 9 and why Design's 3x2 on
+       page 1 is the masthead's cost rather than a grid decision — their own
+       spec puts nine of the same card on a page that has a band. If this rule
+       changes so the rows DO stretch, the measurement is void and the page
+       counts in docs/GALLERY_CONTINUATION_MEASURED_2026-10-07.md stop being
+       facts about geometry. Re-measure with
+       scripts/measure_gallery_continuation_fit.py. */
     .gallery-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -275,6 +294,18 @@
       flex-direction: column;
     }
 
+    /* A FIXED BOX, AND THE GALLERY MEASUREMENT IS ONLY BELIEVABLE BECAUSE OF
+       IT. This is a `background-image`, not an `<img>`, on an element with an
+       explicit height — so the 180px is reserved whether or not the photo
+       loads. Remote photos do not load in a headless render, and the card is
+       still 258px (180 + a 78px info block), which is what makes the page-fit
+       measurement faithful without them.
+
+       `min-height` here instead of `height` would make the box content-driven
+       and void that. `test_the_measurement_states_why_a_headless_render_is_
+       faithful` fails on it — line-anchored, after its first version matched
+       `height: 180px;` INSIDE `min-height: 180px;` and let exactly that change
+       through. */
     .listing-photo {
       width: 100%;
       height: 180px;

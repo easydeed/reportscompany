@@ -17,11 +17,11 @@
       "theme_color": "#FF6B5B",
       "theme_color_light": "#ff9e94",
       "theme_color_dark": "#bf5044",
-      "theme_color_on_light": "#c55145",
+      "theme_color_on_light": "#b94c40",
       "theme_color_on_dark": "#FF6B5B",
       "theme_color_text": "#14151a",
       "achieved": {
-        "on_light_vs_white": 4.53,
+        "on_light_vs_white": 5.04,
         "on_dark_vs_surface": 5.8,
         "text_vs_brand": 6.52,
         "raw_brand_vs_white": 2.8
@@ -67,11 +67,11 @@
       "theme_color": "#DC2626",
       "theme_color_light": "#e87171",
       "theme_color_dark": "#a51c1c",
-      "theme_color_on_light": "#DC2626",
+      "theme_color_on_light": "#ce2323",
       "theme_color_on_dark": "#ff5151",
       "theme_color_text": "#ffffff",
       "achieved": {
-        "on_light_vs_white": 4.83,
+        "on_light_vs_white": 5.4,
         "on_dark_vs_surface": 4.57,
         "text_vs_brand": 4.83,
         "raw_brand_vs_white": 4.83
@@ -83,11 +83,11 @@
       "theme_color": "#0D9488",
       "theme_color_light": "#61b9b1",
       "theme_color_dark": "#096f66",
-      "theme_color_on_light": "#0b8277",
+      "theme_color_on_light": "#0a7a6f",
       "theme_color_on_dark": "#0da89a",
       "theme_color_text": "#14151a",
       "achieved": {
-        "on_light_vs_white": 4.69,
+        "on_light_vs_white": 5.22,
         "on_dark_vs_surface": 4.94,
         "text_vs_brand": 4.87,
         "raw_brand_vs_white": 3.74
@@ -131,11 +131,11 @@
       "theme_color": "#84CC16",
       "theme_color_light": "#afdd67",
       "theme_color_dark": "#639910",
-      "theme_color_on_light": "#53810c",
+      "theme_color_on_light": "#4e790b",
       "theme_color_on_dark": "#84CC16",
       "theme_color_text": "#14151a",
       "achieved": {
-        "on_light_vs_white": 4.65,
+        "on_light_vs_white": 5.17,
         "on_dark_vs_surface": 7.41,
         "text_vs_brand": 9.23,
         "raw_brand_vs_white": 1.98

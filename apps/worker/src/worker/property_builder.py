@@ -368,24 +368,56 @@ def _ensure_readable_on_dark(hex_color, dark_bg="#18235c") -> str:
     return fallback
 
 
-def _ensure_readable_on_light(hex_color: str, light_bg: str = "#ffffff") -> str:
+def _ensure_readable_on_light(hex_color: str, *light_bgs: str) -> str:
     """
-    A version of `hex_color` that clears 4.5:1 on `light_bg`, by mixing toward
-    black in 6% steps. The mirror of the above, with the same guarantees.
+    A version of `hex_color` that clears 4.5:1 on EVERY surface in `light_bgs`,
+    by mixing toward black in 6% steps. The mirror of `_ensure_readable_on_dark`
+    — which has always taken several surfaces — with the same guarantees.
+
+    D-177. THIS TOOK ONE SURFACE AND DEFAULTED IT TO WHITE, which is the defect
+    D-170 fixed in `themes._ink` and did not fix here. The two functions are two
+    implementations of "darken until readable"; only one was corrected, and this
+    is the one `compute_color_roles` calls for `theme_color_on_light` — the token
+    the market surface uses as Design's `accent_ink`.
+
+    Measured before the fix, accent_ink on the brand's own `tint`: Crimson 4.41,
+    Forest 4.39, lime 4.47, teal 4.38 — four of nine brands below 4.5, two of
+    them shipping presets, on a token whose definition is "readable on light
+    surfaces". Design's market spec puts accent text on the tint panel (the
+    over-asking Status column), so the next thing built would have rendered it.
+
+    A guarantee against one of the surfaces a token is used on is half a
+    guarantee, and the half that is missing never announces itself.
     """
+    surfaces = [normalize_hex_color(bg, "#ffffff")
+                for bg in (light_bgs or ("#ffffff",))]
     current = normalize_hex_color(hex_color)
-    bg = normalize_hex_color(light_bg, "#ffffff")
     for _ in range(_READABILITY_MAX_STEPS):
-        if _contrast(current, bg) >= AA_NORMAL:
+        if all(_contrast(current, bg) >= AA_NORMAL for bg in surfaces):
             return current
         stepped = _darken(current, _READABILITY_STEP)
         if stepped == current:
             break
         current = stepped
-    fallback = _best_of(("#14151a", "#ffffff"), bg)
-    achieved = _contrast(fallback, bg)
+    # UNREACHABLE FOR ANY HEX INPUT, AND KEPT ANYWAY. 64 steps of 6% darkening
+    # reaches near-black from anywhere: even `#ffffff` resolves to `#6d6d6d`
+    # inside the loop, so nothing arrives here. Measured, because a mutation
+    # that broke this branch did NOT fail the gate — the regression harness
+    # reported `DID NOT FIRE`, which is how an untestable path announces
+    # itself rather than passing as covered.
+    #
+    # Left in place: `_report_unreachable` is the only thing that would tell us
+    # if the step count or the step size ever stopped being enough, and D-112's
+    # audit counts those log lines (zero per 90 renders). But nothing below is
+    # exercised, so do not read it as a tested guarantee.
+    #
+    # The worst surface is the one to report and to pick against: a fallback
+    # chosen for the easiest background is not a fallback.
+    worst = min(surfaces, key=lambda bg: _contrast("#14151a", bg))
+    fallback = _best_of(("#14151a", "#ffffff"), worst)
+    achieved = min(_contrast(fallback, bg) for bg in surfaces)
     if achieved < AA_NORMAL:
-        _report_unreachable("on_light", hex_color, bg, achieved)
+        _report_unreachable("on_light", hex_color, worst, achieved)
     return fallback
 
 
@@ -562,7 +594,12 @@ def compute_color_roles(hex_color: str, dark_bg="#18235c") -> Dict[str, str]:
         "theme_color_light":    _lighten(hex_color, 0.35),
         "theme_color_dark":     _darken(hex_color, 0.25),
         "theme_color_on_dark":  _ensure_readable_on_dark(hex_color, dark_bg),
-        "theme_color_on_light": _ensure_readable_on_light(hex_color, "#ffffff"),
+        # D-177 — white AND the brand's own tint, which is the other light
+        # surface this token lands on. `derive_theme` owns the tint, so it is
+        # read from there rather than recomputed: a second tint derivation is
+        # exactly the shape that left this guarantee half-built.
+        "theme_color_on_light": _ensure_readable_on_light(
+            hex_color, "#ffffff", derive_theme(hex_color)["tint"]),
         "theme_color_text":     _text_on_accent(hex_color),
     }
 
