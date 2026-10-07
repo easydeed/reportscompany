@@ -72,8 +72,17 @@ def format_measure(value: Any) -> str:
     return f"{num:g}"
 
 
-def format_currency_short(value: Any) -> str:
-    """Format as short currency: 470000 → '$470k', 1200000 → '$1.2M'."""
+def format_currency_short(value: Any, upper: bool = False) -> str:
+    """Format as short currency: 470000 → '$470k', 1200000 → '$1.2M'.
+
+    `upper=True` gives Design's market casing — '$470K', '$1.2M'. A PARAMETER
+    rather than a second formatter: the market `_v2` page specifies an
+    uppercase thousands suffix and every other surface already ships the
+    lowercase one, so changing this globally would be a product-visible edit to
+    emails and the live report for a casing preference on one page. Two money
+    formatters is the duplication this repo keeps filing; one with a flag is
+    not.
+    """
     if value is None:
         return "-"
     try:
@@ -81,7 +90,7 @@ def format_currency_short(value: Any) -> str:
         if val >= 1_000_000:
             return f"${val / 1_000_000:.1f}M"
         elif val >= 1_000:
-            return f"${val / 1_000:.0f}k"
+            return f"${val / 1_000:.0f}{'K' if upper else 'k'}"
         else:
             return f"${val:.0f}"
     except (ValueError, TypeError):

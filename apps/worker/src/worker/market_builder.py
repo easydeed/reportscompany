@@ -208,6 +208,129 @@ PDF_CONFIG: Dict[str, Dict[str, Any]] = {
 }
 
 
+#: Design's dash for a value that exists and is empty, and its wording for a
+#: value nothing produced. Two different facts, two different marks — collapsing
+#: them is D-137's defect (absent is not a default) in presentation.
+V2_DASH = "\u2014"
+V2_NO_DATA = "no data"
+
+
+def _ratio_as_percent(value):
+    """A close-to-list ratio in PERCENT, whatever scale it arrived on.
+
+    D-178. The same key carries two scales depending on which producer filled
+    it: `compute/extract.py:79` computes `round((cp/lp)*100, 2)` and
+    `compute/calc.py:54` rounds that average, so production is percent — while
+    `measure_market_pagination.report_data`, the fixture under
+    `test_market_layout_map` and several others, supplies `0.982`.
+
+    The templates already knew. `macros.jinja2` carries
+    `ratio * 100 if ratio < 2 else ratio` at TWO sites — the same guess,
+    written twice, in a file where it cannot be unit-tested. The page renders
+    correctly today because of it, which is why nobody had to fix the key.
+
+    So the guess moves here, once, where it has a test. The threshold is
+    unchanged on purpose: a close-to-list ratio of 2 would mean selling at
+    200% of asking, and a FRACTION of 2 would mean 200x — both absurd, so the
+    gap between the scales is enormous and 2 sits in the middle of it. What
+    changes is that there is one copy and it is reachable from a test.
+
+    Returns `None` for anything non-numeric or zero, because a ratio of zero is
+    not a sale at asking and must not render as `0.0% of asking`.
+    """
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    if not value:
+        return None
+    return float(value) * 100 if value < 2 else float(value)
+
+
+def _v2_money(value) -> str:
+    """`$1.46M` / `$641K` — Design's casing, via the shared filter's `upper`.
+
+    Not a second money formatter. `format_currency_short` takes a flag so the
+    lowercase `k` every other surface ships stays untouched.
+    """
+    if not isinstance(value, (int, float)) or isinstance(value, bool) or not value:
+        return V2_DASH
+    return format_currency_short(value, upper=True)
+
+
+def _v2_days(value) -> str:
+    """`42 d`. ZERO IS A REAL ANSWER — a same-day sale reports 0 since D-105,
+    so this tests the type rather than the truthiness (D-108)."""
+    if not isinstance(value, (int, float)):
+        return V2_DASH
+    return f"{int(value)} d"
+
+
+def _v2_count(value) -> str:
+    if not isinstance(value, (int, float)):
+        return V2_DASH
+    return f"{int(value):,}"
+
+
+def _v2_beds_baths(item) -> str:
+    """`3/2`, and `3/-` when only one side is known.
+
+    Not `f"{beds}/{baths}"` on raw values: a missing bath count would render
+    `3/None`, and a 0 would render as missing under an `or` chain. Both are
+    D-108/D-168's shape, and both have shipped in this repo before.
+    """
+    beds = item.get("beds")
+    baths = item.get("baths")
+    def one(v):
+        if isinstance(v, (int, float)):
+            return f"{v:g}"
+        return V2_DASH
+    if not isinstance(beds, (int, float)) and not isinstance(baths, (int, float)):
+        return V2_DASH
+    return f"{one(beds)}/{one(baths)}"
+
+
+#: THE MIGRATION SEAM. Report types rendered by Design's `_v2` page rather than
+#: by `market.jinja2` + `_base/base.jinja2`.
+#:
+#: The property surface's equivalent is `property_builder.V2_THEMES`, and it is
+#: the same reasoning: eight kinds cannot land at once, the ones that have not
+#: moved must keep rendering exactly as they do, and "which document is this"
+#: has to be one readable fact rather than a condition spread through a
+#: template. A kind not in here is untouched by the redesign.
+#:
+#: `closed` is first because it is the table kind WITH continuation pages, so it
+#: exercises `header.start_at = 1`, `footer.start_at = 1` and the row capacity
+#: together — the architectural risks, which if wrong invalidate the other
+#: seven. It is NOT first for contrast: all six `market__*` baseline rows are
+#: badge selectors on `new_listings` and `price_bands`, so wiring `closed`
+#: closes zero of them, by construction. See
+#: docs/MARKET_TOKEN_MAPPING_2026-10-07.md.
+V2_KINDS = frozenset({"closed"})
+
+#: Design's shared page. One template, dispatched on kind, per their README.
+V2_TEMPLATE_PATH = "_v2/report.jinja2"
+
+#: `#5E636B` — the muted neutral, 6.05:1 on white, from Design's neutral list.
+#: The `vs. list` column takes it at weight 400 when the sale did not clear
+#: asking; `accent_ink` at 600 when it did. Named because it is a threshold's
+#: other side, not a decoration.
+V2_MUTED = "#5E636B"
+
+#: The label beside the big number sits in a FIXED 50px box (Design: "band
+#: height is therefore fixed: nothing in it grows with data"), so the type size
+#: steps down by character count rather than wrapping. Their ladder.
+V2_LABEL_LADDER = ((26, 22), (34, 18), (44, 15))
+V2_LABEL_MIN_PX = 13
+
+
+def _v2_label_size(label: str) -> int:
+    """Design's size ladder for the band label, by character count."""
+    n = len(label or "")
+    for limit, size in V2_LABEL_LADDER:
+        if n <= limit:
+            return size
+    return V2_LABEL_MIN_PX
+
+
 def _pdf_config_for(report_type: str) -> Dict[str, Any]:
     """Return the PDF_CONFIG entry for a report type (with safe fallback)."""
     return PDF_CONFIG.get(report_type, PDF_CONFIG["market_snapshot"])
@@ -555,10 +678,123 @@ class MarketReportBuilder:
             "list_to_sale_ratio": _first_present(
                 metrics, "list_to_sale_ratio", "close_to_list_ratio", "sale_to_list_ratio"
             ),
+            # D-178. The same value in percent, normalised once here instead of
+            # by a `< 2` guess written twice in `macros.jinja2`. The raw key
+            # stays because other consumers read it and changing what it means
+            # is a wider change than this.
+            "list_to_sale_pct": _ratio_as_percent(_first_present(
+                metrics, "list_to_sale_ratio", "close_to_list_ratio", "sale_to_list_ratio"
+            )),
             "active_count": counts.get("Active", 0),
             "pending_count": counts.get("Pending", 0),
             "closed_count": counts.get("Closed", 0),
             "new_listings_count": metrics.get("new_listings_count", 0),
+        }
+
+    # ── Design's `_v2` page ────────────────────────────────────────────────
+    # One band shape for every kind (fixed height, three rows) and one table
+    # shape for the three table kinds. Only `closed` is wired; see V2_KINDS.
+
+    def _v2_band(self) -> Dict[str, Any]:
+        """Design's page-1 band, for the kinds in `V2_KINDS`.
+
+        Three rows, fixed height: title + logo slot · big number + label + pill
+        · three stats. The numbers are read from the SAME contexts the current
+        page uses (`_build_stats_context`, `_build_header_context`) rather than
+        recomputed — a second derivation of "median close price" would be this
+        project's most-filed defect in a new template.
+        """
+        stats = self._build_stats_context()
+        header = self._build_header_context()
+        city = header["city"] or "this area"
+        lookback = self.report_data.get("lookback_days", 30)
+
+        if self.report_type == "closed":
+            label = f"homes sold in {city}"
+            ratio = stats["list_to_sale_pct"]
+            big = stats["closed_count"]
+            cells = [
+                ("Median price", _v2_money(stats["median_close_price"])),
+                ("Avg. days", _v2_days(stats["avg_dom"])),
+                ("Sold over asking", self._v2_over_asking_count()),
+            ]
+            pill = f"{ratio:.1f}% of asking" if ratio is not None else None
+            pill_sub = f"last {lookback} days"
+        else:  # pragma: no cover - V2_KINDS holds one kind
+            raise NotImplementedError(
+                f"{self.report_type} is in V2_KINDS with no band spec. Every "
+                f"kind's band values are per-kind in Design's table; adding a "
+                f"kind to V2_KINDS without them would render an empty band."
+            )
+
+        return {
+            "title": header["title"],
+            "big": big,
+            "label": label,
+            "label_px": _v2_label_size(label),
+            "pill": pill,
+            "pill_sub": pill_sub,
+            "cells": [{"label": l, "value": v} for l, v in cells],
+        }
+
+    def _v2_over_asking_count(self) -> str:
+        """How many closed sales cleared their asking price.
+
+        Counted from the listings themselves, because no metric reports it.
+        A sale with no list price is NOT counted as over asking — absent is not
+        a default (D-137), and `close > None` would have been a TypeError
+        rather than a quiet wrong answer, which is the one mercy here.
+        """
+        raw = (self.report_data.get("listings")
+               or self.report_data.get("listings_sample") or [])
+        over = 0
+        comparable = 0
+        for item in raw:
+            close = _first_present(item, "close_price", "sold_price")
+            lst = _first_present(item, "list_price", "price")
+            if not isinstance(close, (int, float)) or not isinstance(lst, (int, float)):
+                continue
+            if not lst:
+                continue
+            comparable += 1
+            if close > lst:
+                over += 1
+        if not comparable:
+            return V2_NO_DATA
+        return str(over)
+
+    def _v2_table(self) -> Dict[str, Any]:
+        """Design's table for the three table kinds; `closed`'s columns here.
+
+        `vs. list` carries a COLOUR RULE, not just a number: over asking takes
+        `accent_ink` at 600, otherwise the muted neutral at 400. Design states
+        it per kind ("`>100%` in `accent_ink` 600, else `#5E636B` 400"), and it
+        is resolved here rather than in the template because the template
+        cannot ask whether a ratio is above a threshold without reimplementing
+        the threshold.
+        """
+        listings_ctx = self._build_listings_context()
+        rows = []
+        for item in listings_ctx["items"]:
+            close = item.get("close_price")
+            lst = item.get("list_price")
+            ratio = None
+            if isinstance(close, (int, float)) and isinstance(lst, (int, float)) and lst:
+                ratio = close / lst * 100
+            rows.append({
+                "address": item.get("address") or V2_NO_DATA,
+                "hood": item.get("city") or "",
+                "beds_baths": _v2_beds_baths(item),
+                "sqft": _v2_count(item.get("sqft")),
+                "price": _v2_money(close if close else lst),
+                "vs_list": f"{ratio:.1f}%" if ratio is not None else V2_DASH,
+                "vs_over": bool(ratio is not None and ratio > 100),
+                "days": _v2_days(item.get("days_on_market")),
+            })
+        return {
+            "rows": rows,
+            "showing": listings_ctx["showing"],
+            "total": listings_ctx["total_available"],
         }
 
     def _build_agent_context(self) -> Dict[str, Any]:

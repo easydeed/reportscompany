@@ -1,0 +1,51 @@
+[
+  {
+    "name": "D-178 reverts: the band reads the raw ratio instead of the normalised percent",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            ratio = stats[\"list_to_sale_pct\"]",
+    "new": "            ratio = stats[\"list_to_sale_ratio\"]",
+    "test": "apps/worker/tests/test_market_v2_closed.py"
+  },
+  {
+    "name": "the scale normalisation stops normalising",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "    return float(value) * 100 if value < 2 else float(value)",
+    "new": "    return float(value)",
+    "test": "apps/worker/tests/test_market_v2_closed.py"
+  },
+  {
+    "name": "a zero ratio renders as 0.0% of asking instead of being absent",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "    if not value:\n        return None\n    return float(value) * 100 if value < 2 else float(value)",
+    "new": "    return float(value) * 100 if value and value < 2 else float(value)",
+    "test": "apps/worker/tests/test_market_v2_closed.py apps/worker/tests/test_zero_conditionals.py"
+  },
+  {
+    "name": "the over-asking count drops the type check, so a string list price raises",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            if not isinstance(close, (int, float)) or not isinstance(lst, (int, float)):\n                continue",
+    "new": "            if not isinstance(close, (int, float)):\n                continue",
+    "test": "apps/worker/tests/test_market_v2_closed.py"
+  },
+  {
+    "name": "the vs-list colour rule fires at or below asking, not above",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "                \"vs_over\": bool(ratio is not None and ratio > 100),",
+    "new": "                \"vs_over\": bool(ratio is not None and ratio >= 100),",
+    "test": "apps/worker/tests/test_market_v2_closed.py"
+  },
+  {
+    "name": "a kind is added to V2_KINDS with no band spec",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "V2_KINDS = frozenset({\"closed\"})",
+    "new": "V2_KINDS = frozenset({\"closed\", \"inventory\"})",
+    "test": "apps/worker/tests/test_market_v2_closed.py"
+  },
+  {
+    "name": "the shared money filter's casing changes for every surface",
+    "file": "apps/worker/src/worker/template_filters.py",
+    "old": "            return f\"${val / 1_000:.0f}{'K' if upper else 'k'}\"",
+    "new": "            return f\"${val / 1_000:.0f}K\"",
+    "test": "apps/worker/tests/test_market_v2_closed.py"
+  }
+]
