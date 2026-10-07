@@ -35,7 +35,11 @@ port them, do not take their copy as current.** (D-131.)
 > `_v2/report.jinja2`, shared. elegant (720) and modern (795) are still self-contained and move
 > next. The 1,549 in the table is those two plus bold's 34.
 
-**There is still more dead property-template code than live.** 5,570 lines against 2,284 —
+**There is still more dead property-template code than live.** 5,570 lines against 2,304 —
+*(2,284 until 2026-10-07, when `display_ink` closed the one open [JERRY] decision in
+`_v2/report.jinja2` and the note recording why replaced the note recording that it was
+open; `tests/test_handover_numbers_are_current.py` refused the change until this line
+was updated, which is the mechanism working)* —
 the ratio got *worse*, because the cut deleted one live file and one dead file per retired
 theme while `templates/property/_base/` (2,821 lines, none of it rendered) stayed exactly where it was.
 

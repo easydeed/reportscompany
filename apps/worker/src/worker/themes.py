@@ -78,6 +78,14 @@ __all__ = [
 WHITE = "#ffffff"
 NEAR_BLACK = "#14151a"
 
+#: WCAG 1.4.3's large-text threshold. The display text this gates is 26-32px at
+#: weight 600, which is large text by either of the spec's two definitions
+#: (>=24px, or >=18.66px at >=700), so 3.0 is the applicable minimum and not a
+#: relaxation of 4.5. Named rather than inlined because it is the number the
+#: owner decision turned on: the grounds were "white clears 3.0", and two of
+#: six brands do not.
+_DISPLAY_MIN = 3.0
+
 #: WCAG 2.1 AA for normal-size text.
 AA_NORMAL = 4.5
 
@@ -310,12 +318,35 @@ def _derive(primary: str) -> Tuple[Tuple[str, str], ...]:
          WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p) else NEAR_BLACK),
         ("tint", _flatten_over_white(p, _TINT_ALPHA)),
         ("primary_on_dark", _on_dark(p)),
+        # Design, 2026-10-06, replacing an exception with a derivation.
+        # The brand band's DISPLAY text — the big number, the oversized stat
+        # values, the cover street line — was specified as `#FFFFFF` by owner
+        # decision, on the stated grounds that white clears 3.0 (the WCAG
+        # large-text threshold) on every sample brand. D-171 measured that and
+        # it is false for two of six: amber #f59e0b is 2.15 and lime #84cc16 is
+        # 1.98, which clear neither threshold.
+        #
+        # So the threshold is now COMPUTED rather than asserted. White where
+        # white actually reaches 3.0; `on_primary` otherwise, which is the
+        # token that already exists for text on a brand fill.
+        #
+        # THIS IS NOT `on_primary` WITH EXTRA STEPS. `on_primary` picks the
+        # strict winner between white and near-black, so on a mid-dark brand it
+        # can choose near-black at 4.6 over white at 4.4. `display_ink` keeps
+        # white wherever white is legible at display size, because the owner
+        # decision was about the LOOK of white on the brand fill and only the
+        # premise was wrong. The two tokens differ exactly where white is
+        # adequate but not optimal, and that difference is the decision.
+        ("display_ink",
+         WHITE if contrast(WHITE, p) >= _DISPLAY_MIN
+         else (WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p)
+               else NEAR_BLACK)),
     )
 
 
 def derive_theme(primary: str) -> Dict[str, str]:
     """
-    The five tokens, from one brand colour.
+    Every token, from one brand colour.
 
     Cached on the colour, which is the same thing as cached per affiliate and
     strictly better: two affiliates who picked the same teal share the entry,
@@ -323,7 +354,7 @@ def derive_theme(primary: str) -> Dict[str, str]:
     invalidation step. The function is pure, so a stale entry is impossible.
 
     A FRESH DICT EVERY CALL, over a memoised derivation. Handing out the cached
-    object itself would be faster by one five-key copy and would mean that any
+    object itself would be faster by one small copy and would mean that any
     caller who did `roles["primary"] = ...` — or merged the tokens into a render
     context and then adjusted one — silently rewrote the palette for every
     later caller in that process, including other affiliates' reports on the
@@ -339,8 +370,9 @@ derive_theme.cache_info = _derive.cache_info
 derive_theme.cache_clear = _derive.cache_clear
 
 
-#: The five keys, in the order the design system lists them. Exported so a
-#: consumer can assert it is handling all of them rather than the ones it
-#: happened to know about when it was written.
+#: The keys, in the order the design system lists them. Exported so a consumer
+#: can assert it is handling all of them rather than the ones it happened to
+#: know about when it was written. (The docstrings above said "five" while this
+#: tuple held six; the count is not restated any more.)
 TOKENS = ("primary", "primary_dark", "primary_ink", "on_primary", "tint",
-          "primary_on_dark")
+          "primary_on_dark", "display_ink")

@@ -38,8 +38,9 @@
 <link rel="stylesheet" href="{{ t_font_link }}">
 <style>
   :root {
-    /* The six derive_theme tokens. Nothing on this document is a colour that
-       is not one of these or a fixed neutral below (Design §3.1). */
+    /* The derive_theme tokens. Nothing on this document is a colour that is
+       not one of these or a fixed neutral below (Design §3.1). `display_ink`
+       is declared below, next to the decision it records. */
     --primary: {{ primary }};
     --primary-dark: {{ primary_dark }};
     --primary-ink: {{ primary_ink }};
@@ -49,36 +50,40 @@
     /* Rule lines on a primary fill, by which way on_primary resolved. */
     --on-primary-rule: {% if on_primary | lower == '#ffffff' %}rgba(255,255,255,0.3){% else %}rgba(20,21,26,0.25){% endif %};
 
-    /* ── THE ONE OPEN DECISION IN THIS TEMPLATE. [JERRY] ─────────────────
-       Design's package specifies `#FFFFFF` for the cover's display lines —
-       street, city, the four 30px stat values — "by owner decision", on the
-       stated grounds that it "passes the 3.0 large-text threshold for the
-       street and stat values" with the 22px city line as a recorded
-       exception.
+    /* ── CLOSED, 2026-10-07, BY DESIGN DERIVING IT. ──────────────────────
+       This was an open [JERRY] decision. Design's package specified `#FFFFFF`
+       for the cover's display lines — street, city, the four 30px stat values
+       — "by owner decision", on the stated grounds that white "passes the 3.0
+       large-text threshold" on the sample brands. D-171 measured that and the
+       premise was false for two of six: amber #f59e0b is 2.15 and lime
+       #84cc16 is 1.98, clearing neither 3.0 nor 4.5.
 
-       MEASURED ON THE RENDERED DOCUMENT, 2026-10-06, white on the six corpus
-       brands' primary fill:
+       The holding position was `on_primary`, which passes on all six but
+       overshoots: it picks the strict winner between white and near-black, so
+       it also took white OFF teal, where white is 3.74 and the owner exception
+       was real. The note recorded that taking Design's decision as written
+       would widen the exception from one brand to four. Neither was right.
 
-           violet  #7c3aed   5.57   passes AA
-           red     #dc2626   4.26   passes large-text
-           cyan    #0e7490   4.72   passes AA
-           teal    #0d9488   3.74   passes large-text; the recorded exception
-           amber   #f59e0b   2.15   FAILS large text and AA
-           lime    #84cc16   1.98   FAILS large text and AA
+       Design's answer (RESPONSE_2026-10-06) is a THIRD option, and it is the
+       correct one: compute the threshold instead of asserting it.
 
-       So the premise does not hold for two of six. The grounds were not
-       "it is a deliberate exception on every brand" — they were "it clears
-       3.0" — and on amber and lime it clears neither threshold.
+           display_ink = contrast(white, primary) >= 3.0 ? white : on_primary
 
-       DEFAULTED TO `on_primary`, which is the token that exists for exactly
-       this: text on the brand fill, white or near-black by whichever has more
-       contrast. That makes the cover near-black on teal, amber and lime and
-       white on the other three, and it passes on all six.
+       Which lands, measured on `themes.derive_theme`:
 
-       It is ONE VARIABLE. To take Design's decision as written, set this to
-       `#FFFFFF` and the exception becomes four brands wide rather than one.
-       That is Jerry's call, not ours, and it is not being made here. */
-    --cover-display: var(--on-primary);
+           brand   white  near-black   on_primary   display_ink
+           violet   5.70        3.20      #ffffff       #ffffff
+           cyan     5.36        3.40      #ffffff       #ffffff
+           red      4.83        3.77      #ffffff       #ffffff
+           teal     3.74        4.87      #14151a       #ffffff   <- differs
+           amber    2.15        8.49      #14151a       #14151a
+           lime     1.98        9.23      #14151a       #14151a
+
+       So it keeps white on exactly the one brand the owner exception was
+       about, and drops it on exactly the two that failed. One brand wide, not
+       four and not zero — and derived, so a seventh brand resolves itself. */
+    --display-ink: {{ display_ink }};
+    --cover-display: var(--display-ink);
 
     /* Fixed neutrals, with the measured contrast on white. */
     --ink: #14161A;        /* 18.1:1 */
@@ -244,8 +249,23 @@
   }
   /* `opacity` on a brand fill makes the effective colour depend on the fill,
      which is the thing §3.2 forbids — so the city line is a flat token. The
-     design's 92% is dropped rather than approximated. */
-  .cover-city { font-size: 22px; font-weight: 500; color: var(--cover-display); }
+     design's 92% is dropped rather than approximated.
+
+     AND IT IS NOT `--cover-display`. 22px at weight 500 is NOT large text by
+     either of WCAG 1.4.3's definitions (>=24px, or >=18.66px at >=700), so it
+     needs 4.5 and not 3.0. `display_ink`'s threshold is 3.0, which is right
+     for the three sites around it — the street line (32-64px) and the 30px
+     stat values — and wrong for this one.
+
+     The pixel gate caught it: pointing all four sites at `display_ink` put
+     `#ffffff on #0d9488` at 3.74 under `span.cover-city`, one new failure, on
+     teal. Design's rule is correct and is applied to one site too many; the
+     city line takes `on_primary`, which is the 4.5-or-better token.
+
+     So the derived threshold is right and the SET OF SITES it covers is the
+     part that needed measuring — which is also what Design asked for ("please
+     re-measure"). */
+  .cover-city { font-size: 22px; font-weight: 500; color: var(--on-primary); }
   .cover-stats {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
