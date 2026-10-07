@@ -216,36 +216,81 @@ def test_the_net_saving_is_what_the_document_claims():
     )
 
 
-def test_the_gallery_question_states_the_asymmetry_correctly():
-    """§6's two readings, recomputed.
+# ─────────────────────────────────────────────────────────────────────────────
+# The measured answer — `docs/GALLERY_CONTINUATION_MEASURED_2026-10-07.md`.
+#
+# This replaced an ask. Jerry, 2026-10-07: measure it rather than spend a
+# fourth round asking Design for a number we can take ourselves. The document
+# is kept gated for the same reason the ask was: it is the record the gallery
+# page counts rest on, and §0.6 says its data is for the gate.
+# ─────────────────────────────────────────────────────────────────────────────
 
-    The question to Design is only worth asking if the arithmetic behind it is
-    right: one reading of the spec changes nothing and the other adds six pages
-    to one kind and five to the other. Both numbers come from the same
-    measurement as everything else, so both are checked.
+MEASURED = REPO / "docs/GALLERY_CONTINUATION_MEASURED_2026-10-07.md"
+
+#: The geometry the answer rests on, from
+#: `scripts/measure_gallery_continuation_fit.py`. Pinned rather than re-derived
+#: because re-deriving needs a browser and CI has none — the same contract as
+#: `PAGE_1_CAPACITY`.
+CARD_PX, ROW_GAP_PX, BODY_PX = 258, 8, 9.67 * 96
+
+
+def test_the_gallery_arithmetic_holds():
+    """Three rows fit and four do not, recomputed from the pinned geometry.
+
+    The claim is not "9 per page" — it is that 9 is a consequence of a 258px
+    card in a 928px body. If the card changes, this says so before the page
+    counts quietly move.
     """
-    import math
+    three = 3 * CARD_PX + 2 * ROW_GAP_PX
+    four = 4 * CARD_PX + 3 * ROW_GAP_PX
+    assert three <= BODY_PX < four, (
+        f"three rows are {three}px and four are {four}px against a "
+        f"{BODY_PX:.0f}px body — the three-rows-fit conclusion no longer holds."
+    )
+    headroom = BODY_PX - three
+    body = MEASURED.read_text(encoding="utf-8")
+    assert f"| **{headroom:.0f}** — 0.53 of a card |" in body, (
+        f"headroom is {headroom:.0f}px ({headroom / CARD_PX:.2f} of a card); "
+        f"the document states something else."
+    )
+    assert f"{four:,} — **128px over**" in body or f"{four:,} — 128px over" in body
+
+
+def test_the_measurement_states_why_a_headless_render_is_faithful():
+    """The photo's fixed height is the whole reason, and it is checkable.
+
+    Remote photos do not load in this container. The measurement is only
+    trustworthy because `.listing-photo` reserves 180px in CSS regardless — so
+    if that rule changes to an intrinsic height, this conclusion is void and
+    the document would be asserting something it can no longer support.
+    """
+    css = (REPO / "apps/worker/src/worker/templates/market/_base/base.jinja2"
+           ).read_text(encoding="utf-8")
+    # LINE-ANCHORED, and the first version was not. `"height: 180px;" in css`
+    # matches inside `min-height: 180px;`, so changing the declaration to a
+    # MINIMUM — which makes the box content-driven and voids this whole
+    # measurement — left the gate green. The regression harness caught it;
+    # a hand-run would have reported a pass. Substring-is-not-a-construct,
+    # instance fifteen, in the gate guarding a measurement.
+    declared = any(line.strip() == "height: 180px;"
+                   for line in css.splitlines())
+    assert declared, (
+        "`.listing-photo` no longer carries a fixed 180px height. The gallery "
+        "measurement was taken without photos and is only faithful because "
+        "that space is reserved in CSS. Re-measure with images before "
+        "trusting the page counts."
+    )
+    body = MEASURED.read_text(encoding="utf-8")
+    assert "height: 180px" in body
+    assert "invariant to content" in body or "does not depend on content" in body
+
+
+def test_the_capacity_document_reports_the_answer_not_the_question():
+    """§6 was an ask; it is now a finding. A stale question is worse than none."""
     body = text()
-    cases = {
-        "new_listings_gallery": (120, 14, 20),
-        "open_houses": (100, 12, 17),
-    }
-    for kind, (n, want_9, want_6) in cases.items():
-        page_1 = PAGE_1_CAPACITY[kind]["no_narrative"]
-        at_9 = math.ceil((n - page_1) / 9) + 1
-        at_6 = math.ceil((n - page_1) / 6) + 1
-        assert (at_9, at_6) == (want_9, want_6), (
-            f"{kind} at N={n}: a 3x3 continuation gives {at_9} pages and a 3x2 "
-            f"gives {at_6}; §6 says {want_9} and {want_6}."
-        )
-        assert OURS_CONTINUATION[kind] == 9, (
-            f"{kind}'s continuation is now "
-            f"{OURS_CONTINUATION[kind]}, not 9 — §6's 'unchanged from "
-            f"ours' reading no longer holds."
-        )
-    assert "**20 pages**, from 14" in body
-    assert "**17 pages**, from 12" in body
-    assert "is a gallery continuation page a 3×3 of the same card" in body, (
-        "§6 no longer asks the question. The arithmetic is the argument for "
-        "asking it, not a substitute for the ask."
+    assert "Gallery continuation: measured, and it is three rows" in body
+    assert "One question back" not in body, (
+        "§6 still asks the gallery question, which has been measured and "
+        "answered. Leaving the ask in would send Design a question we have "
+        "already settled."
     )

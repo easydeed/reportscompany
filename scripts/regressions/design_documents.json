@@ -1,0 +1,44 @@
+[
+  {
+    "name": "a pinned page-1 capacity moves and the documents do not",
+    "file": "apps/worker/tests/test_narrative_box.py",
+    "old": "\"closed\": {\"no_narrative\": 15, \"with_narrative\": 11},",
+    "new": "\"closed\": {\"no_narrative\": 17, \"with_narrative\": 11},",
+    "test": "tests/test_market_capacity_doc_is_current.py"
+  },
+  {
+    "name": "a gallery page-1 capacity moves, so the asymmetry in the ask is wrong",
+    "file": "apps/worker/tests/test_narrative_box.py",
+    "old": "\"open_houses\": {\"no_narrative\": 6, \"with_narrative\": 6},",
+    "new": "\"open_houses\": {\"no_narrative\": 9, \"with_narrative\": 9},",
+    "test": "tests/test_market_capacity_doc_is_current.py"
+  },
+  {
+    "name": "the brand audit's lead count is edited",
+    "file": "docs/BRAND_AUDIT_FOR_DESIGN_2026-10-07.md",
+    "old": "**Four of those six were not in your sample.**",
+    "new": "**Two of those six were not in your sample.**",
+    "test": "tests/test_brand_audit_numbers_are_current.py"
+  },
+  {
+    "name": "the gallery card gets taller, so three rows stop fitting",
+    "file": "tests/test_market_capacity_doc_is_current.py",
+    "old": "CARD_PX, ROW_GAP_PX, BODY_PX = 258, 8, 9.67 * 96",
+    "new": "CARD_PX, ROW_GAP_PX, BODY_PX = 300, 8, 9.67 * 96",
+    "test": "tests/test_market_capacity_doc_is_current.py"
+  },
+  {
+    "name": "the photo loses its fixed height, voiding the headless measurement",
+    "file": "apps/worker/src/worker/templates/market/_base/base.jinja2",
+    "old": "    .listing-photo {\n      width: 100%;\n      height: 180px;",
+    "new": "    .listing-photo {\n      width: 100%;\n      min-height: 180px;",
+    "test": "tests/test_market_capacity_doc_is_current.py"
+  },
+  {
+    "name": "\u00a76 reverts to asking the question instead of answering it",
+    "file": "docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md",
+    "old": "## 6 \u00b7 Gallery continuation: measured, and it is three rows",
+    "new": "## 6 \u00b7 One question back: what does a gallery continuation page carry?",
+    "test": "tests/test_market_capacity_doc_is_current.py"
+  }
+]

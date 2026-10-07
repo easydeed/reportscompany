@@ -1394,6 +1394,33 @@ it.**
   have to be different regions of the file.** A gate reaching into prose is either brittle about
   wording or blind about values, and there is no setting of it that is neither.
 
+- **BEFORE BUILDING A TOOL, GREP FOR ONE.** *Added 2026-10-07. Cost: one file overwritten.*
+
+  §0.6 already says a defect list needs a read path, because D-009 was a record nothing consumed.
+  **This is the same shape about the repository rather than the board**, and it is a separate rule
+  because the remedy is different: a board needs a reader, and a repo needs you to look.
+
+  A generalised regression harness was written to fix three hand-run misfires. `scripts/regress.py`
+  had existed since **PR #103** — the same idea for `themes.py`, with eleven recorded mutations and
+  **already carrying the two checks that mattered**: an anchor-count check (`if n != 1: MUTATION DID
+  NOT APPLY`) and an unchanged-on-disk assert. Two thirds of the remedy was in the repository for a
+  hundred PRs. It was overwritten without being read, and the only thing that caught the collision
+  was `git status` printing `M` where `??` was expected.
+
+  What the predecessor lacked was real — a bytecode clear, a verified restore, and an exit code
+  rather than printing `*** NOTHING CAUGHT IT ***` and exiting 0 — so the new tool was worth
+  writing. **Reading the old one first would have produced the same tool and a better one**, because
+  its eleven mutations are knowledge that had to be ported back in afterwards.
+
+  **The harness built that day does not and cannot catch this.** It guards mutations; it has nothing
+  to say about the decision to create a file. There is no gate for "did you look", which is exactly
+  why it is written down here instead: *the habit is the remedy, and `git status` is not it.* A file
+  that reports `M` when you expect `??` has already been overwritten — the check has to come before
+  the write, not after.
+
+  Operationally: `grep -rl` the concept, not the filename. "regression harness" would not have found
+  `regress.py`; `grep -rn "MUTATION DID NOT APPLY"` or a look in `scripts/` would have.
+
 ---
 
 ## Phase 0 — Security & Tooling
