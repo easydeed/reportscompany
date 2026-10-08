@@ -87,7 +87,15 @@ PAGE_1_CAPACITY = {
     # It was 15 / 11 — a four-row swing — on the old page.
     "closed": {"no_narrative": 17, "with_narrative": 17},
     "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
-    "price_bands": {"no_narrative": 3, "with_narrative": 2},
+    # ZERO, AND IT IS NOT A REGRESSION. `price_bands` moved to Design's `_v2`
+    # page, which renders seven fixed band rows and NO LISTINGS TABLE — so the
+    # number of listings that fit on page 1 is zero because none are rendered,
+    # not because none fit. The kind went from 2 pages to 1.
+    #
+    # A capacity of 0 reading as a failure is the risk here, which is why the
+    # measurement script prints "n/a (no listings table)" for it rather than a
+    # bare 0.
+    "price_bands": {"no_narrative": 0, "with_narrative": 0},
     # 17 in both states since `new_listings` moved to the `_v2` page, from
     # 3 / 2 on the analytics layout. The biggest single change on this surface:
     # 16 pages to 5 for 120 listings.

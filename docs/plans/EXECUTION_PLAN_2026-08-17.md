@@ -1421,6 +1421,81 @@ it.**
   Operationally: `grep -rl` the concept, not the filename. "regression harness" would not have found
   `regress.py`; `grep -rn "MUTATION DID NOT APPLY"` or a look in `scripts/` would have.
 
+- **A PREDICTION AND A MEASUREMENT CANNOT SHARE A GATE.** *Added 2026-10-08.*
+
+  `docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md` §2a forecast what Design's row counts would cost
+  per kind, against our capacity at the time. Its gate recomputed the "ours" column from
+  `PAGE_1_CAPACITY` — correct for a document that must stay current, and **it broke the moment the
+  first kind was built**, because the pin moved to the built figure and the forecast did not.
+
+  The tempting fix is to update the forecast. That destroys the only thing it was for: §2a is worth
+  reading *because* it can be compared with what happened, and a forecast edited to match the result
+  predicts nothing. The same edit would also have hidden the interesting part — both built kinds
+  landed on **5 pages** where the formula said **6**, so the forecast was wrong in a direction worth
+  knowing.
+
+  **So the two were split, and the split is the rule.** A forecast records **the inputs it was taken
+  with** and its gate checks that its arithmetic is internally consistent against *those*; a
+  measurement section carries the built figures and its gate checks them against the live pin. One
+  is checkable forever, the other is checkable now, and neither can be made to do the other's job.
+
+  The general form: **a gate enforces either currency or fidelity to a past state, and a document
+  that holds both needs one gate per region.** The giveaway is a gate that starts failing because
+  something it describes *succeeded* — which is what happened here, and which reads as a broken test
+  rather than as a category error.
+
+- **A GATE ON A PRODUCER IS NOT A GATE ON THE DOCUMENT.** *Added 2026-10-08, from D-181.*
+
+  §0.6 already says *a gate on a document must assert its claims, not its text*. This is that rule
+  one level further out, and it needed its own line because the failure mode is the opposite of
+  loud: the gate does not get weaker, it gets **pointed at the wrong object**, and then it is as
+  strong as ever about something nobody reads.
+
+  D-111's price-band rebuild puts a disclosure on the page — *"bands may shift between reports"* —
+  whenever the boundaries came from this period's results instead of from twelve months of closings.
+  It is the sentence that makes the fallback honest. Its gate was:
+
+      note = builder._band_chart_note()
+      assert "may shift between reports" in note
+
+  `_band_chart_note`'s only consumer was a macro reached only from `pricebands_layout`, whose only
+  report type was `price_bands` — and `price_bands` left the macro dispatch when it joined the `_v2`
+  seam. **One kind moving made a four-link chain dead from the far end.** The method kept returning
+  the string, the assertion kept passing, and the document stopped carrying it.
+
+  **A producer with no consumer still produces.** This is the repository's *read-with-no-producer*
+  family (nine instances) pointed the other way, and it is harder to see: a consumer reading a key
+  nothing writes at least renders something empty, while a producer writing a value nothing reads
+  renders nothing at all and looks like a page that never had the line.
+
+  Operationally: when a claim has to appear in an artefact, **assert it on the artefact**. Keep the
+  producer assertion if it is cheap — it localises a failure — but it is never the one that matters.
+  And when a seam moves a kind, surface or path off one code path onto another, the question is not
+  only "does the new path work" but **"what did the old path produce that nobody else produces"**.
+
+- **A CONSTANT THAT IS RIGHT FOR EVERY MEMBER OF A SET IS INDISTINGUISHABLE FROM A CONSTANT THAT IS
+  RIGHT FOR THE SET — UNTIL THE SET GROWS.** *Added 2026-10-08.*
+
+  Four gates written while the `_v2` seam held only table kinds encoded a table kind's property as
+  the seam's property, and all four broke on the first kind that was not a table:
+
+  | gate | what it said | what it meant |
+  |---|---|---|
+  | `test_a_v2_kind_calls_no_layout_macro` | `class="trow thead"` is on the page | *a table kind's* body rendered |
+  | `test_the_built_figures_match_the_live_pin` | `ceil((120 - page_1) / 26) + 1` | 26 is *the table body's* continuation capacity |
+  | `test_the_cap_is_what_limits_the_listings` | rendered rows == `PDF_CONFIG` cap | the kind *has* a listings table |
+  | the §2a forecast gate | live `PAGE_1_CAPACITY` is the forecast's input | the kind *has not been built yet* |
+
+  None was wrong when written and each was wrong one kind later. The remedy in all four was the
+  same and it is the general one: **pin the varying thing per member, and make an unrecorded member
+  an error rather than a default.** `V2_BODY_MARKER`, `V2_CONTINUATION` and `RENDERED_DESPITE_CAP`
+  each raise on a kind they do not know, so the next kind to join the seam is told what to record
+  instead of inheriting the third kind's geometry.
+
+  This is `V2_KINDS`-subtraction's counterpart. Subtracting the seam from a parametrisation stops a
+  moved kind from being silently excluded; pinning per member stops the kinds that remain from
+  sharing one member's properties.
+
 ---
 
 ## Phase 0 — Security & Tooling

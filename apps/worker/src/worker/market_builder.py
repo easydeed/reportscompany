@@ -270,6 +270,31 @@ def _v2_count(value) -> str:
     return f"{int(value):,}"
 
 
+def _v2_known_count(band: Dict[str, Any]):
+    """A band's listing count as an int, or `None` when it is not reported.
+
+    THE TWO ABSENCES ARE DIFFERENT and this is the function that keeps them so.
+    `{"label": "$1.6M+", "count": 0}` means nothing is for sale up there, which
+    is one of the more useful facts a bands report carries. `{"label": "$1.6M+"}`
+    means the band was not counted. `band.get("count") or 0` renders the second
+    as the first — a claim the data does not make, which is D-137's shape
+    (absent is not a default) on a row that reads as fact.
+
+    The legacy band chart drew the first and DROPPED the second
+    (`test_a_band_with_no_count_key_is_dropped`). This page draws both, because
+    its row carries a label, a median, days and $/sq ft beside the bar, so an
+    uncounted band is informative where an uncounted bar was not — but it draws
+    the uncounted one as a dash with no bar, never as a zero.
+
+    Bools are excluded explicitly: `True` is an `int` in Python and `1` is a
+    plausible-looking count.
+    """
+    value = band.get("count")
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    return int(value)
+
+
 def _v2_beds_baths(item) -> str:
     """`3/2`, and `3/-` when only one side is known.
 
@@ -304,7 +329,7 @@ def _v2_beds_baths(item) -> str:
 #: badge selectors on `new_listings` and `price_bands`, so wiring `closed`
 #: closes zero of them, by construction. See
 #: docs/MARKET_TOKEN_MAPPING_2026-10-07.md.
-V2_KINDS = frozenset({"closed", "new_listings"})
+V2_KINDS = frozenset({"closed", "new_listings", "price_bands"})
 
 #: Design's shared page. One template, dispatched on kind, per their README.
 V2_TEMPLATE_PATH = "_v2/report.jinja2"
@@ -336,6 +361,29 @@ V2_TABLE_COLUMNS = {
     "new_listings": {"price": "List price", "fifth": "Listed",
                      "noun": "new listings", "noun_one": "new listing"},
 }
+
+
+#: Design's slowest-band tag, from their neutral list, quoted with the ratio
+#: they measured: "Slowest-band tag `#B42318` (5.9:1)". The FASTEST tag is
+#: `accent_ink`, which is derived — only the slowest one is a fixed hex,
+#: because "slow" is not a brand colour on any brand.
+V2_SLOW_TAG = "#B42318"
+
+#: Design's headline rule for the bands kind, stated in their README §per-kind:
+#: "{band} is moving fastest" only when that band has >=10 listings and is >=3
+#: days faster than the area average, else the plain title "{Area} · Price
+#: Bands"; every headline hidden under 10 sales/listings.
+#:
+#: NAMED CONSTANTS BECAUSE THEY ARE A THRESHOLD SOMEONE CHOSE. Inline, the next
+#: reader cannot tell 10 from an arbitrary 10, and the rule's whole character is
+#: that it REFUSES to make the claim on thin data.
+V2_FASTEST_MIN_LISTINGS = 10
+V2_FASTEST_MIN_DAYS_AHEAD = 3
+
+#: The big number's size per kind. Design: 88px, "snapshot: 96px; bands: 64px
+#: headline" — a price range is wider than a count and does not fit at 88.
+V2_BIG_PX = {"price_bands": 64, "market_snapshot": 96}
+V2_BIG_PX_DEFAULT = 88
 
 
 def _v2_listed_label(days) -> str:
@@ -767,6 +815,19 @@ class MarketReportBuilder:
             pill = f"{low} – {high}" if low and high else None
             pill_sub = "this week"
 
+        elif self.report_type == "price_bands":
+            headline = self._v2_fastest_headline()
+            big = headline["band_label"]
+            label = headline["label"]
+            low, high = self._v2_price_range()
+            cells = [
+                ("Active listings", _v2_count(stats["active_count"])),
+                ("Median list", _v2_money(stats["median_list_price"])),
+                ("Price range", f"{low} – {high}" if low and high else V2_NO_DATA),
+            ]
+            pill = headline["pill"]
+            pill_sub = headline["pill_sub"]
+
         else:
             raise NotImplementedError(
                 f"{self.report_type} is in V2_KINDS with no band spec. Every "
@@ -777,6 +838,7 @@ class MarketReportBuilder:
         return {
             "title": header["title"],
             "big": big,
+            "big_px": V2_BIG_PX.get(self.report_type, V2_BIG_PX_DEFAULT),
             "label": label,
             "label_px": _v2_label_size(label),
             "pill": pill,
@@ -809,6 +871,136 @@ class MarketReportBuilder:
         if not comparable:
             return V2_NO_DATA
         return str(over)
+
+    def _v2_fastest_headline(self) -> Dict[str, Any]:
+        """Design's bands headline, and the rule that refuses to make it.
+
+        *"{band} is moving fastest" only when that band has >=10 listings and
+        is >=3 days faster than the area average, else the plain title
+        "{Area} · Price Bands"; every headline hidden under 10 listings.*
+
+        So this returns the plain title far more often than the claim, and that
+        is the design: a fastest-band headline on four listings is a sentence
+        the data cannot support. The comparison is against the area average
+        across the ranked bands, not against the slowest band — "faster than
+        the area" is what the sub-label says.
+
+        `hottest_and_slowest` does the ranking, imported rather than rewritten:
+        it already excludes bands with no sales rather than scoring them 999,
+        which is the zero-is-falsy defect it was written to fix (D-108's
+        family). A second ranking here would be the fifth copy problem in a
+        new template.
+        """
+        from worker.compute.price_bands import hottest_and_slowest
+
+        bands = self.report_data.get("price_bands") or []
+        header = self._build_header_context()
+        area = header["city"] or "this area"
+        plain = {
+            "band_label": f"{area} · Price Bands",
+            "label": None, "pill": None, "pill_sub": None,
+        }
+        fastest, _slowest = hottest_and_slowest(bands)
+        if not fastest.get("count") or fastest.get("avg_dom") is None:
+            return plain
+        if fastest["count"] < V2_FASTEST_MIN_LISTINGS:
+            return plain
+
+        ranked = [b["avg_dom"] for b in bands
+                  if b.get("avg_dom") is not None and b.get("count")]
+        area_avg = sum(ranked) / len(ranked)
+        ahead = area_avg - fastest["avg_dom"]
+        if ahead < V2_FASTEST_MIN_DAYS_AHEAD:
+            return plain
+
+        return {
+            "band_label": fastest["label"],
+            "label": "is moving fastest",
+            "pill": _v2_days(fastest["avg_dom"]),
+            "pill_sub": f"{ahead:.0f} days faster than the area",
+        }
+
+    def _v2_bands_body(self) -> Dict[str, Any]:
+        """Design's band rows: label + tag, a bar, median, days, $/sq ft.
+
+        THE BAR'S WIDTH IS A SHARE OF THE LARGEST COUNT, not of the total. A
+        share of the total makes every bar short as soon as there are several
+        bands, and Design's row is a comparison between bands rather than a
+        composition of a whole.
+
+        The count sits BESIDE the bar as ink text, not inside it — Design's
+        spec, and it is also the only placement that survives a count of zero
+        and a bar of zero width.
+        """
+        from worker.compute.price_bands import hottest_and_slowest
+
+        bands = self.report_data.get("price_bands") or []
+        fastest, slowest = hottest_and_slowest(bands)
+        counts = [_v2_known_count(b) for b in bands]
+        known = [c for c in counts if c is not None]
+        widest = max(known) if known else 0
+        # A COMPARATIVE TAG NEEDS TWO THINGS TO COMPARE. `hottest_and_slowest`
+        # returns the single band as both when there is one, so an unguarded
+        # `is_fastest` tagged one row "Fastest" against nothing — the body's
+        # version of the refusal `_v2_fastest_headline` already makes for the
+        # headline.
+        #
+        # RANKABLE MATCHES WHAT `hottest_and_slowest` RANKS: a known `avg_dom`
+        # and a NON-ZERO count. Zero and absent are both excluded here and for
+        # once that is right — an empty band has no speed to compare and an
+        # uncounted one has no standing to compare it — which is the one place
+        # in this method where `_v2_known_count`'s `None` and a `0` may be
+        # treated alike.
+        rankable = sum(1 for b in bands if b.get("avg_dom") is not None
+                       and _v2_known_count(b))
+        comparable = rankable >= 2
+        rows = []
+        for band, count in zip(bands, counts):
+            is_fastest = (comparable
+                          and band.get("label") == fastest.get("label")
+                          and fastest.get("avg_dom") is not None)
+            is_slowest = (comparable
+                          and band.get("label") == slowest.get("label")
+                          and slowest.get("avg_dom") is not None
+                          and not is_fastest)
+            rows.append({
+                "label": band.get("label") or V2_DASH,
+                "tag": "Fastest" if is_fastest else ("Slowest" if is_slowest else None),
+                "is_fastest": is_fastest,
+                "is_slowest": is_slowest,
+                "count": _v2_count(count),
+                "bar_pct": round(count / widest * 100) if (
+                    widest and count is not None) else 0,
+                "median": _v2_money(band.get("median_price")),
+                "days": _v2_days(band.get("avg_dom")),
+                "ppsf": (f"${int(band['avg_ppsf']):,}"
+                         if isinstance(band.get("avg_ppsf"), (int, float))
+                         else V2_DASH),
+            })
+        # THE D-111 DISCLOSURE, WHICH THIS MOVE NEARLY DROPPED.
+        # `_band_chart_note` was fed to `band_distribution_chart`, and
+        # `pricebands_layout` is the only caller of that macro — so when this
+        # kind moved to the `_v2` page, the line saying "these boundaries came
+        # from this period's results and may shift between reports" stopped
+        # reaching any page while its producer, and the test on its producer,
+        # stayed green. That caveat is the reason D-111's rebuild is honest:
+        # bands that may move look identical to bands that will not, and the
+        # whole point of round boundaries is that a reader can compare two
+        # runs. A producer with no consumer is this project's read-with-no-
+        # producer defect pointed the other way, and it is why
+        # `test_price_bands.py` now renders the page instead of calling the
+        # method.
+        #
+        # The note is REUSED, not rewritten — a second "N listings across M
+        # bands" would be a second derivation of the figure the table above it
+        # shows. It returns None under two counted bands, where there is no
+        # distribution to caption; the caveat still has to land, so it is
+        # carried on its own in that case.
+        note = self._band_chart_note()
+        caveat = self.report_data.get("price_bands_note")
+        if not note and caveat:
+            note = caveat
+        return {"rows": rows, "slow_tag": V2_SLOW_TAG, "note": note}
 
     def _v2_price_range(self):
         """`($641K, $1.2M)` from the listings' own prices, or `(None, None)`.
@@ -1074,7 +1266,13 @@ class MarketReportBuilder:
             context.update({
                 "v2": True,
                 "v2_band": self._v2_band(),
-                "v2_table": self._v2_table(),
+                # ONE BODY PER KIND, chosen here rather than by the template
+                # asking what kind it is. `price_bands` is not a table and the
+                # page must not pretend it is.
+                "v2_table": (self._v2_table()
+                             if self.report_type in V2_TABLE_COLUMNS else None),
+                "v2_bands": (self._v2_bands_body()
+                             if self.report_type == "price_bands" else None),
                 "on_primary": tokens["on_primary"],
                 "display_ink": tokens["display_ink"],
                 # The pill's text sits on WHITE, not on the brand fill, at

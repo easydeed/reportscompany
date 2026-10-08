@@ -4,49 +4,49 @@
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "            ratio = stats[\"list_to_sale_pct\"]",
     "new": "            ratio = stats[\"list_to_sale_ratio\"]",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "the scale normalisation stops normalising",
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "    return float(value) * 100 if value < 2 else float(value)",
     "new": "    return float(value)",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "a zero ratio renders as 0.0% of asking instead of being absent",
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "    if not value:\n        return None\n    return float(value) * 100 if value < 2 else float(value)",
     "new": "    return float(value) * 100 if value and value < 2 else float(value)",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py apps/worker/tests/test_zero_conditionals.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py apps/worker/tests/test_zero_conditionals.py"
   },
   {
     "name": "the over-asking count drops the type check, so a string list price raises",
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "            if not isinstance(close, (int, float)) or not isinstance(lst, (int, float)):\n                continue",
     "new": "            if not isinstance(close, (int, float)):\n                continue",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "the fifth column's accent fires at or below asking, not above",
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "                emphasis = bool(ratio is not None and ratio > 100)",
     "new": "                emphasis = bool(ratio is not None and ratio >= 100)",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "a kind is added to V2_KINDS with no band spec",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\"})",
-    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"inventory\"})",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\"})",
+    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\"})",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "the shared money filter's casing changes for every surface",
     "file": "apps/worker/src/worker/template_filters.py",
     "old": "            return f\"${val / 1_000:.0f}{'K' if upper else 'k'}\"",
     "new": "            return f\"${val / 1_000:.0f}K\"",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "the band label takes display_ink again, which is 3.0 on a 22px line",
@@ -67,7 +67,7 @@
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "        if self.report_type in V2_KINDS:\n            ai_insights = \"\"\n        elif not ai_insights:",
     "new": "        if not ai_insights:",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "a V2 kind falls back to the old page",
@@ -81,20 +81,83 @@
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "    days = int(days)\n    return \"Today\" if days == 0 else f\"{days} d ago\"",
     "new": "    days = int(days) or 0\n    return \"Today\" if days and days == 0 else f\"{days} d ago\"",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "new_listings shows the sale price instead of the list price",
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "                price = _v2_money(lst)",
     "new": "                price = _v2_money(close if close else lst)",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "the count line's noun is shared, so new listings render as sales",
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "    \"new_listings\": {\"price\": \"List price\", \"fifth\": \"Listed\",\n                     \"noun\": \"new listings\", \"noun_one\": \"new listing\"},",
     "new": "    \"new_listings\": {\"price\": \"List price\", \"fifth\": \"Listed\",\n                     \"noun\": \"sales\", \"noun_one\": \"sale\"},",
-    "test": "apps/worker/tests/test_market_v2_table_kinds.py"
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "the band label span is unguarded again, so a refused headline prints None",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "        {% if v2_band.label %}",
+    "new": "        {% if True %}",
+    "test": "tests/test_market_templates.py apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "an uncounted band is read as zero again (D-137 on the bands body)",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "    if not isinstance(value, (int, float)) or isinstance(value, bool):\n        return None\n    return int(value)",
+    "new": "    if not isinstance(value, (int, float)) or isinstance(value, bool):\n        return 0\n    return int(value)",
+    "test": "apps/worker/tests/test_band_chart.py"
+  },
+  {
+    "name": "a lone band is tagged Fastest against nothing",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        comparable = rankable >= 2",
+    "new": "        comparable = True",
+    "test": "apps/worker/tests/test_band_chart.py apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "an empty search renders five column headings over nothing",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "  {% if not v2_bands.rows %}",
+    "new": "  {% if False %}",
+    "test": "apps/worker/tests/test_band_chart.py"
+  },
+  {
+    "name": "D-111's may-shift caveat stops reaching the page",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        note = self._band_chart_note()\n        caveat = self.report_data.get(\"price_bands_note\")\n        if not note and caveat:\n            note = caveat",
+    "new": "        note = None",
+    "test": "apps/worker/tests/test_price_bands.py"
+  },
+  {
+    "name": "price_bands renders the table body instead of the bands body",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "                \"v2_bands\": (self._v2_bands_body()\n                             if self.report_type == \"price_bands\" else None),",
+    "new": "                \"v2_bands\": None,",
+    "test": "apps/worker/tests/test_market_layout_map.py apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "the bar scales to the total instead of to the largest band",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        widest = max(known) if known else 0",
+    "new": "        widest = sum(known) if known else 0",
+    "test": "apps/worker/tests/test_band_chart.py apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "a layout macro goes dead with nothing recording it",
+    "file": "apps/worker/tests/test_market_layout_map.py",
+    "old": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"pricebands_layout\"]",
+    "new": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\"]",
+    "test": "apps/worker/tests/test_market_layout_map.py"
+  },
+  {
+    "name": "a template note is written as an HTML comment, so Jinja renders it into the page",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "      {# THE BOX IS UNCONDITIONAL, THE SPAN IS NOT.",
+    "new": "      <!-- THE BOX IS UNCONDITIONAL, THE SPAN IS NOT.",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   }
 ]
