@@ -606,3 +606,37 @@ def test_the_corpus_is_the_size_the_documentation_says():
     )
     assert len({k.rsplit("__", 1)[0] for k in market}) == 10, "10 report types"
     assert len({k.rsplit("__", 1)[0] for k in prop}) == len(themes)
+
+
+def test_the_market_surface_has_no_baselined_failure_left():
+    """THE MARKET SURFACE IS AT ZERO, AND THIS IS WHAT KEEPS IT THERE.
+
+    All six `market__*` rows the baseline ever held were one construct — three
+    `listing-tier-badge` on `new_listings`, three `status-badge` on
+    `price_bands`, tinted chips behind semantic text. Design's spec removes it
+    ("no chips, no tinted fills behind semantic text — the live surface's only
+    66 failures are that construct"), so wiring those two kinds closed all six
+    without a colour being chosen.
+
+    WHY A SEPARATE ASSERTION rather than trusting the ratchet. The forward
+    ratchet fails on a NEW pairing and the reverse one fails on a FIXED one,
+    and between them they would let the market surface drift back to one row
+    and then two as long as each was added on a branch that regenerated. A
+    floor of zero cannot be re-raised by a regeneration — it has to be argued.
+
+    And it is worth more than the six rows: every market kind still to be
+    wired regenerates this baseline, and a surface at zero makes each of those
+    diffs PURE PAGE LAYOUT with nothing to disentangle. A surface at three
+    makes every later diff a question about which three.
+    """
+    rows = [line for line in BASELINE.read_text(encoding="utf-8").splitlines()
+            if line.startswith("market__")]
+    assert rows == [], (
+        "the market surface has baselined contrast failures again:\n  "
+        + "\n  ".join(rows)
+        + "\n\nIt reached zero on 2026-10-08 when `new_listings` and "
+          "`price_bands` moved to Design's page. Adding a row back is a "
+          "decision, not a regeneration: say why the construct is needed, or "
+          "fix the colour. Every later kind's baseline diff depends on this "
+          "staying empty."
+    )

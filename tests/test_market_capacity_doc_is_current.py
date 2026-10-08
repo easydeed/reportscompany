@@ -236,6 +236,22 @@ def test_the_eight_kind_page_cost_recomputes():
     assert not wrong, "§2a disagrees with its own inputs:\n  " + "\n  ".join(wrong)
 
 
+#: The `_v2` continuation capacity of each wired kind, and `None` for a kind
+#: whose body has no continuation because it has no listings table.
+#:
+#: WAS A SINGLE `26` IN THE FORMULA BELOW, which was the table kinds' row count
+#: standing in for "the continuation capacity". That held while the seam was all
+#: table kinds and gave `price_bands` six pages when it builds one — because the
+#: formula paginated a listings table the page does not have. A constant that is
+#: right for every member of a set is indistinguishable from a constant that is
+#: right for the set, until the set grows.
+V2_CONTINUATION = {
+    "closed": 26,
+    "new_listings": 26,
+    "price_bands": None,
+}
+
+
 def test_the_built_figures_match_the_live_pin():
     """§7, which IS current, against the pin — the other half of the split.
 
@@ -254,14 +270,28 @@ def test_the_built_figures_match_the_live_pin():
             f"{kind} is wired to the `_v2` page and reads {PAGE_1_CAPACITY[kind]}. "
             f"Two numbers mean page-1 capacity depends on prose length again."
         )
+        assert kind in V2_CONTINUATION, (
+            f"{kind} is wired with no recorded continuation capacity, so its "
+            f"built page count cannot be recomputed here."
+        )
         page_1 = PAGE_1_CAPACITY[kind]["no_narrative"]
-        built = math.ceil((120 - page_1) / 26) + 1
+        per_page = V2_CONTINUATION[kind]
+        if per_page is None:
+            # No listings table: the report is one page whatever N is, and the
+            # pin reads 0 because nothing paginates. Asserted, not skipped.
+            assert page_1 == 0, (
+                f"{kind} has no continuation capacity recorded but its page-1 "
+                f"pin is {page_1}. One of the two is now wrong."
+            )
+            built = 1
+        else:
+            built = math.ceil((120 - page_1) / per_page) + 1
         assert f"| `{kind}` |" in body, f"§7 does not list {kind}"
         assert f"| **{built}** |" in body, (
-            f"{kind} builds to {built} pages at {page_1} + 26/page; §7 says "
-            f"something else."
+            f"{kind} builds to {built} pages at {page_1} + {per_page}/page; "
+            f"§7 says something else."
         )
-    assert "**Eleven pages saved across two kinds**" in body
+    assert "**Twelve pages saved across three kinds**" in body
 
 
 def test_the_net_saving_is_what_the_document_claims():

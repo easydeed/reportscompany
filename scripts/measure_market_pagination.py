@@ -202,6 +202,10 @@ def main(n=120):
 
     print(f"{n} listings · Letter · top {MARGIN_TOP} / bottom {MARGIN_BOTTOM} reserved\n")
     print(f"{'report type':24s} {'layout':18s} {'pages':>5s}  listings per page")
+    # A `_v2` kind with no listings table reports 0 listings on every page,
+    # which is true and reads as a failure. Design's bands kind renders seven
+    # fixed band rows instead, so there is nothing to count — said here rather
+    # than left for the reader to work out from a row of zeroes.
     print("-" * 82)
     out = []
     for report_type in ALL_REPORT_TYPES:

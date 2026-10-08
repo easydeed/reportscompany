@@ -78,6 +78,8 @@ inventory.page_1 = 15
 inventory.continuation = 29
 new_listings.page_1 = 3
 new_listings.continuation = 8
+price_bands.page_1 = 3
+price_bands.continuation = 6
 ```
 
 **`new_listings` is the finding.** It runs on our `analytics` layout today at 3 rows on page 1 and 8
@@ -148,8 +150,8 @@ inventory.with_narrative = 11
 inventory.with_trend = 5
 new_listings.no_narrative = 17
 new_listings.with_narrative = 17
-price_bands.no_narrative = 3
-price_bands.with_narrative = 2
+price_bands.no_narrative = 0
+price_bands.with_narrative = 0
 market_snapshot.no_narrative = 3
 market_snapshot.with_narrative = 3
 market_snapshot.with_trend = 0
@@ -163,6 +165,14 @@ open_houses.with_narrative = 6
 
 Continuation pages, measured on the same run: `closed` / `inventory` 29 · `new_listings` 8 ·
 `price_bands` 6 · `market_snapshot` 6 · gallery kinds 9.
+
+**`price_bands` reads 0 in both narrative states and that is not a regression.** Its `_v2` body is
+the band table — five columns of price-band aggregates — and it carries **no listings table at all**,
+so the number of listings that fit on page 1 is zero because none render. The report is one page and
+holds every band. The figure is pinned at 0 rather than removed so that a listings table appearing
+on this kind is a change somebody has to write down; `test_market_layout_map.py`'s
+`RENDERED_DESPITE_CAP` records the same fact from the other side, that
+`PDF_CONFIG["price_bands"]["cap"] = 8` now governs nothing that renders.
 
 A kind whose rendered capacity moves away from these after wiring has changed the layout's density,
 which is a reviewable fact rather than a surprise.
@@ -210,11 +220,17 @@ difference is the finding.
 |---|---|---|---|
 | `closed` | 5 | **5** | 6 |
 | `new_listings` | **16** | **5** | 6 |
-| | **21** | **10** | 12 |
+| `price_bands` | 2 | **1** | — (their package states no row counts for it) |
+| | **23** | **11** | 12 for the two kinds they gave rows for |
 
-**Eleven pages saved across two kinds**, against the eight their arithmetic predicted across three —
-because both land on 5, not 6. `closed` was never going to cost a page and `new_listings` saves one
-more than forecast.
+**Twelve pages saved across three kinds**, against the eight their arithmetic predicted across three
+— because `closed` and `new_listings` both land on 5 rather than 6, and `price_bands` was not in
+their forecast at all.
+
+`price_bands` going 2 → 1 is the cheapest of the three and the forecast had it at 2 → 2. The saving
+is the stat cards and the SVG chart coming out: the `_v2` body is one five-column table of the same
+six bands, and six rows at 48px plus the band fit inside one page where a hero card, a six-card stat
+row, an SVG bar chart and a narrative box did not.
 
 `new_listings` is the whole of it. It had been rendering on the `analytics` layout at 3 rows on page
 1 and 8 on continuation; on Design's table it is 17 and 26.

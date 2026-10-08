@@ -97,7 +97,9 @@
   .band-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
   .band-lead-left { display: flex; align-items: flex-end; gap: 18px; min-width: 0; }
   .band-big {
-    font-size: 88px;
+    /* SIZE PER KIND, from the builder. Design: 88px, "snapshot: 96px; bands:
+       64px headline" — a price range is wider than a count and does not fit at
+       88. The value is in `v2_band.big_px` rather than a class per kind. */
     font-weight: 600;
     line-height: 0.88;
     letter-spacing: -0.045em;
@@ -231,6 +233,72 @@
   .tvs-over { color: var(--accent-ink); font-weight: 600; }
   .tvs-under { color: var(--muted); font-weight: 400; }
 
+  /* ── The bands body ─────────────────────────────────────────────────────
+     Design's grid: `120px 1fr 72 60 64` — band + tag, a 36px bar with the
+     count beside it, median, days, $/sq ft.
+
+     THE BAR'S WIDTH IS A SHARE OF THE LARGEST BAND, not of the total: the row
+     is a comparison between bands, and a share of the total makes every bar
+     short as soon as there are several. The count sits BESIDE the bar as ink
+     text, which is Design's spec and also the only placement that survives a
+     count of zero and a bar of zero width. */
+  .bands { padding: 22px 52px 0; }
+  .brow {
+    display: grid;
+    grid-template-columns: 120px 1fr 72px 60px 64px;
+    align-items: center;
+    gap: 0 12px;
+    padding: 6px 0;
+  }
+  .bhead {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule-soft);
+    padding-bottom: 8px;
+  }
+  .blabel { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .btag {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 2px;
+  }
+  /* Fastest takes `accent_ink` (derived, >=4.5 on white and on the tint since
+     D-177); slowest takes Design's fixed `#B42318`, which they measured at
+     5.9:1. Only the slow one is a literal, because "slow" is not a brand
+     colour on any brand. */
+  .btag-fast { color: var(--accent-ink); }
+  .btag-slow { color: {{ v2_bands.slow_tag if v2_bands else '#B42318' }}; }
+  .bbar-cell { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .bbar {
+    height: 36px;
+    border-radius: 3px;
+    background: var(--primary);
+    flex-shrink: 0;
+  }
+  .bbar-fast { background: var(--accent); }
+  .bcount { font-size: 13px; font-weight: 500; color: var(--ink);
+            font-variant-numeric: tabular-nums; }
+  .bcell { font-size: 13px; font-weight: 400; line-height: 1.05;
+           color: var(--body); text-align: right;
+           font-variant-numeric: tabular-nums; }
+  .bdays-fast { color: var(--accent-ink); font-weight: 600; }
+  .bdays-slow { color: {{ v2_bands.slow_tag if v2_bands else '#B42318' }}; font-weight: 600; }
+  .brow { break-inside: avoid; page-break-inside: avoid; }
+  .bempty { font-size: 13px; font-weight: 400; color: var(--muted);
+            padding: 10px 0; }
+  .bnote { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+           letter-spacing: 0.06em; color: var(--muted);
+           border-top: 1px solid var(--rule-soft);
+           margin-top: 10px; padding-top: 10px; }
+
   .tshowing {
     font-family: var(--mono);
     font-size: 9.5px;
@@ -265,9 +333,29 @@
 
   <div class="band-lead">
     <div class="band-lead-left">
-      <div class="band-big">{{ v2_band.big }}</div>
+      <div class="band-big" style="font-size: {{ v2_band.big_px }}px">{{ v2_band.big }}</div>
+      {# THE BOX IS UNCONDITIONAL, THE SPAN IS NOT. `price_bands` has a
+         headline that REFUSES: under 10 listings in the fastest band, or under
+         3 days ahead of the area average, the band shows the plain title with
+         no label beneath it (see `_v2_fastest_headline`). With
+         `autoescape=False` an unguarded label expression printed the literal
+         string `None` at 22px — caught by
+         `test_no_undefined_values[price_bands]`, which is the only gate on
+         this surface that reads the rendered page for a bare `None`.
+
+         A JINJA COMMENT, NOT AN HTML ONE. The first version of this note was
+         `<!-- ... -->` and quoted the expression it was about, so Jinja
+         substituted it and the comment itself shipped `None` into the page —
+         inside a comment, where the gate could not see it and a reader of the
+         source would conclude the guard was not working. Jinja does not treat
+         `<!-- -->` as a comment, and an HTML comment ships to the client.
+
+         The 50px box stays so the band's height does not move between a kind
+         that has a label and a kind that, for this data, does not. #}
       <div class="band-label-box">
+        {% if v2_band.label %}
         <span class="band-label" style="font-size: {{ v2_band.label_px }}px">{{ v2_band.label }}</span>
+        {% endif %}
       </div>
     </div>
     {% if v2_band.pill %}
@@ -288,6 +376,52 @@
   </div>
 </section>
 
+{% if v2_bands %}
+<section class="bands">
+  {# NO COLUMN HEADER OVER NO ROWS. `v2_bands` is a dict and always truthy for
+     this kind, so the outer test says "this kind has a bands body", not "there
+     are bands to show". A search that matched nothing used to render five
+     column headings above empty space, which reads as a broken page rather
+     than as an empty result. Standing instruction: the report renders and says
+     the search returned nothing. #}
+  {% if not v2_bands.rows %}
+  <div class="bempty">No price bands — this search returned no listings.</div>
+  {% else %}
+  <div class="brow bhead">
+    <div>Price band</div>
+    <div>Listings</div>
+    <div style="text-align:right">Median</div>
+    <div style="text-align:right">Days</div>
+    <div style="text-align:right">$/sq ft</div>
+  </div>
+  {% for row in v2_bands.rows %}
+  <div class="brow">
+    <div>
+      <span class="blabel">{{ row.label }}</span>
+      {% if row.tag %}
+      <span class="btag {{ 'btag-fast' if row.is_fastest else 'btag-slow' }}">{{ row.tag }}</span>
+      {% endif %}
+    </div>
+    <div class="bbar-cell">
+      <div class="bbar {{ 'bbar-fast' if row.is_fastest else '' }}"
+           style="width: {{ row.bar_pct }}%"></div>
+      <span class="bcount">{{ row.count }}</span>
+    </div>
+    <div class="bcell">{{ row.median }}</div>
+    <div class="bcell {{ 'bdays-fast' if row.is_fastest else ('bdays-slow' if row.is_slowest else '') }}">{{ row.days }}</div>
+    <div class="bcell">{{ row.ppsf }}</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% if v2_bands.note %}
+  {# The table kinds' structural equivalent is `.tshowing`. This carries the
+     same job plus D-111's caveat about where the boundaries came from. #}
+  <div class="bnote">{{ v2_bands.note }}</div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if v2_table %}
 <section class="table">
   <div class="trow thead">
     <div>Address</div>
@@ -311,10 +445,12 @@
   </div>
   {% endfor %}
 </section>
+{% endif %}
 
 {# "Showing a–b of N". The page number is NOT here: this document does not know
    how the paginator will break it, and a page number written by the body would
    be wrong on every page but one. PDFShift's footer carries `Page x of P`. #}
+{% if v2_table %}
 <div class="tshowing">
   {% if v2_table.showing < v2_table.total %}
   Showing {{ v2_table.showing }} of {{ v2_table.total }}
@@ -322,6 +458,7 @@
   {{ v2_table.total }} {{ v2_table.noun if v2_table.total != 1 else v2_table.noun_one }}
   {% endif %}
 </div>
+{% endif %}
 
 </body>
 </html>

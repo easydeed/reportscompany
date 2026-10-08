@@ -1,21 +1,32 @@
-"""The table kinds on Design's `_v2` page — `closed` and `new_listings`.
+"""The kinds wired onto Design's `_v2` page — `closed`, `new_listings`,
+`price_bands`.
 
 Design's market package is adopted one kind at a time, as the property surface
 was. `market_builder.V2_KINDS` is the seam: a kind not in it renders exactly as
-it does today. `closed` is first because it is the table kind WITH continuation
-pages, so it exercises `header.start_at = 1`, `footer.start_at = 1` and the row
-capacity together — the architectural risks, which if wrong invalidate the other
-seven kinds.
+it does today. `closed` was first because it is the table kind WITH
+continuation pages, so it exercises `header.start_at = 1`,
+`footer.start_at = 1` and the row capacity together — the architectural risks,
+which if wrong invalidate the other seven kinds.
 
-It is NOT first for contrast. All six `market__*` baseline rows are badge
-selectors on `new_listings` and `price_bands`, so wiring `closed` closes zero of
-them by construction — established before building it, by the heuristic D-171
-and D-177 produced: ask where a token paints before estimating what it closes.
+It was NOT first for contrast. All six `market__*` baseline rows were badge
+selectors on `new_listings` and `price_bands`, so wiring `closed` closed zero
+of them by construction — established before building it, by the heuristic
+D-171 and D-177 produced: ask where a token paints before estimating what it
+closes. The prediction held exactly at every step: 0 for `closed`, 3 for
+`new_listings`, 3 for `price_bands`, and the market surface is now at zero
+baselined failures.
 
-WHAT THIS FILE COVERS: the band values and the table rows for both wired
-kinds, which are Python. Renamed from `test_market_v2_closed.py` when the
-second kind landed — a file named after one instance of a seam describes that
-instance, which is §0.6's rule about selectors applied to a filename.
+WHAT THIS FILE COVERS: the band values and the per-kind body values, which are
+Python. The `price_bands` BODY — the band rows, the bar scale and the
+no-count-is-not-zero distinction — lives in `test_band_chart.py`, which was
+repointed from the old chart rather than deleted.
+
+Renamed twice: from `test_market_v2_closed.py` when the second kind landed, and
+from `test_market_v2_table_kinds.py` when `price_bands` landed and the seam
+stopped being all table kinds. Both for the same reason — a file named after
+one instance of a seam describes that instance, which is §0.6's rule about
+selectors applied to a filename. The name is now the seam itself, so it should
+not need renaming again.
 """
 import sys
 from pathlib import Path
@@ -45,22 +56,32 @@ def builder(report_type="closed", n=20, **over):
 # The seam
 # ─────────────────────────────────────────────────────────────────────────────
 
-def test_the_seam_holds_one_kind():
+def test_every_kind_in_the_seam_has_its_band_values():
     """A kind in `V2_KINDS` must have a band spec, or the band renders empty.
 
     The property surface's `V2_THEMES` had the same contract. Adding a kind
     here without its per-kind band values is the mistake this guards, and
     `_v2_band` raises rather than returning a shell.
+
+    THE SET IS PINNED, not derived, and that is the point: adding a kind to the
+    seam should fail a test until someone writes the kind's band values and
+    updates this line. It was named `..._holds_one_kind` when there was one,
+    which was a name that went stale the moment the second landed.
     """
-    assert V2_KINDS == frozenset({"closed", "new_listings"}), (
+    assert V2_KINDS == frozenset({"closed", "new_listings", "price_bands"}), (
         f"V2_KINDS is {set(V2_KINDS)}. Every kind in it needs its own band "
         f"values from Design's per-kind table — big number, label, pill, three "
         f"stats — and `_v2_band` raises NotImplementedError without them."
     )
     for kind in V2_KINDS:
         band = builder(kind)._v2_band()
-        assert band["big"] is not None and band["label"]
-        assert len(band["cells"]) == 3
+        assert band["big"] is not None, f"{kind} has no big number"
+        assert len(band["cells"]) == 3, f"{kind} has {len(band['cells'])} stats"
+        # `label` is NOT asserted truthy: on `price_bands` Design's headline
+        # rule deliberately returns no label when the data cannot support the
+        # claim, and the plain title goes in `big` instead. Requiring a label
+        # here would have forced the claim to be made.
+        assert "label" in band
 
 
 def test_a_kind_without_a_band_spec_raises_rather_than_rendering_empty():
@@ -362,3 +383,225 @@ def test_under_a_million_counts_rather_than_shares():
                        (400_000, 999_999, 1_000_000, 2_000_000)):
         item["list_price"] = p
     assert b._v2_band()["cells"][1]["value"] == "2"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `price_bands` — the third kind, and NOT a table.
+#
+# Design's bands kind renders seven fixed band rows and no listings table, so
+# it is the first kind to exercise the page's body dispatch. It is also the
+# kind that closed the last three market baseline rows.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def bands(rows):
+    """A `price_bands` builder with the band rows given."""
+    b = builder("price_bands", n=20)
+    b.report_data["price_bands"] = rows
+    return b
+
+
+def band_row(count, dom, label=None, median=1_000_000, ppsf=500):
+    return {"label": label or f"band-{dom}", "count": count,
+            "median_price": median, "avg_dom": dom, "avg_ppsf": ppsf}
+
+
+def test_price_bands_renders_bands_and_no_table():
+    """The body dispatch, asserted both ways.
+
+    A kind that rendered both bodies would paginate as neither, and a kind
+    that rendered the wrong one would still look like a report.
+    """
+    b = builder("price_bands", n=20)
+    html = b.render_html()
+    assert 'class="brow"' in html, "the bands body did not render"
+    assert 'class="trow"' not in html, "a table rendered on the bands kind"
+    table = builder("closed", n=5).render_html()
+    assert 'class="brow"' not in table, "the bands body rendered on a table kind"
+
+
+@pytest.mark.parametrize("report_type", sorted(V2_KINDS))
+def test_the_v2_page_ships_no_html_comment(report_type):
+    """JINJA DOES NOT TREAT `<!-- -->` AS A COMMENT, and the page found out.
+
+    A note added beside the label guard was written as an HTML comment and
+    quoted the expression it was about. Jinja substituted it, so the rendered
+    page carried the literal `None` **inside a comment** — invisible to the
+    gate that reads the page for a bare `None`, and visible to anyone reading
+    the template source as evidence the guard did not work.
+
+    Two separate reasons to have none of them here. The first is that: a
+    template comment must be `{#  #}`, which never renders, rather than one
+    that renders and then hides what it rendered. The second is plainer — an
+    HTML comment ships to the client, and this document is sent to PDFShift
+    and then to an agent's customer.
+    """
+    html = builder(report_type, n=12).render_html()
+    assert "<!--" not in html, (
+        f"{report_type}'s page ships an HTML comment. In a Jinja template a "
+        f"`<!-- -->` comment is rendered, not skipped, so any expression inside "
+        f"it is substituted and then hidden from every gate that reads the "
+        f"page. Use `{{#  #}}`."
+    )
+    for leftover in ("{{", "{%"):
+        assert leftover not in html, (
+            f"{report_type}'s page contains an unrendered {leftover!r}"
+        )
+
+
+def test_a_refused_headline_renders_no_label_and_not_the_word_none():
+    """`autoescape=False` prints `None` where a template prints a missing value.
+
+    `_v2_fastest_headline` returns `label=None` whenever it refuses, which is
+    most of the time by design — and the template's label span was
+    unconditional, so the band read
+
+        {Area} · Price Bands
+        None
+
+    at 22px, under the plain title. Caught by
+    `tests/test_market_templates.py::test_no_undefined_values[price_bands]`,
+    which is the only gate on this surface that reads the rendered page for a
+    bare `None`, and which only began covering this kind when it joined the
+    seam — the third kind's move to find untested behaviour.
+
+    The 50px label box stays; only the span is conditional, so the band's
+    height does not move between a kind that has a label and one that does not.
+    """
+    html = bands([band_row(4, 8), band_row(4, 40)]).render_html()
+    assert "· Price Bands" in html, "the plain title did not render"
+    assert ">None<" not in html and "None</span>" not in html
+    assert 'class="band-label"' not in html, (
+        "the label span rendered for a headline that refused to make a claim"
+    )
+    assert 'class="band-label-box"' in html, (
+        "the fixed 50px box went with the span, so the band is now a "
+        "different height on this kind"
+    )
+    # And the other way: when the claim IS made, the label is there.
+    claimed = bands([band_row(12, 8), band_row(12, 40)]).render_html()
+    assert 'class="band-label"' in claimed
+    assert "is moving fastest" in claimed
+
+
+def test_the_big_number_is_designs_size_per_kind():
+    """88px default, 64px for bands — a price range does not fit at 88."""
+    assert builder("closed")._v2_band()["big_px"] == 88
+    assert builder("new_listings")._v2_band()["big_px"] == 88
+    assert builder("price_bands")._v2_band()["big_px"] == 64
+
+
+# ── Design's headline rule, which mostly refuses ─────────────────────────────
+
+def test_the_fastest_headline_needs_ten_listings():
+    """Design: the claim only when the band has >=10 listings."""
+    nine = bands([band_row(9, 8), band_row(12, 30), band_row(12, 40)])._v2_band()
+    assert nine["label"] is None
+    assert nine["big"].endswith("· Price Bands"), nine["big"]
+    ten = bands([band_row(10, 8), band_row(12, 30), band_row(12, 40)])._v2_band()
+    assert ten["label"] == "is moving fastest"
+
+
+def test_the_fastest_headline_needs_three_days_ahead_of_the_area():
+    """And >=3 days faster than the area average, not than the slowest band."""
+    close = bands([band_row(12, 20), band_row(12, 21), band_row(12, 22)])._v2_band()
+    assert close["label"] is None, close
+    clear = bands([band_row(12, 8), band_row(12, 22), band_row(12, 40)])._v2_band()
+    assert clear["label"] == "is moving fastest"
+    assert clear["pill_sub"] == "15 days faster than the area"
+
+
+def test_a_single_band_cannot_be_faster_than_itself():
+    """The degenerate case: with one band the area average IS that band, so it
+    is 0 days ahead and the claim must be refused. A rule comparing a value to
+    an average it dominates is the shape worth checking at n=1."""
+    one = bands([band_row(12, 10)])._v2_band()
+    assert one["label"] is None, one
+
+
+def test_bands_with_no_speed_refuse_the_headline_entirely():
+    """`avg_dom` is None for a band with no sales — and for EVERY band on the
+    preview path, because it is computed from `closed_history`, which only
+    production supplies (D-173's family). So the plain title is what the
+    branding preview shows, and that is correct rather than broken."""
+    none = bands([band_row(12, None), band_row(12, None)])._v2_band()
+    assert none["label"] is None
+    assert none["pill"] is None
+
+
+# ── The rows ─────────────────────────────────────────────────────────────────
+
+def test_the_bar_is_a_share_of_the_largest_band_not_of_the_total():
+    """A share of the total makes every bar short once there are several
+    bands, and Design's row is a comparison rather than a composition."""
+    rows = bands([band_row(10, 10), band_row(5, 20), band_row(1, 30)]
+                 )._v2_bands_body()["rows"]
+    assert [r["bar_pct"] for r in rows] == [100, 50, 10]
+
+
+def test_the_fastest_and_slowest_tags_land_on_one_band_each():
+    rows = bands([band_row(12, 8), band_row(12, 22), band_row(12, 40)]
+                 )._v2_bands_body()["rows"]
+    assert [r["tag"] for r in rows] == ["Fastest", None, "Slowest"]
+    assert [r["is_fastest"] for r in rows] == [True, False, False]
+    assert [r["is_slowest"] for r in rows] == [False, False, True]
+
+
+def test_one_band_carries_no_tag_because_there_is_nothing_to_compare_it_to():
+    """A COMPARATIVE TAG NEEDS TWO THINGS TO COMPARE.
+
+    `hottest_and_slowest` returns the single band for both, so a literal read
+    would tag it "Fastest Slowest". This test's first version fixed half of
+    that — it asserted "Fastest" and not also "Slowest" — and shipped the
+    other half: a lone band labelled the fastest of one.
+
+    Found by `test_band_chart.py`, repointed from the chart this page replaced,
+    which rendered the row and read the tag off the page. The headline already
+    refuses here for the same arithmetic (a band is 0 days ahead of an average
+    that is itself); the body's tag now refuses too, and both refusals are the
+    same sentence: there is nothing to be faster than.
+    """
+    rows = bands([band_row(12, 10)])._v2_bands_body()["rows"]
+    assert rows[0]["is_fastest"] is False
+    assert rows[0]["is_slowest"] is False
+    assert rows[0]["tag"] is None
+
+
+def test_two_ranked_bands_are_enough_for_a_tag():
+    """The boundary above, from the other side — a refusal that never lifts is
+    indistinguishable from a feature that does not work (§0.6)."""
+    rows = bands([band_row(12, 8), band_row(12, 40)])._v2_bands_body()["rows"]
+    assert [r["tag"] for r in rows] == ["Fastest", "Slowest"]
+
+
+def test_an_uncounted_band_does_not_count_towards_the_two():
+    """`rankable` requires a known count AND a known speed.
+
+    A band with `avg_dom` and no `count` key is not in the ranking — the same
+    distinction `_v2_known_count` draws for the bar — so it cannot be the
+    second band that licenses a tag on the first.
+    """
+    rows = bands([band_row(12, 8),
+                  {"label": "$2M+", "avg_dom": 40}])._v2_bands_body()["rows"]
+    assert [r["tag"] for r in rows] == [None, None]
+    assert rows[1]["count"] == V2_DASH
+
+
+def test_a_band_with_no_sales_is_kept_and_carries_no_tag():
+    """`build_bands` keeps empty bands deliberately — "nothing above $1.6M" is
+    a fact about the market. An empty band has no speed, so no tag."""
+    rows = bands([band_row(12, 8), band_row(0, None, label="$2M+")]
+                 )._v2_bands_body()["rows"]
+    assert len(rows) == 2
+    empty = rows[1]
+    assert empty["count"] == "0" and empty["bar_pct"] == 0
+    assert empty["tag"] is None and empty["days"] == V2_DASH
+
+
+def test_the_slow_tag_is_designs_measured_hex():
+    """`#B42318`, which Design measured at 5.9:1. The fastest tag is derived
+    (`accent_ink`); only this one is a literal, because "slow" is not a brand
+    colour on any brand."""
+    body = bands([band_row(12, 8), band_row(12, 40)])._v2_bands_body()
+    assert body["slow_tag"] == "#B42318"
+    html = builder("price_bands", n=20).render_html()
+    assert "#B42318" in html
