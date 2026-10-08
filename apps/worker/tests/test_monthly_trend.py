@@ -169,6 +169,80 @@ def svg_of(html):
     return match.group(1) if match else None
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# THE PACE SERIES HAS NO REPORT TYPE SINCE 2026-10-08
+#
+# `inventory` was the only type drawing the COUNT series, and Design's `_v2`
+# page for it is the shared band over the listings table with no chart. So the
+# pace chart — "Homes sold per month", with its note saying it is NOT
+# months-of-supply because past inventory levels are not recoverable — renders
+# nowhere.
+#
+# The four tests below used to render it through `report("inventory", ...)`.
+# They are repointed rather than deleted, for the reason `test_band_chart.py`
+# was repointed one kind earlier: the concerns are about the SERIES and its
+# MARKS, not about which report carried them, and every one of them is live
+# again the moment the chart is restored. A zero month dropped as a gap, a
+# count axis floating off zero, a pace line read as supply — none of those stop
+# being wrong because nothing currently draws them.
+#
+# What is NOT done is pretend the feature is still reachable:
+# `test_no_report_type_draws_the_pace_series_today` asserts the fact, so the
+# suite states it rather than implying otherwise.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def pace_report(history, primary="#1B365D"):
+    """Render the pace chart through a type that still has a chart slot.
+
+    NOT BY LENDING `inventory` THE COUNT SERIES BACK — that was the first
+    version and it rendered nothing, because `inventory` is in `V2_KINDS` now
+    and Design's page has no trend-chart slot at all. Patching `TREND_SERIES`
+    says "draw a count series" to a template with nowhere to draw it. The
+    series map and the page layout are two separate gates and the kind moved
+    through both.
+
+    So the chart is rendered through `market_snapshot`, which is still on the
+    legacy page, with its series swapped from median to count. The patch is
+    restored in a `finally`, so a failure inside the render cannot leave the
+    class attribute edited for the rest of the session — a backup that
+    outlives its edit is misfire (2) in `scripts/apply_regressions.py`, and
+    this is the same hazard in memory.
+
+    `test_no_report_type_draws_the_pace_series_today` asserts that
+    `market_snapshot` still carries a series at all, so if IT moves to the
+    `_v2` page this helper fails loudly rather than silently rendering nothing.
+    """
+    original = MarketReportBuilder.TREND_SERIES
+    MarketReportBuilder.TREND_SERIES = {"market_snapshot": "count"}
+    try:
+        return report("market_snapshot", history, primary)
+    finally:
+        MarketReportBuilder.TREND_SERIES = original
+
+
+def test_no_report_type_draws_the_pace_series_today():
+    """The fact, asserted, so the four tests above it are not misread.
+
+    If this fails because a type drew it again, that is the restore — point
+    `pace_report` at the real type and delete this test. If it fails because
+    the MEDIAN series also went, `market_snapshot` has moved to the `_v2` page
+    and the whole chart is dead; say so in the commit rather than loosening it.
+    """
+    assert "count" not in MarketReportBuilder.TREND_SERIES.values(), (
+        f"a report type draws the pace series again: "
+        f"{MarketReportBuilder.TREND_SERIES}. That is a restore of the "
+        f"inventory trend Design's page dropped — update `pace_report` to "
+        f"render through it and remove this test."
+    )
+    assert "median" in MarketReportBuilder.TREND_SERIES.values(), (
+        "no type draws the median series either, so the trend chart is "
+        "entirely unreachable and these tests describe a document that no "
+        "longer renders at all."
+    )
+    # And the producer is untouched, which is what makes the restore one line.
+    assert count_series(full_year(), today=TODAY)
+
+
 def test_no_history_renders_no_chart():
     assert svg_of(report()) is None
 
@@ -320,18 +394,29 @@ def test_a_truncated_fetch_is_refused_for_counts_too():
     assert count_series(full_year(), today=TODAY, truncated=True) is None
 
 
-def test_the_inventory_report_gets_the_pace_series_and_market_snapshot_the_median():
-    inv = report("inventory", full_year())
-    assert svg_of(inv) is not None, "the inventory report should carry a trend"
-    assert "Homes sold per month" in inv
+def test_each_series_draws_its_own_caption():
+    """Which series a type gets, by the caption it draws — not by reading the
+    map, which is the thing being checked.
+
+    Was `test_the_inventory_report_gets_the_pace_series_and_market_snapshot_
+    the_median`. `inventory` no longer gets one at all; the pace half is now
+    rendered through `pace_report`, so the distinction between the two
+    captions is still asserted.
+    """
+    assert "Homes sold per month" in pace_report(full_year())
     assert "Median closed price by month" in report("market_snapshot", full_year())
+    assert svg_of(report("inventory", full_year())) is None, (
+        "the inventory report drew a trend. Design's `_v2` page for it has no "
+        "chart slot, so this is either a restore (update the tests above) or a "
+        "chart rendering outside the page's layout."
+    )
 
 
 def test_the_pace_note_says_it_is_not_months_of_supply():
     """§7.3 asked for an MOI trend and this is not one. The note has to say so,
     because a pace line on an inventory report is exactly what a reader would
     otherwise take for supply."""
-    html = report("inventory", full_year())
+    html = pace_report(full_year())
     assert "past inventory levels are not recoverable" in html
 
 
@@ -346,7 +431,7 @@ def test_a_zero_month_is_plotted_rather_than_skipped():
     gap. The line must pass through it — a month at zero is the most important
     point on a pace chart."""
     rows = [r for r in full_year() if "-07-" not in r["close_date"]]
-    svg = svg_of(report("inventory", rows))
+    svg = svg_of(pace_report(rows))
     path = re.search(r'<path d="([^"]+)"', svg).group(1)
     assert path.count("M") == 1, f"the pace line broke at a zero month: {path}"
 
@@ -365,7 +450,7 @@ def test_the_count_axis_is_anchored_at_zero():
     axis must start there and let the swing be its true size — the axis should
     not do the exaggerating.
     """
-    ticks = _axis_ticks(svg_of(report("inventory", full_year())))
+    ticks = _axis_ticks(svg_of(pace_report(full_year())))
     assert ticks[-1] == "0", f"count axis floor is {ticks[-1]!r}, expected 0"
 
 

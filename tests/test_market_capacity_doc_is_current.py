@@ -81,13 +81,61 @@ def test_the_comparison_is_against_the_no_narrative_column():
         f"mean the narrative is reaching the `_v2` page again, which makes "
         f"page-1 capacity depend on prose length."
     )
-    # `inventory` has NOT moved, and still shows the swing the move removes.
-    assert PAGE_1_CAPACITY["inventory"]["no_narrative"] == 15
-    assert PAGE_1_CAPACITY["inventory"]["with_narrative"] == 11
+    # THE CONTROL IS GONE AND THAT IS THE FINDING, NOT A GAP TO PATCH.
+    #
+    # This asserted `inventory` at 15/11 as "a kind that has NOT moved and
+    # still shows the swing the move removes". `inventory` moved on 2026-10-08
+    # — the fourth positive control in this suite consumed by the migration it
+    # was controlling for, after `closed` and `inventory` in the layout map and
+    # `inventory` twice in the kinds suite.
+    #
+    # And here the replacement is narrower than the original, which is worth
+    # being exact about rather than papering over.
+    #
+    # THE PROSE SWING IS GONE EVERYWHERE. The 15-against-11 gap existed only on
+    # `closed` and `inventory`, the two kinds whose layout put a narrative box
+    # above a long table, and both have moved. Every kind on the surface now
+    # reads the SAME number with and without a narrative — which is the
+    # determinism the comparison was about, and it is asserted over all eight
+    # rather than demonstrated on one.
+    #
+    # `market_snapshot` still swings on its TREND CHART (3/3/0 — the chart
+    # costs it every row on page 1), and that is the last unwired kind's own
+    # business. A chart is not prose: the number does not depend on how much an
+    # LLM wrote, which is the specific defect D-102 was about. So the two are
+    # asserted separately instead of one standing in for the other.
+    #
+    # The historical figures stay in the DOCUMENT, because that is what the
+    # comparison was made against and §2's arithmetic is unreadable without
+    # them. They are gone from the live pin, which is correct: the pin is
+    # current and the document records what was.
+    prose_swing = {
+        kind: states for kind, states in PAGE_1_CAPACITY.items()
+        if states["no_narrative"] != states["with_narrative"]
+    }
+    assert prose_swing == {}, (
+        f"these kinds' page-1 capacity still depends on how much prose an LLM "
+        f"wrote: {prose_swing}. That is D-102's defect and the thing Design's "
+        f"one-state page removes."
+    )
+    assert PAGE_1_CAPACITY["market_snapshot"]["with_trend"] == 0, (
+        f"`market_snapshot` reads "
+        f"{PAGE_1_CAPACITY['market_snapshot']} — the one remaining swing is "
+        f"its trend chart, and this control exists so the assertion above is "
+        f"not vacuously true of a surface where nothing varies at all. If "
+        f"`market_snapshot` has been wired, this suite has no control left: "
+        f"say so rather than deleting the line."
+    )
     assert "the middle column" in body, (
         "the document no longer says which column the comparison is against. "
-        "Their 13 is a no-narrative figure; ours is 15 without and 11 with."
+        "Their 13 is a no-narrative figure; ours was 15 without and 11 with."
     )
+    for historical in ("15", "11"):
+        assert historical in body, (
+            f"the document no longer records our pre-move figure {historical}. "
+            f"§2's arithmetic compared their 13 against those numbers and "
+            f"cannot be read without them."
+        )
 
 
 def test_the_page_cost_arithmetic_holds():
@@ -248,6 +296,7 @@ def test_the_eight_kind_page_cost_recomputes():
 V2_CONTINUATION = {
     "closed": 26,
     "new_listings": 26,
+    "inventory": 26,
     "price_bands": None,
 }
 
@@ -291,7 +340,7 @@ def test_the_built_figures_match_the_live_pin():
             f"{kind} builds to {built} pages at {page_1} + {per_page}/page; "
             f"§7 says something else."
         )
-    assert "**Twelve pages saved across three kinds**" in body
+    assert "**Twelve pages saved across four kinds**" in body
 
 
 def test_the_net_saving_is_what_the_document_claims():

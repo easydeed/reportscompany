@@ -37,8 +37,8 @@
   {
     "name": "a kind is added to V2_KINDS with no band spec",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\"})",
-    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\"})",
+    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\"})",
+    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\", \"market_snapshot\"})",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
@@ -86,8 +86,8 @@
   {
     "name": "new_listings shows the sale price instead of the list price",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "                price = _v2_money(lst)",
-    "new": "                price = _v2_money(close if close else lst)",
+    "old": "                emphasis = fifth == \"Today\"\n                price = _v2_money(lst)",
+    "new": "                emphasis = fifth == \"Today\"\n                price = _v2_money(close if close else lst)",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
@@ -149,8 +149,8 @@
   {
     "name": "a layout macro goes dead with nothing recording it",
     "file": "apps/worker/tests/test_market_layout_map.py",
-    "old": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"pricebands_layout\"]",
-    "new": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\"]",
+    "old": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"pricebands_layout\"]",
+    "new": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\",\n                             \"pricebands_layout\"]",
     "test": "apps/worker/tests/test_market_layout_map.py"
   },
   {
@@ -180,5 +180,47 @@
     "old": "  {% for band in price_bands[:4] %}\n  <div class=\"stat-block",
     "new": "  {% for band in price_bands %}\n  <div class=\"stat-block",
     "test": "apps/worker/tests/test_market_layout_map.py::test_the_four_of_six_band_slice_is_only_where_it_is_recorded"
+  },
+  {
+    "name": "inventory's Status column loses its exclusive boundary, so day 7 is not New",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "                         and dom <= V2_NEW_WITHIN_DAYS)",
+    "new": "                         and dom < V2_NEW_WITHIN_DAYS)",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "the inventory pill classifies with its own threshold instead of the shared one",
+    "file": "apps/worker/src/worker/compute/moi.py",
+    "old": "SELLERS_MARKET_BELOW = 4",
+    "new": "SELLERS_MARKET_BELOW = 3",
+    "test": "apps/worker/tests/test_market_v2_kinds.py apps/worker/tests/test_market_trends.py"
+  },
+  {
+    "name": "an MOI of zero is read as no estimate, so nothing-for-sale loses its pill",
+    "file": "apps/worker/src/worker/compute/moi.py",
+    "old": "    if moi is None:\n        return None\n    if moi < SELLERS_MARKET_BELOW:",
+    "new": "    if not moi:\n        return None\n    if moi < SELLERS_MARKET_BELOW:",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "New this week reads the 30-day lookback count instead of counting seven days",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        return _v2_count(sum(1 for d in known if d <= V2_NEW_WITHIN_DAYS))",
+    "new": "        return _v2_count(self._build_stats_context()[\"new_listings_count\"])",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "inventory stays in TREND_SERIES, so tasks.py buys a year of rows for no chart",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "    TREND_SERIES = {\n        \"market_snapshot\": \"median\",\n    }",
+    "new": "    TREND_SERIES = {\n        \"market_snapshot\": \"median\",\n        \"inventory\": \"count\",\n    }",
+    "test": "apps/worker/tests/test_closed_history_fetch.py apps/worker/tests/test_monthly_trend.py apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "the fifth-column default comes back, so an unwired kind renders a page of dashes",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            else:\n                raise NotImplementedError(\n                    f\"{self.report_type} has `_v2` table columns but no fifth-\"",
+    "new": "            elif True:\n                fifth = V2_DASH\n                emphasis = False\n                price = _v2_money(lst)\n            else:\n                raise NotImplementedError(\n                    f\"{self.report_type} has `_v2` table columns but no fifth-\"",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   }
 ]

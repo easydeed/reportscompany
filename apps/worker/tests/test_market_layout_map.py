@@ -166,6 +166,7 @@ def test_the_layout_map_matches_the_macro_that_runs(report_type):
 V2_BODY_MARKER = {
     "closed": 'class="trow thead"',
     "new_listings": 'class="trow thead"',
+    "inventory": 'class="trow thead"',
     "price_bands": 'class="brow bhead"',
 }
 
@@ -225,7 +226,8 @@ def test_a_v2_kind_calls_no_layout_macro_and_renders_the_v2_page(report_type):
 #: dispatch still names them), but accumulating them unnoticed is how a
 #: template file comes to be two thirds dead without anyone having decided it —
 #: which is exactly what `property/_base/base.jinja2`'s 5,570 dead lines are.
-UNREACHABLE_LAYOUT_MACROS = ["analytics_layout", "pricebands_layout"]
+UNREACHABLE_LAYOUT_MACROS = ["analytics_layout", "closed_inventory_layout",
+                             "pricebands_layout"]
 
 
 def test_the_layouts_no_report_type_reaches_are_recorded():
@@ -303,10 +305,20 @@ def test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout():
     report type at a layout base.jinja2 has no branch for and the fallback
     gallery must run instead.
     """
-    # `inventory`, not `closed`: closed renders the `_v2` page now and
-    # never reaches base.jinja2's dispatch, so it cannot exercise the
-    # fallback this control exists to prove is reachable.
-    data = report_data("inventory")
+    # DERIVED, NOT NAMED. This line said `closed`, then `inventory`, and each
+    # became wrong when that kind joined the seam — a kind in `V2_KINDS` never
+    # reaches base.jinja2's dispatch, so it cannot exercise the fallback this
+    # control exists to prove is reachable. A positive control drawn from the
+    # set being migrated is consumed by the migration, so the remainder is
+    # computed and asserted non-empty.
+    outside = sorted(set(ALL_REPORT_TYPES) - V2_KINDS)
+    assert outside, (
+        "every report type is in V2_KINDS, so no kind can reach base.jinja2's "
+        "dispatch and this control cannot be run at all. The fallback is now "
+        "unreachable from production — retire it with the old layouts, or say "
+        "here why it stays."
+    )
+    data = report_data(outside[0])
     builder = MarketReportBuilder(data)
     builder.layout = "no_such_layout"
     with recording_macros() as seen:

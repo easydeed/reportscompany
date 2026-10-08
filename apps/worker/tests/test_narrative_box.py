@@ -86,7 +86,13 @@ PAGE_1_CAPACITY = {
     # page-1 capacity is one number rather than a property of prose length.
     # It was 15 / 11 — a four-row swing — on the old page.
     "closed": {"no_narrative": 17, "with_narrative": 17},
-    "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
+    # 17/17, ONE STATE — and the third number is gone, not just equalised.
+    # `with_trend: 5` recorded the inventory page's capacity when it carried
+    # the sales-pace chart; Design's `_v2` page has no chart slot, so the
+    # pace series has no report type at all (see `TREND_SERIES`). A
+    # `with_trend` key here would be a capacity for a state the kind can no
+    # longer be in.
+    "inventory": {"no_narrative": 17, "with_narrative": 17},
     # ZERO, AND IT IS NOT A REGRESSION. `price_bands` moved to Design's `_v2`
     # page, which renders seven fixed band rows and NO LISTINGS TABLE — so the
     # number of listings that fit on page 1 is zero because none are rendered,
