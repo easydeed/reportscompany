@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 60 | Real, unfixed |
-| `fixed` | 115 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 117 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 5 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **181** | D-001 … D-181, contiguous, no duplicates |
+| **Total** | **183** | D-001 … D-183, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 15 · ROUGH 24. (Sums to 60, the open total.)
 
@@ -10832,6 +10832,140 @@ Supplying `closed_history` means generating twelve months of plausible closings 
 a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
 same question as the nineteen orphans. The hole is recorded with its measurement so the decision
 can be taken on the number.
+
+---
+
+### D-183 — the inventory trend lost its page and nearly kept its vendor fetch
+
+**Severity:** FRAGILE · **Affects:** the `inventory` report — the sales-pace chart, and one SimplyRETS
+query per render · **Found during:** wiring `inventory` onto Design's `_v2` page, by looking for
+D-181's shape before building rather than after
+**Status:** `fixed` — `feat/market-inventory-v2`. **The information loss is not a defect and is not
+fixed; it is Design's call and is flagged for Jerry below.**
+
+Design's `_v2` page for `inventory` is the shared band over the listings table. It specifies **no
+chart**. `inventory` was the only report type drawing the **sales-pace** series — "Homes sold per
+month", with the note saying it is *not* months-of-supply because past inventory levels are not
+recoverable from a feed fetched as Active/Pending/Closed.
+
+So the chart stops rendering. That part is forced by the spec. **What would have gone wrong quietly
+is the fetch:**
+
+```python
+TREND_REPORT_TYPES = frozenset(MarketReportBuilder.TREND_SERIES)
+```
+
+`TREND_SERIES` is both the drawing map and the shopping list — `tasks.py` reads the derived set to
+decide whether to buy twelve months of closings (D-113). Leaving `inventory` in it would have paid
+for a year of rows on every inventory report for a chart that cannot draw.
+
+**That is D-113 exactly inverted.** D-113 was a chart whose data was never bought; this would have
+been data no chart could spend. The comment on `TREND_REPORT_TYPES` names both directions —
+*"two copies fail the quiet way in both directions: a fetch whose answer is never used, or a chart
+whose data was never bought"* — and this is the second one arriving, against a map that was
+deliberately single-sourced to prevent it. **The single source is what made it one line instead of
+two, and the gate is what noticed:**
+`test_only_the_trend_reports_pay_for_a_second_query` pins the count, it went 2 → 1, and the test
+asked why.
+
+#### Found before the fact, which is the only interesting part
+
+D-181 was a producer surviving its only consumer, discovered after the fact by repointing a test.
+One kind later the same shape was *looked for* — "what did the old path produce that nobody else
+produces" is now the question asked when a kind moves — and it was here. The pace series, its note,
+`compute/monthly_trend.count_series` and the chart macro are all untouched and all unreachable.
+
+`apps/worker/tests/test_monthly_trend.py` is repointed rather than deleted, the same way
+`test_band_chart.py` was: the four assertions were about **the series and its marks**, not about
+which report carried them, and every one is live again the moment the chart is restored — a zero
+month dropped as a gap, a count axis floating off zero, a pace line read as supply. They render
+through `pace_report`, which lends `market_snapshot` the count series, and
+`test_no_report_type_draws_the_pace_series_today` asserts the fact so the suite states it rather
+than implying the feature works.
+
+> **The first version of `pace_report` lent the series back to `inventory` and rendered nothing** —
+> because `inventory` is in `V2_KINDS` now and Design's page has no chart slot at all. The series
+> map and the page layout are two separate gates and the kind moved through both. Worth recording:
+> re-enabling a feature by patching the flag that used to enable it is not enough once the surface
+> it drew on has been replaced.
+
+#### [JERRY] What is lost, and it is a decision rather than a cleanup
+
+**The inventory report now carries no trend at all.** §7.3 asked for a months-of-supply trend; that
+is not buildable. The pace is MOI's *denominator*, which is knowable, so that is what shipped —
+**labelled as what it is**, which is what made it honest. Design's page replaces it with nothing.
+
+Restoring it is this one line plus a chart slot on the `_v2` page, and the slot is the part Design
+would have to agree to. Recorded here so the decision is taken on purpose rather than discovered by
+an agent who used to show a client a twelve-month line.
+
+---
+
+### D-182 — "seller's market" means under four months on the PDF and under three in the email
+
+**Severity:** WRONG · **Affects:** every surface that classifies a market — property PDFs, market
+PDFs, scheduled emails, and the AI insight prompt · **Found during:** building Design's `inventory`
+pill, which needed the classification and would have been a seventh copy of it
+**Status:** `fixed` for the divergence's cause — `feat/market-inventory-v2`. **The four `moi < 3`
+sites are UNCHANGED and are flagged below**, because moving a threshold under live customer copy is
+a behaviour change and not part of wiring a report kind.
+
+`compute/moi.py` exists because two MOI formulas disagreed (D-056), and its `describe()` says so:
+
+> *"The render-ready shape. One place decides how 'no number' looks, so the surfaces cannot disagree
+> about it the way the two formulas did."*
+
+**The classification was the one piece of MOI interpretation that module did not own**, and it was
+therefore reimplemented **six times at two different thresholds:**
+
+| site | threshold | what it says |
+|---|---|---|
+| `compute/market_trends.py:484` | `moi < 4` | `"Seller's Market"` — docstring cites NAR |
+| `property_builder.py:2680` | `moi < 4` | `"It's a seller's market"` |
+| `ai_insights.py:238` | **`moi < 3`** | `market_vibe = "competitive (seller's market)"` |
+| `email/template.py:1915` | **`moi < 3`** | `"Great news for sellers in {area}"` |
+| `email/template.py:1959` | **`moi < 3`** | `"Inventory is tight in {area}"` |
+| `email/template.py:2087` | **`moi < 3`** | `"Seller's market conditions"` |
+
+**A market at 3.5 months of supply is "a seller's market" on the property PDF and nothing at all in
+the email for the same account on the same day.** The buyer's boundary agrees at `> 6` everywhere,
+so only the seller's side diverges — which is the half an agent forwards.
+
+Nothing in a grep distinguishes them: six sites, two answers, no shared symbol. It is the
+same-name/two-implementations family (D-163, D-170, D-177, and D-086's `_median` three deep) in its
+most diffuse form — **not two implementations under one name, but six under no name at all.**
+
+#### Fixed: the classification moved to where the module's own docstring says it belongs
+
+`compute/moi.py` now holds `SELLERS_MARKET_BELOW = 4`, `BUYERS_MARKET_ABOVE = 6`, the four canonical
+labels, and `condition(moi)`. `market_trends._classify_market_condition` reads them instead of
+repeating the numbers and the strings — **boundaries and wording unchanged**, `moi < 4` was always
+the documented NAR figure and this is simply the module that now holds it.
+
+`condition()` returns **`None`** for no estimate rather than `"Insufficient Data"`, so a caller that
+wants to omit a claim gets a value it cannot accidentally render as a classification. And **zero is
+a real answer**: `active_count = 0` with enough closings gives an MOI of exactly `0.0` — nothing is
+for sale, the most seller-favourable market there can be — so the test is `moi is None` and not
+truthiness. That is D-108's shape on the one input where the wrong answer is the exact opposite of
+the right one.
+
+Design's `inventory` pill reads both halves from that module and nothing else:
+`describe(moi)["formatted_current"]` for *"1.9 months"* and `condition(moi)` for *"seller's
+market"*. **No number means no pill** — not a dash. The pill is a claim about the market, and
+`"— months of inventory · "` is a claim with the evidence taken out of the middle of it.
+
+#### [JERRY] Not fixed: which threshold is right
+
+The four `moi < 3` sites are customer-facing email copy and an LLM prompt. Aligning them on 4 would
+make more markets read as sellers' markets in email, which is a **content change** and wants a
+decision rather than a refactor. What this change buys is that the decision is now a one-line edit
+in one file instead of four edits in three, and that a fifth surface cannot pick a third number.
+
+One smaller divergence noted rather than changed: `describe()` formats `f"{moi} months"` and prints
+a whole number as **`"4.0 months"`**, while `property_builder.py:2683` does
+`f"{moi:.1f}".rstrip("0").rstrip(".")` and prints **`"4"`**. Two formatters for the same number in
+the module whose job is that there is one. Left alone because `describe`'s output is pinned by other
+tests and the fix is cosmetic on a surface this ticket does not touch.
 
 ---
 

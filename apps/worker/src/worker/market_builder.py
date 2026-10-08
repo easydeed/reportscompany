@@ -329,7 +329,7 @@ def _v2_beds_baths(item) -> str:
 #: badge selectors on `new_listings` and `price_bands`, so wiring `closed`
 #: closes zero of them, by construction. See
 #: docs/MARKET_TOKEN_MAPPING_2026-10-07.md.
-V2_KINDS = frozenset({"closed", "new_listings", "price_bands"})
+V2_KINDS = frozenset({"closed", "new_listings", "price_bands", "inventory"})
 
 #: Design's shared page. One template, dispatched on kind, per their README.
 V2_TEMPLATE_PATH = "_v2/report.jinja2"
@@ -360,7 +360,23 @@ V2_TABLE_COLUMNS = {
                "noun": "sales", "noun_one": "sale"},
     "new_listings": {"price": "List price", "fifth": "Listed",
                      "noun": "new listings", "noun_one": "new listing"},
+    # Design: "same table; `vs. list` becomes `Status`: `New` in `accent_ink`
+    # 600 when DOM <= 7, else `—` #5E636B 400". The noun is "homes for sale"
+    # and not "listings" — an inventory report counts what is ON the market,
+    # and "212 listings" reads as activity where "212 homes for sale" reads as
+    # stock. Their band label says "homes for sale in {area}" for the same
+    # reason, so the count line matches it.
+    "inventory": {"price": "List price", "fifth": "Status",
+                  "noun": "homes for sale", "noun_one": "home for sale"},
 }
+
+#: Design's `Status` rule for `inventory`: "New" at or under this many days.
+#:
+#: SEVEN, NOT "a week" — and the boundary is INCLUSIVE, which is what their
+#: `<= 7` says. A listing at exactly 7 days is new; at 8 it is not. Written
+#: down because `< 7` and `<= 7` differ on one day in seven and neither reads
+#: wrong in a diff.
+V2_NEW_WITHIN_DAYS = 7
 
 
 #: Design's slowest-band tag, from their neutral list, quoted with the ratio
@@ -528,9 +544,35 @@ class MarketReportBuilder:
     #: inventory and no past month's active count is recoverable from a feed
     #: fetched as Active/Pending/Closed. The pace is MOI's denominator and is
     #: knowable, so that is what ships, labelled as what it is.
+    #: `inventory` WAS HERE AND IS NOT ANY MORE, AND THAT IS A REAL LOSS.
+    #:
+    #: Design's `_v2` page for `inventory` is the shared band over the listings
+    #: table and specifies no chart, so from 2026-10-08 the sales-pace series
+    #: has nowhere to render. It is removed from this map rather than left in
+    #: it, because THIS MAP IS ALSO THE SHOPPING LIST: `TREND_REPORT_TYPES`
+    #: below is derived from it and is what `tasks.py` reads to decide whether
+    #: to pay for the twelve-month closings fetch (D-113). Leaving `inventory`
+    #: here would buy a year of rows for a chart that cannot draw — "a fetch
+    #: whose answer is never used", which is the exact failure the comment on
+    #: `TREND_REPORT_TYPES` was written to prevent, arriving from the other
+    #: direction.
+    #:
+    #: WHAT IS LOST, stated plainly because it is a product decision and not a
+    #: cleanup: the inventory report no longer carries any trend. §7.3 asked
+    #: for a months-of-supply trend, that is not buildable (no past month's
+    #: active count is recoverable from a feed fetched as
+    #: Active/Pending/Closed), and the pace — MOI's denominator, which IS
+    #: knowable — is what shipped instead, labelled as what it is. That
+    #: labelling is why it was honest. Design's spec replaces it with nothing.
+    #:
+    #: `count_series`, the pace note ("past inventory levels are not
+    #: recoverable") and the whole of `compute/monthly_trend` are UNTOUCHED, so
+    #: restoring it is adding this one line back plus a slot on the page. The
+    #: producer surviving with no consumer is recorded in the defect list
+    #: rather than deleted, which is D-181's lesson applied before the fact
+    #: instead of after it.
     TREND_SERIES = {
         "market_snapshot": "median",
-        "inventory": "count",
     }
 
     def _build_monthly_trend(self):
@@ -815,6 +857,19 @@ class MarketReportBuilder:
             pill = f"{low} – {high}" if low and high else None
             pill_sub = "this week"
 
+        elif self.report_type == "inventory":
+            # Design: count "212" / "homes for sale in {area}", pill
+            # "1.9 months" / "of inventory · seller's market", stats
+            # Median list · New this week · Avg. days listed.
+            label = f"homes for sale in {city}"
+            big = _v2_count(stats["active_count"])
+            cells = [
+                ("Median list", _v2_money(stats["median_list_price"])),
+                ("New this week", self._v2_new_this_week()),
+                ("Avg. days listed", _v2_days(stats["avg_dom"])),
+            ]
+            pill, pill_sub = self._v2_inventory_pill()
+
         elif self.report_type == "price_bands":
             headline = self._v2_fastest_headline()
             big = headline["band_label"]
@@ -1002,6 +1057,61 @@ class MarketReportBuilder:
             note = caveat
         return {"rows": rows, "slow_tag": V2_SLOW_TAG, "note": note}
 
+    def _v2_new_this_week(self) -> str:
+        """How many active listings came on within `V2_NEW_WITHIN_DAYS`.
+
+        Counted from the listings rather than read from a metric, because
+        `new_listings_count` is a DIFFERENT QUANTITY: it is produced by
+        `build_new_listings_result` over that report's own lookback window,
+        which is 30 days by default and settable per schedule. Design's cell
+        says "New this week" and means seven days. Reading the 30-day figure
+        under a label that says week would be a number that is right about
+        something else, which is the hardest kind of wrong to see on a page.
+
+        `V2_NO_DATA` when no listing reports a day count at all — not `0`.
+        "No listing has a DOM" and "no listing is new" are different facts and
+        only the second is a claim about the market (D-137).
+        """
+        raw = (self.report_data.get("listings")
+               or self.report_data.get("listings_sample") or [])
+        days = [item.get("days_on_market") for item in raw]
+        known = [d for d in days
+                 if isinstance(d, (int, float)) and not isinstance(d, bool)]
+        if not known:
+            return V2_NO_DATA
+        return _v2_count(sum(1 for d in known if d <= V2_NEW_WITHIN_DAYS))
+
+    def _v2_inventory_pill(self):
+        """Design's `("1.9 months", "of inventory · seller's market")`.
+
+        BOTH HALVES COME FROM `compute.moi` AND NEITHER IS COMPUTED HERE.
+        `describe()` already owns the formatting ("one place decides how 'no
+        number' looks, so the surfaces cannot disagree") and `condition()` now
+        owns the classification, which was the one piece of MOI interpretation
+        that module did not own — and which had therefore been reimplemented
+        six times at two different thresholds (D-182). A seventh copy on a new
+        page is how that defect would have reached a fourth surface.
+
+        **NO NUMBER MEANS NO PILL.** `months_of_supply` returns `None` whenever
+        MOI cannot honestly be estimated — fewer than three closings in the
+        rate window, or an active count that hit a paging limit and is a floor
+        rather than a count (D-056). The pill is dropped entirely in that case
+        rather than filled with a dash: the band's pill is a claim about the
+        market, and "— months of inventory · " is a claim with the evidence
+        removed from the middle of it.
+        """
+        from worker.compute.moi import condition as moi_condition, describe
+
+        metrics = self.report_data.get("metrics") or {}
+        moi = metrics.get("months_of_inventory")
+        if not isinstance(moi, (int, float)) or isinstance(moi, bool):
+            return None, None
+        label = moi_condition(moi)
+        if label is None:
+            return None, None
+        return describe(moi)["formatted_current"], (
+            f"of inventory · {label.lower()}")
+
     def _v2_price_range(self):
         """`($641K, $1.2M)` from the listings' own prices, or `(None, None)`.
 
@@ -1067,6 +1177,17 @@ class MarketReportBuilder:
             ratio = None
             if isinstance(close, (int, float)) and isinstance(lst, (int, float)) and lst:
                 ratio = close / lst * 100
+            # PER KIND, AND AN UNKNOWN KIND RAISES.
+            #
+            # This was `if new_listings: ... else: ...`, and the `else` was
+            # `closed`'s close-to-list ratio. That is right for two kinds and
+            # silently wrong for every kind added afterwards: `inventory`'s
+            # listings are Active, so they have no close price, so the ratio
+            # comes out `None`, so the column would have rendered a full page
+            # of dashes under a header reading "Status" — a page that looks
+            # finished and says nothing. The same shape as the four gates that
+            # encoded a table kind's property as the seam's property, in the
+            # builder instead of in a test.
             if self.report_type == "new_listings":
                 # Design's `Listed` column, and the LIST price — a new listing
                 # has no sale price, so `close if close else lst` would be the
@@ -1074,10 +1195,29 @@ class MarketReportBuilder:
                 fifth = _v2_listed_label(item.get("days_on_market"))
                 emphasis = fifth == "Today"
                 price = _v2_money(lst)
-            else:
+            elif self.report_type == "inventory":
+                # Design: `Status` — "New" when DOM <= 7, else a dash. The LIST
+                # price for the same reason as `new_listings`: a home for sale
+                # has not sold.
+                dom = item.get("days_on_market")
+                fresh = (isinstance(dom, (int, float))
+                         and not isinstance(dom, bool)
+                         and dom <= V2_NEW_WITHIN_DAYS)
+                fifth = "New" if fresh else V2_DASH
+                emphasis = fresh
+                price = _v2_money(lst)
+            elif self.report_type == "closed":
                 fifth = f"{ratio:.1f}%" if ratio is not None else V2_DASH
                 emphasis = bool(ratio is not None and ratio > 100)
                 price = _v2_money(close if close else lst)
+            else:
+                raise NotImplementedError(
+                    f"{self.report_type} has `_v2` table columns but no fifth-"
+                    f"column rule. Design states that column per kind — a "
+                    f"ratio on `closed`, a date on `new_listings`, a status on "
+                    f"`inventory` — and there is no default that is right for "
+                    f"a kind nobody has read the spec for."
+                )
             rows.append({
                 "address": item.get("address") or V2_NO_DATA,
                 "hood": item.get("city") or "",

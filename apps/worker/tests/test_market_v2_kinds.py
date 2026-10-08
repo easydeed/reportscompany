@@ -39,9 +39,34 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 from measure_market_pagination import report_data  # noqa: E402
 from worker.market_builder import (  # noqa: E402
-    V2_DASH, V2_KINDS, V2_LABEL_LADDER, V2_NO_DATA, MarketReportBuilder,
+    ALL_REPORT_TYPES, V2_DASH, V2_KINDS, V2_LABEL_LADDER, V2_NEW_WITHIN_DAYS,
+    V2_NO_DATA, MarketReportBuilder,
     _ratio_as_percent, _v2_beds_baths, _v2_label_size,
 )
+
+
+def a_kind_outside_the_seam() -> str:
+    """A report type that has NOT moved to the `_v2` page, derived.
+
+    THREE TESTS IN THIS FILE NAMED `inventory` FOR THIS, and `inventory` moved
+    into the seam on 2026-10-08 — so each of them silently stopped being a
+    control and started being a second assertion about a `_v2` kind. One of the
+    three even carried the comment "`inventory`, not `closed`: closed renders
+    the `_v2` page now", which is the same substitution one kind earlier.
+
+    **A positive control drawn from the set being migrated is consumed by the
+    migration.** So it is derived from the remainder and the remainder is
+    asserted non-empty: when the last kind moves, these tests say their control
+    is gone rather than quietly passing for the wrong reason.
+    """
+    outside = sorted(set(ALL_REPORT_TYPES) - V2_KINDS)
+    assert outside, (
+        "every report type is now in V2_KINDS, so there is no kind left to act "
+        "as the control for these tests. They are no longer proving what they "
+        "say — replace the control with a synthetic report type, or retire the "
+        "tests with the seam."
+    )
+    return outside[0]
 from worker.template_filters import format_currency_short  # noqa: E402
 
 
@@ -68,7 +93,8 @@ def test_every_kind_in_the_seam_has_its_band_values():
     updates this line. It was named `..._holds_one_kind` when there was one,
     which was a name that went stale the moment the second landed.
     """
-    assert V2_KINDS == frozenset({"closed", "new_listings", "price_bands"}), (
+    assert V2_KINDS == frozenset({"closed", "new_listings", "price_bands",
+                                  "inventory"}), (
         f"V2_KINDS is {set(V2_KINDS)}. Every kind in it needs its own band "
         f"values from Design's per-kind table — big number, label, pill, three "
         f"stats — and `_v2_band` raises NotImplementedError without them."
@@ -85,10 +111,13 @@ def test_every_kind_in_the_seam_has_its_band_values():
 
 
 def test_a_kind_without_a_band_spec_raises_rather_than_rendering_empty():
-    # `inventory` is `closed`'s twin and is NOT in V2_KINDS, so it stands in
-    # for "a kind someone added to the seam without its band values".
-    b = builder("inventory")
-    b.report_type = "inventory"
+    """A kind outside the seam stands in for one added to it without values.
+
+    The control is DERIVED, not named — see `a_kind_outside_the_seam`.
+    """
+    kind = a_kind_outside_the_seam()
+    b = builder(kind)
+    b.report_type = kind
     with pytest.raises(NotImplementedError):
         b._v2_band()
 
@@ -274,8 +303,9 @@ def test_a_v2_render_does_not_pay_for_a_narrative_it_discards(monkeypatch):
     assert "some generated prose" not in html
 
     # The control: a kind that has NOT moved still generates one, so this is
-    # not asserting that the generator is simply unreachable.
-    other = builder("inventory")
+    # not asserting that the generator is simply unreachable. DERIVED — this
+    # line said `inventory` until `inventory` joined the seam.
+    other = builder(a_kind_outside_the_seam())
     other.report_data["ai_insights"] = ""
     other.render_html()
     assert calls, (
@@ -605,3 +635,192 @@ def test_the_slow_tag_is_designs_measured_hex():
     assert body["slow_tag"] == "#B42318"
     html = builder("price_bands", n=20).render_html()
     assert "#B42318" in html
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `inventory` — the fourth kind, and the one whose payoff is zero of both.
+#
+# Five pages before and after, and the contrast baseline was already empty, so
+# nothing here is measured as a saving. What it is, is `closed`'s twin with one
+# column changed and one pill that makes a CLAIM — "seller's market" — which is
+# the first time Design's package asks this surface to interpret rather than
+# report. That claim is what these cover.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def inv(n=20, **over):
+    return builder("inventory", n=n, **over)
+
+
+def test_inventory_renders_the_table_and_designs_columns():
+    b = inv()
+    html = b.render_html()
+    assert 'class="trow thead"' in html and 'class="brow' not in html
+    cols = b._v2_table()["columns"]
+    assert cols["price"] == "List price", cols
+    assert cols["fifth"] == "Status", cols
+
+
+def test_the_count_line_says_homes_for_sale_and_not_sales():
+    """`noun` per kind. "212 sales" on an inventory report is a number that is
+    right about something else — the hardest kind of wrong to see."""
+    table = inv()._v2_table()
+    assert table["noun"] == "homes for sale"
+    assert table["noun_one"] == "home for sale"
+    assert "sale" in table["noun"] and "sold" not in table["noun"]
+
+
+@pytest.mark.parametrize("dom,want_fifth,want_emphasis", [
+    (0, "New", True),            # listed today — the boundary that matters most
+    (1, "New", True),
+    (7, "New", True),            # INCLUSIVE: Design says `<= 7`
+    (8, V2_DASH, False),         # one day past
+    (90, V2_DASH, False),
+    (None, V2_DASH, False),      # absent is not fresh
+    (True, V2_DASH, False),      # a bool is not a day count
+    ("3", V2_DASH, False),       # nor is a string
+])
+def test_the_status_column_is_new_within_a_week_inclusive(dom, want_fifth,
+                                                          want_emphasis):
+    """Design: "`New` in `accent_ink` 600 when DOM <= 7, else `—` 400".
+
+    Seven is inclusive and the test says so at the boundary, because `< 7` and
+    `<= 7` differ on one day in seven and neither reads wrong in a diff.
+    """
+    rows = inv(n=1, listings=[{
+        "street_address": "1 A St", "city": "Irvine", "list_price": 900000,
+        "bedrooms": 3, "bathrooms": 2, "sqft": 1800,
+        "status": "Active", "days_on_market": dom,
+    }])._v2_table()["rows"]
+    assert rows[0]["fifth"] == want_fifth
+    assert rows[0]["emphasis"] is want_emphasis
+
+
+def test_inventory_shows_the_list_price_and_never_a_sale_price():
+    """A home for sale has not sold. `closed`'s `close if close else lst` would
+    be the right value by accident on a feed that leaks a close price."""
+    rows = inv(n=1, listings=[{
+        "street_address": "1 A St", "city": "Irvine",
+        "list_price": 900000, "close_price": 1_400_000,
+        "bedrooms": 3, "bathrooms": 2, "sqft": 1800,
+        "status": "Active", "days_on_market": 3,
+    }])._v2_table()["rows"]
+    assert rows[0]["price"] == format_currency_short(900000, upper=True)
+    assert "1.4M" not in rows[0]["price"]
+
+
+def test_a_kind_with_columns_but_no_fifth_column_rule_raises():
+    """The `else` that used to be `closed`'s ratio.
+
+    An unwired kind given table columns would have rendered a page of dashes
+    under its own header — finished-looking and silent. It raises now.
+    """
+    b = inv()
+    b.report_type = "market_snapshot"
+    import worker.market_builder as mb
+    original = mb.V2_TABLE_COLUMNS
+    mb.V2_TABLE_COLUMNS = {**original, "market_snapshot": original["closed"]}
+    try:
+        with pytest.raises(NotImplementedError):
+            b._v2_table()
+    finally:
+        mb.V2_TABLE_COLUMNS = original
+
+
+def test_the_band_counts_homes_for_sale_not_listings_in_a_window():
+    band = inv()._v2_band()
+    assert "homes for sale in" in band["label"]
+    assert [c["label"] for c in band["cells"]] == [
+        "Median list", "New this week", "Avg. days listed"]
+
+
+@pytest.mark.parametrize("moi,want_pill,want_label", [
+    (1.9, "1.9 months", "seller's market"),
+    (3.9, "3.9 months", "seller's market"),   # just inside
+    # "4.0 months", NOT "4 months". `compute.moi.describe` formats `f"{moi}
+    # months"` and does not strip a trailing zero. `property_builder.py:2683`
+    # DOES (`f"{moi:.1f}".rstrip("0").rstrip(".")`), so the two surfaces print
+    # a whole number differently — noted on D-182 rather than changed here,
+    # because `describe` is shared and its output is pinned by other tests.
+    (4.0, "4.0 months", "balanced market"),   # THE BOUNDARY: 4 is balanced
+    (6.0, "6.0 months", "balanced market"),   # inclusive at the top
+    (6.1, "6.1 months", "buyer's market"),
+    (0, "0 months", "seller's market"),       # NOTHING FOR SALE — see below
+])
+def test_the_pill_classifies_the_market_at_the_shared_thresholds(
+        moi, want_pill, want_label):
+    """Design: "1.9 months" / "of inventory · seller's market".
+
+    THE THRESHOLDS ARE `compute.moi`'s, not this page's. They were
+    reimplemented six times at two different values before this (D-182), and a
+    seventh copy on a new page is how that reaches a fourth surface.
+
+    MOI of exactly 0 is a real answer and the most seller-favourable market
+    there can be — nothing is for sale. A truthiness test would drop it into
+    the unknown branch, giving the OPPOSITE of the right answer.
+    """
+    pill, sub = inv(metrics={"months_of_inventory": moi})._v2_inventory_pill()
+    assert pill == want_pill
+    assert sub == f"of inventory · {want_label}"
+
+
+@pytest.mark.parametrize("moi", [None, "1.9", True])
+def test_no_estimate_means_no_pill_rather_than_a_dash(moi):
+    """`months_of_supply` returns `None` whenever MOI cannot honestly be
+    estimated (D-056 removed the 0.0 and 99.9 sentinels). The pill is a claim
+    about the market; "— months of inventory · " is a claim with the evidence
+    taken out of the middle of it, so the whole pill is dropped."""
+    metrics = {} if moi is None else {"months_of_inventory": moi}
+    b = inv(metrics=metrics)
+    assert b._v2_inventory_pill() == (None, None)
+    html = b.render_html()
+    assert "of inventory" not in html
+    # The ELEMENT, not the class name — `.band-pill`'s rule is in the <style>
+    # block on every render of this page whether or not a pill is drawn.
+    assert '<span class="band-pill">' not in html
+
+
+def test_new_this_week_counts_seven_days_and_not_the_lookback_window():
+    """`new_listings_count` is a DIFFERENT QUANTITY — that report's own
+    lookback, 30 days by default and settable per schedule. Design's cell says
+    "New this week"."""
+    listings = [{
+        "street_address": f"{i} A St", "city": "Irvine", "list_price": 900000,
+        "bedrooms": 3, "bathrooms": 2, "sqft": 1800, "status": "Active",
+        "days_on_market": d,
+    } for i, d in enumerate([0, 3, 7, 8, 20, 29, 40])]
+    b = inv(listings=listings, metrics={"new_listings_count": 6})
+    assert b._v2_new_this_week() == "3", (
+        "three listings are within seven days; a 30-day figure would say six"
+    )
+
+
+def test_no_day_counts_at_all_is_absent_rather_than_zero():
+    """"No listing reports a DOM" and "no listing is new" are different facts
+    and only the second is a claim about the market (D-137)."""
+    listings = [{
+        "street_address": "1 A St", "city": "Irvine", "list_price": 900000,
+        "bedrooms": 3, "bathrooms": 2, "sqft": 1800, "status": "Active",
+        "days_on_market": None,
+    }]
+    assert inv(listings=listings)._v2_new_this_week() == V2_NO_DATA
+
+
+def test_the_recorded_new_window_is_designs():
+    assert V2_NEW_WITHIN_DAYS == 7
+
+
+def test_inventory_draws_no_trend_and_the_pace_series_has_no_report_type():
+    """What Design's page costs: the sales-pace chart has nowhere to go.
+
+    Asserted on BOTH sides — the page does not draw it, and the map that
+    decides what `tasks.py` pays to fetch no longer claims it does. Leaving the
+    second would buy a year of closings for a chart that cannot render, which
+    is D-113's defect inverted.
+    """
+    html = inv().render_html()
+    assert "trend-chart" not in html
+    assert "Homes sold per month" not in html
+    assert "inventory" not in MarketReportBuilder.TREND_SERIES, (
+        "`inventory` is back in TREND_SERIES, so `tasks.py` will fetch twelve "
+        "months of closings for a page with no chart slot."
+    )

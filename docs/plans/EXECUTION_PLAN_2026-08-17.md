@@ -1473,6 +1473,38 @@ it.**
   And when a seam moves a kind, surface or path off one code path onto another, the question is not
   only "does the new path work" but **"what did the old path produce that nobody else produces"**.
 
+- **A POSITIVE CONTROL DRAWN FROM THE SET BEING MIGRATED IS CONSUMED BY THE MIGRATION.**
+  *Added 2026-10-08.*
+
+  §0.6 already requires a positive control: a checker whose normal output is "match" is
+  indistinguishable from one that has stopped matching anything. The trap is **where the control
+  comes from.** Four tests named a report type as "the kind that has NOT moved", and each stopped
+  being a control the moment that kind moved:
+
+  | test | named | consumed when |
+  |---|---|---|
+  | `test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout` | `closed`, then `inventory` | twice |
+  | `test_a_kind_without_a_band_spec_raises_rather_than_rendering_empty` | `inventory` | 2026-10-08 |
+  | `test_a_v2_render_does_not_pay_for_a_narrative_it_discards` | `inventory` | 2026-10-08 |
+  | `test_the_comparison_is_against_the_no_narrative_column` | `inventory` | 2026-10-08 |
+
+  **None of them failed in a way that said "your control is gone."** Three failed with the control's
+  own assertion inverted, which reads as the feature breaking; one would have passed while proving
+  nothing, because a kind inside the seam satisfies "calls no layout macro" trivially. One of them
+  even carried the comment *"`inventory`, not `closed`: closed renders the `_v2` page now"* — the
+  same substitution, one kind earlier, by someone who had just watched it happen.
+
+  **The remedy is to compute the control and assert the remainder is non-empty.**
+  `sorted(set(ALL_REPORT_TYPES) - V2_KINDS)` with an assertion that it is not empty, so when the
+  last member moves the test says *"there is no kind left to act as the control; these tests are no
+  longer proving what they say"* instead of quietly passing.
+
+  And when the control genuinely has no replacement, **say that rather than patch it.** The 15/11
+  page-1 swing existed only on the two kinds whose layout put a narrative box above a long table,
+  and both moved — so "one kind still shows the swing" became "no kind's capacity depends on prose
+  length", asserted over all eight. A weaker-looking assertion over the whole set beats a strong one
+  over a sample of zero.
+
 - **A CONSTANT THAT IS RIGHT FOR EVERY MEMBER OF A SET IS INDISTINGUISHABLE FROM A CONSTANT THAT IS
   RIGHT FOR THE SET — UNTIL THE SET GROWS.** *Added 2026-10-08.*
 

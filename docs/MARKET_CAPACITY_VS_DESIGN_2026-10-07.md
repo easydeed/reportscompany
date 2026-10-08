@@ -145,9 +145,8 @@ stale.
 ```capacity
 closed.no_narrative = 17
 closed.with_narrative = 17
-inventory.no_narrative = 15
-inventory.with_narrative = 11
-inventory.with_trend = 5
+inventory.no_narrative = 17
+inventory.with_narrative = 17
 new_listings.no_narrative = 17
 new_listings.with_narrative = 17
 price_bands.no_narrative = 0
@@ -165,6 +164,14 @@ open_houses.with_narrative = 6
 
 Continuation pages, measured on the same run: `closed` / `inventory` 29 · `new_listings` 8 ·
 `price_bands` 6 · `market_snapshot` 6 · gallery kinds 9.
+
+**`inventory`'s third state is gone, not equalised.** It read
+`no_narrative 15 · with_narrative 11 · with_trend 5` — three capacities, because the page could
+carry a narrative box, a sales-pace chart, both or neither. Design's `_v2` page has neither slot, so
+there is one number. **The pace chart is not relocated, it is removed**: `inventory` was the only
+report type drawing the count series and `MarketReportBuilder.TREND_SERIES` no longer lists it, which
+also stops `tasks.py` paying for a twelve-month closings fetch it cannot use (D-113's shape,
+inverted). That is a loss of information and it is Design's call, not a cleanup — see §8.
 
 **`price_bands` reads 0 in both narrative states and that is not a regression.** Its `_v2` body is
 the band table — five columns of price-band aggregates — and it carries **no listings table at all**,
@@ -221,11 +228,20 @@ difference is the finding.
 | `closed` | 5 | **5** | 6 |
 | `new_listings` | **16** | **5** | 6 |
 | `price_bands` | 2 | **1** | — (their package states no row counts for it) |
-| | **23** | **11** | 12 for the two kinds they gave rows for |
+| `inventory` | 5 | **5** | 6 |
+| | **28** | **16** | 18 for the three kinds they gave rows for |
 
-**Twelve pages saved across three kinds**, against the eight their arithmetic predicted across three
+**Twelve pages saved across four kinds**, against the eight their arithmetic predicted across three
 — because `closed` and `new_listings` both land on 5 rather than 6, and `price_bands` was not in
 their forecast at all.
+
+**`inventory` saves nothing and closes no contrast failure, and both were known before it was
+built.** It is `closed`'s twin — the same layout, the same table, 5 pages before and 5 after — and
+the market contrast baseline was already at zero, so there was nothing left for it to close. Its
+payoff is that the surface becomes uniform: four of eight kinds on one page now, and the three that
+remain are the galleries and `market_snapshot`. Saying so in advance is the same discipline that
+said `closed` would close zero contrast rows, and for the same reason — a kind whose payoff is
+consistency should be chosen on that argument and not discovered to have no other.
 
 `price_bands` going 2 → 1 is the cheapest of the three and the forecast had it at 2 → 2. The saving
 is the stat cards and the SVG chart coming out: the `_v2` body is one five-column table of the same

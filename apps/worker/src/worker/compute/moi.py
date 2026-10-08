@@ -149,6 +149,61 @@ def closed_in_window(
     return kept
 
 
+#: The seller's / balanced / buyer's boundaries, in months of supply.
+#:
+#: NAR / industry standard, and the figure this module was already documenting
+#: in `market_trends._classify_market_condition`'s docstring. Named here
+#: because the CLASSIFICATION was the one piece of MOI interpretation this
+#: module did not own, and it was reimplemented six times at TWO DIFFERENT
+#: THRESHOLDS as a result:
+#:
+#:     moi < 4   compute/market_trends.py:484   (documented, NAR)
+#:               property_builder.py:2680
+#:     moi < 3   ai_insights.py:238
+#:               email/template.py:1915, :1959, :2087
+#:
+#: So a market at 3.5 months of supply is "a seller's market" on the property
+#: PDF and nothing at all in the email for the same account on the same day.
+#: That is D-182; the four `moi < 3` sites are customer-facing copy and are
+#: NOT changed here, because moving a threshold under live email copy is a
+#: behaviour change and not part of wiring a report kind. What this gives them
+#: is a one-line fix when that decision is taken.
+SELLERS_MARKET_BELOW = 4
+BUYERS_MARKET_ABOVE = 6
+
+#: The canonical labels. `market_trends` reads these rather than repeating the
+#: strings, so the two cannot drift in wording either.
+CONDITION_UNKNOWN = "Insufficient Data"
+CONDITION_SELLERS = "Seller's Market"
+CONDITION_BALANCED = "Balanced Market"
+CONDITION_BUYERS = "Buyer's Market"
+
+
+def condition(moi: Optional[float]) -> Optional[str]:
+    """The market-condition label for a months-of-supply figure, or `None`.
+
+    `None` in and `None` out — NOT `CONDITION_UNKNOWN`. A caller that wants to
+    print "Insufficient Data" asks for it; a caller that wants to omit the
+    claim gets a value it cannot accidentally render as a classification.
+    `months_of_supply` returns `None` whenever the number cannot honestly be
+    estimated (D-056 removed the 0.0 and 99.9 sentinels), so this is the common
+    case rather than the edge.
+
+    ZERO IS A REAL ANSWER AND IT IS NOT NONE. `active_count = 0` with enough
+    closings gives an MOI of exactly 0.0 — nothing is for sale, which is the
+    most seller-favourable market there can be. A truthiness test would drop it
+    into the unknown branch, which is D-108's shape on the one input where the
+    wrong answer is the opposite of the right one.
+    """
+    if moi is None:
+        return None
+    if moi < SELLERS_MARKET_BELOW:
+        return CONDITION_SELLERS
+    if moi <= BUYERS_MARKET_ABOVE:
+        return CONDITION_BALANCED
+    return CONDITION_BUYERS
+
+
 def describe(moi: Optional[float]) -> Dict[str, Any]:
     """
     The render-ready shape. One place decides how "no number" looks, so the
