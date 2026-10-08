@@ -123,14 +123,18 @@ def test_the_market_baseline_is_all_one_construct():
                 ).read_text(encoding="utf-8")
     rows = [line.split("\t") for line in baseline.splitlines()
             if line.startswith("market__")]
-    assert len(rows) == 6, f"{len(rows)} market baseline rows, expected 6"
+    # WAS 6 ACROSS TWO KINDS. `new_listings` moved to the `_v2` page on
+    # 2026-10-08 and its three tier-badge rows closed — exactly what the
+    # heuristic predicted before any template was written. What remains is the
+    # other half of the prediction: three status-badge rows on `price_bands`.
+    assert len(rows) == 3, f"{len(rows)} market baseline rows, expected 3"
     by_kind = {}
     for family, selector, *_ in rows:
         by_kind.setdefault(family, []).append(selector)
-    assert set(by_kind) == {"market__new_listings", "market__price_bands"}, (
-        f"market baseline rows now span {sorted(by_kind)}. The document says "
-        f"the contrast payoff is on new_listings and price_bands only, and "
-        f"that `closed` closes nothing."
+    assert set(by_kind) == {"market__price_bands"}, (
+        f"market baseline rows now span {sorted(by_kind)}. After wiring "
+        f"`closed` (0 rows) and `new_listings` (3, all closed), the remaining "
+        f"payoff is price_bands' three status badges and nothing else."
     )
     assert all("badge" in sel for sels in by_kind.values() for sel in sels), (
         f"not every market baseline row is a badge selector: {by_kind}. "
@@ -139,3 +143,6 @@ def test_the_market_baseline_is_all_one_construct():
     )
     body = DOC.read_text(encoding="utf-8")
     assert "**`closed` closes zero contrast failures**" in body
+    # And the prediction, now half-redeemed, must stay stated: the value of the
+    # heuristic is that it was written down BEFORE the measurement agreed.
+    assert "| `new_listings` | 3 (tier badges) | **3 pairings** |" in body

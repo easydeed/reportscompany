@@ -221,9 +221,13 @@
            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .thood { font-size: 11.5px; font-weight: 400; line-height: 1.05; color: var(--muted); }
   .tcell { font-size: 13px; font-weight: 400; line-height: 1.15; color: var(--body); }
-  /* Design: ">100% in `accent_ink` 600, else `#5E636B` 400". The boolean is
-     resolved in Python — a template cannot ask whether a ratio is above a
-     threshold without reimplementing the threshold. */
+  /* THE FIFTH COLUMN'S ACCENT, which is a different fact per kind and the
+     same rule. Design states it twice: `closed` puts ">100% in `accent_ink`
+     600, else `#5E636B` 400", and `new_listings` marks a listing that went
+     live today. Both are "accent_ink 600 when this row is the notable one,
+     muted 400 otherwise", so the page carries one rule and the builder decides
+     which fact it is — a template cannot ask whether a ratio is above a
+     threshold, or whether a day count is zero, without reimplementing both. */
   .tvs-over { color: var(--accent-ink); font-weight: 600; }
   .tvs-under { color: var(--muted); font-weight: 400; }
 
@@ -289,8 +293,8 @@
     <div>Address</div>
     <div class="tnum">Bd/Ba</div>
     <div class="tnum">Sq ft</div>
-    <div class="tnum">Sold for</div>
-    <div class="tnum">vs. list</div>
+    <div class="tnum">{{ v2_table.columns.price }}</div>
+    <div class="tnum">{{ v2_table.columns.fifth }}</div>
     <div class="tnum">Days</div>
   </div>
   {% for row in v2_table.rows %}
@@ -302,7 +306,7 @@
     <div class="tcell tnum">{{ row.beds_baths }}</div>
     <div class="tcell tnum">{{ row.sqft }}</div>
     <div class="tcell tnum">{{ row.price }}</div>
-    <div class="tnum {{ 'tvs-over' if row.vs_over else 'tvs-under' }}">{{ row.vs_list }}</div>
+    <div class="tnum {{ 'tvs-over' if row.emphasis else 'tvs-under' }}">{{ row.fifth }}</div>
     <div class="tcell tnum">{{ row.days }}</div>
   </div>
   {% endfor %}
@@ -315,7 +319,7 @@
   {% if v2_table.showing < v2_table.total %}
   Showing {{ v2_table.showing }} of {{ v2_table.total }}
   {% else %}
-  {{ v2_table.total }} {{ 'sale' if v2_table.total == 1 else 'sales' }}
+  {{ v2_table.total }} {{ v2_table.noun if v2_table.total != 1 else v2_table.noun_one }}
   {% endif %}
 </div>
 

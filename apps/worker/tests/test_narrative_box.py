@@ -88,7 +88,10 @@ PAGE_1_CAPACITY = {
     "closed": {"no_narrative": 17, "with_narrative": 17},
     "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
     "price_bands": {"no_narrative": 3, "with_narrative": 2},
-    "new_listings": {"no_narrative": 3, "with_narrative": 2},
+    # 17 in both states since `new_listings` moved to the `_v2` page, from
+    # 3 / 2 on the analytics layout. The biggest single change on this surface:
+    # 16 pages to 5 for 120 listings.
+    "new_listings": {"no_narrative": 17, "with_narrative": 17},
 }
 
 

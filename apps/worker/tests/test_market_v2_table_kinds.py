@@ -1,4 +1,4 @@
-"""The `closed` kind on Design's `_v2` page — the builder half.
+"""The table kinds on Design's `_v2` page — `closed` and `new_listings`.
 
 Design's market package is adopted one kind at a time, as the property surface
 was. `market_builder.V2_KINDS` is the seam: a kind not in it renders exactly as
@@ -12,8 +12,10 @@ selectors on `new_listings` and `price_bands`, so wiring `closed` closes zero of
 them by construction — established before building it, by the heuristic D-171
 and D-177 produced: ask where a token paints before estimating what it closes.
 
-WHAT THIS FILE COVERS: the band values and the table rows, which are Python.
-The page template is separate and so is its test.
+WHAT THIS FILE COVERS: the band values and the table rows for both wired
+kinds, which are Python. Renamed from `test_market_v2_closed.py` when the
+second kind landed — a file named after one instance of a seam describes that
+instance, which is §0.6's rule about selectors applied to a filename.
 """
 import sys
 from pathlib import Path
@@ -50,7 +52,7 @@ def test_the_seam_holds_one_kind():
     here without its per-kind band values is the mistake this guards, and
     `_v2_band` raises rather than returning a shell.
     """
-    assert V2_KINDS == frozenset({"closed"}), (
+    assert V2_KINDS == frozenset({"closed", "new_listings"}), (
         f"V2_KINDS is {set(V2_KINDS)}. Every kind in it needs its own band "
         f"values from Design's per-kind table — big number, label, pill, three "
         f"stats — and `_v2_band` raises NotImplementedError without them."
@@ -62,6 +64,8 @@ def test_the_seam_holds_one_kind():
 
 
 def test_a_kind_without_a_band_spec_raises_rather_than_rendering_empty():
+    # `inventory` is `closed`'s twin and is NOT in V2_KINDS, so it stands in
+    # for "a kind someone added to the seam without its band values".
     b = builder("inventory")
     b.report_type = "inventory"
     with pytest.raises(NotImplementedError):
@@ -157,7 +161,7 @@ def test_the_vs_list_rule_fires_above_asking_and_not_at_it():
     listings[0]["close_price"] = listings[0]["list_price"]          # exactly
     listings[1]["close_price"] = listings[1]["list_price"] * 1.01   # over
     listings[2]["close_price"] = listings[2]["list_price"] * 0.99   # under
-    flags = [row["vs_over"] for row in b._v2_table()["rows"]]
+    flags = [row["emphasis"] for row in b._v2_table()["rows"]]
     assert flags == [False, True, False], flags
 
 
@@ -208,8 +212,11 @@ def test_the_table_reports_what_it_shows_and_what_exists():
 
 
 def test_every_row_has_every_column_design_specifies():
-    columns = {"address", "hood", "beds_baths", "sqft", "price", "vs_list",
-               "vs_over", "days"}
+    # `fifth` and `emphasis`, not `vs_list`/`vs_over`: the fifth column means
+    # "vs. list" on `closed` and "Listed" on `new_listings`, so the row carries
+    # one shape and the page reads one shape whichever kind rendered.
+    columns = {"address", "hood", "beds_baths", "sqft", "price", "fifth",
+               "emphasis", "days"}
     rows = builder(n=5)._v2_table()["rows"]
     assert rows
     for row in rows:
@@ -254,3 +261,104 @@ def test_a_v2_render_does_not_pay_for_a_narrative_it_discards(monkeypatch):
         "a non-v2 kind did not call the narrative generator either, so the "
         "assertion above proves nothing about the seam."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# `new_listings` — the second kind, and the one that saves eleven pages.
+#
+# Added because the regression harness reported three mutations as DID NOT
+# FIRE: the kind was wired and nothing tested what makes it different from
+# `closed`. The seam's whole purpose is that the two kinds differ, so the
+# differences are what needs covering.
+# ─────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("days,want", [
+    (0, "Today"),        # THE INTERESTING VALUE — a listing that went live
+                         # today reports 0, and `or` reads that as missing
+    (1, "1 d ago"),
+    (14, "14 d ago"),
+    (None, V2_DASH),
+    (True, V2_DASH),     # a bool is not a day count
+    ("3", V2_DASH),
+])
+def test_listed_renders_today_at_zero_days(days, want):
+    from worker.market_builder import _v2_listed_label
+    assert _v2_listed_label(days) == want
+
+
+def test_new_listings_shows_the_list_price_not_a_sale_price():
+    """A new listing has no sale price, so reading `close or list` would be
+    right by accident. Given a close price it must still show the list one."""
+    b = builder("new_listings", n=3)
+    for item in b.report_data["listings"]:
+        item["list_price"] = 500_000
+        item["close_price"] = 925_000      # must be ignored on this kind
+    prices = {row["price"] for row in b._v2_table()["rows"]}
+    assert prices == {"$500K"}, prices
+
+
+def test_the_fifth_column_and_the_noun_are_per_kind():
+    """One row shape, two meanings — and the count line's word matters.
+
+    "20 sales" on a new-listings report is the number right and the word
+    wrong, which nothing but a reader would catch.
+    """
+    closed = builder("closed", n=4)._v2_table()
+    new = builder("new_listings", n=4)._v2_table()
+    assert closed["columns"]["price"] == "Sold for"
+    assert closed["columns"]["fifth"] == "vs. list"
+    assert closed["noun"] == "sales" and closed["noun_one"] == "sale"
+    assert new["columns"]["price"] == "List price"
+    assert new["columns"]["fifth"] == "Listed"
+    assert new["noun"] == "new listings" and new["noun_one"] == "new listing"
+    assert closed["noun"] != new["noun"], (
+        "both kinds share a count-line noun, so one of them is wrong"
+    )
+
+
+def test_new_listings_emphasises_a_listing_posted_today():
+    """The same accent rule, a different fact: `closed` accents over asking,
+    `new_listings` accents listed-today. One rule in the page, two facts."""
+    b = builder("new_listings", n=3)
+    days = [0, 5, 12]
+    for item, d in zip(b.report_data["listings"], days):
+        item["days_on_market"] = d
+    rows = b._v2_table()["rows"]
+    assert [r["emphasis"] for r in rows] == [True, False, False]
+    assert [r["fifth"] for r in rows] == ["Today", "5 d ago", "12 d ago"]
+
+
+def test_the_new_listings_band_carries_designs_three_stats():
+    """Median list · Under $1M · Of inventory, and a price-range pill."""
+    band = builder("new_listings", n=20)._v2_band()
+    assert [c["label"] for c in band["cells"]] == [
+        "Median list", "Under $1M", "Of inventory"]
+    assert band["label"].startswith("new listings in ")
+    assert band["pill_sub"] == "this week"
+    assert band["pill"] and " – " in band["pill"], band["pill"]
+
+
+def test_the_price_range_comes_from_the_listings_not_from_a_metric():
+    """No metric reports a range, and inventing one from a median would be a
+    number with no source."""
+    b = builder("new_listings", n=3)
+    for item, p in zip(b.report_data["listings"], (400_000, 1_250_000, 800_000)):
+        item["list_price"] = p
+    assert b._v2_band()["pill"] == "$400K – $1.2M"
+
+
+def test_share_of_inventory_is_absent_rather_than_zero_without_an_active_count():
+    """D-137: "0% of inventory" is a claim; a market with no recorded active
+    count has no share to state."""
+    b = builder("new_listings", n=4)
+    b.report_data["counts"] = dict(b.report_data["counts"] or {})
+    b.report_data["counts"]["Active"] = 0
+    assert b._v2_band()["cells"][2]["value"] == V2_NO_DATA
+
+
+def test_under_a_million_counts_rather_than_shares():
+    b = builder("new_listings", n=4)
+    for item, p in zip(b.report_data["listings"],
+                       (400_000, 999_999, 1_000_000, 2_000_000)):
+        item["list_price"] = p
+    assert b._v2_band()["cells"][1]["value"] == "2"
