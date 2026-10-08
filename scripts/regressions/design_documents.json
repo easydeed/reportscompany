@@ -2,8 +2,8 @@
   {
     "name": "a pinned page-1 capacity moves and the documents do not",
     "file": "apps/worker/tests/test_narrative_box.py",
-    "old": "\"closed\": {\"no_narrative\": 15, \"with_narrative\": 11},",
-    "new": "\"closed\": {\"no_narrative\": 17, \"with_narrative\": 11},",
+    "old": "\"closed\": {\"no_narrative\": 17, \"with_narrative\": 17},",
+    "new": "\"closed\": {\"no_narrative\": 19, \"with_narrative\": 19},",
     "test": "tests/test_market_capacity_doc_is_current.py"
   },
   {

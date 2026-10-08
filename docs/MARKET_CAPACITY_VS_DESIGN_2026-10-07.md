@@ -34,8 +34,21 @@ per-kind table — against ours:
 |---|---|
 | Design's spec (13 + 26/page) | **6** |
 | ours, no narrative (15 + 29/page) | **5** |
+| **the built `_v2` page (17 + 26/page)** | **5** |
 
-One extra page on that kind. But `closed` alone is the wrong basis for the decision, so:
+**UPDATED 2026-10-07, AFTER BUILDING IT.** The +1 was an artefact of their page-1 figure, not of
+their density. Built to their continuation number exactly — **26 rows, measured** — `closed` renders
+**5 pages for 120 listings**, the same as before. Their layout does not cost a page on this kind.
+
+**And their two numbers do not agree with each other.** 26 continuation rows needs a row of at most
+`(928 − 22) / 26 = 34.8px`; 13 page-1 rows at that height needs a page-1 chrome of **441–476px**,
+while their own band spec computes to ~295px and ours measures **265px**. No single row height
+satisfies both against their band: hitting 26 puts page 1 at 17, and hitting 13 would put the
+continuation at 19 and cost two pages per report. Resolved by hitting the continuation number —
+that is what drives page count — and 17 on page 1 is *more* rows than specified, which costs the
+customer nothing.
+
+But `closed` alone is the wrong basis for the decision, so:
 
 ## 2a · The same arithmetic on all eight kinds, which reverses the headline
 
@@ -115,8 +128,8 @@ substring-is-not-a-construct defect in the gate written to stop a document going
 stale.
 
 ```capacity
-closed.no_narrative = 15
-closed.with_narrative = 11
+closed.no_narrative = 17
+closed.with_narrative = 17
 inventory.no_narrative = 15
 inventory.with_narrative = 11
 inventory.with_trend = 5

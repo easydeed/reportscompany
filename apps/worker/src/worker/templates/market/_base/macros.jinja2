@@ -151,10 +151,10 @@
     <span class="stats-bar-value">${{ stats.price_per_sqft | format_number }}</span>
   </div>
   {% endif %}
-  {% if stats.list_to_sale_ratio %}
+  {% if stats.list_to_sale_pct %}
   <div class="stats-bar-row">
     <span class="stats-bar-label">List-to-Sale Ratio</span>
-    <span class="stats-bar-value">{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%</span>
+    <span class="stats-bar-value">{{ "%.1f" | format(stats.list_to_sale_pct) }}%</span>
   </div>
   {% endif %}
 </div>
@@ -257,9 +257,9 @@
       <div class="mini-stat-label">$/Sq Ft</div>
     </div>
     {% endif %}
-    {% if stats.list_to_sale_ratio %}
+    {% if stats.list_to_sale_pct %}
     <div class="mini-stat">
-      <div class="mini-stat-value">{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%</div>
+      <div class="mini-stat-value">{{ "%.1f" | format(stats.list_to_sale_pct) }}%</div>
       <div class="mini-stat-label">Sale Ratio</div>
     </div>
     {% endif %}

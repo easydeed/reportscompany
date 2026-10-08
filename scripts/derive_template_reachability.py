@@ -94,26 +94,85 @@ def python_roots():
     """Template names passed to `get_template(...)` anywhere in the worker.
 
     Parsed with Python's own parser, not grepped — a `get_template` inside a
-    comment or a docstring is not a call. Returns the literal strings; which
-    surface each belongs to is decided by whether the file resolves, because
-    the same name can exist under both loaders.
+    comment or a docstring is not a call. Returns the names; which surface each
+    belongs to is decided by whether the file resolves, because the same name
+    can exist under both loaders.
+
+    AND NOT ONLY LITERALS, WHICH IS WHERE THIS WAS WRONG. The first version
+    collected `ast.Constant` arguments only. `market_builder` renders Design's
+    page with
+
+        template = self.env.get_template(
+            V2_TEMPLATE_PATH if self.report_type in V2_KINDS else TEMPLATE_PATH)
+
+    — module constants, not literals — so `_v2/report.jinja2` came back
+    UNREACHABLE on its first render, and the gate's own message asked the right
+    question: "are they reached from PYTHON?"
+
+    That message exists because of D-131, where following only Jinja edges
+    reported two live templates as dead. This is the same shape one level in:
+    following only literal arguments misses a template referenced through a
+    name. So module-level string constants are resolved too, and a `Name` or
+    `Attribute` argument that resolves to nothing is reported rather than
+    dropped — an argument the scan cannot follow is the thing that produced
+    both of these.
     """
     import ast
     names = set()
+    unresolved = []
     for path in (ROOT / "apps/worker/src").rglob("*.py"):
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
+        # Module-level `NAME = "literal"`, which is how a template path is
+        # spelled when it is also used for a dispatch decision.
+        consts = {}
+        for node in tree.body:
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = (node.targets if isinstance(node, ast.Assign)
+                           else [node.target])
+                value = node.value
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    for t in targets:
+                        if isinstance(t, ast.Name):
+                            consts[t.id] = value.value
+
+        def collect(arg):
+            """One argument, which may be a literal, a name, or a ternary."""
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                names.add(arg.value)
+                return True
+            if isinstance(arg, ast.Name) and arg.id in consts:
+                names.add(consts[arg.id])
+                return True
+            if isinstance(arg, ast.IfExp):
+                # `a if cond else b` — BOTH branches are roots. Only taking one
+                # is how a conditional render path goes missing.
+                return collect(arg.body) and collect(arg.orelse)
+            return False
+
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
-            fn = node.func
-            if getattr(fn, "attr", None) != "get_template":
+            if getattr(node.func, "attr", None) != "get_template":
                 continue
             for arg in node.args:
-                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    names.add(arg.value)
+                if not collect(arg):
+                    unresolved.append(
+                        f"{path.relative_to(ROOT)}:{getattr(arg, 'lineno', '?')}")
+    if unresolved:
+        # TWO SITES ARE EXPECTED AND BOTH ARE COVERED ELSEWHERE, so the warning
+        # is a list to read rather than a list of defects:
+        #   property_builder.py — `get_template(template_path)`, a local from
+        #     `THEME_TEMPLATES`, which this derivation imports directly.
+        #   email/template.py — `get_template(f"blocks/{name}.jinja2")` on
+        #     `_BLOCK_ENV`, a third loader that is neither market nor property.
+        # A THIRD entry appearing is the thing to look at.
+        print(f"WARNING: get_template arguments this scan could not resolve: "
+              f"{unresolved}. A template reached only through one of these "
+              f"will be reported as dead. Two are expected — see the note "
+              f"above `python_roots`.", file=sys.stderr)
     return sorted(names)
 
 

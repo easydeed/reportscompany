@@ -81,7 +81,11 @@ PAGE_1_CAPACITY = {
     "featured_listings": {"no_narrative": 6, "with_narrative": 6},
     "open_houses": {"no_narrative": 6, "with_narrative": 6},
     "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
-    "closed": {"no_narrative": 15, "with_narrative": 11},
+    # 17 IN BOTH STATES since `closed` moved to Design's `_v2` page, and that
+    # identity is the point: the narrative is suppressed for `V2_KINDS`, so
+    # page-1 capacity is one number rather than a property of prose length.
+    # It was 15 / 11 — a four-row swing — on the old page.
+    "closed": {"no_narrative": 17, "with_narrative": 17},
     "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
     "price_bands": {"no_narrative": 3, "with_narrative": 2},
     "new_listings": {"no_narrative": 3, "with_narrative": 2},

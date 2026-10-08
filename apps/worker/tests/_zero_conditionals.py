@@ -71,7 +71,16 @@ EXEMPT = {
     "price": "as list_price",
     "price_per_sqft": "a market with no sales has nothing to divide by, so "
                       "the metric is None rather than 0",
-    "list_to_sale_ratio": "a 0 ratio means every sale closed at $0",
+    # D-178 replaced the raw key with a normalised one, and the exemption's
+    # ARGUMENT got stronger rather than being carried over. It used to be "a 0
+    # ratio means every sale closed at $0" — an argument about plausibility,
+    # which is the weakest kind on this list. `_ratio_as_percent` now returns
+    # None for anything zero or non-numeric, so the value reaching the template
+    # CANNOT be 0: the truthiness test is safe by construction, not by the
+    # input being unlikely.
+    "list_to_sale_pct": "the producer cannot emit 0 — `_ratio_as_percent` "
+                        "returns None for a zero or non-numeric ratio, so "
+                        "falsy means absent and nothing else (D-178)",
     "year_built": "year 0 is not a year",
     "lot_size": "0 lot size is missing parcel data",
     # Surface-specific. `beds` on the market report IS fixed (renders

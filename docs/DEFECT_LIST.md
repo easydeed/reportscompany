@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 60 | Real, unfixed |
-| `fixed` | 112 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 113 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **177** | D-001 … D-177, contiguous, no duplicates |
+| **Total** | **178** | D-001 … D-178, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 15 · ROUGH 24. (Sums to 60, the open total.)
 
@@ -91,7 +91,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > imports the test's `parse()`, so there is one reader and it is the one CI runs. Two
 > implementations of "how to read this document" is a second answer waiting to be believed.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`); D-178 (`feat/market-closed-v2`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
@@ -10803,6 +10803,125 @@ Supplying `closed_history` means generating twelve months of plausible closings 
 a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
 same question as the nineteen orphans. The hole is recorded with its measurement so the decision
 can be taken on the number.
+
+---
+
+### D-178 — the close-to-list ratio arrives on two scales, and the only thing reconciling them is a `< 2` guess written twice in a template
+
+**Severity:** FRAGILE · **Affects:** the close-to-list ratio on every market report — the stats bar
+and the mini-stat, and the `_v2` band's pill · **Found during:** building the `closed` kind's band,
+which rendered **"1.0% of asking"** on the first try
+**Status:** `fixed` (`feat/market-closed-v2`)
+
+The same key carries two scales depending on which producer filled it:
+
+| producer | what it puts in the key |
+|---|---|
+| `compute/extract.py:79` | `round((cp/lp)*100, 2)` — **percent** (98.5) |
+| `compute/calc.py:54` | the average of those, rounded — **percent** |
+| `compute/market_trends.py:406` | formatted `f"{x}%"` — **percent** |
+| `scripts/measure_market_pagination.report_data` | `0.982` — **a fraction** |
+
+Production is percent. The fixture that `test_market_layout_map`,
+`measure_market_pagination` and several others render through is a fraction.
+
+**And the templates already knew.** `market/_base/macros.jinja2` carried
+
+```jinja
+{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%
+```
+
+at **two sites**. The live page renders 98.2% correctly *because of that guess* — which is why
+nobody had to fix the key, and why the next consumer written against it got 1.0%.
+
+Three defects in one expression: a **units ambiguity** tolerated rather than resolved, the
+reconciliation **duplicated**, and both copies in a template where neither can be unit-tested. The
+D-163 family, with the twist that the copies are not stale — they agree, and they are both load-
+bearing.
+
+#### The fix is where it can be tested
+
+`_ratio_as_percent` in `market_builder.py`, once, and `_build_stats_context` exposes
+`list_to_sale_pct` beside the raw key. **Both template copies of the guess are gone.** The raw key
+stays because other consumers read it and redefining it is a wider change than this.
+
+The threshold is unchanged on purpose: a ratio of 2 would be selling at 200% of asking and a
+*fraction* of 2 would be 200×, so the gap between the scales is enormous and 2 sits in the middle of
+it. What changed is that there is one copy of that reasoning and a test reaches it — eight cases,
+including `True` and `"98.2"`, both of which the template expression would have crashed or mangled.
+
+#### The exemption's argument got stronger, not carried over
+
+`list_to_sale_ratio` sat on `_zero_conditionals.EXEMPT` as *"a 0 ratio means every sale closed at
+$0"* — an argument about **plausibility**, the weakest kind on that list. The gate caught the rename
+immediately (both the new name being unexempt and the old exemption being unused), which is the
+right question to be asked. `_ratio_as_percent` returns `None` for zero, so the value reaching the
+template **cannot be 0**: falsy means absent and nothing else. The exemption is now a statement
+about the producer rather than about the world.
+
+#### What converging the fixtures would take, and what it would cost
+
+Asked for deliberately — *to know the price, not to pay it.* A fixture on a different scale from
+what production emits is the shape that produced this defect, so the price is worth knowing before
+the next consumer is written.
+
+**The fixtures do not just differ from production. They differ from each other.**
+
+| scale | where |
+|---|---|
+| **fraction** (`0.982`) | `apps/worker/tests/email_fixtures.py:32` · `test_email_contrast.py:72` · `test_market_layout_map.py:68` · `test_monthly_trend.py:398` · `test_narrative_guards.py:28` · `tests/test_market_templates.py:104` · `scripts/render_all_pdfs_for_review.py:110-111` |
+| **percent** (`99.2`, `99.1`) | `test_insight_paragraph_missing_metrics.py:76` · `test_sender_postal_address.py:57` |
+
+Six fixtures and a script on one scale, two fixtures on the other, and production on percent. So
+"converge the fixture" is eight files, not one, and two of them are already right.
+
+**On the market surface the change is free. Measured, not argued:**
+
+| report type | rendered with `0.982` | rendered with `98.2` | identical? |
+|---|---|---|---|
+| `closed` | `7b722cfd57fc77e9` | `7b722cfd57fc77e9` | **yes** |
+| `market_snapshot` | `385f2c23b2ca248c` | `385f2c23b2ca248c` | **yes** |
+
+Byte-identical HTML, because `_ratio_as_percent` now maps both scales to the same output — which is
+also what the template's `< 2` guess did. **Zero pagination re-measurement, zero baseline churn, no
+page counts move.**
+
+**The cost is on the email surface, and it is not re-measurement — it is a second defect.**
+`email/template._format_percent` is `f"{value:.1f}%"` with **no scale handling at all**:
+
+```
+0.982 -> "1.0%"      98.2 -> "98.2%"
+```
+
+Production is safe: `calc.py:54` emits percent and `tasks.py:595` copies it across unchanged, so
+customers' emails read "98.5%". But **the email fixtures render "1.0%", and the email tests are
+green about it** — including `test_email_contrast.py`, which measures contrast over that rendered
+HTML. D-173's shape on a surface nobody had looked at: a fixture encoding a contract production does
+not use.
+
+So converging the fixtures would **change rendered email output in the tests** from `1.0%` to
+`98.2%`, which is a different string length inside measured HTML and would need the email contrast
+figures re-taken. That is the whole price: **eight files, no market change, and one email
+re-measurement** — plus the decision of whether `_format_percent` should normalise the way
+`_ratio_as_percent` does, which is the actual fix and is a change to the email surface rather than
+to a fixture.
+
+**Not done here**, deliberately: it is the email surface, this branch is the market surface's first
+kind, and the two should not move in one change. Recorded so the next person spends the price
+knowingly.
+
+#### The harness found an untested case while this landed
+
+A mutation removing the `isinstance(lst, ...)` guard from the over-asking count came back
+**`DID NOT FIRE`** — `if not lst: continue` catches a `None`, so the type check looked redundant. It
+is not: a **string** list price (`"500000"`, which a feed can yield) is truthy, reaches
+`close > lst`, and raises `TypeError`. The guard is the only thing between a typed feed value and a
+500 on the render path, and nothing tested it.
+
+So the mutation was badly constructed *and* the case was untested. Both were invisible until the
+harness said the gate did not guard. Third harness result in three days: a gate passing on a
+substring, a mutation on unreachable code, and now a mutation whose target was covered by a second
+guard while the first one's real job went untested.
 
 ---
 

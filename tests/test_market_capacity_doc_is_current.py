@@ -70,8 +70,20 @@ def test_the_comparison_is_against_the_no_narrative_column():
     has been about.
     """
     body = text()
-    assert PAGE_1_CAPACITY["closed"]["no_narrative"] == 15
-    assert PAGE_1_CAPACITY["closed"]["with_narrative"] == 11
+    # `closed` moved to the `_v2` page on 2026-10-07 and now reads 17 in BOTH
+    # states, because the narrative is suppressed for `V2_KINDS`. The identity
+    # is the assertion worth making: page-1 capacity is a number rather than a
+    # property of prose length, which is the determinism Design's design buys
+    # and the thing the old 15/11 split could not give.
+    assert (PAGE_1_CAPACITY["closed"]["no_narrative"]
+            == PAGE_1_CAPACITY["closed"]["with_narrative"] == 17), (
+        f"`closed` reads {PAGE_1_CAPACITY['closed']}. Two different numbers "
+        f"mean the narrative is reaching the `_v2` page again, which makes "
+        f"page-1 capacity depend on prose length."
+    )
+    # `inventory` has NOT moved, and still shows the swing the move removes.
+    assert PAGE_1_CAPACITY["inventory"]["no_narrative"] == 15
+    assert PAGE_1_CAPACITY["inventory"]["with_narrative"] == 11
     assert "the middle column" in body, (
         "the document no longer says which column the comparison is against. "
         "Their 13 is a no-narrative figure; ours is 15 without and 11 with."
