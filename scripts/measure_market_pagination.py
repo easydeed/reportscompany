@@ -171,7 +171,9 @@ def main(n=120):
     if shutil.which("node") is None:
         sys.exit("node is required (this script drives Playwright through it)")
 
-    from worker.market_builder import ALL_REPORT_TYPES, MarketReportBuilder
+    from worker.market_builder import (
+        ALL_REPORT_TYPES, V2_KINDS, MarketReportBuilder,
+    )
 
     work = Path(tempfile.mkdtemp(prefix="market-pagination-"))
     (work / "types.json").write_text(json.dumps(ALL_REPORT_TYPES))
@@ -179,7 +181,13 @@ def main(n=120):
     for report_type in ALL_REPORT_TYPES:
         builder = MarketReportBuilder(report_data(report_type, n))
         (work / f"{report_type}.html").write_text(builder.render_html())
-        layouts[report_type] = builder.layout
+        # `builder.layout` is LAYOUT_MAP's value, which a `V2_KINDS` type no
+        # longer uses — it renders Design's `_v2` page and reaches no layout
+        # macro at all. Printing it unqualified said `new_listings | analytics`
+        # for a document with no analytics layout in it, which is a measurement
+        # output naming a thing that did not run.
+        layouts[report_type] = (
+            "_v2 (Design)" if report_type in V2_KINDS else builder.layout)
 
     # node resolves `playwright` from the repo's node_modules, so run from there.
     js = REPO / "_measure_market_pagination.js"
@@ -250,7 +258,9 @@ def emit_capacity(n=120):
     except ImportError:
         sys.exit("pypdf is required: pip install pypdf")
 
-    from worker.market_builder import ALL_REPORT_TYPES, MarketReportBuilder
+    from worker.market_builder import (
+        ALL_REPORT_TYPES, V2_KINDS, MarketReportBuilder,
+    )
 
     work = Path(tempfile.mkdtemp(prefix="market-capacity-"))
     jobs = []

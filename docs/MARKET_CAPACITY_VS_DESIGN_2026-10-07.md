@@ -67,6 +67,19 @@ Each type at its own `PDF_CONFIG` cap (a `market_snapshot` never renders 120 lis
 | `price_bands` | 8 | 8 | 2 | one page, 7 fixed band rows | — |
 | **the three stated kinds** | | | **26** | **18** | **−8** |
 
+**The inputs this forecast used**, recorded with it so the arithmetic stays checkable after the
+build changes them. Without this the table could only be validated against live capacity, which is
+exactly how a forecast stops being one:
+
+```forecast
+closed.page_1 = 15
+closed.continuation = 29
+inventory.page_1 = 15
+inventory.continuation = 29
+new_listings.page_1 = 3
+new_listings.continuation = 8
+```
+
 **`new_listings` is the finding.** It runs on our `analytics` layout today at 3 rows on page 1 and 8
 on continuation — sixteen pages for 120 listings. Design puts it on the **table** layout at 13 and
 26, which is six. The two pages their density costs on `closed` and `inventory` are bought back four
@@ -133,8 +146,8 @@ closed.with_narrative = 17
 inventory.no_narrative = 15
 inventory.with_narrative = 11
 inventory.with_trend = 5
-new_listings.no_narrative = 3
-new_listings.with_narrative = 2
+new_listings.no_narrative = 17
+new_listings.with_narrative = 17
 price_bands.no_narrative = 3
 price_bands.with_narrative = 2
 market_snapshot.no_narrative = 3
@@ -182,3 +195,44 @@ The card height is invariant to content (258px at 3 listings and at 40) and the 
 180px in CSS, so a headless render without photos is faithful. Full working, including why Design's
 own reference file could not be measured in this container:
 `docs/GALLERY_CONTINUATION_MEASURED_2026-10-07.md`.
+
+
+---
+
+## 7 · Built, measured: the two wired kinds
+
+**§1, §2 and §2a above are the PREDICTION and are left exactly as they were taken.** Editing a
+forecast after the result is in destroys the only thing it was for — this section is worth reading
+because it can be compared with that one. Where they differ, the forecast was wrong and the
+difference is the finding.
+
+| kind | before | built | Design's formula said |
+|---|---|---|---|
+| `closed` | 5 | **5** | 6 |
+| `new_listings` | **16** | **5** | 6 |
+| | **21** | **10** | 12 |
+
+**Eleven pages saved across two kinds**, against the eight their arithmetic predicted across three —
+because both land on 5, not 6. `closed` was never going to cost a page and `new_listings` saves one
+more than forecast.
+
+`new_listings` is the whole of it. It had been rendering on the `analytics` layout at 3 rows on page
+1 and 8 on continuation; on Design's table it is 17 and 26.
+
+And page-1 capacity is now **one number for both** — `17` in every narrative state — where the old
+page gave 15/11 and 3/2. That is the determinism their design buys, measured on two kinds rather
+than argued from one.
+
+### The contrast payoff landed exactly where the heuristic said
+
+Predicted before any template was written: `new_listings` 3 pairings, `closed` 0. Measured:
+
+| kind | baseline rows closed |
+|---|---|
+| `closed` | **0** |
+| `new_listings` | **3** — the tier badges, `#d97706 on #fef1db`, `#2563eb on #e2ecfe`, `#16a34a on #def6e7` |
+
+Design's spec removes the construct ("no chips, no tinted fills behind semantic text"), so the rows
+had nothing left to fail on. The baseline went **61 → 58**, and `market__new_listings` is gone from
+it entirely. The only market rows left are `price_bands`' three badges — which is the remaining
+contrast payoff on this surface, and it is the next kind's.

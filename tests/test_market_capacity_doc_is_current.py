@@ -179,20 +179,52 @@ def _doc_table_rows():
     return rows
 
 
+def _forecast_inputs():
+    """§2a's ```forecast block — the capacities the forecast was taken with."""
+    body = text()
+    start = body.index("```forecast") + len("```forecast")
+    block = body[start:body.index("```", start)]
+    out = {}
+    for line in block.strip().splitlines():
+        key, _, value = line.partition("=")
+        kind, _, field = key.strip().partition(".")
+        out.setdefault(kind, {})[field] = int(value.strip())
+    return out
+
+
 def test_the_eight_kind_page_cost_recomputes():
-    """Every row, against the cap, the pin and Design's own spec."""
+    """§2a's arithmetic, against ITS OWN RECORDED INPUTS — not the live pin.
+
+    This checked `ours` against `PAGE_1_CAPACITY` and broke the moment a kind
+    was built, because the pin moved and the forecast did not. That is the
+    right behaviour for a current document and the wrong behaviour for a
+    recorded one: **a forecast validated against live inputs cannot stay
+    valid, and editing it to match destroys the only thing it was for.**
+
+    So §2a now records the capacities it was taken with, and this checks the
+    arithmetic is internally consistent. §7 holds the built figures and
+    `test_the_built_figures_match_the_live_pin` checks those against the pin.
+    """
     sys.path.insert(0, str(REPO / "apps/worker/src"))
     from worker.market_builder import PDF_CONFIG  # noqa: E402
 
     doc = _doc_table_rows()
     assert len(doc) == 8, f"§2a has {len(doc)} parseable kinds, expected 8: {sorted(doc)}"
+    inputs = _forecast_inputs()
+    assert inputs, "§2a records no forecast inputs, so its arithmetic cannot be checked"
 
     wrong = []
     for report_type, (cap, n, ours, theirs) in sorted(doc.items()):
         real_cap = PDF_CONFIG[report_type]["cap"]
         want_n = min(120, real_cap)
-        want_ours = _pages(PAGE_1_CAPACITY[report_type]["no_narrative"],
-                           OURS_CONTINUATION[report_type], want_n)
+        if report_type in inputs:
+            want_ours = _pages(inputs[report_type]["page_1"],
+                               inputs[report_type]["continuation"], want_n)
+        else:
+            # Kinds the forecast did not restate took the pin at the time, and
+            # none of them has been built, so the pin is still their input.
+            want_ours = _pages(PAGE_1_CAPACITY[report_type]["no_narrative"],
+                               OURS_CONTINUATION[report_type], want_n)
         t_p1, t_cont = DESIGN_ROWS[report_type]
         want_theirs = _pages(t_p1, t_cont, want_n) if t_cont else None
         if (cap, n, ours, theirs) != (real_cap, want_n, want_ours, want_theirs):
@@ -201,7 +233,35 @@ def test_the_eight_kind_page_cost_recomputes():
                 f"theirs={theirs}; recomputed cap={real_cap} N={want_n} "
                 f"ours={want_ours} theirs={want_theirs}"
             )
-    assert not wrong, "§2a disagrees with the recomputation:\n  " + "\n  ".join(wrong)
+    assert not wrong, "§2a disagrees with its own inputs:\n  " + "\n  ".join(wrong)
+
+
+def test_the_built_figures_match_the_live_pin():
+    """§7, which IS current, against the pin — the other half of the split.
+
+    The wired kinds must read the same number in every narrative state, which
+    is the determinism Design's design buys, and §7's table must say what the
+    pin says.
+    """
+    sys.path.insert(0, str(REPO / "apps/worker/src"))
+    from worker.market_builder import V2_KINDS  # noqa: E402
+    import math
+
+    body = text()
+    for kind in sorted(V2_KINDS):
+        states = set(PAGE_1_CAPACITY[kind].values())
+        assert len(states) == 1, (
+            f"{kind} is wired to the `_v2` page and reads {PAGE_1_CAPACITY[kind]}. "
+            f"Two numbers mean page-1 capacity depends on prose length again."
+        )
+        page_1 = PAGE_1_CAPACITY[kind]["no_narrative"]
+        built = math.ceil((120 - page_1) / 26) + 1
+        assert f"| `{kind}` |" in body, f"§7 does not list {kind}"
+        assert f"| **{built}** |" in body, (
+            f"{kind} builds to {built} pages at {page_1} + 26/page; §7 says "
+            f"something else."
+        )
+    assert "**Eleven pages saved across two kinds**" in body
 
 
 def test_the_net_saving_is_what_the_document_claims():

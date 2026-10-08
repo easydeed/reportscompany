@@ -136,11 +136,11 @@ files in `RETIRED_NAME_ALLOWED`, each with its reason, and fails on any *other* 
 
 | artefact | theme-keyed rows | a rename needs |
 |---|---|---|
-| `apps/worker/tests/pdf_contrast_baseline.txt` | 61 entries: elegant 36, modern 19, market 6, **bold 0** *(was 81 until D-177 darkened `accent_ink` against the tint as well as white, closing 20 accent-on-tint failures with no template change)* | **a `sed` on the family column** — the key is `property__<theme>` |
+| `apps/worker/tests/pdf_contrast_baseline.txt` | 58 entries: elegant 36, modern 19, market 3, **bold 0** *(was 81; D-177 closed 20 accent-on-tint failures with no template change, and wiring `new_listings` onto Design's page closed its 3 tier-badge rows by removing the tinted-chip construct)* | **a `sed` on the family column** — the key is `property__<theme>` |
 | `apps/worker/tests/golden/color_roles.json` | 3 `property_themes` keys | regenerate (`regen_color_roles_golden.py`) |
 | `scripts/template_color_baseline.txt` | 34 lines naming a `property/<theme>/` path | **a `sed` on the path** |
 
-This is the one place a rename is mechanical-but-fiddly: **95 baseline rows** key on the theme name,
+This is the one place a rename is mechanical-but-fiddly: **92 baseline rows** key on the theme name,
 and both files are ratchets whose whole point is that they may only shrink. A rename is a pure
 substitution in both — the measured colours and selectors are unchanged — but it must be done as a
 substitution, **not** by regenerating, or the diff stops being evidence of anything.
@@ -175,7 +175,7 @@ ratchet.
 
 **Measured on the first rewire: bold went from 37 baseline rows to ZERO.** The redesigned document
 has no baselined contrast failure on any of the six brands — the first property theme in this
-project with none — so the rewire *shrank* the ratchet by a third. **95** theme-keyed rows now,
+project with none — so the rewire *shrank* the ratchet by a third. **92** theme-keyed rows now,
 against 152 before bold moved; the three live themes carry 55 between them, all of them elegant's
 and modern's.
 
@@ -184,7 +184,7 @@ well as white — one function, no template change — and the contrast baseline
 61 (elegant 50→36, modern 25→19). So the rename's fiddly part is a fifth smaller than it was this
 morning, and the cause was a guarantee being half-built rather than anything about themes.
 
-- **Renaming today**: ~4 edits, 3 file moves, 95 baseline-row substitutions.
+- **Renaming today**: ~4 edits, 3 file moves, 92 baseline-row substitutions.
 - **Renaming after all three rewires**: the same 4 edits and 3 moves, over **fewer** rows than
   today if elegant and modern behave like bold — and their 55 rows are the ones the rewire is meant
   to clear.

@@ -28,12 +28,9 @@
 # Regenerate after FIXING something (never to clear a new failure):
 #     python3 -m pytest apps/worker/tests/test_pdf_contrast.py --regen-contrast-baseline
 #
-# 203 failing runs, 61 combinations, worst 1.06:1, of 7698 runs measured.
+# 185 failing runs, 58 combinations, worst 1.06:1, of 7554 runs measured.
 # Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.
 
-market__new_listings	span.listing-tier-badge.tier-high	#d97706	#fef1db
-market__new_listings	span.listing-tier-badge.tier-low	#2563eb	#e2ecfe
-market__new_listings	span.listing-tier-badge.tier-median	#16a34a	#def6e7
 market__price_bands	span.status-badge.active	#16a34a	#e7f6ed
 market__price_bands	span.status-badge.closed	#dc2626	#fbe9e9
 market__price_bands	span.status-badge.pending	#ca8a04	#faf3e5

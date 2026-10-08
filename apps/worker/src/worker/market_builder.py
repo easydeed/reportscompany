@@ -304,7 +304,7 @@ def _v2_beds_baths(item) -> str:
 #: badge selectors on `new_listings` and `price_bands`, so wiring `closed`
 #: closes zero of them, by construction. See
 #: docs/MARKET_TOKEN_MAPPING_2026-10-07.md.
-V2_KINDS = frozenset({"closed"})
+V2_KINDS = frozenset({"closed", "new_listings"})
 
 #: Design's shared page. One template, dispatched on kind, per their README.
 V2_TEMPLATE_PATH = "_v2/report.jinja2"
@@ -320,6 +320,36 @@ V2_MUTED = "#5E636B"
 #: steps down by character count rather than wrapping. Their ladder.
 V2_LABEL_LADDER = ((26, 22), (34, 18), (44, 15))
 V2_LABEL_MIN_PX = 13
+
+
+#: THE TABLE'S COLUMNS, PER KIND. Design gives all three table kinds the same
+#: grid — `1fr 64 72 108 72 44` — and changes two of the six headings. Data
+#: rather than a branch in the template, because "which heading goes here" is a
+#: per-kind fact and a template `{% if %}` chain over kinds is the dispatch the
+#: `_v2` architecture exists to remove.
+#:
+#: `price` and `fifth` name what the fifth and fourth columns MEAN, so the row
+#: builder fills one shape and the page reads one shape whichever kind rendered.
+V2_TABLE_COLUMNS = {
+    "closed": {"price": "Sold for", "fifth": "vs. list",
+               "noun": "sales", "noun_one": "sale"},
+    "new_listings": {"price": "List price", "fifth": "Listed",
+                     "noun": "new listings", "noun_one": "new listing"},
+}
+
+
+def _v2_listed_label(days) -> str:
+    """Design's `Listed` column: "Today" at 0 days, else "n d ago".
+
+    ZERO IS THE INTERESTING VALUE and it is why this is not a format string:
+    a listing that went live today reports 0, which `or` would read as missing
+    and render as a dash. The same defect as D-108's `or` chains, on the field
+    whose zero is the whole point of a new-listings report.
+    """
+    if not isinstance(days, (int, float)) or isinstance(days, bool):
+        return V2_DASH
+    days = int(days)
+    return "Today" if days == 0 else f"{days} d ago"
 
 
 def _v2_label_size(label: str) -> int:
@@ -720,7 +750,24 @@ class MarketReportBuilder:
             ]
             pill = f"{ratio:.1f}% of asking" if ratio is not None else None
             pill_sub = f"last {lookback} days"
-        else:  # pragma: no cover - V2_KINDS holds one kind
+        elif self.report_type == "new_listings":
+            # Design: "same header, same pill, same stats" as the grid kind —
+            # count / "new listings in {area}", price range / "this week",
+            # Median list · Under $1M · Of inventory.
+            label = f"new listings in {city}"
+            big = stats["new_listings_count"] or len(
+                self.report_data.get("listings")
+                or self.report_data.get("listings_sample") or [])
+            low, high = self._v2_price_range()
+            cells = [
+                ("Median list", _v2_money(stats["median_list_price"])),
+                ("Under $1M", self._v2_under_a_million()),
+                ("Of inventory", self._v2_share_of_inventory()),
+            ]
+            pill = f"{low} – {high}" if low and high else None
+            pill_sub = "this week"
+
+        else:
             raise NotImplementedError(
                 f"{self.report_type} is in V2_KINDS with no band spec. Every "
                 f"kind's band values are per-kind in Design's table; adding a "
@@ -763,6 +810,53 @@ class MarketReportBuilder:
             return V2_NO_DATA
         return str(over)
 
+    def _v2_price_range(self):
+        """`($641K, $1.2M)` from the listings' own prices, or `(None, None)`.
+
+        From the listings rather than from `metrics`, because no metric reports
+        a range and inventing one from median +/- something would be a number
+        with no source. A single listing gives a degenerate range, which is
+        correct: one listing has one price.
+        """
+        raw = (self.report_data.get("listings")
+               or self.report_data.get("listings_sample") or [])
+        prices = [_first_present(i, "list_price", "price") for i in raw]
+        prices = [p for p in prices
+                  if isinstance(p, (int, float)) and not isinstance(p, bool) and p]
+        if not prices:
+            return None, None
+        return _v2_money(min(prices)), _v2_money(max(prices))
+
+    def _v2_under_a_million(self) -> str:
+        """How many of the new listings are under $1M.
+
+        A count, not a percentage: Design's cell is "Under $1M" beside a
+        median, and a share would need a denominator the band does not show.
+        """
+        raw = (self.report_data.get("listings")
+               or self.report_data.get("listings_sample") or [])
+        prices = [_first_present(i, "list_price", "price") for i in raw]
+        prices = [p for p in prices
+                  if isinstance(p, (int, float)) and not isinstance(p, bool) and p]
+        if not prices:
+            return V2_NO_DATA
+        return _v2_count(sum(1 for p in prices if p < 1_000_000))
+
+    def _v2_share_of_inventory(self) -> str:
+        """New listings as a share of active inventory.
+
+        `V2_NO_DATA` when there is no active count, NOT 0% — a market with no
+        recorded inventory has no share, and "0% of inventory" is a claim
+        (D-137: absent is not a default).
+        """
+        active = (self.report_data.get("counts") or {}).get("Active")
+        new = self._build_stats_context()["new_listings_count"]
+        if not isinstance(active, (int, float)) or not active:
+            return V2_NO_DATA
+        if not isinstance(new, (int, float)):
+            return V2_NO_DATA
+        return f"{new / active * 100:.0f}%"
+
     def _v2_table(self) -> Dict[str, Any]:
         """Design's table for the three table kinds; `closed`'s columns here.
 
@@ -781,20 +875,41 @@ class MarketReportBuilder:
             ratio = None
             if isinstance(close, (int, float)) and isinstance(lst, (int, float)) and lst:
                 ratio = close / lst * 100
+            if self.report_type == "new_listings":
+                # Design's `Listed` column, and the LIST price — a new listing
+                # has no sale price, so `close if close else lst` would be the
+                # right value by accident rather than by intent.
+                fifth = _v2_listed_label(item.get("days_on_market"))
+                emphasis = fifth == "Today"
+                price = _v2_money(lst)
+            else:
+                fifth = f"{ratio:.1f}%" if ratio is not None else V2_DASH
+                emphasis = bool(ratio is not None and ratio > 100)
+                price = _v2_money(close if close else lst)
             rows.append({
                 "address": item.get("address") or V2_NO_DATA,
                 "hood": item.get("city") or "",
                 "beds_baths": _v2_beds_baths(item),
                 "sqft": _v2_count(item.get("sqft")),
-                "price": _v2_money(close if close else lst),
-                "vs_list": f"{ratio:.1f}%" if ratio is not None else V2_DASH,
-                "vs_over": bool(ratio is not None and ratio > 100),
+                "price": price,
+                # ONE SHAPE WHICHEVER KIND RENDERED. The fifth column means
+                # "vs. list" on `closed` and "Listed" on `new_listings`;
+                # `emphasis` is whichever of those the kind accents — over
+                # asking, or listed today. The page reads two keys, not six.
+                "fifth": fifth,
+                "emphasis": emphasis,
                 "days": _v2_days(item.get("days_on_market")),
             })
         return {
             "rows": rows,
             "showing": listings_ctx["showing"],
             "total": listings_ctx["total_available"],
+            "columns": V2_TABLE_COLUMNS[self.report_type],
+            # The count line's noun, per kind. "20 sales" on a new-listings
+            # report would be wrong in a way nothing would catch — the number
+            # is right and the word is not.
+            "noun": V2_TABLE_COLUMNS[self.report_type]["noun"],
+            "noun_one": V2_TABLE_COLUMNS[self.report_type]["noun_one"],
         }
 
     def _build_agent_context(self) -> Dict[str, Any]:
