@@ -5724,6 +5724,35 @@ way, and only the rendering rule is in question.
 A market with six price bands renders four cards. Nothing on the page says the other two exist,
 and nothing in the code says why four.
 
+> **CORRECTION, 2026-10-08 — THE FIX REACHED ONE OF TWO COPIES.** There is a second
+> `{% for band in price_bands[:4] %}`, in **`analytics_layout`** (`macros.jinja2:323`), and this
+> entry's fix did not touch it. Same loop, same slice, same four-of-six truncation, under a
+> different macro. The two-implementations family again (D-163, D-170, D-177), and it was invisible
+> for the usual reason: the entry named `pricebands_layout`, the fix edited `pricebands_layout`, and
+> nothing asked whether the construct existed elsewhere. `grep -n "price_bands\[:4\]"` finds both
+> in one line and was not run.
+>
+> **It is dead, for two independent reasons, and was dead before this entry was filed:**
+>
+> 1. `analytics_layout`'s only report type was `new_listings`, and
+>    **`build_new_listings_result` emits no `price_bands` key** — so `{% if price_bands %}` has never
+>    been true on that path from the real builder. (D-111's entry says this defect "affects the band
+>    cards on `new_listings`". That is overstated in the same direction: `new_listings` has never
+>    carried band data.)
+> 2. `analytics_layout` also has an `{% if report_type == 'price_bands' %}` branch, which has never
+>    been taken either, because `price_bands`' layout was `pricebands_layout`.
+>
+> And as of 2026-10-08 `analytics_layout` is unreachable from any kind at all — `new_listings` moved
+> to Design's `_v2` page — so it is now dead a third way. Recorded rather than edited: **editing a
+> dead slice would produce a diff that looks like a fix and changes no rendered page**, and the
+> decision to remove the two unreachable layouts is D-181's, where the set is pinned.
+>
+> What this costs is only the record: the entry claimed a construct was removed and one instance of
+> it remains. The **severity does not change** and the status stays `fixed`, because the surviving
+> copy cannot render. What *would* have changed is if `new_listings` had ever been given band data —
+> post-D-111 the ladder yields up to six bands, so the slice would truncate two, which is exactly
+> the defect this entry describes, on a page nobody would have re-checked.
+
 **Surfaced by the §7.3 band chart**, which renders every band — so a six-band report now shows four
 cards above six bars. The chart's caption names the discrepancy as a stopgap ("the cards above show
 the first 4; the chart shows all 6"), which is a caption apologising for a layout rather than a fix.
@@ -10878,6 +10907,54 @@ so is `analytics_layout`, which went dead one day earlier when `new_listings` mo
 dead inside a live file is invisible to it. `test_market_layout_map.py::test_the_layouts_no_report_type_reaches_are_recorded`
 now pins the set, so the next one is a decision rather than a drift. Removing them is a separate
 call: they are the rollback path for the seam while five kinds are still unwired.
+
+#### The generalisable half: two implementations that share a NAME
+
+Filed against this entry on request, with the instances corrected to the ones that exist.
+
+**The rule.** Two implementations of the same derivation under *different* names are findable by
+grep: you search the concept, you get two hits, you compare them. Two implementations under the
+**same name in different modules** are findable only by tracing the call, because every tool that
+works on text — grep, a symbol index, a reviewer's eye on a diff — shows one name and gives no
+reason to think there are two. **It is worse than the usual case**, and the usual case is already
+this repository's most-filed family (D-163, D-170, D-177).
+
+**The instance that exists here is `_median`, and it is three deep:**
+
+| | returns for `[]` |
+|---|---|
+| `report_builders.py:43` | **`0.0`** |
+| `compute/price_bands.py:240` | `None` |
+| `email/template.py:1798` | `None` — and a *different signature entirely* (`kind, metrics`) |
+
+D-086 is the entry: `report_builders._median` answers an empty list with `0.0`, which reaches
+`median_close_price`, `median_list_price` and four other price fields as "$0". D-111's rebuild gave
+`compute/price_bands.py` its own `_median` that returns `None`, which is the fix D-086 asks for —
+**so the defect is live on the paths it was filed against and fixed on one new one**, and nothing in
+a grep for `_median` distinguishes which of the three a given call reaches. The board already
+records this as D-086 being *partially* superseded; what it did not say is that the name collision is
+the reason the partial fix was invisible.
+
+**This entry's own defect is not an instance of it** and the distinction is worth keeping straight:
+`_band_chart_note` has exactly one definition and had exactly one consumer. Its failure is a chain
+going dead from the far end, not two implementations diverging. The two shapes travel together
+because both survive a grep, but the remedies differ — a name collision needs the call traced, a
+dead chain needs the consumer side checked when a seam moves.
+
+#### Checked and not reproducing: a duplicate `cap` at 8 and 4
+
+Reported alongside this entry and **absent**, recorded so it is not re-filed from the same report:
+
+| the claim | measured |
+|---|---|
+| `_price_band_rows` caps at 8 while `PDF_CONFIG` caps at 4, both named `cap` | **there is no `_price_band_rows`** anywhere in `apps/`, `scripts/` or `tests/`. `PDF_CONFIG["price_bands"]["cap"]` is **8**, and there is **no `cap` of 4** in any Python file in the repository |
+| both reachable, so a sixteen-band test was green on the half that was right | **there is no sixteen-band test**, and `compute/price_bands.MAX_BANDS = 6` caps the band count at six, so sixteen bands cannot be produced |
+| `show_more` survives its only producer — the template honours a key nothing emits | **`show_more` does not appear** in any `.py`, `.jinja2`, `.ts` or `.tsx` file |
+
+**There is a real finding in the vicinity and it is a different one** — D-107's `[:4]` slice reached
+one of two copies. Recorded as a correction on D-107 rather than here, because it is that entry's
+fix that was partial.
+
 
 ---
 

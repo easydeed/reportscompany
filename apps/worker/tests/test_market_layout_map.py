@@ -244,6 +244,57 @@ def test_the_layouts_no_report_type_reaches_are_recorded():
     )
 
 
+#: `price_bands[:4]` — D-107's construct — and where it still is.
+#:
+#: D-107 removed the four-of-six band slice from `pricebands_layout` and left an
+#: identical one in `analytics_layout`, which nobody noticed for ten days because
+#: the entry named one macro and the fix edited that macro. `grep -n
+#: "price_bands\[:4\]"` finds both on one line and was not run.
+#:
+#: Pinned rather than deleted. The surviving copy is dead three times over —
+#: `build_new_listings_result` emits no `price_bands` key, `analytics_layout`
+#: never served the `price_bands` kind, and no kind reaches `analytics_layout`
+#: at all since 2026-10-08 — so editing it would be a diff that looks like a fix
+#: and changes no rendered page. What this holds is the RECORD: if the count
+#: moves, either someone removed the dead slice (fine, say so here) or a second
+#: one appeared (not fine).
+BAND_SLICE_SITES = {"analytics_layout": 1, "pricebands_layout": 0}
+
+
+def test_the_four_of_six_band_slice_is_only_where_it_is_recorded():
+    """D-107's construct, counted per macro rather than per file.
+
+    A grep of the whole file would say "one `[:4]` remains" and not say which
+    macro, which is the information that mattered: one copy was reachable and
+    one was not, and the entry was about the reachable one.
+    """
+    import re
+    source = (Path(__file__).resolve().parents[1]
+              / "src/worker/templates/market/_base/macros.jinja2"
+              ).read_text(encoding="utf-8")
+    # Split on macro boundaries so a slice is attributed to the macro it is in.
+    starts = [(m.start(), m.group(1))
+              for m in re.finditer(r"\{%\s*macro\s+(\w+)", source)]
+    found = {name: 0 for name in BAND_SLICE_SITES}
+    for i, (pos, name) in enumerate(starts):
+        end = starts[i + 1][0] if i + 1 < len(starts) else len(source)
+        if name in found:
+            found[name] = source[pos:end].count("price_bands[:4]")
+    assert found == BAND_SLICE_SITES, (
+        f"D-107's `price_bands[:4]` is now {found}, recorded as "
+        f"{BAND_SLICE_SITES}. A market with six bands renders four cards and "
+        f"says nothing about the other two. If the dead copy in "
+        f"`analytics_layout` was removed, record that here; if a new one "
+        f"appeared, it is D-107 coming back."
+    )
+    whole = source.count("price_bands[:4]")
+    assert whole == sum(BAND_SLICE_SITES.values()), (
+        f"{whole} occurrences of `price_bands[:4]` in the file but "
+        f"{sum(BAND_SLICE_SITES.values())} inside the macros this test knows "
+        f"about — one is somewhere this test does not look."
+    )
+
+
 def test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout():
     """Positive control: prove the assertion above can fail.
 

@@ -159,5 +159,26 @@
     "old": "      {# THE BOX IS UNCONDITIONAL, THE SPAN IS NOT.",
     "new": "      <!-- THE BOX IS UNCONDITIONAL, THE SPAN IS NOT.",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "a market contrast row is baselined back in, so the surface stops being at zero",
+    "file": "apps/worker/tests/pdf_contrast_baseline.txt",
+    "old": "property__elegant\tdiv.cover-agent-name\t#ffffff\t#58880e",
+    "new": "market__price_bands\tspan.status-badge.active\t#5E636B\t#E6EEF5\nproperty__elegant\tdiv.cover-agent-name\t#ffffff\t#58880e",
+    "test": "apps/worker/tests/test_pdf_contrast.py::test_the_market_surface_has_no_baselined_failure_left tests/test_market_token_mapping.py::test_the_market_baseline_is_spent"
+  },
+  {
+    "name": "D-107's four-of-six band slice comes back in pricebands_layout",
+    "file": "apps/worker/src/worker/templates/market/_base/macros.jinja2",
+    "old": "    {% for band in price_bands %}\n    <div class=\"stat-card\">",
+    "new": "    {% for band in price_bands[:4] %}\n    <div class=\"stat-card\">",
+    "test": "apps/worker/tests/test_market_layout_map.py::test_the_four_of_six_band_slice_is_only_where_it_is_recorded"
+  },
+  {
+    "name": "the dead slice is removed without the record being updated",
+    "file": "apps/worker/src/worker/templates/market/_base/macros.jinja2",
+    "old": "  {% for band in price_bands[:4] %}\n  <div class=\"stat-block",
+    "new": "  {% for band in price_bands %}\n  <div class=\"stat-block",
+    "test": "apps/worker/tests/test_market_layout_map.py::test_the_four_of_six_band_slice_is_only_where_it_is_recorded"
   }
 ]
