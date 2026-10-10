@@ -10853,8 +10853,24 @@ they specified, is **265.4px**, leaving **662.9px** above the footer:
 | `featured_listings` | 2×2 = 4 | **2** | **4.7px short** |
 
 **`featured_listings` misses by four and a half pixels.** One point of line-height, or five pixels
-off the photo, and 2×2 fits — which takes that kind from 4 pages to 3. `open_houses`' 80px needs a
-materially shorter card and is a design decision, not a tweak.
+off the photo, and 2×2 fits — which takes that kind from 4 pages to 3.
+
+#### THE BIGGER SHORTFALL IS THE FREE ONE, and that inverts the priority
+
+| kind | short by | pages ours | pages if their grid fitted | cost |
+|---|---|---|---|---|
+| `open_houses` (cap 100) | **80.1px** | 12 | 12 | **nothing** |
+| `featured_listings` (cap 12) | **4.7px** | 4 | 3 | **one page per report** |
+
+`open_houses` renders `[6, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4]` — 100 cards over 12 pages. Design's 3×3
+everywhere would be `ceil(100 / 9)` = also 12, because the three cards page 1 cannot hold are
+absorbed by continuation pages that are not full. **The shortfall moves cards between pages without
+adding one.**
+
+Filed as one entry because it is one class of defect, but it is **two different asks**, and ranking
+them by shortfall size would have put the effort on the wrong one: five pixels on `featured_listings`
+buys a page on every report, and eighty on `open_houses` buys nothing and is purely a page-1 density
+question.
 
 #### Third instance of the same class
 

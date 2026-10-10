@@ -325,9 +325,32 @@ The band measures **265.4px**, leaving **662.9px** above the footer.
 | `featured_listings` | 2×2 = 4 | **2** | **4.7px short** |
 
 **This is the third instance of their stated numbers not being self-consistent**, after the 13-and-26
-row counts and the gradient contradiction. The `featured_listings` miss is the actionable one: **4.7
-pixels.** One point of line-height, or five pixels off the photo, and 2×2 fits — which takes that
-kind from 4 pages back to 3. `open_houses`' 80px needs a materially shorter card, not a tweak.
+row counts and the gradient contradiction.
+
+### What each shortfall actually costs, which is not the same as how big it is
+
+| kind | short by | pages ours | pages if their grid fitted | cost |
+|---|---|---|---|---|
+| `open_houses` (cap 100) | **80.1px** | 12 | 12 | **nothing** |
+| `featured_listings` (cap 12) | **4.7px** | 4 | 3 | **one page per report** |
+
+**The bigger shortfall is the free one.** `open_houses` renders `[6, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4]`
+— 100 cards over 12 pages. Design's 3×3 everywhere would be `ceil(100 / 9)` = **also 12**, because
+the three cards page 1 cannot hold are absorbed by continuation pages that are not full. The
+shortfall moves cards between pages without adding one.
+
+`featured_listings` is the opposite: 4.7 pixels, and it costs a page on every report. At cap 12,
+`1 + ceil((12 − 2) / 4)` = 4 pages; with 2×2 on page 1 it is `1 + ceil((12 − 4) / 4)` = **3**.
+
+So the ask to Design is two different asks, and conflating them by shortfall size would have put the
+effort on the wrong one:
+
+* **`featured_listings`** — five pixels, worth a page. A line-height point or a slightly shorter
+  photo.
+* **`open_houses`** — eighty pixels, worth nothing in pages. Purely a question about **page-1
+  density**: is nine cards at that card size deliberate, or was the card size chosen for the
+  three-grid kinds and the 3×3 inherited from a sample that had a shorter card? Not ours to decide
+  either way.
 
 ### What the galleries cost, and why it is one kind
 
