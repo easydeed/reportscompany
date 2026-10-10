@@ -241,7 +241,14 @@ class TestContentRendering:
     def test_listing_prices_rendered(self, full_data):
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
-        assert "$950,000" in html or "$950k" in html, "Listing price not rendered"
+        # `$950K` is Design's casing on the `_v2` page (`format_currency_short`
+        # with `upper=True`); `$950k` is every other surface's. Both accepted —
+        # the assertion is that the price reaches the page, and which case it
+        # wears is gated where that decision lives,
+        # `test_designs_casing_does_not_change_every_other_surface`.
+        assert ("$950,000" in html or "$950k" in html or "$950K" in html), (
+            "Listing price not rendered"
+        )
 
     def test_brand_primary_color_in_css(self, full_data):
         builder = MarketReportBuilder(full_data)
@@ -262,10 +269,47 @@ class TestContentRendering:
 class TestPrintCSS:
     """Verify print-related CSS is present."""
 
-    def test_has_page_size_rule(self, full_data):
-        builder = MarketReportBuilder(full_data)
-        html = builder.render_html()
-        assert "@page" in html, "Missing @page CSS rule"
+    #: Which architecture carries an `@page` rule, per report type.
+    #:
+    #: THIS TEST READ AS "the market templates set a page size" AND MEANT
+    #: "`new_listings_gallery` does", because `full_data`'s one `report_type`
+    #: is that kind. Four `_v2` kinds shipped with no `@page` from 2026-10-07
+    #: and it went unobserved for three days — the test could not see them.
+    #: It only failed when the gallery kind itself moved, which is the last
+    #: moment it could have.
+    #:
+    #: THE `_v2` PAGE IS LEFT WITHOUT ONE, deliberately. PDFShift sets the
+    #: page box through its API (`format`, `margin`, and the 0.44in/0.89in
+    #: header and footer reserve), and the measured PDFs are correct letter
+    #: pages without any CSS `@page`. Adding `@page { margin }` to a document
+    #: whose box is set by the caller risks moving the body — and every row
+    #: capacity on this surface is measured against that box, so it would mean
+    #: re-measuring seven kinds to buy a rule that changes nothing. Recorded
+    #: instead, so the absence is a decision.
+    HAS_AT_PAGE_RULE = {
+        "market_snapshot": True,     # the legacy page
+        "closed": False, "inventory": False, "new_listings": False,
+        "price_bands": False, "new_listings_gallery": False,
+        "open_houses": False, "featured_listings": False,
+    }
+
+    @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
+    def test_the_page_size_rule_is_where_it_is_recorded(self, full_data,
+                                                        report_type):
+        """Per kind, because the two architectures differ and one fixture
+        cannot speak for both."""
+        assert report_type in self.HAS_AT_PAGE_RULE, (
+            f"{report_type} has no recorded `@page` expectation"
+        )
+        full_data["report_type"] = report_type
+        html = MarketReportBuilder(full_data).render_html()
+        assert ("@page" in html) is self.HAS_AT_PAGE_RULE[report_type], (
+            f"{report_type}: `@page` "
+            f"{'disappeared from' if self.HAS_AT_PAGE_RULE[report_type] else 'appeared in'}"
+            f" this page. If a `_v2` kind gained one, re-measure its row "
+            f"capacity — the page box is set by PDFShift and every capacity on "
+            f"this surface is pinned against it."
+        )
 
     def test_has_print_media_query(self, full_data):
         builder = MarketReportBuilder(full_data)

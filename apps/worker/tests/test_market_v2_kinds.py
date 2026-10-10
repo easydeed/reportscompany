@@ -39,9 +39,9 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 from measure_market_pagination import report_data  # noqa: E402
 from worker.market_builder import (  # noqa: E402
-    ALL_REPORT_TYPES, V2_DASH, V2_KINDS, V2_LABEL_LADDER, V2_NEW_WITHIN_DAYS,
-    V2_NO_DATA, MarketReportBuilder,
-    _ratio_as_percent, _v2_beds_baths, _v2_label_size,
+    ALL_REPORT_TYPES, V2_DASH, V2_GRID, V2_KINDS, V2_LABEL_LADDER,
+    V2_NEW_WITHIN_DAYS, V2_NO_DATA, MarketReportBuilder,
+    _ratio_as_percent, _v2_beds_baths, _v2_card_specs, _v2_label_size,
 )
 
 
@@ -94,7 +94,8 @@ def test_every_kind_in_the_seam_has_its_band_values():
     which was a name that went stale the moment the second landed.
     """
     assert V2_KINDS == frozenset({"closed", "new_listings", "price_bands",
-                                  "inventory"}), (
+                                  "inventory", "new_listings_gallery",
+                                  "open_houses", "featured_listings"}), (
         f"V2_KINDS is {set(V2_KINDS)}. Every kind in it needs its own band "
         f"values from Design's per-kind table — big number, label, pill, three "
         f"stats — and `_v2_band` raises NotImplementedError without them."
@@ -824,3 +825,157 @@ def test_inventory_draws_no_trend_and_the_pace_series_has_no_report_type():
         "`inventory` is back in TREND_SERIES, so `tasks.py` will fetch twelve "
         "months of closings for a page with no chart slot."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The three gallery kinds — two cards, three grids, and the measurement that
+# said Design's own page-1 grids do not fit under Design's own band.
+# ─────────────────────────────────────────────────────────────────────────────
+
+def gal(kind, n=12, **over):
+    return builder(kind, n=n, **over)
+
+
+@pytest.mark.parametrize("kind", sorted(V2_GRID))
+def test_a_gallery_kind_renders_a_grid_and_no_table(kind):
+    html = gal(kind).render_html()
+    assert 'class="grid"' in html
+    assert 'class="trow' not in html and 'class="brow' not in html
+    cols = V2_GRID[kind]["cols"]
+    assert f"repeat({cols}, minmax(0, 1fr))" in html, (
+        f"{kind} did not render Design's {cols}-column grid"
+    )
+
+
+def test_only_featured_gets_its_own_card():
+    """Design: "same card as listings" for the gallery kinds, and a bigger one
+    for featured. Four cards on a page can afford the size; nine cannot."""
+    assert gal("featured_listings")._v2_gallery()["card"] == "featured"
+    for kind in ("new_listings_gallery", "open_houses"):
+        assert gal(kind)._v2_gallery()["card"] == "listing"
+    featured = gal("featured_listings").render_html()
+    assert "gcard featured" in featured
+    assert "gcard featured" not in gal("open_houses").render_html()
+
+
+@pytest.mark.parametrize("item,want", [
+    ({"beds": 3, "baths": 2, "sqft": 1480}, "3 bd / 2 ba / 1,480 sq ft"),
+    # ZERO BEDROOMS IS A STUDIO, not "0 bd" and not missing. The legacy card
+    # said Studio and the gate on it exists because `or` eats the 0.
+    ({"beds": 0, "baths": 1, "sqft": 600}, "Studio / 1 ba / 600 sq ft"),
+    ({"beds": 2, "baths": 1.5, "sqft": 900}, "2 bd / 1.5 ba / 900 sq ft"),
+    # Absent parts are DROPPED, not rendered as None or 0.
+    ({"beds": 3, "sqft": 1200}, "3 bd / 1,200 sq ft"),
+    ({"beds": None, "baths": None, "sqft": None}, ""),
+    ({"beds": True, "baths": 2, "sqft": 900}, "2 ba / 900 sq ft"),
+])
+def test_the_card_specs_drop_what_is_absent_and_name_a_studio(item, want):
+    assert _v2_card_specs(item) == want
+
+
+def test_the_meta_line_does_not_lead_with_a_separator():
+    """`{hood} · {specs}` joined from the parts that exist. A dot-joined
+    template renders `· 3 bd / 2 ba` when the hood is missing."""
+    rows = gal("open_houses", n=1, listings=[{
+        "street_address": "1 A St", "list_price": 900000,
+        "bedrooms": 3, "bathrooms": 2, "sqft": 1800, "status": "Active",
+    }])._v2_gallery()["rows"]
+    assert not rows[0]["meta"].startswith("\u00b7")
+    assert rows[0]["meta"] == "3 bd / 2 ba / 1,800 sq ft"
+
+
+def test_the_open_house_pill_names_the_days_actually_present():
+    """NOT the literal "Sat & Sun". Design's example reads that way because
+    their sample week has both; a feed with one Sunday slot would promise
+    Saturday viewings that do not exist."""
+    def pill(dates):
+        return gal("open_houses", n=len(dates), listings=[{
+            "street_address": f"{i} A St", "city": "Irvine",
+            "list_price": 900000, "bedrooms": 3, "bathrooms": 2, "sqft": 1800,
+            "status": "Active", "next_open_house": d,
+        } for i, d in enumerate(dates)])._v2_band()["pill_sub"]
+
+    assert pill(["2026-10-10", "2026-10-11"]) == "Sat & Sun \u00b7 Irvine"
+    assert pill(["2026-10-11"]) == "Sun \u00b7 Irvine"
+    assert pill(["2026-10-11", "2026-10-11"]) == "Sun \u00b7 Irvine"
+    # No parseable date at all: the city alone, never an invented day.
+    assert pill(["Sat 1-4pm"]) == "Irvine"
+
+
+def test_an_unparseable_open_house_still_reaches_its_card():
+    """The split: the band only claims what it could read, the card shows what
+    the feed said. Feeds send "Sat 1-4pm" in this field as well as ISO dates."""
+    b = gal("open_houses", n=1, listings=[{
+        "street_address": "1 A St", "city": "Irvine", "list_price": 900000,
+        "bedrooms": 3, "bathrooms": 2, "sqft": 1800, "status": "Active",
+        "next_open_house": "Sat 1-4pm",
+    }])
+    first, last, _ = b._v2_open_house_span()
+    assert (first, last) == (None, None), "the band claimed a span it could not read"
+    assert "Sat 1-4pm" in b.render_html(), "the card dropped what the feed said"
+    band = b._v2_band()
+    assert band["cells"][0]["value"] == V2_NO_DATA
+    assert band["cells"][1]["value"] == V2_NO_DATA
+
+
+def test_the_open_house_span_does_not_trust_an_upstream_sort():
+    """`build_open_houses_result` sorts ascending; a body that relies on that
+    breaks when someone adds a filter."""
+    dates = ["2026-10-12", "2026-10-10", "2026-10-11"]
+    b = gal("open_houses", n=3, listings=[{
+        "street_address": f"{i} A St", "city": "Irvine", "list_price": 900000,
+        "bedrooms": 3, "bathrooms": 2, "sqft": 1800, "status": "Active",
+        "next_open_house": d,
+    } for i, d in enumerate(dates)])
+    first, last, _ = b._v2_open_house_span()
+    assert first == "Sat 10 Oct" and last == "Mon 12 Oct", (first, last)
+
+
+def test_featured_averages_are_absent_rather_than_zero():
+    """"No listing reports a sq ft" is not "the average is zero" (D-137)."""
+    b = gal("featured_listings", n=1, listings=[{
+        "street_address": "1 A St", "city": "Irvine", "list_price": 900000,
+        "bedrooms": 3, "bathrooms": 2, "status": "Active",
+    }])
+    assert b._v2_average("sqft") is None
+    cells = {c["label"]: c["value"] for c in b._v2_band()["cells"]}
+    assert cells["Avg. sq ft"] == V2_DASH
+    assert cells["Avg. price"] != V2_DASH
+
+
+def test_the_band_count_agrees_with_the_cards_below_it():
+    """A band saying "9 homes to see" over six cards is worse than either
+    number alone. The count is the capped listing count, not the feed's."""
+    b = gal("open_houses", n=40)
+    band = b._v2_band()
+    gallery = b._v2_gallery()
+    assert band["big"] == _v2_count_of(len(gallery["rows"]))
+
+
+def _v2_count_of(n):
+    return f"{n:,}"
+
+
+def test_the_missing_photo_tile_is_designs_and_carries_no_stock_house():
+    """Design: tint tile, neighbourhood 22px/600 in primary bottom-left,
+    "Photos coming soon" 9.5px mono uppercase. No broken-image icon, no stock
+    house — a photo of a house that is not the house is the one thing here
+    that would be a lie."""
+    html = gal("open_houses", n=3).render_html()
+    assert "Photos coming soon" in html
+    assert "gphoto empty" in html
+    assert "\U0001F3E0" not in html, "the legacy broken-image house emoji is back"
+    # The price plate stays on the tile, per Design.
+    import re
+    tile = re.search(r'<div class="gphoto empty">(.*?)</div>\s*<div class="ginfo"',
+                     html, re.S)
+    assert tile and "gplate" in tile.group(1)
+
+
+def test_the_price_plate_is_a_solid_plate_and_never_text_on_photography():
+    """Design's rule, and the only one readable over an unknown image."""
+    html = gal("open_houses", n=3).render_html()
+    import re
+    rule = re.search(r"\.gplate \{([^}]*)\}", html, re.S).group(1)
+    assert "background: #ffffff" in rule, rule
+    assert "#14161A" in rule, rule

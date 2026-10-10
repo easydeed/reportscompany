@@ -60,6 +60,26 @@ GRID_KINDS = {
     "featured_listings": {"cols": 2, "rows": 2},
 }
 
+#: The 2026-10-07 measurement, taken against the LEGACY gallery page.
+#:
+#: Re-measured on 2026-10-10 because the architecture under it changed: the
+#: three gallery kinds moved onto Design's `_v2` page, whose card moves the
+#: price onto the photo (so the info block loses a 23px line), sets the photo
+#: from the column width instead of a fixed 180px, and sits in a body with
+#: different padding. **A fit measured against a page that has been replaced
+#: describes nothing** — the same rule as a contrast baseline outliving its
+#: template, applied to a geometry measurement.
+#:
+#: The page BOX did not change: `pdf_engine.py`'s 0.44in header and 0.89in
+#: footer reserve are untouched since PR #101, so the 928px body is the same.
+#: What moved is the card.
+LEGACY_2026_10_07 = {
+    "card_px": 258.0,
+    "row_gap_px": 8.0,
+    "rows_fit_continuation": 3,
+    "headroom_after_3_rows_px": 138.0,
+}
+
 #: Design's stated type for the listings/gallery card, from the market README's
 #: per-kind table. The card's own height is not stated; these are.
 DESIGN_CARD_TYPE = {
@@ -92,7 +112,29 @@ MEASURE_JS = r"""
   let textBlock = null;
   if (cards.length) {
     const first = cards[0];
-    const img = first.querySelector('img, [style*="background-image"]');
+    // BY COMPUTED STYLE, NOT BY INLINE ATTRIBUTE. The first version was
+    // `first.querySelector('img, [style*="background-image"]')`, which finds a
+    // card WITH a photo url and misses the missing-photo tile — so against the
+    // `_v2` page, where a headless render resolves no photos and every card is
+    // the tile, it reported `photo_px: 0` and folded the whole card into
+    // `text_px`. The card height was still right (it is read off the card), so
+    // the FIT was correct and only the breakdown was wrong, which is the quiet
+    // kind: a plausible split nobody would question.
+    //
+    // `background-size: cover` is what both the legacy card and the `_v2` one
+    // set on their photo box, with or without a url.
+    const img = [...first.querySelectorAll('*')].find(el => {
+      const cs = getComputedStyle(el);
+      // THREE WAYS A PHOTO BOX RESERVES HEIGHT, and the `_v2` card uses the
+      // third. `aspect-ratio` is how a width-driven grid reserves its box; the
+      // legacy card used a fixed height with `background-size: cover`. Asking
+      // only about `cover` missed the `_v2` tile twice over — once because the
+      // `background` shorthand had reset it, and once because `cover` is not
+      // what makes the box in the first place.
+      return cs.aspectRatio !== 'auto'
+          || cs.backgroundSize === 'cover'
+          || (el.tagName === 'IMG' && el.getBoundingClientRect().height > 10);
+    });
     const imgH = img ? img.getBoundingClientRect().height : 0;
     textBlock = {
       card_px: first.getBoundingClientRect().height,
@@ -163,8 +205,15 @@ def main() -> int:
                 continue
             card, gap = geom["cardHeight"], geom["rowGap"]
             three = 3 * card + 2 * gap
+            legacy_head = LEGACY_2026_10_07["headroom_after_3_rows_px"]
             report["kinds"][report_type] = {
                 "design_states_page_1": f"{stated['cols']}x{stated['rows']}",
+                "legacy_card_px": LEGACY_2026_10_07["card_px"],
+                "legacy_headroom_after_3_rows_px": legacy_head,
+                "headroom_moved_px": round(
+                    (BODY_PX - three) - legacy_head, 1),
+                "a_fourth_row_would_need_px": round(card + gap, 1),
+                "a_fourth_row_fits": (BODY_PX - three) >= (card + gap),
                 "our_grid_cols": geom["cols"],
                 "card_px": round(card, 1),
                 "row_gap_px": round(gap, 1),

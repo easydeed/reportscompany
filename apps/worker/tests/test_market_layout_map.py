@@ -168,6 +168,9 @@ V2_BODY_MARKER = {
     "new_listings": 'class="trow thead"',
     "inventory": 'class="trow thead"',
     "price_bands": 'class="brow bhead"',
+    "new_listings_gallery": 'class="grid"',
+    "open_houses": 'class="grid"',
+    "featured_listings": 'class="grid"',
 }
 
 
@@ -227,7 +230,7 @@ def test_a_v2_kind_calls_no_layout_macro_and_renders_the_v2_page(report_type):
 #: template file comes to be two thirds dead without anyone having decided it —
 #: which is exactly what `property/_base/base.jinja2`'s 5,570 dead lines are.
 UNREACHABLE_LAYOUT_MACROS = ["analytics_layout", "closed_inventory_layout",
-                             "pricebands_layout"]
+                             "gallery_layout", "pricebands_layout"]
 
 
 def test_the_layouts_no_report_type_reaches_are_recorded():
@@ -366,6 +369,13 @@ RENDERED_LISTING_CAP = {
 RENDERED_DESPITE_CAP = {
     "price_bands": 0,
 }
+
+#: Kinds whose `_v2` body renders CARDS rather than table rows, so the listing
+#: cap still governs but the address-match count below finds them in a grid.
+#: Listed so the cap test's parametrisation covers them explicitly rather than
+#: by happening to match the same strings.
+V2_GALLERY_KINDS = frozenset({"new_listings_gallery", "open_houses",
+                              "featured_listings"})
 
 
 @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
