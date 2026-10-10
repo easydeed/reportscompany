@@ -294,6 +294,77 @@
   .brow { break-inside: avoid; page-break-inside: avoid; }
   .bempty { font-size: 13px; font-weight: 400; color: var(--muted);
             padding: 10px 0; }
+  /* ── Design's photo grid ──────────────────────────────────────────────
+     THE PHOTO RESERVES ITS BOX FROM THE COLUMN WIDTH, via `aspect-ratio` on a
+     `background-image` div. Remote photos do not load in a headless render, so
+     a card whose height came from a loaded image would make
+     `measure_gallery_continuation_fit.py` measure a page that collapses to
+     nothing. The legacy card used a fixed `height: 180px` for the same reason
+     and the comment there says so; this is the width-driven version of the
+     same guarantee, which is what a grid of varying column counts needs.
+
+     Design states the type (price plate 15px/700, address 13px/600, meta
+     11.5px) and NOT the photo height or the card height. So the card height is
+     an OUTPUT of their spec, measured rather than chosen — see §8 of
+     docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md. */
+  .grid { padding: 22px 52px 0; display: grid; gap: 14px; }
+  .gcard { border-radius: 8px; overflow: hidden; background: #ffffff;
+           border: 1px solid var(--rule-soft); }
+  .gphoto { position: relative; width: 100%; aspect-ratio: 4 / 3;
+            background-color: var(--tint); background-size: cover;
+            background-position: center; }
+  /* Design: "solid white #14161A 15px/700, padding 4px 9px, radius 4px,
+     top-left 10px". A SOLID PLATE and never text straight onto photography —
+     their rule, and the only one that is readable over an unknown image. */
+  .gplate { position: absolute; top: 10px; left: 10px; background: #ffffff;
+            color: #14161A; font-size: 15px; font-weight: 700;
+            padding: 4px 9px; border-radius: 4px; }
+  /* The missing-photo tile: `tint` (primary at 8% over white), the
+     neighbourhood 22px/600 in `primary` bottom-left, "Photos coming soon"
+     9.5px mono uppercase at 75%. No broken-image icon and no stock house —
+     Design's spec, and a stock photo of a house that is not the house is the
+     one thing here that would be a lie. */
+  /* `background-color`, NOT the `background` shorthand. The shorthand resets
+     every background longhand it does not name, so `background: var(--tint)`
+     here silently wiped `background-size: cover` from the base `.gphoto` rule
+     — found by the fit measurement reporting `photo_px: 0`, because its
+     detector looks for a cover-sized box. Nothing was visibly wrong (the tile
+     has no image), which is exactly why it would have survived until someone
+     put a url on this branch. */
+  .gphoto.empty { background-color: var(--tint); display: flex;
+                  flex-direction: column; justify-content: flex-end;
+                  padding: 10px; }
+  .ghood { font-size: 22px; font-weight: 600; color: var(--primary-ink);
+           line-height: 1.05; }
+  .gsoon { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+           letter-spacing: 0.08em; text-transform: uppercase;
+           color: var(--muted); margin-top: 3px; }
+  .ginfo { padding: 8px 10px 10px; }
+  .gaddr { font-size: 13px; font-weight: 600; color: var(--ink);
+           line-height: 1.3; overflow: hidden; text-overflow: ellipsis;
+           white-space: nowrap; }
+  .gmeta { font-size: 11.5px; font-weight: 400; color: var(--body);
+           line-height: 1.3; margin-top: 2px; overflow: hidden;
+           text-overflow: ellipsis; white-space: nowrap; }
+  .goh { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+         letter-spacing: 0.06em; text-transform: uppercase;
+         color: var(--accent-ink); margin-top: 4px; }
+  /* `featured_listings` only: 18px plate, 15px address, and the three specs
+     stacked to the right instead of one meta line underneath. */
+  .gcard.featured .gplate { font-size: 18px; }
+  .gcard.featured .gaddr { font-size: 15px; }
+  .gcard.featured .ginfo { display: flex; justify-content: space-between;
+                           align-items: flex-start; gap: 10px; }
+  .gstats { text-align: right; flex-shrink: 0; }
+  .gstat { font-size: 11.5px; font-weight: 400; color: var(--body);
+           line-height: 1.35; font-variant-numeric: tabular-nums; }
+  .gcard { break-inside: avoid; page-break-inside: avoid; }
+  .gempty { font-size: 13px; font-weight: 400; color: var(--muted);
+            padding: 22px 52px 0; }
+  .gshowing { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+              letter-spacing: 0.06em; text-transform: uppercase;
+              color: var(--muted); padding: 14px 52px 0; }
+
   .bnote { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
            letter-spacing: 0.06em; color: var(--muted);
            border-top: 1px solid var(--rule-soft);
@@ -419,6 +490,55 @@
   <div class="bnote">{{ v2_bands.note }}</div>
   {% endif %}
 </section>
+{% endif %}
+
+{% if v2_gallery %}
+{% if not v2_gallery.rows %}
+{# AN EMPTY GRID IS A BARE `<section>` AND READS AS A BROKEN PAGE. Same shape
+   as the bands body's five column headings over nothing. The standing
+   instruction on an empty search is that the report renders and says the
+   search returned nothing — it does NOT change whether the report sends. #}
+<div class="gempty">No listings matched this search{% if v2_gallery.empty_city %} in {{ v2_gallery.empty_city }}{% endif %}{% if v2_gallery.empty_label %} — {{ v2_gallery.empty_label }}{% endif %}.</div>
+{% else %}
+<section class="grid"
+         style="grid-template-columns: repeat({{ v2_gallery.cols }}, minmax(0, 1fr))">
+  {% for row in v2_gallery.rows %}
+  <div class="gcard{% if v2_gallery.card == 'featured' %} featured{% endif %}">
+    {% if row.photo_url %}
+    <div class="gphoto" style="background-image: url('{{ row.photo_url }}')">
+      <span class="gplate">{{ row.price }}</span>
+    </div>
+    {% else %}
+    <div class="gphoto empty">
+      <span class="gplate">{{ row.price }}</span>
+      {% if row.hood %}<div class="ghood">{{ row.hood }}</div>{% endif %}
+      <div class="gsoon">Photos coming soon</div>
+    </div>
+    {% endif %}
+    <div class="ginfo">
+      <div>
+        <div class="gaddr">{{ row.address }}</div>
+        {% if v2_gallery.card != 'featured' %}
+        <div class="gmeta">{{ row.meta }}</div>
+        {% endif %}
+        {% if row.open_house %}<div class="goh">{{ row.open_house }}</div>
+        {% elif row.listed %}<div class="goh">{{ row.listed }}</div>{% endif %}
+      </div>
+      {% if v2_gallery.card == 'featured' %}
+      <div class="gstats">
+        <div class="gstat">{{ row.beds }} bd</div>
+        <div class="gstat">{{ row.baths }} ba</div>
+        <div class="gstat">{{ row.sqft }} sq ft</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% if v2_gallery.showing < v2_gallery.total %}
+<div class="gshowing">Showing {{ v2_gallery.showing }} of {{ v2_gallery.total }}</div>
+{% endif %}
 {% endif %}
 
 {% if v2_table %}

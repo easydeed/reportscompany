@@ -183,12 +183,32 @@ def test_the_alias_rule_still_finds_the_aliased_read(derived):
     scan was wrong. So the alias path is asserted by name: if the rule is
     narrowed again, this fails instead of the finding quietly reversing.
     """
-    via = derived["builder_reads_via_alias"]
-    assert "filters_label" in via, (
-        f"`filters_label` is no longer found through an alias: {via}. Either "
-        f"`market_builder.py:435` stopped doing `data = self.report_data` — "
-        f"fine, and this test should be retired with it — or the alias rule "
-        f"was narrowed and the read went invisible again."
+    # THE UNFILTERED SET, because this is a question about the SCANNER.
+    #
+    # This read `builder_reads_via_alias`, which is filtered to keys a
+    # direct-receiver scan would MISS. On 2026-10-10 `filters_label` gained a
+    # second, direct read in `_v2_gallery`'s empty state — so it left that set,
+    # and by then every key in the aliased block was also read directly, so the
+    # set was empty and this test failed claiming the alias rule had been
+    # narrowed. It had not: the rule still found the aliased site, and the key
+    # had simply stopped being the witness.
+    #
+    # A gate scoped to one key, meaning the rule — §0.6's
+    # instance-named-as-class, in a gate about scanning. Scoped to the rule now
+    # and asserted two ways, so neither a narrowed rule nor a vanished alias
+    # can pass quietly.
+    via_all = derived["builder_reads_via_alias_all"]
+    assert via_all, (
+        "the alias rule found NO aliased reads anywhere in market_builder.py. "
+        "Either every `data = self.report_data` alias is gone — fine, and this "
+        "test should be retired with them — or the rule was narrowed and a "
+        "whole class of reads is invisible again, which is how `filters_label` "
+        "shipped green."
+    )
+    assert "filters_label" in via_all, (
+        f"`filters_label` is no longer found through an alias: "
+        f"{sorted(via_all)}. It is read off `data` in `_build_header_context`, "
+        f"and that read is the one the direct-receiver scan missed."
     )
     assert "filters_label" in derived["builder_reads"]
 

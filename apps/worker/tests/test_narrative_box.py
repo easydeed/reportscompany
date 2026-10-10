@@ -78,7 +78,13 @@ CHARS_PER_LINE = 97
 #: these are properties of the layout rather than of a fixture.
 PAGE_1_CAPACITY = {
     "new_listings_gallery": {"no_narrative": 6, "with_narrative": 6},
-    "featured_listings": {"no_narrative": 6, "with_narrative": 6},
+    # 6 -> 2, AND IT IS DESIGN'S CARD, NOT A REGRESSION IN OURS. Their
+    # featured card is 326.8px against the shared gallery card's 238.3 —
+    # 18px price plate, 15px address, and a 2-column grid whose photo is
+    # 260px tall because the column is 349px wide. Two fit under the band
+    # where six did. See §8 of the capacity document: this is the one kind
+    # the market adoption COSTS pages on.
+    "featured_listings": {"no_narrative": 2, "with_narrative": 2},
     "open_houses": {"no_narrative": 6, "with_narrative": 6},
     "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
     # 17 IN BOTH STATES since `closed` moved to Design's `_v2` page, and that

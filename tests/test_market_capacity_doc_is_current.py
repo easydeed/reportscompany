@@ -298,6 +298,24 @@ V2_CONTINUATION = {
     "new_listings": 26,
     "inventory": 26,
     "price_bands": None,
+    "new_listings_gallery": 9,
+    "open_houses": 9,
+    "featured_listings": 4,
+}
+
+#: The BUILT page count per wired kind, measured by
+#: `scripts/measure_market_pagination.py` at 120 listings on 2026-10-10.
+#:
+#: PINNED RATHER THAN RECOMPUTED, and the previous version of the gate below is
+#: why. It computed `ceil((120 - page_1) / continuation) + 1`, which is right
+#: only for a kind whose cap is above 120 — true of all four table-and-bands
+#: kinds and false of every gallery kind, where `PDF_CONFIG` caps at 12 or 100
+#: and the cap decides the page count, not the row capacity. The formula was a
+#: constant that was right for every member of the set until the set grew,
+#: which is a §0.6 rule this suite has now instantiated twice.
+V2_BUILT_PAGES = {
+    "closed": 5, "new_listings": 5, "inventory": 5, "price_bands": 1,
+    "new_listings_gallery": 14, "open_houses": 12, "featured_listings": 4,
 }
 
 
@@ -325,22 +343,30 @@ def test_the_built_figures_match_the_live_pin():
         )
         page_1 = PAGE_1_CAPACITY[kind]["no_narrative"]
         per_page = V2_CONTINUATION[kind]
+        assert kind in V2_BUILT_PAGES, (
+            f"{kind} is wired with no measured page count recorded. Re-run "
+            f"`scripts/measure_market_pagination.py` and pin it."
+        )
         if per_page is None:
-            # No listings table: the report is one page whatever N is, and the
+            # No listings body: the report is one page whatever N is, and the
             # pin reads 0 because nothing paginates. Asserted, not skipped.
             assert page_1 == 0, (
                 f"{kind} has no continuation capacity recorded but its page-1 "
                 f"pin is {page_1}. One of the two is now wrong."
             )
-            built = 1
-        else:
-            built = math.ceil((120 - page_1) / per_page) + 1
+            assert V2_BUILT_PAGES[kind] == 1, kind
+        built = V2_BUILT_PAGES[kind]
         assert f"| `{kind}` |" in body, f"§7 does not list {kind}"
         assert f"| **{built}** |" in body, (
-            f"{kind} builds to {built} pages at {page_1} + {per_page}/page; "
-            f"§7 says something else."
+            f"{kind} builds to {built} pages (page 1 holds {page_1}, "
+            f"continuation {per_page}); §7 says something else."
         )
-    assert "**Twelve pages saved across four kinds**" in body
+    assert "**Ten pages saved across seven kinds**" in body
+    assert "**the galleries cost two**" in body, (
+        "the document no longer states that the gallery kinds cost pages. The "
+        "per-kind rows are each true and the sum is the finding — two of three "
+        "unchanged and `featured_listings` doubling."
+    )
 
 
 def test_the_net_saving_is_what_the_document_claims():

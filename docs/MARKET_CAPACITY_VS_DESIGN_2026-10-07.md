@@ -80,6 +80,12 @@ new_listings.page_1 = 3
 new_listings.continuation = 8
 price_bands.page_1 = 3
 price_bands.continuation = 6
+featured_listings.page_1 = 6
+featured_listings.continuation = 9
+new_listings_gallery.page_1 = 6
+new_listings_gallery.continuation = 9
+open_houses.page_1 = 6
+open_houses.continuation = 9
 ```
 
 **`new_listings` is the finding.** It runs on our `analytics` layout today at 3 rows on page 1 and 8
@@ -156,8 +162,8 @@ market_snapshot.with_narrative = 3
 market_snapshot.with_trend = 0
 new_listings_gallery.no_narrative = 6
 new_listings_gallery.with_narrative = 6
-featured_listings.no_narrative = 6
-featured_listings.with_narrative = 6
+featured_listings.no_narrative = 2
+featured_listings.with_narrative = 2
 open_houses.no_narrative = 6
 open_houses.with_narrative = 6
 ```
@@ -229,9 +235,16 @@ difference is the finding.
 | `new_listings` | **16** | **5** | 6 |
 | `price_bands` | 2 | **1** | — (their package states no row counts for it) |
 | `inventory` | 5 | **5** | 6 |
-| | **28** | **16** | 18 for the three kinds they gave rows for |
+| `new_listings_gallery` | 14 | **14** | — (no continuation row count given) |
+| `open_houses` | 12 | **12** | — |
+| `featured_listings` | 2 | **4** | — |
+| | **56** | **46** | 18 for the three kinds they gave rows for |
 
-**Twelve pages saved across four kinds**, against the eight their arithmetic predicted across three
+**Ten pages saved across seven kinds**, and **the galleries cost two** — all of them on
+`featured_listings`, which goes 2 → 4. See §8 for the measurement.
+
+Previously stated as twelve saved across four kinds; that was true of the four table-and-bands kinds
+and is superseded by the galleries landing. **Twelve pages saved across four kinds**, against the eight their arithmetic predicted across three
 — because `closed` and `new_listings` both land on 5 rather than 6, and `price_bands` was not in
 their forecast at all.
 
@@ -268,3 +281,86 @@ Design's spec removes the construct ("no chips, no tinted fills behind semantic 
 had nothing left to fail on. The baseline went **61 → 58**, and `market__new_listings` is gone from
 it entirely. The only market rows left are `price_bands`' three badges — which is the remaining
 contrast payoff on this surface, and it is the next kind's.
+
+
+---
+
+## 8 · The galleries, re-measured against the new architecture
+
+**#156's measurement was taken against the LEGACY gallery page and is superseded.** It said: card
+258px, row gap 8px, three rows fit a continuation page with **138px to spare**. Re-measured
+2026-10-10 because the page under it was replaced — and a fit measured against a page that no longer
+renders describes nothing, which is the contrast-baseline rule applied to geometry.
+
+**The page box did not move.** `pdf_engine.py`'s 0.44in header and 0.89in footer reserve are
+untouched since PR #101, so the body is still **928.3px**. What changed is the card: Design moves the
+price onto the photo (the info block loses a 23px line) and sizes the photo from the column width
+instead of a fixed 180px.
+
+### The continuation page
+
+| | legacy | `_v2` | moved |
+|---|---|---|---|
+| shared gallery card (3-col) | 258.0 | **238.3** = 169.5 photo + 68.8 text | −19.7 |
+| row gap | 8 | 14 | +6 |
+| three rows | 790.0 | **743.0** | −47.0 |
+| headroom after three rows | 138.0 | **185.3** | **+47.3** |
+| a fourth row would need | 266 | **252.3** | — |
+
+**Three rows still fit and 3×3 holds, with more room than before.** A fourth row is 67px short, so
+the answer is not close to flipping — and it is robust to the gap: at the legacy 8px gap three rows
+are 730.9px and a fourth still does not fit.
+
+`featured_listings`' own card is **326.8px** (260.2 photo + 66.5 text) in a 2-column grid, so its
+continuation page carries **two rows, four cards**.
+
+### Design's page-1 grids do not fit under Design's band
+
+The band measures **265.4px**, leaving **662.9px** above the footer.
+
+| kind | Design's page 1 | measured | verdict |
+|---|---|---|---|
+| `new_listings_gallery` | 3×2 = 6 | **6** | fits, 172.2px spare |
+| `open_houses` | 3×3 = 9 | **6** | **80.1px short** |
+| `featured_listings` | 2×2 = 4 | **2** | **4.7px short** |
+
+**This is the third instance of their stated numbers not being self-consistent**, after the 13-and-26
+row counts and the gradient contradiction.
+
+### What each shortfall actually costs, which is not the same as how big it is
+
+| kind | short by | pages ours | pages if their grid fitted | cost |
+|---|---|---|---|---|
+| `open_houses` (cap 100) | **80.1px** | 12 | 12 | **nothing** |
+| `featured_listings` (cap 12) | **4.7px** | 4 | 3 | **one page per report** |
+
+**The bigger shortfall is the free one.** `open_houses` renders `[6, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4]`
+— 100 cards over 12 pages. Design's 3×3 everywhere would be `ceil(100 / 9)` = **also 12**, because
+the three cards page 1 cannot hold are absorbed by continuation pages that are not full. The
+shortfall moves cards between pages without adding one.
+
+`featured_listings` is the opposite: 4.7 pixels, and it costs a page on every report. At cap 12,
+`1 + ceil((12 − 2) / 4)` = 4 pages; with 2×2 on page 1 it is `1 + ceil((12 − 4) / 4)` = **3**.
+
+So the ask to Design is two different asks, and conflating them by shortfall size would have put the
+effort on the wrong one:
+
+* **`featured_listings`** — five pixels, worth a page. A line-height point or a slightly shorter
+  photo.
+* **`open_houses`** — eighty pixels, worth nothing in pages. Purely a question about **page-1
+  density**: is nine cards at that card size deliberate, or was the card size chosen for the
+  three-grid kinds and the 3×3 inherited from a sample that had a shorter card? Not ours to decide
+  either way.
+
+### What the galleries cost, and why it is one kind
+
+| kind | before | built |
+|---|---|---|
+| `new_listings_gallery` | 14 | **14** |
+| `open_houses` | 12 | **12** |
+| `featured_listings` | 2 | **4** |
+
+Two of the three are unchanged. `featured_listings` doubles because Design's featured card is 88px
+taller than the shared one — 18px price plate, 15px address, and a 349px-wide column whose 4:3 photo
+is 260px tall. **That is their design decision and it is recorded rather than worked around**; the
+4.7px above is the cheapest way back to 3.

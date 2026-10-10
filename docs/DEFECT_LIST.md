@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 60 | Real, unfixed |
-| `fixed` | 117 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 61 | Real, unfixed |
+| `fixed` | 119 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 5 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **183** | D-001 … D-183, contiguous, no duplicates |
+| **Total** | **186** | D-001 … D-186, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 15 · ROUGH 24. (Sums to 60, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 15 · ROUGH 25. (Sums to 61, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -10832,6 +10832,145 @@ Supplying `closed_history` means generating twelve months of plausible closings 
 a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
 same question as the nineteen orphans. The hole is recorded with its measurement so the decision
 can be taken on the number.
+
+---
+
+### D-184 — Design's page-1 photo grids do not fit under Design's page-1 band
+
+**Severity:** ROUGH · **Affects:** `open_houses` and `featured_listings` page 1 — the stated grid
+against the measured fit · **Found during:** re-measuring #156's gallery fit against the `_v2`
+architecture before trusting 3×3
+**Status:** `open` — **not ours to fix.** Built to the measured fit, with the shortfall reported to
+Design as a measurement.
+
+Their per-kind table states a page-1 grid for each gallery kind. Their band, measured on the page
+they specified, is **265.4px**, leaving **662.9px** above the footer:
+
+| kind | Design states | measured fit | verdict |
+|---|---|---|---|
+| `new_listings_gallery` | 3×2 = 6 | **6** | fits, 172.2px spare |
+| `open_houses` | 3×3 = 9 | **6** | **80.1px short** |
+| `featured_listings` | 2×2 = 4 | **2** | **4.7px short** |
+
+**`featured_listings` misses by four and a half pixels.** One point of line-height, or five pixels
+off the photo, and 2×2 fits — which takes that kind from 4 pages to 3.
+
+#### THE BIGGER SHORTFALL IS THE FREE ONE, and that inverts the priority
+
+| kind | short by | pages ours | pages if their grid fitted | cost |
+|---|---|---|---|---|
+| `open_houses` (cap 100) | **80.1px** | 12 | 12 | **nothing** |
+| `featured_listings` (cap 12) | **4.7px** | 4 | 3 | **one page per report** |
+
+`open_houses` renders `[6, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4]` — 100 cards over 12 pages. Design's 3×3
+everywhere would be `ceil(100 / 9)` = also 12, because the three cards page 1 cannot hold are
+absorbed by continuation pages that are not full. **The shortfall moves cards between pages without
+adding one.**
+
+Filed as one entry because it is one class of defect, but it is **two different asks**, and ranking
+them by shortfall size would have put the effort on the wrong one: five pixels on `featured_listings`
+buys a page on every report, and eighty on `open_houses` buys nothing and is purely a page-1 density
+question.
+
+#### Third instance of the same class
+
+After the 13-and-26 row counts (page-1 13 and continuation 26 are not simultaneously satisfiable:
+26 needs a row ≤34.8px, and 13 at that height needs 441–476px of page-1 chrome where their own band
+computes to ~295px and ours measures 265px) and the gradient contradiction. **The pattern is a
+number stated for one part of a page without the rest of the page in it** — and it is the same
+failure mode as this project's own, which is why it is filed rather than just relayed: we shipped
+`ceil((120 - page_1) / 26) + 1` as a built-page formula that was right for four kinds and wrong for
+every capped one.
+
+#### Built to the measurement, not to the spec
+
+`PAGE_1_CAPACITY` records 6 / 6 / 2 because that is what renders. The alternative — honouring the
+stated grid — puts a ninth card 80px below the page edge, where PDFShift breaks it onto page 2 as an
+orphan row. **A spec number that does not fit is not a target to hit by overflowing.**
+
+---
+
+### D-185 — a page-size assertion covered one report type and read as if it covered the market templates
+
+**Severity:** FRAGILE · **Affects:** `tests/test_market_templates.py::TestPrintCSS` — four `_v2`
+kinds unasserted for three days · **Found during:** wiring the gallery kinds, when the one kind the
+test could see finally moved
+**Status:** `fixed` — `feat/market-galleries-v2`
+
+```python
+def test_has_page_size_rule(self, full_data):
+    html = MarketReportBuilder(full_data).render_html()
+    assert "@page" in html, "Missing @page CSS rule"
+```
+
+`full_data` sets one `report_type` — `new_listings_gallery`. So the test reads as *"the market
+templates set a page size"* and means *"`new_listings_gallery` does"*.
+
+**`closed`, `new_listings`, `inventory` and `price_bands` moved to the `_v2` page, which has no
+`@page` rule at all, and shipped that way for three days unobserved.** The test could not see them.
+It failed only when the gallery kind itself moved — the last moment it could have.
+
+#### The tell is the fixture, not the assertion
+
+The assertion is correct, points at the right object and asserts the right thing. What is wrong is
+its **scope**: a single-instance fixture under a class-scoped name. `full_data` with one
+`report_type`, a partial render standing for a page, one theme standing for six. **It reads as
+coverage and is a sample of one.**
+
+This is the direction **D-107** failed in a day earlier, in a document rather than a test: the
+entry's claim was class-scoped ("the price-band stat cards show the first four bands") and its fix
+was instance-scoped (one macro of two), and nothing noticed for ten days. §0.6 now carries the rule.
+
+#### Fixed by pinning per member, not by renaming
+
+`HAS_AT_PAGE_RULE` records the expectation for all eight kinds and the test is parametrised over
+`ALL_REPORT_TYPES`, so an unrecorded kind is an error. Renaming it to
+`test_new_listings_gallery_has_a_page_size_rule` would have been honest and would still have left
+seven kinds unasserted.
+
+**The `_v2` page is left without an `@page` rule, deliberately.** PDFShift sets the page box through
+its API — `format`, `margin`, and the 0.44in/0.89in header and footer reserve — and the measured
+PDFs are correct letter pages without any CSS rule. Adding `@page { margin }` to a document whose box
+is set by the caller risks moving the body, and **every row capacity on this surface is measured
+against that box**, so it would mean re-measuring seven kinds to buy a rule that changes nothing. A
+mutation adding one is recorded and fires.
+
+---
+
+### D-186 — three facts the gallery card dropped on the way to Design's page, each guarded by a gate written because zero is the interesting value
+
+**Severity:** WRONG · **Affects:** the three gallery kinds — a studio's bed count, a same-day
+listing's date, and an empty search · **Found during:** wiring the galleries, by three gates that
+had been written for exactly these values
+**Status:** `fixed` — `feat/market-galleries-v2`. All three found and fixed in the same change.
+
+Design's gallery card is price plate · address · `{hood} · {specs}`. Three things the legacy card
+carried are absent from that spec, and all three were caught by `test_zero_conditionals.py` — a file
+whose whole subject is values an `or` chain eats:
+
+| what was lost | the gate | fixed by |
+|---|---|---|
+| **"Studio"** for 0 bedrooms | `test_zero_bedrooms_renders_as_a_studio` | `_v2_card_specs` names it. `0 bd` is not wrong so much as not what the thing is called, and it reads as missing data to the agent's client |
+| **a same-day listing's date** | `test_zero_days_on_market_renders_as_new` | the card's third line — Design's own slot, which `open_houses` puts its viewing time in — carries `Today` / `n d ago`. Their word, their structure |
+| **the empty state** | `test_an_empty_result_set_says_so_in_the_terms_of_the_search` | an empty grid was a bare `<section>`; it now names the city and `filters_label` |
+
+#### Why the third one matters most
+
+"No listings matched this search" **alone cannot tell an empty market from an over-tight filter**,
+which is the entire point of that gate: the reader has to know whether to widen the filter or believe
+the market. The first version of the fix named the report title instead of `filters_label` and would
+have passed a test asserting only the sentence.
+
+This is the same empty-state shape as `price_bands`' bands body rendering five column headings over
+nothing, two days earlier, on the same page. Standing instruction unchanged: **the report renders and
+says the search returned nothing; it does not change whether the report sends** (D-110).
+
+#### The one judgement call, flagged
+
+The date line is **not in Design's gallery spec.** It is placed in the slot their own card already
+has for per-kind information, because the alternative was losing the most interesting fact on a
+new-listings report to a spec that did not ask for it to go. One `{% elif %}` removes it if they want
+the card bare — but that should be their sentence, not a silent omission.
 
 ---
 

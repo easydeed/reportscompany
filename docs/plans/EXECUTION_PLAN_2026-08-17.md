@@ -1473,6 +1473,41 @@ it.**
   And when a seam moves a kind, surface or path off one code path onto another, the question is not
   only "does the new path work" but **"what did the old path produce that nobody else produces"**.
 
+- **AN ASSERTION SCOPED TO ONE INSTANCE, NAMED AS IF SCOPED TO THE CLASS.** *Added 2026-10-10.*
+
+  §0.6 already says a gate on a document must assert its claims, not its text, and that a gate on a
+  producer is not a gate on the document. This is the third face of it: the gate is pointed at the
+  right object, asserts the right thing, and **covers one member of a set whose name it borrows.**
+
+  `TestPrintCSS::test_has_page_size_rule` reads as *"the market templates set a page size"*. Its
+  fixture sets one `report_type`, so it meant *"`new_listings_gallery` does"*. **Four `_v2` kinds
+  shipped with no `@page` rule for three days and it was unobserved** — the test could not see them,
+  and it failed only when the one kind it did see moved, which is the last moment it could have.
+
+  The tell is in the **fixture, not the assertion**: a single-instance fixture under a class-scoped
+  name. `full_data` with one `report_type`, a partial render standing for a page, one theme standing
+  for six. The assertion reads as coverage and is a sample of one.
+
+  **This is also the direction D-107 failed in**, a day earlier and in a document rather than a test:
+  the entry's claim was class-scoped (*"the price-band stat cards show the first four bands"*) and
+  its fix was instance-scoped (one macro of two). Same mismatch, and nothing noticed for ten days.
+
+  Two remedies, and which one depends on whether the members differ:
+
+  * **They do not differ** → parametrise over the set. `ALL_REPORT_TYPES`, every theme, every kind.
+  * **They do differ** → pin the expectation per member and make an unrecorded member an error, the
+    way `HAS_AT_PAGE_RULE` now records that the legacy page has an `@page` rule and the `_v2` page
+    deliberately has none.
+
+  What is NOT a remedy is renaming the test to match its scope. `test_new_listings_gallery_has_a_
+  page_size_rule` would be honest and would still leave seven kinds unasserted. **The name should
+  carry the scope, and the scope should be the class.**
+
+  *Checked and absent:* a test asserting exactly one `<table` in a document that has two, passing
+  because its fixture was a partial render, is **not in this repository** — there is no such
+  assertion and no `test_html` fixture. Recorded so it is not re-filed; the real instance is the
+  `@page` one above.
+
 - **A POSITIVE CONTROL DRAWN FROM THE SET BEING MIGRATED IS CONSUMED BY THE MIGRATION.**
   *Added 2026-10-08.*
 

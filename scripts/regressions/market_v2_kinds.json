@@ -37,8 +37,8 @@
   {
     "name": "a kind is added to V2_KINDS with no band spec",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\"})",
-    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\", \"market_snapshot\"})",
+    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\",\n                      \"new_listings_gallery\", \"open_houses\",\n                      \"featured_listings\"})",
+    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\",\n                      \"new_listings_gallery\", \"open_houses\",\n                      \"featured_listings\", \"market_snapshot\"})",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
@@ -149,8 +149,8 @@
   {
     "name": "a layout macro goes dead with nothing recording it",
     "file": "apps/worker/tests/test_market_layout_map.py",
-    "old": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"pricebands_layout\"]",
-    "new": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\",\n                             \"pricebands_layout\"]",
+    "old": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"gallery_layout\", \"pricebands_layout\"]",
+    "new": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"pricebands_layout\"]",
     "test": "apps/worker/tests/test_market_layout_map.py"
   },
   {
@@ -222,5 +222,54 @@
     "old": "            else:\n                raise NotImplementedError(\n                    f\"{self.report_type} has `_v2` table columns but no fifth-\"",
     "new": "            elif True:\n                fifth = V2_DASH\n                emphasis = False\n                price = _v2_money(lst)\n            else:\n                raise NotImplementedError(\n                    f\"{self.report_type} has `_v2` table columns but no fifth-\"",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "a studio renders as 0 bd, which reads as missing data",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        parts.append(\"Studio\" if int(beds) == 0 else f\"{int(beds)} bd\")",
+    "new": "        parts.append(f\"{int(beds)} bd\")",
+    "test": "apps/worker/tests/test_zero_conditionals.py"
+  },
+  {
+    "name": "the gallery card drops the listed date, so a same-day listing is unmarked",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "                \"listed\": (_v2_listed_label(item.get(\"days_on_market\"))",
+    "new": "                \"listed\": (None and _v2_listed_label(item.get(\"days_on_market\"))",
+    "test": "apps/worker/tests/test_zero_conditionals.py"
+  },
+  {
+    "name": "an empty gallery search renders a bare section instead of saying so",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "{% if not v2_gallery.rows %}",
+    "new": "{% if False %}",
+    "test": "apps/worker/tests/test_zero_conditionals.py"
+  },
+  {
+    "name": "the empty state names the report instead of the search's own filters",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            \"empty_label\": (self.report_data.get(\"filters_label\") or \"\").strip(),",
+    "new": "            \"empty_label\": \"\",",
+    "test": "apps/worker/tests/test_zero_conditionals.py"
+  },
+  {
+    "name": "the featured card loses its own type, so four kinds share one card",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            \"card\": (V2_FEATURED_CARD\n                     if self.report_type == \"featured_listings\"\n                     else V2_LISTING_CARD),",
+    "new": "            \"card\": V2_LISTING_CARD,",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "the open-house pill hardcodes Sat & Sun regardless of the slots present",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        dates = self._open_house_dates()\n        if not dates:\n            return city",
+    "new": "        dates = self._open_house_dates()\n        if True:\n            return f\"Sat & Sun \\u00b7 {city}\"",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
+  },
+  {
+    "name": "the _v2 page gains an @page rule, which moves a measured page box",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "  html, body { margin: 0; padding: 0; }",
+    "new": "  @page { size: letter; margin: 0; }\n  html, body { margin: 0; padding: 0; }",
+    "test": "tests/test_market_templates.py"
   }
 ]

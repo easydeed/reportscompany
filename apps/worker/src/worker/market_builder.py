@@ -19,6 +19,7 @@ Usage:
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -329,7 +330,9 @@ def _v2_beds_baths(item) -> str:
 #: badge selectors on `new_listings` and `price_bands`, so wiring `closed`
 #: closes zero of them, by construction. See
 #: docs/MARKET_TOKEN_MAPPING_2026-10-07.md.
-V2_KINDS = frozenset({"closed", "new_listings", "price_bands", "inventory"})
+V2_KINDS = frozenset({"closed", "new_listings", "price_bands", "inventory",
+                      "new_listings_gallery", "open_houses",
+                      "featured_listings"})
 
 #: Design's shared page. One template, dispatched on kind, per their README.
 V2_TEMPLATE_PATH = "_v2/report.jinja2"
@@ -369,6 +372,26 @@ V2_TABLE_COLUMNS = {
     "inventory": {"price": "List price", "fifth": "Status",
                   "noun": "homes for sale", "noun_one": "home for sale"},
 }
+
+#: Design's page-1 photo grid per gallery kind, from their per-kind table.
+#:
+#: COLUMNS ONLY. The ROW count on a continuation page is not in their package —
+#: their continuation section covers "closed, inventory, new_listings table"
+#: and says nothing about a grid — so it is measured rather than quoted. The
+#: page-1 row count IS theirs and is what the band leaves room for.
+V2_GRID = {
+    "new_listings_gallery": {"cols": 3, "rows_page_1": 2},
+    "open_houses": {"cols": 3, "rows_page_1": 3},
+    "featured_listings": {"cols": 2, "rows_page_1": 2},
+}
+
+#: `featured_listings` is the one gallery kind with its OWN card, not a
+#: different grid of the same card. Design: price plate 18px (against 15),
+#: address 15px/600 (against 13), and beds/baths/sq ft as three stacked
+#: mini-stats to the right instead of one meta line underneath. Four cards on a
+#: page can afford the size; nine cannot.
+V2_FEATURED_CARD = "featured"
+V2_LISTING_CARD = "listing"
 
 #: Design's `Status` rule for `inventory`: "New" at or under this many days.
 #:
@@ -414,6 +437,41 @@ def _v2_listed_label(days) -> str:
         return V2_DASH
     days = int(days)
     return "Today" if days == 0 else f"{days} d ago"
+
+
+def _v2_card_specs(item) -> str:
+    """`"3 bd / 2 ba / 1,480 sq ft"`, dropping whichever parts are absent.
+
+    Built from the parts that exist rather than from a format string, because
+    a format string renders `None bd / None ba` and an `or` chain renders a
+    studio's 0 bedrooms as missing (D-108, D-168 — both have shipped here).
+    """
+    parts = []
+    beds = item.get("beds")
+    baths = item.get("baths")
+    sqft = item.get("sqft")
+    if isinstance(beds, (int, float)) and not isinstance(beds, bool):
+        # "STUDIO", NOT "0 bd". The legacy card said Studio and
+        # `test_zero_bedrooms_renders_as_a_studio` is a gate written because
+        # zero bedrooms is a real property and an `or` chain eats it. "0 bd" is
+        # not wrong so much as not what the thing is called, and a listing that
+        # reads "0 bd" looks like missing data to the reader it is for.
+        parts.append("Studio" if int(beds) == 0 else f"{int(beds)} bd")
+    if isinstance(baths, (int, float)) and not isinstance(baths, bool):
+        shown = int(baths) if float(baths).is_integer() else baths
+        parts.append(f"{shown} ba")
+    if isinstance(sqft, (int, float)) and not isinstance(sqft, bool) and sqft:
+        parts.append(f"{int(sqft):,} sq ft")
+    return " / ".join(parts)
+
+
+def _v2_open_house_label(day) -> str:
+    """`"Sat 11 Oct"` — Design's From/To cells.
+
+    Day name first because that is what a reader scans for on an open-house
+    report: "is there a Sunday one" is the question, not "is it the 12th".
+    """
+    return f"{day.strftime('%a')} {day.day} {day.strftime('%b')}"
 
 
 def _v2_label_size(label: str) -> int:
@@ -840,7 +898,7 @@ class MarketReportBuilder:
             ]
             pill = f"{ratio:.1f}% of asking" if ratio is not None else None
             pill_sub = f"last {lookback} days"
-        elif self.report_type == "new_listings":
+        elif self.report_type in ("new_listings", "new_listings_gallery"):
             # Design: "same header, same pill, same stats" as the grid kind —
             # count / "new listings in {area}", price range / "this week",
             # Median list · Under $1M · Of inventory.
@@ -856,6 +914,43 @@ class MarketReportBuilder:
             ]
             pill = f"{low} – {high}" if low and high else None
             pill_sub = "this week"
+
+        elif self.report_type == "open_houses":
+            # Design: count "9" / "homes to see this weekend", pill
+            # "Open houses" / "Sat & Sun · {area}", stats From · To ·
+            # Neighborhoods.
+            #
+            # THE PILL SUB IS DERIVED, NOT THE LITERAL "Sat & Sun". Design's
+            # example says Sat & Sun because their sample week has both; a feed
+            # with one Sunday slot would render a document promising Saturday
+            # viewings that do not exist. The days actually present are read
+            # off the listings and named.
+            label = "homes to see this weekend"
+            big = _v2_count(len(self._v2_listing_rows()))
+            first, last, hoods = self._v2_open_house_span()
+            cells = [
+                ("From", first or V2_NO_DATA),
+                ("To", last or V2_NO_DATA),
+                ("Neighborhoods", _v2_count(hoods) if hoods else V2_NO_DATA),
+            ]
+            pill = "Open houses"
+            pill_sub = self._v2_open_house_days(city)
+
+        elif self.report_type == "featured_listings":
+            # Design: count "4" / "featured homes in {area}", pill
+            # "Hand-picked" / price range, stats Listings · Avg. price ·
+            # Avg. sq ft.
+            rows = self._v2_listing_rows()
+            label = f"featured homes in {city}"
+            big = _v2_count(len(rows))
+            low, high = self._v2_price_range()
+            cells = [
+                ("Listings", _v2_count(len(rows))),
+                ("Avg. price", _v2_money(self._v2_average("list_price", "price"))),
+                ("Avg. sq ft", _v2_count(self._v2_average("sqft"))),
+            ]
+            pill = "Hand-picked"
+            pill_sub = f"{low} – {high}" if low and high else None
 
         elif self.report_type == "inventory":
             # Design: count "212" / "homes for sale in {area}", pill
@@ -1112,6 +1207,95 @@ class MarketReportBuilder:
         return describe(moi)["formatted_current"], (
             f"of inventory · {label.lower()}")
 
+    def _v2_listing_rows(self):
+        """The raw listings a `_v2` body will render, capped as the page caps.
+
+        One accessor, because four gallery/band branches were each reaching for
+        `listings or listings_sample` and a fifth would have got it subtly
+        different. The cap is `_build_listings_context`'s, so a band counting
+        "9 homes to see" agrees with the nine cards below it rather than with
+        the hundred the feed returned — a band that disagrees with its own body
+        is worse than either number alone.
+        """
+        return self._build_listings_context()["items"]
+
+    def _v2_average(self, *keys):
+        """The mean of the first present numeric value across `keys`, or None.
+
+        `None` and not `0` for an empty set: "no listing reports a sq ft" is
+        not "the average sq ft is zero" (D-137), and `_v2_money`/`_v2_count`
+        turn the None into a dash.
+        """
+        vals = []
+        for item in self._v2_listing_rows():
+            value = _first_present(item, *keys)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                vals.append(value)
+        if not vals:
+            return None
+        return sum(vals) / len(vals)
+
+    def _v2_open_house_span(self):
+        """`("Sat 11 Oct", "Sun 12 Oct", 3)` — the first slot, last, and hoods.
+
+        Design's three `open_houses` stats are From · To · Neighborhoods, and
+        none of them is a metric: the open-house builder returns no `metrics`
+        at all, so all three come from the listings. The dates are already
+        sorted ascending by `build_open_houses_result`, but this does not rely
+        on that — a body that trusts an upstream sort is a body that breaks
+        when someone adds a filter.
+        """
+        dates = self._open_house_dates()
+        hoods = {
+            (item.get("city") or "").strip()
+            for item in self._v2_listing_rows()
+            if (item.get("city") or "").strip()
+        }
+        if not dates:
+            return None, None, len(hoods)
+        return (_v2_open_house_label(min(dates)),
+                _v2_open_house_label(max(dates)),
+                len(hoods))
+
+    def _open_house_dates(self):
+        """Every parseable `next_open_house` as a `date`, deduplicated."""
+        out = set()
+        for item in self._v2_listing_rows():
+            raw = item.get("next_open_house")
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            try:
+                out.add(datetime.strptime(raw.strip()[:10], "%Y-%m-%d").date())
+            except ValueError:
+                # Feeds also send "Sat 1-4pm" and other free text here. An
+                # unparseable slot is dropped from the SPAN and still renders
+                # on its card, which is the right split: the card shows what
+                # the feed said, the band only claims what it could read.
+                continue
+        return out
+
+    def _v2_open_house_days(self, city: str) -> str:
+        """`"Sat & Sun · Irvine"`, or whichever days are actually present.
+
+        NOT THE LITERAL "Sat & Sun". Design's example reads that way because
+        their sample week has both, and a report whose only slot is Sunday
+        would otherwise promise Saturday viewings that do not exist — a claim
+        the data contradicts, on a document an agent hands to a client.
+        """
+        dates = self._open_house_dates()
+        if not dates:
+            return city
+        names = sorted({d.strftime("%a") for d in dates},
+                       key=lambda n: min(d.weekday() for d in dates
+                                         if d.strftime("%a") == n))
+        if len(names) == 1:
+            days = names[0]
+        elif len(names) == 2:
+            days = f"{names[0]} & {names[1]}"
+        else:
+            days = f"{names[0]}\u2013{names[-1]}"
+        return f"{days} \u00b7 {city}"
+
     def _v2_price_range(self):
         """`($641K, $1.2M)` from the listings' own prices, or `(None, None)`.
 
@@ -1158,6 +1342,88 @@ class MarketReportBuilder:
         if not isinstance(new, (int, float)):
             return V2_NO_DATA
         return f"{new / active * 100:.0f}%"
+
+    def _v2_gallery(self) -> Dict[str, Any]:
+        """Design's photo grid: the cards, the grid shape, and which card.
+
+        TWO CARDS, NOT ONE GRID OF ONE CARD. `featured_listings` gets its own
+        (price plate 18px, address 15px/600, beds/baths/sq ft as three stacked
+        mini-stats to the right) because four cards on a page can afford the
+        size and nine cannot. `new_listings_gallery` and `open_houses` share
+        the listings card — Design's own words, "same card as listings".
+
+        THE PHOTO RESERVES ITS BOX WITHOUT LOADING, and that is load-bearing
+        for the page-fit measurement rather than a detail. It is an
+        `aspect-ratio` on a `background-image` div, so the height is reserved
+        from the column width whether or not a remote photo resolves — and
+        remote photos never resolve in a headless render. The legacy card used
+        a fixed `height: 180px` for the same reason; an `<img>` with no
+        reserved box would make `measure_gallery_continuation_fit.py` measure a
+        page that collapses to nothing.
+        """
+        rows = []
+        for item in self._v2_listing_rows():
+            price = _first_present(item, "list_price", "price")
+            hood = (item.get("city") or "").strip()
+            rows.append({
+                "photo_url": item.get("photo_url") or None,
+                "price": _v2_money(price),
+                "address": item.get("address") or V2_NO_DATA,
+                # `{hood} · {specs}` as ONE line, Design's spec. Joined here
+                # rather than in the template so an absent hood does not render
+                # a leading separator — the shape `· 3 bd / 2 ba` is the
+                # thing a dot-joined template produces on missing data.
+                "meta": " \u00b7 ".join(
+                    part for part in (hood, _v2_card_specs(item)) if part),
+                "hood": hood,
+                "beds": _v2_count(item.get("beds")),
+                "baths": _v2_count(item.get("baths")),
+                "sqft": _v2_count(item.get("sqft")),
+                # Free text as well as a date — feeds send both, and the card
+                # shows whatever the feed said even when the band could not
+                # parse it for the From/To span.
+                "open_house": (item.get("next_open_house") or "").strip() or None,
+                # THE CARD'S THIRD LINE, AND IT IS HOW "LISTED TODAY" SURVIVES
+                # THE MOVE. Design's gallery card is price plate · address ·
+                # "{hood} · {specs}" and names no date — but the legacy card
+                # carried a "New" badge on a same-day listing, and
+                # `test_zero_days_on_market_renders_as_new` is a gate written
+                # because 0 days is the value an `or` chain eats (D-105,
+                # D-108). Dropping it would lose the most interesting fact on
+                # a new-listings report, silently, to a spec that did not ask
+                # for it to go.
+                #
+                # It uses the SAME SLOT `open_houses` puts its viewing time in,
+                # so this is Design's own card structure carrying a per-kind
+                # line rather than a line invented beside it. Flagged for them:
+                # one `{% if %}` removes it if they want the card bare.
+                "listed": (_v2_listed_label(item.get("days_on_market"))
+                           if self.report_type == "new_listings_gallery"
+                           else None),
+            })
+        spec = V2_GRID[self.report_type]
+        return {
+            "rows": rows,
+            # The search's own terms, for the empty state. Standing
+            # instruction: an empty search renders and says it returned
+            # nothing — and `_v2`'s grid is a `<section>` that collapses to a
+            # bare empty element otherwise, which is the same defect the bands
+            # body had (five column headings over nothing).
+            # THE SEARCH'S OWN TERMS, not the report title. "No listings
+            # matched this search" alone cannot tell an empty market from an
+            # over-tight filter, which is the whole point of the gate on this:
+            # the reader needs to know whether to widen the filter or believe
+            # the market. `filters_label` is what the user chose.
+            "empty_label": (self.report_data.get("filters_label") or "").strip(),
+            "empty_city": self._build_header_context()["city"] or "",
+            "cols": spec["cols"],
+            "rows_page_1": spec["rows_page_1"],
+            "card": (V2_FEATURED_CARD
+                     if self.report_type == "featured_listings"
+                     else V2_LISTING_CARD),
+            "showing": len(rows),
+            "total": self._build_listings_context()["total_available"],
+        }
 
     def _v2_table(self) -> Dict[str, Any]:
         """Design's table for the three table kinds; `closed`'s columns here.
@@ -1413,6 +1679,8 @@ class MarketReportBuilder:
                              if self.report_type in V2_TABLE_COLUMNS else None),
                 "v2_bands": (self._v2_bands_body()
                              if self.report_type == "price_bands" else None),
+                "v2_gallery": (self._v2_gallery()
+                               if self.report_type in V2_GRID else None),
                 "on_primary": tokens["on_primary"],
                 "display_ink": tokens["display_ink"],
                 # The pill's text sits on WHITE, not on the brand fill, at
