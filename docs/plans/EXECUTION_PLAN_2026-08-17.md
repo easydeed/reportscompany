@@ -1473,6 +1473,39 @@ it.**
   And when a seam moves a kind, surface or path off one code path onto another, the question is not
   only "does the new path work" but **"what did the old path produce that nobody else produces"**.
 
+- **A VALUE FORMATTED FOR DISPLAY AND CONSUMED AS DATA FAILS TWICE, AND THE SECOND FAILURE IS THE
+  WORSE ONE.** *Added 2026-10-11.*
+
+  A number that has been through a display formatter is a **string**. Hand it to something that wants
+  a number and it fails in two directions, in this order:
+
+  1. **As a crash, or as nothing.** The consumer raises, or silently renders empty — loud enough to
+     notice, or at least obviously wrong.
+  2. **As a plausible value**, once somebody adds a guard. `| default(0, true) | float` turns
+     `"$412"` into `0.0`, and a chart of zeros is a chart. It paginates, it passes a smoke test, and
+     it says the market is at zero.
+
+  **The second is worse and it is caused by fixing the first.** The guard converts a visible failure
+  into an invisible one, which is why the remedy is **the boundary, not the guard**: a value crosses
+  from data to presentation exactly once, and nothing downstream of that crossing may be read as
+  data. Format at the edge, keep the number until then.
+
+  The live instance in this repository is **D-178** — `close_to_list_ratio` arrives as `0.982` from
+  one producer and `98.2` from another, and two template sites reconciled them with
+  `ratio * 100 if ratio < 2 else ratio`. Not a formatted string, but the same shape one step earlier:
+  a value whose scale is a presentation decision, consumed as data, with a guard standing in for a
+  boundary. It is fixed by normalising once in Python, which is the boundary.
+
+  The *exact* shape — `| default(0, true) | float` over a currency-formatted value — exists at
+  `templates/property/_base/_macros.jinja2:469`, and that file is **dead** (no `get_template` literal
+  reaches it; 5,570 dead lines by `derive_template_reachability.py`). Recorded with its reachability
+  rather than fixed, because editing dead code produces a diff that looks like a fix and changes no
+  rendered page — the same disposition as D-107's surviving `[:4]`.
+
+  *Checked and absent:* a `volume_label` carrying dollars, a count and dollars under one name is
+  **not in this repository** — the symbol does not exist in any `.py` or `.jinja2`. Recorded so it is
+  not re-filed.
+
 - **AN ASSERTION SCOPED TO ONE INSTANCE, NAMED AS IF SCOPED TO THE CLASS.** *Added 2026-10-10.*
 
   §0.6 already says a gate on a document must assert its claims, not its text, and that a gate on a

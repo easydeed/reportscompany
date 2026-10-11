@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 61 | Real, unfixed |
+| `open` | 62 | Real, unfixed |
 | `fixed` | 119 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 5 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **186** | D-001 … D-186, contiguous, no duplicates |
+| **Total** | **187** | D-001 … D-187, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 15 · ROUGH 25. (Sums to 61, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 16 · ROUGH 25. (Sums to 62, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -10934,6 +10934,68 @@ PDFs are correct letter pages without any CSS rule. Adding `@page { margin }` to
 is set by the caller risks moving the body, and **every row capacity on this surface is measured
 against that box**, so it would mean re-measuring seven kinds to buy a rule that changes nothing. A
 mutation adding one is recorded and fires.
+
+---
+
+### D-187 — thirty-six green tests for four metrics the product does not compute
+
+**Severity:** FRAGILE · **Affects:** `tests/test_new_metrics.py` — and §7.3's unbuilt DOM
+distribution chart, whose computation this is · **Found during:** auditing §07 for unbuilt and
+untracked work at the close of the market surface
+**Status:** `open` — **what to do about it is a decision, not a fix.** Recorded with the measurement.
+
+`tests/test_new_metrics.py` is 36 tests and they all pass. **Every function they test is defined
+inside the test file:**
+
+| function | in `apps/`? |
+|---|---|
+| `compute_price_cut_stats` | **no** |
+| `compute_dom_distribution` | **no** |
+| `comp_confidence` | **no** |
+| `parse_options_meta` | **no** |
+
+Its own docstring says so without quite saying so — *"Helpers / pure functions (no project deps)"* —
+and that is accurate about the imports and silent about the consequence: **the file specifies four
+metrics, asserts they behave correctly, and the product computes none of them.**
+
+#### Why this is worse than an empty file
+
+The defect board already carries a note on this suite from the 2026-09-22 sweep: *"`test_new_metrics.py`
+passes completely, which is worth noting: at least one of these suites has been correct and unrun for
+its whole life."* That was about the **runner** — `testpaths` had excluded it. It was then included,
+it went green, and it has been green ever since.
+
+So the suite reads as thirty-six tests' worth of coverage on price-cut rates, DOM buckets, comp
+confidence and OPTIONS parsing. **It is thirty-six tests of a specification.** §0.6: *an assertion
+with no content is worse than none, because it reads as coverage* — this is the largest instance of
+it in the repository, and it survived the sweep that was about exactly this, because the sweep asked
+whether the tests passed rather than what they tested.
+
+#### It is also the unbuilt §7.3 chart, from the other end
+
+`compute_dom_distribution` is the computation `closed`'s DOM distribution histogram needs.
+`DELIVERY_SURFACES_MASTER_PLAN` §7.3 records that chart as open, and for a good reason — the column
+it plots was D-105, every DOM read from the wrong path, and a histogram makes a number authoritative
+so it waits for a live payload. **What nothing records is that the computation is already specified
+and tested.** And `scripts/gen_la_verne_all_themes.py:505` feeds a hand-written
+`"dom_distribution": {"fast": 55, "normal": 30, "slow": 15}` into sample data, so the SHAPE is in a
+fixture with nothing producing it — the read-with-no-producer family, with the test suite standing in
+for the producer.
+
+#### Three dispositions, and this entry does not pick one
+
+1. **Move the four functions into `apps/` and import them.** The tests become real. But two of the
+   four (`comp_confidence`, `parse_options_meta`) describe behaviour the product may already
+   implement differently elsewhere, so this is not a move — it is a reconciliation, and it needs each
+   one checked against what ships.
+2. **Delete the file.** Honest, and it discards a specification of the DOM distribution that §7.3
+   will want when D-105 is confirmed in production.
+3. **Rename it to say what it is** — a specification with executable examples, not a test of the
+   product — and leave it until §7.3's chart is unblocked.
+
+**Not picked here because it is four separate decisions**, one per function, and the one that matters
+(`compute_dom_distribution`) is blocked on the same live payload the chart is. What this entry does is
+stop the suite being counted as coverage.
 
 ---
 
