@@ -62,9 +62,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 63 | Real, unfixed |
 | `fixed` | 119 | Corrected in code, with the branch or PR named on the entry |
-| `closed-not-live` | 5 | Not occurring in production, with the evidence named on the entry |
+| `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **188** | D-001 … D-188, contiguous, no duplicates |
+| **Total** | **189** | D-001 … D-189, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 63, the open total.)
 
@@ -10952,6 +10952,67 @@ PDFs are correct letter pages without any CSS rule. Adding `@page { margin }` to
 is set by the caller risks moving the body, and **every row capacity on this surface is measured
 against that box**, so it would mean re-measuring seven kinds to buy a rule that changes nothing. A
 mutation adding one is recorded and fires.
+
+---
+
+### D-189 — not reproducing: a migration `0062` that re-seeds a themes table on every deploy. Four premises, all absent.
+
+**Severity:** ROUGH — *nominal; `closed-not-live` entries are excluded from the severity sums and a
+defect that does not exist has no severity* · **Affects:** nothing · **Found during:** checking
+whether the theme rename was safe against the migrations, before writing any of it
+**Status:** `closed-not-live` — **the described code does not exist, at four independent levels.**
+Recorded because **a claim about it reached the product owner**, and because the same report will
+otherwise produce it again.
+
+Reported as: migration `0062` does `CREATE TABLE IF NOT EXISTS` then an unconditional
+`INSERT ... ON CONFLICT DO NOTHING`, has been running on every deploy for six days, and would
+resurrect a deleted `bold` theme row as a new id — so the rename is unsafe until it is fixed.
+
+**Every link in that chain is absent, and any one of them alone would be enough:**
+
+| the claim | measured |
+|---|---|
+| migration `0062` exists | **the highest migration is `0058`.** There is no `0059`, `0060`, `0061` or `0062` — `ls db/migrations/` ends at `0058_theme_cut_to_three.sql` |
+| migrations re-run on every deploy | **they do not.** `db/schema_migrations.sql` states the contract both runners implement: *"a file whose basename IS in this table is skipped, never re-executed"* — and *"if a recorded file's checksum no longer matches what was applied, the runner warns and still skips it"* |
+| there is a themes table with rows to delete | **there is no themes table.** `grep -niE "CREATE TABLE[^;]*theme" **/*.sql` returns nothing. Themes live in `apps/worker/src/worker/themes.json` |
+| a deleted row would come back with a new id | **there is no table, so no row and no sequence.** What the database stores is integers: `accounts.default_theme_id INTEGER` (`0043`, `SET DEFAULT 5` by `0058`) and `property_reports.theme INTEGER CHECK (theme >= 1 AND theme <= 5)` |
+
+A fifth claim travelled with it — that this is "the fourth copy of the id→name mapping, in SQL where
+none of the Python-side checks reach." **There is no id→name mapping in SQL.** The mapping lives in
+`themes.json` and is generated into two files by `scripts/gen_theme_registries.py`; `0058` names the
+themes **only in comments**, explaining which ids were retired.
+
+#### The shape is real, and it is closed by the runner rather than by each file
+
+The question that produced this — *"are these literals historical or operative?"* — is the right
+one, and two migrations do carry an unconditional seed with `ON CONFLICT DO NOTHING`:
+`0012_seed_plans.sql` and `0056_seed_free_plan.sql`.
+
+**`ON CONFLICT DO NOTHING` does protect against duplicates and not against re-creation after a
+deliberate delete** — that part of the report is a correct observation about SQL. It does not bite
+here because **the runner never re-executes a recorded file**, so the seed runs once whatever it
+contains. The protection is at the runner, not in the statement, and
+`tests/test_migration_bootstrap_guard.py` gates the runner's half (D-053).
+
+**Worth knowing rather than fixing:** if that contract ever changed — a runner that replayed
+migrations, or a fresh database seeded by replay — those two files would resurrect deleted plan
+rows. The guarantee is one layer away from the statements that depend on it, and neither file says
+so. That is a comment worth adding, not a defect.
+
+#### Why this is recorded rather than dismissed
+
+Nothing was built on it, so there is no code to revert — but **a message describing it as a live
+defect being fixed before the rename reached Jerry.** A non-existent defect has exactly one cost,
+and it is that: a product owner now believes his database has a flaw it does not have, and that work
+is happening which is not. Four named absences are cheaper to check next time than they were to
+check this time.
+
+**The rename's safety was the actual question and it is answered, in the other direction:** a rename
+changes no stored value, because every theme reference in the database is an integer id and ids are
+never reused (`0058`). The only theme *names* in SQL are five column identifiers in
+`0037_property_report_stats.sql` — `theme_classic`, `theme_modern`, `theme_elegant`, `theme_teal`,
+`theme_bold` — which no application code reads, and two of which have already named retired themes
+since the theme cut without consequence.
 
 ---
 
