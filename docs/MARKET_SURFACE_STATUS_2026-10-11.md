@@ -3,6 +3,20 @@
 **Status at 2026-10-11.** Seven of the eight market report types render Design's `_v2` page.
 **`market_snapshot` is not wired** — it is scoped (below) and is the remaining work.
 
+**The old-beside-new review pack is not committed, and is regenerated rather than stored:**
+
+    python3 scripts/build_review_pack.py --out <dir>
+
+One PDF, ~3MB, 46 pages: a cover, then per report type a divider saying what changed and what to look
+at, the current report, then the new one. One brand, 24 listings each.
+
+**Deliberately not in the repository.** A rendered comparison is a recorded measurement of two
+documents, and this project's standing rule is that such a record may not outlive its subject — a
+committed pack would be stale the first time a template changed, and stale with no gate to say so
+(the contrast baseline and the gallery fit measurement have both already been through that). The
+generator is committed, so the pack can be rebuilt from any commit and will describe *that* commit.
+It also means a reviewer's copy can never silently disagree with `main`.
+
 Everything here is produced by rendering, not by reading. `scripts/measure_market_pagination.py`
 (Chromium's own paginator, Letter, PDFShift's reservations) for pages and rows;
 `scripts/measure_contrast_by_pixel.py` for contrast; `scripts/measure_gallery_continuation_fit.py`
