@@ -20,7 +20,8 @@ export const PROPERTY_ASSETS_PATH = `${R2_BASE_URL}/property-reports`;
 
 export interface ThemeConfig {
   id: number;
-  key: string;  // Theme name for API: "classic", "modern", "elegant", "teal", "bold"
+  key: string;  // Theme name for API: "harbor", "linen", "atlas" (live);
+                // "classic", "teal" retired; "modern"/"elegant"/"bold" renamed 2026-10-13
   name: string;
   description: string;
   defaultColor: string;
@@ -66,8 +67,8 @@ const UNIFIED_PAGES: PageConfig[] = [
 export const THEMES: ThemeConfig[] = [
   {
     id: 2,
-    key: "modern",
-    name: "Modern",
+    key: "harbor",
+    name: "Harbor",
     description: "Fresh & contemporary",
     defaultColor: "#FF6B5B",
     secondaryColor: "#1A1F36",
@@ -79,8 +80,8 @@ export const THEMES: ThemeConfig[] = [
   },
   {
     id: 3,
-    key: "elegant",
-    name: "Elegant",
+    key: "linen",
+    name: "Linen",
     description: "Luxury & sophisticated",
     defaultColor: "#722F37",
     secondaryColor: "#C9A962",
@@ -92,8 +93,8 @@ export const THEMES: ThemeConfig[] = [
   },
   {
     id: 5,
-    key: "bold",
-    name: "Bold",
+    key: "atlas",
+    name: "Atlas",
     description: "Strong & confident",
     defaultColor: "#15216E",
     secondaryColor: "#D69649",

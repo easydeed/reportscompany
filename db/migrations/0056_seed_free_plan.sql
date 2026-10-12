@@ -37,6 +37,23 @@
 -- row already exists and may carry values chosen there. This migration does not
 -- UPDATE — it will not overwrite a limit somebody set deliberately.
 
+--
+-- WHY THE UNCONDITIONAL SEED BELOW IS SAFE, which is not stated by the
+-- statement itself. `ON CONFLICT DO NOTHING` protects against DUPLICATES; it
+-- does not protect against RE-CREATION after a row is deliberately deleted.
+-- Those are different guarantees and the idiom reads like the stronger one.
+--
+-- What makes this file safe is one layer away: both runners
+-- (`scripts/migrate.sh`, `scripts/run_migrations.py`) skip any migration whose
+-- basename is recorded in `schema_migrations`, so this never re-executes. See
+-- db/schema_migrations.sql for that contract and
+-- tests/test_migration_bootstrap_guard.py for its gate.
+--
+-- IF THAT CONTRACT EVER CHANGES — a runner that replays migrations, or a fresh
+-- database seeded by replay — this file will resurrect any row removed from
+-- the table since. Recorded here because nothing near these statements says
+-- what they depend on (D-189).
+--
 INSERT INTO plans (
     plan_slug,
     plan_name,

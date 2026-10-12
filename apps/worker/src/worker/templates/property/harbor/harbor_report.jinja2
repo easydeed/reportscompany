@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sellers Report - Modern Theme</title>
+  <title>Sellers Report - Harbor Theme</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -476,7 +476,7 @@
         <div class="contents-item"><div class="contents-num">{{ loop.index }}</div><div class="contents-text">{{ _titles[_k] }}</div><div class="contents-page">{% if _nums.get(_k) %}{{ "%02d" | format(_nums[_k]) }}{% endif %}</div></div>
         {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Harbor Collection</div><div class="num">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -493,7 +493,7 @@
         <div class="aerial-card"><h3>Neighborhood Context</h3><p>This aerial view showcases your property's location, highlighting proximity to parks, schools, and major thoroughfares.</p></div>
         <div class="aerial-card"><h3>Quarter-Mile Radius</h3><p>Properties within this radius provide the most accurate comparables with similar neighborhood characteristics.</p></div>
       </div>
-      <div class="page-footer" style="border-color: rgba(255,255,255,.15);"><div class="brand" style="color:var(--coral-on-dark);"><span class="brand-dot"></span>Modern Collection</div><div class="num" style="color:#fff;">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
+      <div class="page-footer" style="border-color: rgba(255,255,255,.15);"><div class="brand" style="color:var(--coral-on-dark);"><span class="brand-dot"></span>Harbor Collection</div><div class="num" style="color:#fff;">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -555,7 +555,7 @@
           </div>
         </div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">{% if _nums.get("property") %}{{ "%02d" | format(_nums["property"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Harbor Collection</div><div class="num">{% if _nums.get("property") %}{{ "%02d" | format(_nums["property"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -599,7 +599,7 @@
       <div class="analysis-note" style="margin-top:10px; font-size:10px; line-height:1.5;">{{ stats.analysis_note }}</div>
       {% endif %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">{% if _nums.get("analysis") %}{{ "%02d" | format(_nums["analysis"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Harbor Collection</div><div class="num">{% if _nums.get("analysis") %}{{ "%02d" | format(_nums["analysis"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -698,7 +698,7 @@
           <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
         </div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">{% if _nums.get("market_trends") %}{{ "%02d" | format(_nums["market_trends"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Harbor Collection</div><div class="num">{% if _nums.get("market_trends") %}{{ "%02d" | format(_nums["market_trends"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -724,7 +724,7 @@
         </div>
         {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">{% if _nums.get("comparables") %}{{ "%02d" | format(_nums["comparables"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Harbor Collection</div><div class="num">{% if _nums.get("comparables") %}{{ "%02d" | format(_nums["comparables"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -760,7 +760,7 @@
       </table>
       <p class="comp-list-note">{{ comparables | length }} comparable sales. Every one of them is
       listed here, and the range on the following page is drawn from these and no others.</p>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">{% if _nums.get("comparables_all") %}{{ "%02d" | format(_nums["comparables_all"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Harbor Collection</div><div class="num">{% if _nums.get("comparables_all") %}{{ "%02d" | format(_nums["comparables_all"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -786,7 +786,7 @@
         </div>
         <p class="range-note">{{ comps_window.note }}</p>
       </div>
-      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Modern Collection</div><div class="num">{% if _nums.get("range") %}{{ "%02d" | format(_nums["range"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="brand-dot"></span>Harbor Collection</div><div class="num">{% if _nums.get("range") %}{{ "%02d" | format(_nums["range"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 

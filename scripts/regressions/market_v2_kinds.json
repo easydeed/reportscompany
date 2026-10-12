@@ -163,8 +163,8 @@
   {
     "name": "a market contrast row is baselined back in, so the surface stops being at zero",
     "file": "apps/worker/tests/pdf_contrast_baseline.txt",
-    "old": "property__elegant\tdiv.cover-agent-name\t#ffffff\t#58880e",
-    "new": "market__price_bands\tspan.status-badge.active\t#5E636B\t#E6EEF5\nproperty__elegant\tdiv.cover-agent-name\t#ffffff\t#58880e",
+    "old": "property__linen\tdiv.cover-agent-name\t#ffffff\t#58880e",
+    "new": "market__price_bands\tspan.status-badge.active\t#5E636B\t#E6EEF5\nproperty__linen\tdiv.cover-agent-name\t#ffffff\t#58880e",
     "test": "apps/worker/tests/test_pdf_contrast.py::test_the_market_surface_has_no_baselined_failure_left tests/test_market_token_mapping.py::test_the_market_baseline_is_spent"
   },
   {

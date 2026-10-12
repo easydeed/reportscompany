@@ -65,9 +65,9 @@ thing to change deliberately, not to work around.
 
 ```
 apps/worker/src/worker/templates/property/_v2/report.jinja2          <- the six pages
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2    <- bold's type only
-apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2
+apps/worker/src/worker/templates/property/atlas/atlas_report.jinja2    <- bold's type only
+apps/worker/src/worker/templates/property/linen/linen_report.jinja2
+apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2
 ```
 
 ---

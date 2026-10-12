@@ -13,9 +13,9 @@ from typing import Dict, List
 
 #: id -> name, live themes only.
 THEME_NUMBER_MAP: Dict[int, str] = {
-    2: "modern",
-    3: "elegant",
-    5: "bold",
+    2: "harbor",
+    3: "linen",
+    5: "atlas",
 }
 
 #: Retired ids. Still held by historical rows; not selectable.

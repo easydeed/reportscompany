@@ -53,7 +53,25 @@ WEB_GENERATED = REPO / "apps/web/lib/themes.generated.ts"
 TEMPLATES = REPO / "apps/worker/src/worker/templates/property"
 MIGRATION = REPO / "db/migrations/0058_theme_cut_to_three.sql"
 
-ALL_NAMES = ("teal", "bold", "classic", "modern", "elegant")
+#: Every theme name the id->name pairing has EVER used — live, retired and
+#: former. Not just the current three, because the id-pairing regexes below hunt
+#: for stale copies of the mapping, and a stale copy spells the name it was
+#: written with.
+#:
+#: THREE CATEGORIES AND THEY ARE NOT INTERCHANGEABLE:
+#:   live    harbor (2) · linen (3) · atlas (5)
+#:   retired classic (1) · teal (4)      — no template, id not in use
+#:   former  modern · elegant · bold     — renamed 2026-10-13, IDS STILL LIVE
+#:
+#: A former name in live code breaks for a different reason than a retired one:
+#: `"bold"` asks for `bold/bold_report.jinja2`, which the rename moved, while
+#: `"teal"` asks for a template that was deleted. Both are unreachable paths;
+#: `test_no_live_code_path_names_a_retired_theme` reports which kind it found.
+ALL_NAMES = ("teal", "bold", "classic", "modern", "elegant",
+             "atlas", "linen", "harbor")
+
+#: Names that must not appear quoted in live code, and why each one must not.
+FORMER_NAMES = ("bold", "elegant", "modern")
 
 #: Source trees worth scanning. `output/` holds generated HTML and PDFs and
 #: `_intake/` holds a vendored starter app; neither ships.
@@ -134,7 +152,8 @@ def test_the_registry_says_one_thing():
         f"are never reused, because property_reports.theme holds historical values"
     )
     assert len(set(live.values())) == len(live), "two live themes share a name"
-    assert set(live.values()) | set(retired.values()) == set(ALL_NAMES), (
+    assert (set(live.values()) | set(retired.values())
+            | set(FORMER_NAMES)) == set(ALL_NAMES), (
         "the registry has gained or lost a theme name this gate does not know "
         "about; add it to ALL_NAMES and re-read the retired-name exemptions below"
     )
@@ -341,6 +360,12 @@ RETIRED_NAME_ALLOWED = {
     "db/migrations/0058_theme_cut_to_three.sql": "the migration that did it",
     "apps/worker/src/worker/themes.json": "canonical; carries the retired set",
     "apps/worker/src/worker/theme_registry.py": "explains what D-163 was",
+    # `w === 'bold' ? 700 : ...` — a CSS font weight inside the measurement's
+    # injected JS, quoted because JS quotes it. D-176's point exactly: a string
+    # carries no namespace, and `bold` is a font weight far more often than a
+    # theme. The rename makes this the LAST such collision: `atlas`, `linen`
+    # and `harbor` are not CSS keywords.
+    "scripts/measure_pdf_contrast.py": "a CSS font weight in injected JS, not a theme",
     "scripts/gen_theme_registries.py": "generates the retired set",
     "apps/api/src/api/theme_registry.py": "generated; carries the retired set",
     "scripts/derive_theme_name_scope.py":
@@ -358,8 +383,17 @@ def test_no_live_code_path_names_a_retired_theme():
     (`--teal`, 39 of them), so this would have been a wall of noise before
     the cut — it is the cut that makes the gate affordable.
     """
-    retired = [t["name"] for t in registry()["retired"]]
-    word = re.compile(r"\b(" + "|".join(retired) + r")\b", re.I)
+    # RETIRED **AND** FORMER. A retired name asks for a deleted template; a
+    # former name asks for one the rename moved. Both are paths that cannot
+    # resolve, and the gate exists for the paths rather than for the reason —
+    # so it reads both lists and names which kind it found.
+    reg = registry()
+    retired = [t["name"] for t in reg["retired"]]
+    former = [t["was"] for t in reg.get("renamed", [])]
+    why = {n: "retired" for n in retired}
+    why.update({n: f"renamed to {t['now']}" for t in reg.get("renamed", [])
+                for n in [t["was"]]})
+    word = re.compile(r"\b(" + "|".join(retired + former) + r")\b", re.I)
     offenders = {}
     for path in source_files(".py", ".ts", ".tsx", ".sql"):
         rel = str(path.relative_to(REPO))
@@ -541,3 +575,49 @@ def test_no_request_model_defaults_a_theme_field_to_a_retired_id():
         "`SELECTABLE_THEME_IDS` (or a field_validator against it) for the set. "
         "A range cannot express the gaps ids-are-never-reused leaves behind."
     )
+
+
+def test_a_former_name_resolves_to_the_theme_it_became_not_the_default():
+    """THE RENAME'S ONE REAL HAZARD, and it is on a live read path.
+
+    `report_generations.theme_id` is VARCHAR(20) and the market wizard wrote a
+    NAME into it. `tasks.py` reads that column and calls `resolve()` on
+    whatever it finds. Before the 2026-10-13 rename a row holding `'modern'`
+    matched the live map and resolved to id 2. After it, `modern` is in no live
+    map, the string is not a digit, and `resolve` would fall through to the
+    DEFAULT — rendering a report stored as `modern` in `atlas` (5) instead of
+    `harbor` (2).
+
+    **Two of the three would have been wrong and nothing would have said so.**
+    `bold` was already the default, so it alone would have looked correct. The
+    column is a string, the fallback is deliberate (D-166), and a report in the
+    wrong theme still renders.
+
+    This is the live-reference question asked of a COLUMN rather than a
+    migration, and the column is where the answer was yes.
+    """
+    sys.path.insert(0, str(REPO / "apps/worker/src"))
+    from worker.theme_registry import resolve
+
+    reg = registry()
+    renamed = reg.get("renamed", [])
+    assert renamed, "themes.json records no renames; this gate has no subject"
+
+    for entry in renamed:
+        was, now, want_id = entry["was"], entry["now"], int(entry["id"])
+        got_name, got_id = resolve(was)
+        assert (got_name, got_id) == (now, want_id), (
+            f"resolve({was!r}) gave {(got_name, got_id)}, expected "
+            f"{(now, want_id)}. A former name must resolve to the theme it "
+            f"became — defaulting it relabels every stored report that holds "
+            f"the old string."
+        )
+
+    # And the distinction from a RETIRED name, which must still default.
+    default_id = int(reg["default_id"])
+    for entry in reg["retired"]:
+        _name, got_id = resolve(entry["name"])
+        assert got_id == default_id, (
+            f"resolve({entry['name']!r}) gave id {got_id}; a retired theme has "
+            f"no template and must fall back to the default ({default_id})."
+        )

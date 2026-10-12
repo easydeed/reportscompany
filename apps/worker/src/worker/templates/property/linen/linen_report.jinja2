@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sellers Report - Elegant Theme</title>
+  <title>Sellers Report - Linen Theme</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -397,7 +397,7 @@
         <div class="contents-item"><div class="contents-num">{{ loop.index }}</div><div class="contents-text">{{ _titles[_k] }}</div><div class="contents-dots"></div><div class="contents-page">{% if _nums.get(_k) %}{{ "%02d" | format(_nums[_k]) }}{% endif %}</div></div>
         {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("contents") %}{{ "%02d" | format(_nums["contents"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -415,7 +415,7 @@
         </div>
       </div>
             {# E15/D-129: NO `color:#fff` HERE. This footer sits on the page's light background, not on the dark band above it — measured 1.11:1 and 1.31:1 on #f3f3f3 by reading the rendered pixel. The theme's own `.page-footer` colours are the legible ones. #}
-      <div class="page-footer" style="border:none;"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
+      <div class="page-footer" style="border:none;"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("aerial") %}{{ "%02d" | format(_nums["aerial"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -480,7 +480,7 @@
           </table>
         </div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("property") %}{{ "%02d" | format(_nums["property"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("property") %}{{ "%02d" | format(_nums["property"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -522,7 +522,7 @@
       {% if stats.analysis_note %}
       <div class="analysis-note" style="margin-top:10px; font-size:10px; line-height:1.5;">{{ stats.analysis_note }}</div>
       {% endif %}
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("analysis") %}{{ "%02d" | format(_nums["analysis"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("analysis") %}{{ "%02d" | format(_nums["analysis"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -623,7 +623,7 @@
           <p>Market conditions change rapidly. Consult your real estate professional for current, personalized advice.</p>
         </div>
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("market_trends") %}{{ "%02d" | format(_nums["market_trends"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("market_trends") %}{{ "%02d" | format(_nums["market_trends"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -651,7 +651,7 @@
         </div>
         {% endfor %}
       </div>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("comparables") %}{{ "%02d" | format(_nums["comparables"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("comparables") %}{{ "%02d" | format(_nums["comparables"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -689,7 +689,7 @@
       </table>
       <p class="comp-list-note">{{ comparables | length }} comparable sales. Every one of them is
       listed here, and the range on the following page is drawn from these and no others.</p>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("comparables_all") %}{{ "%02d" | format(_nums["comparables_all"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("comparables_all") %}{{ "%02d" | format(_nums["comparables_all"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 
@@ -711,7 +711,7 @@
         <div class="range-slider-track"><div class="range-slider-dot" style="left:5%;"></div><div class="range-slider-dot" style="left:95%;"></div></div>
       </div>
       <p class="range-note">{{ comps_window.note }}</p>
-      <div class="page-footer"><div class="brand"><span class="diamond"></span> Elegant Collection</div><div class="num">{% if _nums.get("range") %}{{ "%02d" | format(_nums["range"]) }}{% endif %}</div></div>
+      <div class="page-footer"><div class="brand"><span class="diamond"></span> Linen Collection</div><div class="num">{% if _nums.get("range") %}{{ "%02d" | format(_nums["range"]) }}{% endif %}</div></div>
     </section>
     {% endif %}
 

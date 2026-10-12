@@ -54,7 +54,7 @@ export interface Comparable {
 export const THEMES = [
   {
     id: 2,
-    name: "Modern",
+    name: "Harbor",
     description: "Bold orange accents with Montserrat",
     defaultColor: "#f2964a",
     pages: "full" as const,
@@ -62,7 +62,7 @@ export const THEMES = [
   },
   {
     id: 3,
-    name: "Elegant",
+    name: "Linen",
     description: "Sophisticated with gradient overlays",
     defaultColor: "#0d294b",
     pages: "full" as const,
@@ -70,7 +70,7 @@ export const THEMES = [
   },
   {
     id: 5,
-    name: "Bold",
+    name: "Atlas",
     description: "Navy & gold with Bebas Neue",
     defaultColor: "#d79547",
     pages: "compact" as const,

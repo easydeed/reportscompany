@@ -40,8 +40,27 @@ THEMES: List[Dict[str, object]] = sorted(_RAW["themes"], key=lambda t: t["id"])
 #: arrive from a row written years ago.
 RETIRED: List[Dict[str, object]] = sorted(_RAW["retired"], key=lambda t: t["id"])
 
-#: The id a report gets when nothing chose one. Jerry, 2026-10-05: bold.
+#: The id a report gets when nothing chose one. Jerry, 2026-10-05: bold, renamed atlas 2026-10-13.
 DEFAULT_THEME_ID: int = int(_RAW["default_id"])
+
+#: FORMER name -> current id, for rows written before the 2026-10-13 rename.
+#:
+#: THIS IS WHAT MAKES THE RENAME SAFE, and without it the rename silently
+#: relabels reports. `report_generations.theme_id` is VARCHAR(20) and the market
+#: wizard wrote a NAME into it; `tasks.py` reads that column and calls
+#: `resolve()` on whatever it finds. A row holding `'modern'` matched
+#: `THEME_TEMPLATES` before the rename and resolved to id 2. After it, `modern`
+#: is in no live map, the string is not a digit, and `resolve` falls through to
+#: the DEFAULT — so a report stored as `modern` would have rendered as `atlas`
+#: (id 5) instead of `harbor` (id 2).
+#:
+#: `bold` would have been the one that looked fine, because it was the default
+#: already. Two of the three would have been wrong and nothing would have said
+#: so: the column is a string, the fallback is deliberate (D-166), and a report
+#: that renders in the wrong theme still renders.
+FORMER_NAME_IDS: Dict[str, int] = {
+    str(r["was"]): int(r["id"]) for r in _RAW.get("renamed", [])
+}
 
 #: name -> template path, relative to `templates/property/`.
 THEME_TEMPLATES: Dict[str, str] = {str(t["name"]): str(t["template"]) for t in THEMES}
@@ -87,10 +106,21 @@ def resolve(theme_input: object) -> tuple[str, int]:
     from an `accounts` row or a schedule written before the cut, and a report
     that renders in the current default is better than one that does not
     render.
+
+    A FORMER name resolves to the theme it was renamed to — NOT to the default.
+    That distinction is the whole of `FORMER_NAME_IDS` above: a retired theme
+    has nothing to render, but a renamed one is the same design under a new
+    name, and defaulting it would relabel a stored report.
     """
     if isinstance(theme_input, str):
         if theme_input in THEME_TEMPLATES:
             return theme_input, THEME_NAME_MAP[theme_input]
+        # A FORMER name resolves to the theme it became, not to the default.
+        # Checked before the digit arm and before the fallback, because the
+        # fallback is indistinguishable from a correct answer at the call site.
+        if theme_input in FORMER_NAME_IDS:
+            now = THEME_NUMBER_MAP[FORMER_NAME_IDS[theme_input]]
+            return now, FORMER_NAME_IDS[theme_input]
         if theme_input.strip().lstrip("-").isdigit():
             theme_input = int(theme_input)
     if isinstance(theme_input, bool):

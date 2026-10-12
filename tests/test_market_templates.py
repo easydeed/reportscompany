@@ -409,8 +409,14 @@ class TestEdgeCases:
         assert builder.report_type == "market_snapshot"
 
     def test_theme_id_ignored_gracefully(self, full_data):
-        """Old theme_id field doesn't break anything."""
-        full_data["theme_id"] = "bold"
+        """Old theme_id field doesn't break anything.
+
+        The value is DELIBERATELY not a theme name. `MarketReportBuilder` reads
+        no theme at all (D-164), so this asserts a stray key is ignored — and a
+        real theme name here would make the retired-name gate carry an
+        exemption for a string that never referenced a theme.
+        """
+        full_data["theme_id"] = "not-a-theme"
         builder = MarketReportBuilder(full_data)
         html = builder.render_html()
         assert "<html" in html

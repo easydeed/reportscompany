@@ -228,7 +228,7 @@ class TestTemplateExistence:
 
         Was the five names until Jerry's cut on 2026-10-05.
         """
-        assert set(THEMES) == {"bold", "modern", "elegant"}
+        assert set(THEMES) == {"atlas", "harbor", "linen"}
 
 
 # ============================================================================
