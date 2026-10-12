@@ -34,6 +34,11 @@ builder, the filters and the fixtures, and the comparison would be of two
 different programs rather than two page architectures.
 
     python3 scripts/build_review_pack.py [--listings 24] [--out DIR]
+
+Writes BOTH forms into `--out`, from the same rendered pages so they cannot
+disagree: `market-reports-old-beside-new.pdf` for reading the surface whole,
+and `by-report-type/` as one file per kind for flipping between a single
+report's old and new pages — which is what judging a document involves.
 """
 from __future__ import annotations
 
@@ -255,18 +260,49 @@ def main() -> int:
 
         out = Path(args.out) if args.out else work
         out.mkdir(parents=True, exist_ok=True)
+
+        def parts(kind: str) -> list[str]:
+            """Divider, then old, then new — the review order for one kind."""
+            got = [f"div__{kind}", f"old__{kind}"]
+            if kind in mb.V2_KINDS:
+                got.append(f"new__{kind}")
+            return [str(work / f"{n}.pdf") for n in got]
+
+        # THE STITCHED PACK, and then the SAME pages as one file per kind.
+        #
+        # Both, because they answer different questions. A 46-page scroll is
+        # right for reading the surface as a whole; eight separate files are
+        # right for flipping between one report's old and new pages, which is
+        # what judging a document actually involves. Built from the same
+        # per-kind PDFs, so the two cannot disagree.
         writer = PdfWriter()
         writer.append(str(work / "cover.pdf"))
         for kind in kinds:
-            writer.append(str(work / f"div__{kind}.pdf"))
-            writer.append(str(work / f"old__{kind}.pdf"))
-            if kind in mb.V2_KINDS:
-                writer.append(str(work / f"new__{kind}.pdf"))
+            for part in parts(kind):
+                writer.append(part)
         dest = out / "market-reports-old-beside-new.pdf"
         with open(dest, "wb") as fh:
             writer.write(fh)
 
-        print(f"{len(PdfReader(str(dest)).pages)} pages -> {dest}\n")
+        loose = out / "by-report-type"
+        loose.mkdir(parents=True, exist_ok=True)
+        for stale in loose.glob("*.pdf"):
+            # A regenerated set must not leave a renamed kind's file behind: a
+            # stale PDF in a review folder is a document describing a build
+            # nobody is looking at, which is this project's most-filed shape.
+            stale.unlink()
+        shutil.copyfile(str(work / "cover.pdf"),
+                        str(loose / "0-how-to-read-this.pdf"))
+        for i, kind in enumerate(kinds, 1):
+            one = PdfWriter()
+            for part in parts(kind):
+                one.append(part)
+            name = f"{i}-{kind.replace('_', '-')}.pdf"
+            with open(loose / name, "wb") as fh:
+                one.write(fh)
+
+        print(f"{len(PdfReader(str(dest)).pages)} pages -> {dest}")
+        print(f"{len(list(loose.glob('*.pdf')))} loose files -> {loose}\n")
         print(f"{'kind':24s} {'old':>4s} {'new':>4s}   at {args.listings} listings")
         print("-" * 52)
         for kind in kinds:
