@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 62 | Real, unfixed |
+| `open` | 63 | Real, unfixed |
 | `fixed` | 119 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 5 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **187** | D-001 … D-187, contiguous, no duplicates |
+| **Total** | **188** | D-001 … D-188, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 16 · ROUGH 25. (Sums to 62, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 63, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -10934,6 +10934,75 @@ PDFs are correct letter pages without any CSS rule. Adding `@page { margin }` to
 is set by the caller risks moving the body, and **every row capacity on this surface is measured
 against that box**, so it would mean re-measuring seven kinds to buy a rule that changes nothing. A
 mutation adding one is recorded and fires.
+
+---
+
+### D-188 — the headline on every market report is the sum of every status count, printed under the report's own title
+
+**Severity:** WRONG · **Affects:** the masthead metric on **all eight** market report types, plus the
+hero on `inventory` and `price_bands` — live on `main` · **Found during:** building the old-beside-new
+review pack, by reading the two documents side by side
+**Status:** `open` — the `_v2` band reads the right field, so seven kinds are fixed *as a side
+effect* of the redesign. **The legacy page is still what `main` renders, and `market_snapshot` still
+renders it even after the redesign lands.**
+
+`_build_header_context`:
+
+```python
+total = sum(counts.values()) if counts else data.get("total_listings", 0)
+```
+
+and `macros.jinja2:697`:
+
+```jinja
+<span class="masthead-metric-value">{{ header.total_count }}</span>
+<span class="masthead-metric-label">{{ header.title }}</span>
+```
+
+**So the number is the sum of every status bucket and the label is the name of the report.** Measured
+from the real builders, not a fixture:
+
+| builder | `counts` | headline shows | correct |
+|---|---|---|---|
+| `build_open_houses_result` | `{OpenHouses: 30, Active: 30}` | **60** | 30 |
+| `build_inventory_result` | `{Active: 10, Pending: 0, Closed: 10}` | **20** | 10 |
+| `build_price_bands_result` | `{Active: 10, Pending: 10, Closed: 10}` | **30** | 10 |
+| `build_closed_result` | `{Active, Pending, Closed}` | all three summed | the Closed count |
+
+**`open_houses` is the clearest: its two counts are the same listings counted twice**, so the
+headline is exactly double. `pricebands_layout` makes it explicit by labelling the hero
+**"Total Active Listings"** over a number that includes pending and closed.
+
+#### Why no gate caught it
+
+Every gate on this surface asks whether a number *renders* and whether it is formatted correctly.
+`total_count` renders, it is an integer, it is never `None` — and D-108's own comment sits directly
+above it defending the right thing for the wrong number: *"0 is a result, not a missing field: the
+report shows the number it matched rather than dropping the block."* The block is shown, the number
+is not the one it matched.
+
+**This is the class §0.6 has no rule for and the structural gates cannot reach**: a value that is
+present, well-typed, correctly formatted and *means something other than its label*. The contrast
+gates measure its colour. The pagination gates measure the space it occupies. Nothing compares it to
+the thing it claims to count.
+
+#### Found by a human-facing artefact, which is the point worth recording
+
+It surfaced because the old and new pages were put on facing pages and the two headlines disagreed —
+117 against 38 on the same data. **Neither document is wrong on its own terms**; only the pair is
+informative. Three weeks of measurement on this surface did not find it, and one render of a
+comparison did.
+
+#### Not fixed here
+
+The fix is one line (`counts.get(<the kind's own bucket>)` rather than `sum`), and it is **not one
+line of decision**: each kind has a different right answer, `market_snapshot`'s headline may
+legitimately be a total of something, and the masthead is shared by eight kinds. It also changes a
+number on a live customer-facing document, which wants Jerry's word rather than a refactor.
+
+**What is urgent is not the redesign** — the `_v2` band reads `closed_count`, `active_count` and the
+rest per kind and is already right. It is that **`main` has this defect on all eight kinds today**,
+and `market_snapshot` keeps it after the redesign lands.
 
 ---
 
