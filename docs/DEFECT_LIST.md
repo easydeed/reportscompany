@@ -10840,8 +10840,26 @@ can be taken on the number.
 **Severity:** ROUGH · **Affects:** `open_houses` and `featured_listings` page 1 — the stated grid
 against the measured fit · **Found during:** re-measuring #156's gallery fit against the `_v2`
 architecture before trusting 3×3
-**Status:** `open` — **not ours to fix.** Built to the measured fit, with the shortfall reported to
-Design as a measurement.
+**Status:** `open` for `open_houses`; **DECIDED for `featured_listings`** — see below. Built to the
+measured fit, with the shortfall reported to Design as a measurement.
+
+> ### DECIDED 2026-10-12 — the bigger featured card stays, and the two pages are accepted
+>
+> Jerry reviewed the full old-beside-new comparison (all eight kinds, one brand) and approved it
+> as-is. **The `featured_listings` question in that pack was explicit** — *"this one got longer, two
+> pages to four. Is the bigger card worth two extra pages, or should it use the smaller shared
+> card?"* — so the approval answers it.
+>
+> **The bigger card stays. The 2 → 4 page cost is accepted, not an oversight.** Recorded here so
+> nobody re-opens it as one: the card is 326.8px against the shared card's 238.3, two fit under the
+> band where six of the smaller fit, and that is the intended document.
+>
+> **The 4.7px question to Design is still worth asking** and is unaffected by this. It is no longer
+> "should the card be smaller" — that is settled — but "your stated 2×2 misses by five pixels, and
+> closing it would give the approved card three pages instead of four." A free page on an approved
+> design, not a redesign.
+>
+> `open_houses`' 80.1px shortfall remains open and remains cost-free; it was never a page question.
 
 Their per-kind table states a page-1 grid for each gallery kind. Their band, measured on the page
 they specified, is **265.4px**, leaving **662.9px** above the footer:
@@ -11013,15 +11031,43 @@ distribution chart, whose computation this is · **Found during:** auditing §07
 untracked work at the close of the market surface
 **Status:** `open` — **what to do about it is a decision, not a fix.** Recorded with the measurement.
 
+> ### CORRECTION 2026-10-12 — THIS IS THE TEST-SUITE HALF OF D-167, AND I FILED IT WITHOUT FINDING
+> **D-167 — "three market metric groups have no producer at all, and a bare `except` has been hiding
+> it"** — already records that `compute_price_cut_stats` and `compute_dom_distribution` do not
+> exist, filed on 2026-10-05 while wiring Design's property page 5. **Two of the four functions
+> below are its functions.** This entry was written as though the absence were a new finding; it is
+> not.
+>
+> **What is new here and belongs to this entry:** D-167 is about the **consumer** — `market_trends`
+> imports the three, the import raises every time, and `except (ImportError, Exception)` swallows
+> it, so three of a property report's four headline market numbers have always been `None`. This
+> entry is about the **apparent coverage**: a 36-test suite that reads as a guarantee those
+> computations behave correctly, for computations that have never existed. Neither notices the
+> other, and the pair is why nobody looked: the consumer fails silently, and the tests pass.
+>
+> **The other two** — `comp_confidence` and `parse_options_meta` — are not D-167's and are not
+> imported by anything, so for those the absence genuinely was unfiled.
+>
+> **How the miss happened, because it is the rule this project files most.** "Before building a
+> tool, grep for one" was applied to code and not to the board: the §07 audit grepped `apps/` for
+> the function names and never grepped `DEFECT_LIST.md` for them. One `grep -n
+> "compute_dom_distribution" docs/DEFECT_LIST.md` would have returned D-167. **The board is a
+> codebase and the same rule governs it** — added to §0.6.
+>
+> Severity stays FRAGILE: the WRONG half is D-167's and is already counted there. Counting it twice
+> would overstate the open board.
+
 `tests/test_new_metrics.py` is 36 tests and they all pass. **Every function they test is defined
-inside the test file:**
+inside the test file** — and the first two are the ones D-167 records as having no producer:
 
 | function | in `apps/`? |
 |---|---|
-| `compute_price_cut_stats` | **no** |
-| `compute_dom_distribution` | **no** |
-| `comp_confidence` | **no** |
-| `parse_options_meta` | **no** |
+| function | in `apps/`? | |
+|---|---|---|
+| `compute_price_cut_stats` | **no** | **D-167** — imported by `market_trends`, ImportError swallowed |
+| `compute_dom_distribution` | **no** | **D-167** — same, and §7.3's unbuilt chart needs it |
+| `comp_confidence` | **no** | unfiled before this entry |
+| `parse_options_meta` | **no** | unfiled before this entry |
 
 Its own docstring says so without quite saying so — *"Helpers / pure functions (no project deps)"* —
 and that is accurate about the imports and silent about the consequence: **the file specifies four

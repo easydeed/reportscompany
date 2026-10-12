@@ -1473,6 +1473,28 @@ it.**
   And when a seam moves a kind, surface or path off one code path onto another, the question is not
   only "does the new path work" but **"what did the old path produce that nobody else produces"**.
 
+- **THE DEFECT BOARD IS A CODEBASE, AND "GREP FOR ONE FIRST" GOVERNS IT TOO.**
+  *Added 2026-10-12, from filing D-187 on top of D-167.*
+
+  §0.6 already says: before building a tool, grep for one — a rule that cost a file when
+  `scripts/regress.py` was overwritten by a reimplementation of itself. **The same rule applies to
+  entries**, and it was not being applied: an audit of §07's unbuilt work grepped `apps/` for four
+  function names, found them missing, and filed it — without grepping `DEFECT_LIST.md` for the same
+  names. Two of the four were already **D-167**, filed seven days earlier.
+
+  The duplicate was not harmless. It would have **double-counted the open board** and split one
+  situation across two entries that do not reference each other, which is precisely the condition
+  that lets a defect be "known" and unfixed indefinitely: each entry looks like a partial view of
+  something someone else is handling.
+
+  Operationally: **the last step of filing an entry is `grep -n "<the symbol>" docs/DEFECT_LIST.md`,
+  for every symbol the entry names.** Not the title, not the description — the symbols. D-187's title
+  shares no words with D-167's and a prose search would have missed it; `compute_dom_distribution`
+  appears in both.
+
+  The board has 188 entries and nobody can hold them. That is not a reason to skip the check — it is
+  the reason the check exists.
+
 - **A VALUE FORMATTED FOR DISPLAY AND CONSUMED AS DATA FAILS TWICE, AND THE SECOND FAILURE IS THE
   WORSE ONE.** *Added 2026-10-11.*
 
