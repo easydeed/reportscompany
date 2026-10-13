@@ -1,5 +1,36 @@
 # A gallery continuation page holds three rows. Measured, not asked.
 
+> ## RE-MEASURED 2026-10-10 AGAINST THE NEW ARCHITECTURE. The answer held; the numbers moved.
+>
+> Everything below was measured against the **legacy** gallery page. The three gallery kinds moved
+> onto Design's `_v2` page on 2026-10-10, and **a fit measured against a page that no longer renders
+> describes nothing** — the contrast-baseline rule applied to geometry. So it was taken again rather
+> than carried forward.
+>
+> | | legacy (below) | `_v2` | moved |
+> |---|---|---|---|
+> | card | 258.0 | **238.3** | −19.7 |
+> | row gap | 8 | 14 | +6 |
+> | three rows | 790.0 | **743.0** | −47.0 |
+> | **headroom** | **138.0** | **185.3** | **+47.3** |
+> | a fourth row needs | 266 | 252.3 | — |
+>
+> **Three rows still fit, four still cannot, and it is less tight than it was** — 67px short of a
+> fourth rather than 128px, but in the same direction and not near flipping. Robust to the gap: at
+> the legacy 8px gap the `_v2` card gives 730.9px for three rows and a fourth still does not fit.
+>
+> The page BOX did not change — `pdf_engine.py`'s 0.44in/0.89in reserve is untouched since PR #101,
+> so the body is still 928.3px. What changed is the card: Design moves the price onto the photo (the
+> info block loses a 23px line) and sizes the photo from the column width instead of a fixed 180px.
+>
+> **What this re-measurement also found**, and could only have found by being retaken: Design's
+> stated page-1 grids do not fit under Design's own band. The band is 265.4px, leaving 662.9px —
+> `open_houses`' 3×3 is **80.1px short** and `featured_listings`' 2×2 is **4.7px short**. Full
+> working in §8 of `MARKET_CAPACITY_VS_DESIGN_2026-10-07.md`.
+>
+> `featured_listings` has its own, taller card (326.8px) and carries **two rows** on a continuation
+> page, not three. The section below is about the shared gallery card only; it never covered that one.
+
 **2026-10-07.** Design's per-kind spec gives `new_listings_gallery` a **3×2** photo grid and
 `open_houses` a **3×3** grid described as "same card as listings", and their continuation-pages
 section covers only the three table kinds. So what a gallery continuation page carries was unstated,

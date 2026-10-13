@@ -1,5 +1,34 @@
 # Renaming a theme: what it costs
 
+> ## DONE, 2026-10-13 — `bold → atlas`, `elegant → linen`, `modern → harbor`
+>
+> Jerry's call; `atlas` from his shortlist. **Ids 2, 3 and 5 are unchanged**, so no stored value
+> moved. The figures below were the estimate; what it actually cost is at the end of this box.
+>
+> **The estimate was right about the mechanics and missed one thing, which was the only hazard.**
+> `report_generations.theme_id` is `VARCHAR(20)` and the market wizard wrote a **name** into it.
+> `tasks.py:1704` reads that column and calls `resolve()`. A row holding `'modern'` matched the live
+> map before the rename and resolved to id 2; afterwards `modern` is in no live map, the string is
+> not a digit, and `resolve` falls through to the **default** — so a stored `modern` report would
+> have rendered as `atlas` (5) instead of `harbor` (2).
+>
+> **Two of the three would have been wrong and nothing would have said so.** `bold` was already the
+> default, so it alone would have looked correct. `theme_registry.FORMER_NAME_IDS` fixes it and
+> `test_a_former_name_resolves_to_the_theme_it_became_not_the_default` holds it.
+>
+> This document said *"nothing in the database holds a theme name that anything reads"*, and the
+> qualifier was doing the work: `property_report_stats.theme_<name>` are column identifiers nothing
+> reads, but `report_generations.theme_id` holds names **as values** and something does read it.
+>
+> **What it cost, measured:** 71 occurrences across 12 files (was 73 across 15); 18 of them
+> regenerated from one `themes.json` edit; 3 directory moves and 6 file moves; 55 contrast-baseline
+> rows and 34 colour-lint lines **substituted, never regenerated**; 6 display labels the occurrence
+> count never saw, found by widening the retired-name gate to former names.
+>
+> **`renamed` is a third list, not an addition to `retired`.** A retired entry means "this id has no
+> template and is not in use"; an entry for id 5 would make `resolve(5)` default and relabel every
+> report an account on 5 ever produced.
+
 **Scoped, not implemented.** Jerry, 2026-10-05: *"Renaming is open… Not a decision yet — he'll take
 it once the designs are wired and comparable side by side. Scope it while you're in the theme cut,
 don't implement it."*
@@ -30,7 +59,7 @@ was that nobody knew how many copies there were.
 
 ## 1 · Where a theme NAME appears, and where an ID appears
 
-**73 name occurrences across 15 files** (was 147 across 18 before the theme cut, and 82 after it).
+**71 name occurrences across 12 files** (was 147 across 18 before the theme cut, and 82 after it).
 Grouped by what a rename would have to do to them:
 
 > **+3 ON 2026-10-06, when bold moved to Design's shared architecture.** One in
@@ -55,13 +84,13 @@ Grouped by what a rename would have to do to them:
 
 | group | files | occurrences | what a rename costs |
 |---|---|---|---|
-| **canonical** — `worker/themes.json` | 1 | 6 | **the edit itself** |
-| **generated** — `api/theme_registry.py`, `web/lib/themes.generated.ts` | 2 | 17 | **nothing** — one command |
-| **derives from the registry** — `property_builder`, `theme_registry`, `unified-wizard`, `wizard-types`, `measure_pdf_contrast` | 5 | 12 | **nothing** — they import it |
+| **canonical** — `worker/themes.json` | 1 | 11 | **the edit itself** |
+| **generated** — `api/theme_registry.py`, `web/lib/themes.generated.ts` | 2 | 16 | **nothing** — one command |
+| **derives from the registry** — `property_builder`, `theme_registry`, `unified-wizard`, `wizard-types` | 4 | 10 | **nothing** — they import it |
 | **historical, deliberately keeps retired names** — `affiliate/property-reports/page.tsx` | 1 | 10 | **nothing** — see §4 |
-| **per-theme presentation metadata** — `web/lib/property-report-assets.ts` | 1 | 11 | **one `key:` per theme** |
-| **the gate and the derivation** — `test_theme_registry_is_single_sourced.py`, `derive_theme_name_scope.py` | 2 | 10 | **nothing** — they read the registry |
-| **golden/corpus scripts naming themes to seed data** — `regen_color_roles_golden.py`, `test_property_templates.py`, `test_market_templates.py` | 3 | 7 | **one literal each** |
+| **per-theme presentation metadata** — `web/lib/property-report-assets.ts` | 1 | 9 | **one `key:` per theme** |
+| **the gate** — `test_theme_registry_is_single_sourced.py` | 1 | 9 | **nothing** — they read the registry |
+| **golden/corpus scripts naming themes to seed data** — `regen_color_roles_golden.py`, `test_property_templates.py` | 2 | 6 | **one literal each** |
 
 The **ids** are what everything load-bearing actually keys on:
 `accounts.default_theme_id` (INTEGER), `property_reports.theme` (INTEGER, `CHECK 1..5`),
@@ -87,8 +116,9 @@ eight CSS comments. Zero CSS custom properties are named after a theme. That was
 cut: `teal_report.jinja2` had **39** `--teal-*` custom properties and 45 self-references, and
 renaming *that* theme would have been a real sweep through its own stylesheet.
 
-**A theme on the shared architecture names itself 3 times**, all in its entry file's own commentary
-— measured on bold, 2026-10-06, across its two-file chain. The `<title>` moved to the shared file
+**A theme on the shared architecture names itself 2 times**, both in its entry file's own commentary
+— measured on atlas (was bold), 2026-10-13, across its two-file chain. It was 3 before the rename:
+one of the three was the old name appearing in a sentence that no longer needs it. The `<title>` moved to the shared file
 and is built from the context. So **the rename gets cheaper as the themes migrate**, not dearer:
 bold went from 9 self-references to 3, and from a 1,290-line template to 34 lines.
 
@@ -136,11 +166,14 @@ files in `RETIRED_NAME_ALLOWED`, each with its reason, and fails on any *other* 
 
 | artefact | theme-keyed rows | a rename needs |
 |---|---|---|
-| `apps/worker/tests/pdf_contrast_baseline.txt` | 58 entries: elegant 36, modern 19, market 3, **bold 0** *(was 81; D-177 closed 20 accent-on-tint failures with no template change, and wiring `new_listings` onto Design's page closed its 3 tier-badge rows by removing the tinted-chip construct)* | **a `sed` on the family column** — the key is `property__<theme>` |
+| `apps/worker/tests/pdf_contrast_baseline.txt` | 55 entries: linen 36, harbor 19, **atlas 0**, **market 0** *(was 81; D-177 closed 20 accent-on-tint failures with no template change, and wiring `new_listings` and `price_bands` onto Design's page closed the remaining 6 badge rows by removing the tinted-chip construct)* | **a `sed` on the family column** — the key is `property__<theme>` |
 | `apps/worker/tests/golden/color_roles.json` | 3 `property_themes` keys | regenerate (`regen_color_roles_golden.py`) |
 | `scripts/template_color_baseline.txt` | 34 lines naming a `property/<theme>/` path | **a `sed` on the path** |
 
-This is the one place a rename is mechanical-but-fiddly: **92 baseline rows** key on the theme name,
+**Every remaining row is on the property surface.** The market surface reached zero baselined
+contrast failures on 2026-10-08, so a theme rename now touches nothing market-keyed at all.
+
+This is the one place a rename is mechanical-but-fiddly: **89 baseline rows** key on the theme name,
 and both files are ratchets whose whole point is that they may only shrink. A rename is a pure
 substitution in both — the measured colours and selectors are unchanged — but it must be done as a
 substitution, **not** by regenerating, or the diff stops being evidence of anything.
@@ -175,7 +208,7 @@ ratchet.
 
 **Measured on the first rewire: bold went from 37 baseline rows to ZERO.** The redesigned document
 has no baselined contrast failure on any of the six brands — the first property theme in this
-project with none — so the rewire *shrank* the ratchet by a third. **92** theme-keyed rows now,
+project with none — so the rewire *shrank* the ratchet by a third. **89** theme-keyed rows now,
 against 152 before bold moved; the three live themes carry 55 between them, all of them elegant's
 and modern's.
 
@@ -184,7 +217,7 @@ well as white — one function, no template change — and the contrast baseline
 61 (elegant 50→36, modern 25→19). So the rename's fiddly part is a fifth smaller than it was this
 morning, and the cause was a guarantee being half-built rather than anything about themes.
 
-- **Renaming today**: ~4 edits, 3 file moves, 92 baseline-row substitutions.
+- **Renaming today**: ~4 edits, 3 file moves, 89 baseline-row substitutions.
 - **Renaming after all three rewires**: the same 4 edits and 3 moves, over **fewer** rows than
   today if elegant and modern behave like bold — and their 55 rows are the ones the rewire is meant
   to clear.

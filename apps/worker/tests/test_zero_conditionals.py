@@ -270,9 +270,29 @@ def test_zero_bedrooms_renders_as_a_studio():
     assert "Studio" in html, "a studio rendered with no bed count at all"
 
 
-def test_zero_days_on_market_renders_as_new():
+def test_zero_days_on_market_is_marked_and_not_blank():
+    """A listing that went live today must be visibly marked.
+
+    THE WORD CHANGED AND THE CONCERN DID NOT. The legacy gallery card carried a
+    "New" status badge; Design's card says **"Today"**, which is their own word
+    for it in the `new_listings` table's `Listed` column, rendered in the
+    card's third line. Was `assert re.search(r">\s*New\s*<", html)` — which is
+    an assertion about a BADGE, and the badge is gone because Design's rule is
+    no text over photography except the price plate.
+
+    What must not happen is the information disappearing, and it nearly did:
+    Design's gallery card names no date at all. 0 days is the value an `or`
+    chain eats (D-105, D-108) and the most interesting fact on a new-listings
+    report, so it keeps a slot.
+    """
     html = _render(days_on_market=0)
-    assert re.search(r">\s*New\s*<", html), "a same-day listing rendered with no DOM"
+    assert re.search(r">\s*Today\s*<", html), (
+        "a same-day listing rendered with no indication it is same-day"
+    )
+    assert not re.search(r">\s*0 d ago\s*<", html), (
+        "zero days rendered as an elapsed count, which is what `Today` exists "
+        "to prevent"
+    )
 
 
 def test_an_empty_result_set_says_so_in_the_terms_of_the_search():

@@ -12,24 +12,24 @@ export interface ThemeRegistryEntry {
 }
 
 export const THEME_REGISTRY: ThemeRegistryEntry[] = [
-  { id: 2, name: "modern", label: "Modern" },
-  { id: 3, name: "elegant", label: "Elegant" },
-  { id: 5, name: "bold", label: "Bold" },
+  { id: 2, name: "harbor", label: "Harbor" },
+  { id: 3, name: "linen", label: "Linen" },
+  { id: 5, name: "atlas", label: "Atlas" },
 ]
 
 /** id -> name. The two hand-written copies of this were wrong on
  *  every id (D-163): a user on theme 4 got a wizard showing
  *  `elegant` and a PDF rendered in teal. */
 export const THEME_ID_TO_NAME: Record<number, string> = {
-  2: "modern",
-  3: "elegant",
-  5: "bold",
+  2: "harbor",
+  3: "linen",
+  5: "atlas",
 }
 
 export const THEME_NAME_TO_ID: Record<string, number> = {
-  modern: 2,
-  elegant: 3,
-  bold: 5,
+  harbor: 2,
+  linen: 3,
+  atlas: 5,
 }
 
 /** Retired themes. An account row or a saved schedule can still hold

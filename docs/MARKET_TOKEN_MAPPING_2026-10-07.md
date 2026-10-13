@@ -108,3 +108,35 @@ win is a separate axis and it sits on `new_listings` and `price_bands`.
 by moving off the analytics layout. It carries both the largest page saving and half the contrast
 payoff, which makes it the obvious second rather than `inventory` (which is `closed`'s twin and
 closes nothing).
+
+---
+
+## The prediction against the measurement
+
+Stated above before any `_v2` template existed: **0, 3, 3** — nothing for `closed`, three for
+`new_listings`, three for `price_bands`. Measured as each kind was wired, by regenerating the
+contrast baseline per surface:
+
+| kind | predicted | measured | baseline rows after |
+|---|---|---|---|
+| `closed` (2026-10-07) | 0 | **0** | 61 → 58 was D-177's fix, not this kind |
+| `new_listings` (2026-10-08) | 3 | **3** | 58 |
+| `price_bands` (2026-10-08) | 3 | **3** | 55, and **zero of them market** |
+
+Eighty-one baseline rows at the start of the market work; fifty-five now, all on the property
+surface (elegant 36, modern 19). `test_market_token_mapping.py::test_the_market_baseline_is_spent`
+holds the market surface at zero, and
+`test_pdf_contrast.py::test_the_market_surface_has_no_baselined_failure_left` says why that matters:
+with the surface at zero, **every later kind's baseline diff is pure page layout**. A market row that
+reappears was introduced by the change that introduced it, with the kind named in the row, and nobody
+has to bisect to attribute it.
+
+What the heuristic bought was not the six rows — those would have closed either way. It bought
+knowing *in advance* that `closed` would close none of them, so the choice to do `closed` first was
+made on the architectural argument (continuation pages, `start_at`, row capacity) instead of on a
+contrast payoff it did not have. The cost of not having it is on the record twice: D-171 adopted a
+token and closed twenty rows, D-177 was the same ticket shape and closed none, and both were
+discovered after building.
+
+**The heuristic in one line, for §0.6:** ask where a token *paints* before estimating what it closes
+— which is a grep of the baseline, not a render.

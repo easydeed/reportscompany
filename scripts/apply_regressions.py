@@ -37,6 +37,15 @@ makes the outcome machine-readable. The eleven `themes.py` mutations it records
 are ported to `scripts/regressions/themes.json`; consolidating the two scripts
 is a decision for whoever is next in that file, not something to do silently.
 
+AND IN PRACTICE IT FINDS MISSING TESTS, NOT BAD MUTATIONS
+---------------------------------------------------------
+It was built for misfire (3) — a mutation that changes nothing reading as a
+pass. Of the `DID NOT FIRE` results it has produced so far, ONE was a weak gate
+(a substring match), one was a mutation on unreachable code, and THREE were
+behaviour nobody had tested, including an entire wired report kind. See
+`scripts/regressions/README.md` for the three readings of `DID NOT FIRE` and
+which of them is a defect in the gate (only the first).
+
 THE REPORTING IS INVERTED, WHICH IS THE POINT
 ---------------------------------------------
 For a regression run, **a passing test is the failure.** This exits non-zero

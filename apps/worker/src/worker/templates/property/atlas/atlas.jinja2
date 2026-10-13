@@ -4,7 +4,7 @@
    
    Typography: Oswald (display) + Inter (body)
    Colors: Deep navy + gold
-   Style: Strong geometric shapes, bold type, high contrast
+   Style: Strong geometric shapes, atlas type, high contrast
    ============================================================================= #}
 
 {% extends '_base/base.jinja2' %}
@@ -17,7 +17,7 @@
 
 {% block theme_styles %}
   :root {
-    /* Bold Theme Colors - Primary is customizable via theme_color */
+    /* Atlas Theme Colors - Primary is customizable via theme_color */
     --color-primary: {{ theme_color | default('#0F1629', true) }};
     --color-primary-light: {{ theme_color | default('#1a2744', true) }};
     --color-accent: #C9A227;
@@ -408,7 +408,7 @@
     letter-spacing: 0.5px;
   }
   
-  /* V0 overrides — Bold */
+  /* V0 overrides — Atlas */
   .section-title {
     text-transform: uppercase;
     letter-spacing: 1.5px;
@@ -453,7 +453,7 @@
     background: var(--color-primary);
   }
 
-  /* Analysis summary — bold border */
+  /* Analysis summary — atlas border */
   .analysis-summary {
     border-top: 4px solid var(--color-primary);
   }
@@ -503,7 +503,7 @@
      ========================================================================== */
 
   /* ==========================================================================
-     BOLD V0: Analysis Page (p5) — Teal-style layout, Bold palette (navy/gold)
+     BOLD V0: Analysis Page (p5) — Teal-style layout, Atlas palette (navy/gold)
      ========================================================================== */
 
   /* Intro banner — deep navy gradient, gold accent numbers */
@@ -530,7 +530,7 @@
   .bold-v0-p5 .analysis-bar-val   { color: var(--color-primary); font-weight: 800; }
   .bold-v0-p5 .analysis-bar-label { color: var(--color-text-muted); }
 
-  /* Table — bold navy header, gold footer, alternating surface rows */
+  /* Table — atlas navy header, gold footer, alternating surface rows */
   .bold-v0-p5 .analysis-table-wrap { border: 2px solid var(--color-primary); border-radius: 10px; overflow: hidden; }
   .bold-v0-p5 .analysis-table thead th { background: var(--color-primary); color: white; text-transform: uppercase; letter-spacing: 0.05em; font-size: 11px; }
   .bold-v0-p5 .analysis-table thead th:first-child { border-radius: 8px 0 0 0; }
@@ -738,7 +738,7 @@
 
 {# =============================================================================
    COVER PAGE OVERRIDE
-   Bold has a unique cover layout
+   Atlas has a unique cover layout
    ============================================================================= #}
 {% block cover %}
 <div class="cover-bg"></div>

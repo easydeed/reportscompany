@@ -93,7 +93,7 @@ export interface PropertyReportResponse {
 export const THEMES: Theme[] = [
   {
     id: 2,
-    name: "Modern",
+    name: "Harbor",
     style: "Clean & Contemporary",
     displayFont: "'DM Sans', sans-serif",
     gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)",
@@ -105,7 +105,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: 3,
-    name: "Elegant",
+    name: "Linen",
     style: "Sophisticated & Refined",
     displayFont: "'Playfair Display', serif",
     gradient: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #C9A962 100%)",
@@ -117,7 +117,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: 5,
-    name: "Bold",
+    name: "Atlas",
     style: "Impactful & Striking",
     displayFont: "'Clash Display', sans-serif",
     gradient: "linear-gradient(135deg, #15216E 0%, #1a3a7a 50%, #D69649 100%)",

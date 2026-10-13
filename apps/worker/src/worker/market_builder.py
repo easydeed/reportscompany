@@ -19,6 +19,7 @@ Usage:
 """
 
 import logging
+from datetime import datetime
 from typing import Any, Dict
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -270,6 +271,31 @@ def _v2_count(value) -> str:
     return f"{int(value):,}"
 
 
+def _v2_known_count(band: Dict[str, Any]):
+    """A band's listing count as an int, or `None` when it is not reported.
+
+    THE TWO ABSENCES ARE DIFFERENT and this is the function that keeps them so.
+    `{"label": "$1.6M+", "count": 0}` means nothing is for sale up there, which
+    is one of the more useful facts a bands report carries. `{"label": "$1.6M+"}`
+    means the band was not counted. `band.get("count") or 0` renders the second
+    as the first — a claim the data does not make, which is D-137's shape
+    (absent is not a default) on a row that reads as fact.
+
+    The legacy band chart drew the first and DROPPED the second
+    (`test_a_band_with_no_count_key_is_dropped`). This page draws both, because
+    its row carries a label, a median, days and $/sq ft beside the bar, so an
+    uncounted band is informative where an uncounted bar was not — but it draws
+    the uncounted one as a dash with no bar, never as a zero.
+
+    Bools are excluded explicitly: `True` is an `int` in Python and `1` is a
+    plausible-looking count.
+    """
+    value = band.get("count")
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        return None
+    return int(value)
+
+
 def _v2_beds_baths(item) -> str:
     """`3/2`, and `3/-` when only one side is known.
 
@@ -304,7 +330,9 @@ def _v2_beds_baths(item) -> str:
 #: badge selectors on `new_listings` and `price_bands`, so wiring `closed`
 #: closes zero of them, by construction. See
 #: docs/MARKET_TOKEN_MAPPING_2026-10-07.md.
-V2_KINDS = frozenset({"closed", "new_listings"})
+V2_KINDS = frozenset({"closed", "new_listings", "price_bands", "inventory",
+                      "new_listings_gallery", "open_houses",
+                      "featured_listings"})
 
 #: Design's shared page. One template, dispatched on kind, per their README.
 V2_TEMPLATE_PATH = "_v2/report.jinja2"
@@ -335,7 +363,66 @@ V2_TABLE_COLUMNS = {
                "noun": "sales", "noun_one": "sale"},
     "new_listings": {"price": "List price", "fifth": "Listed",
                      "noun": "new listings", "noun_one": "new listing"},
+    # Design: "same table; `vs. list` becomes `Status`: `New` in `accent_ink`
+    # 600 when DOM <= 7, else `—` #5E636B 400". The noun is "homes for sale"
+    # and not "listings" — an inventory report counts what is ON the market,
+    # and "212 listings" reads as activity where "212 homes for sale" reads as
+    # stock. Their band label says "homes for sale in {area}" for the same
+    # reason, so the count line matches it.
+    "inventory": {"price": "List price", "fifth": "Status",
+                  "noun": "homes for sale", "noun_one": "home for sale"},
 }
+
+#: Design's page-1 photo grid per gallery kind, from their per-kind table.
+#:
+#: COLUMNS ONLY. The ROW count on a continuation page is not in their package —
+#: their continuation section covers "closed, inventory, new_listings table"
+#: and says nothing about a grid — so it is measured rather than quoted. The
+#: page-1 row count IS theirs and is what the band leaves room for.
+V2_GRID = {
+    "new_listings_gallery": {"cols": 3, "rows_page_1": 2},
+    "open_houses": {"cols": 3, "rows_page_1": 3},
+    "featured_listings": {"cols": 2, "rows_page_1": 2},
+}
+
+#: `featured_listings` is the one gallery kind with its OWN card, not a
+#: different grid of the same card. Design: price plate 18px (against 15),
+#: address 15px/600 (against 13), and beds/baths/sq ft as three stacked
+#: mini-stats to the right instead of one meta line underneath. Four cards on a
+#: page can afford the size; nine cannot.
+V2_FEATURED_CARD = "featured"
+V2_LISTING_CARD = "listing"
+
+#: Design's `Status` rule for `inventory`: "New" at or under this many days.
+#:
+#: SEVEN, NOT "a week" — and the boundary is INCLUSIVE, which is what their
+#: `<= 7` says. A listing at exactly 7 days is new; at 8 it is not. Written
+#: down because `< 7` and `<= 7` differ on one day in seven and neither reads
+#: wrong in a diff.
+V2_NEW_WITHIN_DAYS = 7
+
+
+#: Design's slowest-band tag, from their neutral list, quoted with the ratio
+#: they measured: "Slowest-band tag `#B42318` (5.9:1)". The FASTEST tag is
+#: `accent_ink`, which is derived — only the slowest one is a fixed hex,
+#: because "slow" is not a brand colour on any brand.
+V2_SLOW_TAG = "#B42318"
+
+#: Design's headline rule for the bands kind, stated in their README §per-kind:
+#: "{band} is moving fastest" only when that band has >=10 listings and is >=3
+#: days faster than the area average, else the plain title "{Area} · Price
+#: Bands"; every headline hidden under 10 sales/listings.
+#:
+#: NAMED CONSTANTS BECAUSE THEY ARE A THRESHOLD SOMEONE CHOSE. Inline, the next
+#: reader cannot tell 10 from an arbitrary 10, and the rule's whole character is
+#: that it REFUSES to make the claim on thin data.
+V2_FASTEST_MIN_LISTINGS = 10
+V2_FASTEST_MIN_DAYS_AHEAD = 3
+
+#: The big number's size per kind. Design: 88px, "snapshot: 96px; bands: 64px
+#: headline" — a price range is wider than a count and does not fit at 88.
+V2_BIG_PX = {"price_bands": 64, "market_snapshot": 96}
+V2_BIG_PX_DEFAULT = 88
 
 
 def _v2_listed_label(days) -> str:
@@ -350,6 +437,41 @@ def _v2_listed_label(days) -> str:
         return V2_DASH
     days = int(days)
     return "Today" if days == 0 else f"{days} d ago"
+
+
+def _v2_card_specs(item) -> str:
+    """`"3 bd / 2 ba / 1,480 sq ft"`, dropping whichever parts are absent.
+
+    Built from the parts that exist rather than from a format string, because
+    a format string renders `None bd / None ba` and an `or` chain renders a
+    studio's 0 bedrooms as missing (D-108, D-168 — both have shipped here).
+    """
+    parts = []
+    beds = item.get("beds")
+    baths = item.get("baths")
+    sqft = item.get("sqft")
+    if isinstance(beds, (int, float)) and not isinstance(beds, bool):
+        # "STUDIO", NOT "0 bd". The legacy card said Studio and
+        # `test_zero_bedrooms_renders_as_a_studio` is a gate written because
+        # zero bedrooms is a real property and an `or` chain eats it. "0 bd" is
+        # not wrong so much as not what the thing is called, and a listing that
+        # reads "0 bd" looks like missing data to the reader it is for.
+        parts.append("Studio" if int(beds) == 0 else f"{int(beds)} bd")
+    if isinstance(baths, (int, float)) and not isinstance(baths, bool):
+        shown = int(baths) if float(baths).is_integer() else baths
+        parts.append(f"{shown} ba")
+    if isinstance(sqft, (int, float)) and not isinstance(sqft, bool) and sqft:
+        parts.append(f"{int(sqft):,} sq ft")
+    return " / ".join(parts)
+
+
+def _v2_open_house_label(day) -> str:
+    """`"Sat 11 Oct"` — Design's From/To cells.
+
+    Day name first because that is what a reader scans for on an open-house
+    report: "is there a Sunday one" is the question, not "is it the 12th".
+    """
+    return f"{day.strftime('%a')} {day.day} {day.strftime('%b')}"
 
 
 def _v2_label_size(label: str) -> int:
@@ -480,9 +602,35 @@ class MarketReportBuilder:
     #: inventory and no past month's active count is recoverable from a feed
     #: fetched as Active/Pending/Closed. The pace is MOI's denominator and is
     #: knowable, so that is what ships, labelled as what it is.
+    #: `inventory` WAS HERE AND IS NOT ANY MORE, AND THAT IS A REAL LOSS.
+    #:
+    #: Design's `_v2` page for `inventory` is the shared band over the listings
+    #: table and specifies no chart, so from 2026-10-08 the sales-pace series
+    #: has nowhere to render. It is removed from this map rather than left in
+    #: it, because THIS MAP IS ALSO THE SHOPPING LIST: `TREND_REPORT_TYPES`
+    #: below is derived from it and is what `tasks.py` reads to decide whether
+    #: to pay for the twelve-month closings fetch (D-113). Leaving `inventory`
+    #: here would buy a year of rows for a chart that cannot draw — "a fetch
+    #: whose answer is never used", which is the exact failure the comment on
+    #: `TREND_REPORT_TYPES` was written to prevent, arriving from the other
+    #: direction.
+    #:
+    #: WHAT IS LOST, stated plainly because it is a product decision and not a
+    #: cleanup: the inventory report no longer carries any trend. §7.3 asked
+    #: for a months-of-supply trend, that is not buildable (no past month's
+    #: active count is recoverable from a feed fetched as
+    #: Active/Pending/Closed), and the pace — MOI's denominator, which IS
+    #: knowable — is what shipped instead, labelled as what it is. That
+    #: labelling is why it was honest. Design's spec replaces it with nothing.
+    #:
+    #: `count_series`, the pace note ("past inventory levels are not
+    #: recoverable") and the whole of `compute/monthly_trend` are UNTOUCHED, so
+    #: restoring it is adding this one line back plus a slot on the page. The
+    #: producer surviving with no consumer is recorded in the defect list
+    #: rather than deleted, which is D-181's lesson applied before the fact
+    #: instead of after it.
     TREND_SERIES = {
         "market_snapshot": "median",
-        "inventory": "count",
     }
 
     def _build_monthly_trend(self):
@@ -750,7 +898,7 @@ class MarketReportBuilder:
             ]
             pill = f"{ratio:.1f}% of asking" if ratio is not None else None
             pill_sub = f"last {lookback} days"
-        elif self.report_type == "new_listings":
+        elif self.report_type in ("new_listings", "new_listings_gallery"):
             # Design: "same header, same pill, same stats" as the grid kind —
             # count / "new listings in {area}", price range / "this week",
             # Median list · Under $1M · Of inventory.
@@ -767,6 +915,69 @@ class MarketReportBuilder:
             pill = f"{low} – {high}" if low and high else None
             pill_sub = "this week"
 
+        elif self.report_type == "open_houses":
+            # Design: count "9" / "homes to see this weekend", pill
+            # "Open houses" / "Sat & Sun · {area}", stats From · To ·
+            # Neighborhoods.
+            #
+            # THE PILL SUB IS DERIVED, NOT THE LITERAL "Sat & Sun". Design's
+            # example says Sat & Sun because their sample week has both; a feed
+            # with one Sunday slot would render a document promising Saturday
+            # viewings that do not exist. The days actually present are read
+            # off the listings and named.
+            label = "homes to see this weekend"
+            big = _v2_count(len(self._v2_listing_rows()))
+            first, last, hoods = self._v2_open_house_span()
+            cells = [
+                ("From", first or V2_NO_DATA),
+                ("To", last or V2_NO_DATA),
+                ("Neighborhoods", _v2_count(hoods) if hoods else V2_NO_DATA),
+            ]
+            pill = "Open houses"
+            pill_sub = self._v2_open_house_days(city)
+
+        elif self.report_type == "featured_listings":
+            # Design: count "4" / "featured homes in {area}", pill
+            # "Hand-picked" / price range, stats Listings · Avg. price ·
+            # Avg. sq ft.
+            rows = self._v2_listing_rows()
+            label = f"featured homes in {city}"
+            big = _v2_count(len(rows))
+            low, high = self._v2_price_range()
+            cells = [
+                ("Listings", _v2_count(len(rows))),
+                ("Avg. price", _v2_money(self._v2_average("list_price", "price"))),
+                ("Avg. sq ft", _v2_count(self._v2_average("sqft"))),
+            ]
+            pill = "Hand-picked"
+            pill_sub = f"{low} – {high}" if low and high else None
+
+        elif self.report_type == "inventory":
+            # Design: count "212" / "homes for sale in {area}", pill
+            # "1.9 months" / "of inventory · seller's market", stats
+            # Median list · New this week · Avg. days listed.
+            label = f"homes for sale in {city}"
+            big = _v2_count(stats["active_count"])
+            cells = [
+                ("Median list", _v2_money(stats["median_list_price"])),
+                ("New this week", self._v2_new_this_week()),
+                ("Avg. days listed", _v2_days(stats["avg_dom"])),
+            ]
+            pill, pill_sub = self._v2_inventory_pill()
+
+        elif self.report_type == "price_bands":
+            headline = self._v2_fastest_headline()
+            big = headline["band_label"]
+            label = headline["label"]
+            low, high = self._v2_price_range()
+            cells = [
+                ("Active listings", _v2_count(stats["active_count"])),
+                ("Median list", _v2_money(stats["median_list_price"])),
+                ("Price range", f"{low} – {high}" if low and high else V2_NO_DATA),
+            ]
+            pill = headline["pill"]
+            pill_sub = headline["pill_sub"]
+
         else:
             raise NotImplementedError(
                 f"{self.report_type} is in V2_KINDS with no band spec. Every "
@@ -777,6 +988,7 @@ class MarketReportBuilder:
         return {
             "title": header["title"],
             "big": big,
+            "big_px": V2_BIG_PX.get(self.report_type, V2_BIG_PX_DEFAULT),
             "label": label,
             "label_px": _v2_label_size(label),
             "pill": pill,
@@ -809,6 +1021,280 @@ class MarketReportBuilder:
         if not comparable:
             return V2_NO_DATA
         return str(over)
+
+    def _v2_fastest_headline(self) -> Dict[str, Any]:
+        """Design's bands headline, and the rule that refuses to make it.
+
+        *"{band} is moving fastest" only when that band has >=10 listings and
+        is >=3 days faster than the area average, else the plain title
+        "{Area} · Price Bands"; every headline hidden under 10 listings.*
+
+        So this returns the plain title far more often than the claim, and that
+        is the design: a fastest-band headline on four listings is a sentence
+        the data cannot support. The comparison is against the area average
+        across the ranked bands, not against the slowest band — "faster than
+        the area" is what the sub-label says.
+
+        `hottest_and_slowest` does the ranking, imported rather than rewritten:
+        it already excludes bands with no sales rather than scoring them 999,
+        which is the zero-is-falsy defect it was written to fix (D-108's
+        family). A second ranking here would be the fifth copy problem in a
+        new template.
+        """
+        from worker.compute.price_bands import hottest_and_slowest
+
+        bands = self.report_data.get("price_bands") or []
+        header = self._build_header_context()
+        area = header["city"] or "this area"
+        plain = {
+            "band_label": f"{area} · Price Bands",
+            "label": None, "pill": None, "pill_sub": None,
+        }
+        fastest, _slowest = hottest_and_slowest(bands)
+        if not fastest.get("count") or fastest.get("avg_dom") is None:
+            return plain
+        if fastest["count"] < V2_FASTEST_MIN_LISTINGS:
+            return plain
+
+        ranked = [b["avg_dom"] for b in bands
+                  if b.get("avg_dom") is not None and b.get("count")]
+        area_avg = sum(ranked) / len(ranked)
+        ahead = area_avg - fastest["avg_dom"]
+        if ahead < V2_FASTEST_MIN_DAYS_AHEAD:
+            return plain
+
+        return {
+            "band_label": fastest["label"],
+            "label": "is moving fastest",
+            "pill": _v2_days(fastest["avg_dom"]),
+            "pill_sub": f"{ahead:.0f} days faster than the area",
+        }
+
+    def _v2_bands_body(self) -> Dict[str, Any]:
+        """Design's band rows: label + tag, a bar, median, days, $/sq ft.
+
+        THE BAR'S WIDTH IS A SHARE OF THE LARGEST COUNT, not of the total. A
+        share of the total makes every bar short as soon as there are several
+        bands, and Design's row is a comparison between bands rather than a
+        composition of a whole.
+
+        The count sits BESIDE the bar as ink text, not inside it — Design's
+        spec, and it is also the only placement that survives a count of zero
+        and a bar of zero width.
+        """
+        from worker.compute.price_bands import hottest_and_slowest
+
+        bands = self.report_data.get("price_bands") or []
+        fastest, slowest = hottest_and_slowest(bands)
+        counts = [_v2_known_count(b) for b in bands]
+        known = [c for c in counts if c is not None]
+        widest = max(known) if known else 0
+        # A COMPARATIVE TAG NEEDS TWO THINGS TO COMPARE. `hottest_and_slowest`
+        # returns the single band as both when there is one, so an unguarded
+        # `is_fastest` tagged one row "Fastest" against nothing — the body's
+        # version of the refusal `_v2_fastest_headline` already makes for the
+        # headline.
+        #
+        # RANKABLE MATCHES WHAT `hottest_and_slowest` RANKS: a known `avg_dom`
+        # and a NON-ZERO count. Zero and absent are both excluded here and for
+        # once that is right — an empty band has no speed to compare and an
+        # uncounted one has no standing to compare it — which is the one place
+        # in this method where `_v2_known_count`'s `None` and a `0` may be
+        # treated alike.
+        rankable = sum(1 for b in bands if b.get("avg_dom") is not None
+                       and _v2_known_count(b))
+        comparable = rankable >= 2
+        rows = []
+        for band, count in zip(bands, counts):
+            is_fastest = (comparable
+                          and band.get("label") == fastest.get("label")
+                          and fastest.get("avg_dom") is not None)
+            is_slowest = (comparable
+                          and band.get("label") == slowest.get("label")
+                          and slowest.get("avg_dom") is not None
+                          and not is_fastest)
+            rows.append({
+                "label": band.get("label") or V2_DASH,
+                "tag": "Fastest" if is_fastest else ("Slowest" if is_slowest else None),
+                "is_fastest": is_fastest,
+                "is_slowest": is_slowest,
+                "count": _v2_count(count),
+                "bar_pct": round(count / widest * 100) if (
+                    widest and count is not None) else 0,
+                "median": _v2_money(band.get("median_price")),
+                "days": _v2_days(band.get("avg_dom")),
+                "ppsf": (f"${int(band['avg_ppsf']):,}"
+                         if isinstance(band.get("avg_ppsf"), (int, float))
+                         else V2_DASH),
+            })
+        # THE D-111 DISCLOSURE, WHICH THIS MOVE NEARLY DROPPED.
+        # `_band_chart_note` was fed to `band_distribution_chart`, and
+        # `pricebands_layout` is the only caller of that macro — so when this
+        # kind moved to the `_v2` page, the line saying "these boundaries came
+        # from this period's results and may shift between reports" stopped
+        # reaching any page while its producer, and the test on its producer,
+        # stayed green. That caveat is the reason D-111's rebuild is honest:
+        # bands that may move look identical to bands that will not, and the
+        # whole point of round boundaries is that a reader can compare two
+        # runs. A producer with no consumer is this project's read-with-no-
+        # producer defect pointed the other way, and it is why
+        # `test_price_bands.py` now renders the page instead of calling the
+        # method.
+        #
+        # The note is REUSED, not rewritten — a second "N listings across M
+        # bands" would be a second derivation of the figure the table above it
+        # shows. It returns None under two counted bands, where there is no
+        # distribution to caption; the caveat still has to land, so it is
+        # carried on its own in that case.
+        note = self._band_chart_note()
+        caveat = self.report_data.get("price_bands_note")
+        if not note and caveat:
+            note = caveat
+        return {"rows": rows, "slow_tag": V2_SLOW_TAG, "note": note}
+
+    def _v2_new_this_week(self) -> str:
+        """How many active listings came on within `V2_NEW_WITHIN_DAYS`.
+
+        Counted from the listings rather than read from a metric, because
+        `new_listings_count` is a DIFFERENT QUANTITY: it is produced by
+        `build_new_listings_result` over that report's own lookback window,
+        which is 30 days by default and settable per schedule. Design's cell
+        says "New this week" and means seven days. Reading the 30-day figure
+        under a label that says week would be a number that is right about
+        something else, which is the hardest kind of wrong to see on a page.
+
+        `V2_NO_DATA` when no listing reports a day count at all — not `0`.
+        "No listing has a DOM" and "no listing is new" are different facts and
+        only the second is a claim about the market (D-137).
+        """
+        raw = (self.report_data.get("listings")
+               or self.report_data.get("listings_sample") or [])
+        days = [item.get("days_on_market") for item in raw]
+        known = [d for d in days
+                 if isinstance(d, (int, float)) and not isinstance(d, bool)]
+        if not known:
+            return V2_NO_DATA
+        return _v2_count(sum(1 for d in known if d <= V2_NEW_WITHIN_DAYS))
+
+    def _v2_inventory_pill(self):
+        """Design's `("1.9 months", "of inventory · seller's market")`.
+
+        BOTH HALVES COME FROM `compute.moi` AND NEITHER IS COMPUTED HERE.
+        `describe()` already owns the formatting ("one place decides how 'no
+        number' looks, so the surfaces cannot disagree") and `condition()` now
+        owns the classification, which was the one piece of MOI interpretation
+        that module did not own — and which had therefore been reimplemented
+        six times at two different thresholds (D-182). A seventh copy on a new
+        page is how that defect would have reached a fourth surface.
+
+        **NO NUMBER MEANS NO PILL.** `months_of_supply` returns `None` whenever
+        MOI cannot honestly be estimated — fewer than three closings in the
+        rate window, or an active count that hit a paging limit and is a floor
+        rather than a count (D-056). The pill is dropped entirely in that case
+        rather than filled with a dash: the band's pill is a claim about the
+        market, and "— months of inventory · " is a claim with the evidence
+        removed from the middle of it.
+        """
+        from worker.compute.moi import condition as moi_condition, describe
+
+        metrics = self.report_data.get("metrics") or {}
+        moi = metrics.get("months_of_inventory")
+        if not isinstance(moi, (int, float)) or isinstance(moi, bool):
+            return None, None
+        label = moi_condition(moi)
+        if label is None:
+            return None, None
+        return describe(moi)["formatted_current"], (
+            f"of inventory · {label.lower()}")
+
+    def _v2_listing_rows(self):
+        """The raw listings a `_v2` body will render, capped as the page caps.
+
+        One accessor, because four gallery/band branches were each reaching for
+        `listings or listings_sample` and a fifth would have got it subtly
+        different. The cap is `_build_listings_context`'s, so a band counting
+        "9 homes to see" agrees with the nine cards below it rather than with
+        the hundred the feed returned — a band that disagrees with its own body
+        is worse than either number alone.
+        """
+        return self._build_listings_context()["items"]
+
+    def _v2_average(self, *keys):
+        """The mean of the first present numeric value across `keys`, or None.
+
+        `None` and not `0` for an empty set: "no listing reports a sq ft" is
+        not "the average sq ft is zero" (D-137), and `_v2_money`/`_v2_count`
+        turn the None into a dash.
+        """
+        vals = []
+        for item in self._v2_listing_rows():
+            value = _first_present(item, *keys)
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                vals.append(value)
+        if not vals:
+            return None
+        return sum(vals) / len(vals)
+
+    def _v2_open_house_span(self):
+        """`("Sat 11 Oct", "Sun 12 Oct", 3)` — the first slot, last, and hoods.
+
+        Design's three `open_houses` stats are From · To · Neighborhoods, and
+        none of them is a metric: the open-house builder returns no `metrics`
+        at all, so all three come from the listings. The dates are already
+        sorted ascending by `build_open_houses_result`, but this does not rely
+        on that — a body that trusts an upstream sort is a body that breaks
+        when someone adds a filter.
+        """
+        dates = self._open_house_dates()
+        hoods = {
+            (item.get("city") or "").strip()
+            for item in self._v2_listing_rows()
+            if (item.get("city") or "").strip()
+        }
+        if not dates:
+            return None, None, len(hoods)
+        return (_v2_open_house_label(min(dates)),
+                _v2_open_house_label(max(dates)),
+                len(hoods))
+
+    def _open_house_dates(self):
+        """Every parseable `next_open_house` as a `date`, deduplicated."""
+        out = set()
+        for item in self._v2_listing_rows():
+            raw = item.get("next_open_house")
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            try:
+                out.add(datetime.strptime(raw.strip()[:10], "%Y-%m-%d").date())
+            except ValueError:
+                # Feeds also send "Sat 1-4pm" and other free text here. An
+                # unparseable slot is dropped from the SPAN and still renders
+                # on its card, which is the right split: the card shows what
+                # the feed said, the band only claims what it could read.
+                continue
+        return out
+
+    def _v2_open_house_days(self, city: str) -> str:
+        """`"Sat & Sun · Irvine"`, or whichever days are actually present.
+
+        NOT THE LITERAL "Sat & Sun". Design's example reads that way because
+        their sample week has both, and a report whose only slot is Sunday
+        would otherwise promise Saturday viewings that do not exist — a claim
+        the data contradicts, on a document an agent hands to a client.
+        """
+        dates = self._open_house_dates()
+        if not dates:
+            return city
+        names = sorted({d.strftime("%a") for d in dates},
+                       key=lambda n: min(d.weekday() for d in dates
+                                         if d.strftime("%a") == n))
+        if len(names) == 1:
+            days = names[0]
+        elif len(names) == 2:
+            days = f"{names[0]} & {names[1]}"
+        else:
+            days = f"{names[0]}\u2013{names[-1]}"
+        return f"{days} \u00b7 {city}"
 
     def _v2_price_range(self):
         """`($641K, $1.2M)` from the listings' own prices, or `(None, None)`.
@@ -857,6 +1343,88 @@ class MarketReportBuilder:
             return V2_NO_DATA
         return f"{new / active * 100:.0f}%"
 
+    def _v2_gallery(self) -> Dict[str, Any]:
+        """Design's photo grid: the cards, the grid shape, and which card.
+
+        TWO CARDS, NOT ONE GRID OF ONE CARD. `featured_listings` gets its own
+        (price plate 18px, address 15px/600, beds/baths/sq ft as three stacked
+        mini-stats to the right) because four cards on a page can afford the
+        size and nine cannot. `new_listings_gallery` and `open_houses` share
+        the listings card — Design's own words, "same card as listings".
+
+        THE PHOTO RESERVES ITS BOX WITHOUT LOADING, and that is load-bearing
+        for the page-fit measurement rather than a detail. It is an
+        `aspect-ratio` on a `background-image` div, so the height is reserved
+        from the column width whether or not a remote photo resolves — and
+        remote photos never resolve in a headless render. The legacy card used
+        a fixed `height: 180px` for the same reason; an `<img>` with no
+        reserved box would make `measure_gallery_continuation_fit.py` measure a
+        page that collapses to nothing.
+        """
+        rows = []
+        for item in self._v2_listing_rows():
+            price = _first_present(item, "list_price", "price")
+            hood = (item.get("city") or "").strip()
+            rows.append({
+                "photo_url": item.get("photo_url") or None,
+                "price": _v2_money(price),
+                "address": item.get("address") or V2_NO_DATA,
+                # `{hood} · {specs}` as ONE line, Design's spec. Joined here
+                # rather than in the template so an absent hood does not render
+                # a leading separator — the shape `· 3 bd / 2 ba` is the
+                # thing a dot-joined template produces on missing data.
+                "meta": " \u00b7 ".join(
+                    part for part in (hood, _v2_card_specs(item)) if part),
+                "hood": hood,
+                "beds": _v2_count(item.get("beds")),
+                "baths": _v2_count(item.get("baths")),
+                "sqft": _v2_count(item.get("sqft")),
+                # Free text as well as a date — feeds send both, and the card
+                # shows whatever the feed said even when the band could not
+                # parse it for the From/To span.
+                "open_house": (item.get("next_open_house") or "").strip() or None,
+                # THE CARD'S THIRD LINE, AND IT IS HOW "LISTED TODAY" SURVIVES
+                # THE MOVE. Design's gallery card is price plate · address ·
+                # "{hood} · {specs}" and names no date — but the legacy card
+                # carried a "New" badge on a same-day listing, and
+                # `test_zero_days_on_market_renders_as_new` is a gate written
+                # because 0 days is the value an `or` chain eats (D-105,
+                # D-108). Dropping it would lose the most interesting fact on
+                # a new-listings report, silently, to a spec that did not ask
+                # for it to go.
+                #
+                # It uses the SAME SLOT `open_houses` puts its viewing time in,
+                # so this is Design's own card structure carrying a per-kind
+                # line rather than a line invented beside it. Flagged for them:
+                # one `{% if %}` removes it if they want the card bare.
+                "listed": (_v2_listed_label(item.get("days_on_market"))
+                           if self.report_type == "new_listings_gallery"
+                           else None),
+            })
+        spec = V2_GRID[self.report_type]
+        return {
+            "rows": rows,
+            # The search's own terms, for the empty state. Standing
+            # instruction: an empty search renders and says it returned
+            # nothing — and `_v2`'s grid is a `<section>` that collapses to a
+            # bare empty element otherwise, which is the same defect the bands
+            # body had (five column headings over nothing).
+            # THE SEARCH'S OWN TERMS, not the report title. "No listings
+            # matched this search" alone cannot tell an empty market from an
+            # over-tight filter, which is the whole point of the gate on this:
+            # the reader needs to know whether to widen the filter or believe
+            # the market. `filters_label` is what the user chose.
+            "empty_label": (self.report_data.get("filters_label") or "").strip(),
+            "empty_city": self._build_header_context()["city"] or "",
+            "cols": spec["cols"],
+            "rows_page_1": spec["rows_page_1"],
+            "card": (V2_FEATURED_CARD
+                     if self.report_type == "featured_listings"
+                     else V2_LISTING_CARD),
+            "showing": len(rows),
+            "total": self._build_listings_context()["total_available"],
+        }
+
     def _v2_table(self) -> Dict[str, Any]:
         """Design's table for the three table kinds; `closed`'s columns here.
 
@@ -875,6 +1443,17 @@ class MarketReportBuilder:
             ratio = None
             if isinstance(close, (int, float)) and isinstance(lst, (int, float)) and lst:
                 ratio = close / lst * 100
+            # PER KIND, AND AN UNKNOWN KIND RAISES.
+            #
+            # This was `if new_listings: ... else: ...`, and the `else` was
+            # `closed`'s close-to-list ratio. That is right for two kinds and
+            # silently wrong for every kind added afterwards: `inventory`'s
+            # listings are Active, so they have no close price, so the ratio
+            # comes out `None`, so the column would have rendered a full page
+            # of dashes under a header reading "Status" — a page that looks
+            # finished and says nothing. The same shape as the four gates that
+            # encoded a table kind's property as the seam's property, in the
+            # builder instead of in a test.
             if self.report_type == "new_listings":
                 # Design's `Listed` column, and the LIST price — a new listing
                 # has no sale price, so `close if close else lst` would be the
@@ -882,10 +1461,29 @@ class MarketReportBuilder:
                 fifth = _v2_listed_label(item.get("days_on_market"))
                 emphasis = fifth == "Today"
                 price = _v2_money(lst)
-            else:
+            elif self.report_type == "inventory":
+                # Design: `Status` — "New" when DOM <= 7, else a dash. The LIST
+                # price for the same reason as `new_listings`: a home for sale
+                # has not sold.
+                dom = item.get("days_on_market")
+                fresh = (isinstance(dom, (int, float))
+                         and not isinstance(dom, bool)
+                         and dom <= V2_NEW_WITHIN_DAYS)
+                fifth = "New" if fresh else V2_DASH
+                emphasis = fresh
+                price = _v2_money(lst)
+            elif self.report_type == "closed":
                 fifth = f"{ratio:.1f}%" if ratio is not None else V2_DASH
                 emphasis = bool(ratio is not None and ratio > 100)
                 price = _v2_money(close if close else lst)
+            else:
+                raise NotImplementedError(
+                    f"{self.report_type} has `_v2` table columns but no fifth-"
+                    f"column rule. Design states that column per kind — a "
+                    f"ratio on `closed`, a date on `new_listings`, a status on "
+                    f"`inventory` — and there is no default that is right for "
+                    f"a kind nobody has read the spec for."
+                )
             rows.append({
                 "address": item.get("address") or V2_NO_DATA,
                 "hood": item.get("city") or "",
@@ -1074,7 +1672,15 @@ class MarketReportBuilder:
             context.update({
                 "v2": True,
                 "v2_band": self._v2_band(),
-                "v2_table": self._v2_table(),
+                # ONE BODY PER KIND, chosen here rather than by the template
+                # asking what kind it is. `price_bands` is not a table and the
+                # page must not pretend it is.
+                "v2_table": (self._v2_table()
+                             if self.report_type in V2_TABLE_COLUMNS else None),
+                "v2_bands": (self._v2_bands_body()
+                             if self.report_type == "price_bands" else None),
+                "v2_gallery": (self._v2_gallery()
+                               if self.report_type in V2_GRID else None),
                 "on_primary": tokens["on_primary"],
                 "display_ink": tokens["display_ink"],
                 # The pill's text sits on WHITE, not on the brand fill, at

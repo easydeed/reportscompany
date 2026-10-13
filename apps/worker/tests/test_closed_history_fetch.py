@@ -44,11 +44,35 @@ def test_the_fetch_list_is_derived_from_the_draw_list():
 
 
 def test_only_the_trend_reports_pay_for_a_second_query():
-    """A second vendor request on six reports that cannot use the answer."""
+    """A second vendor request on the reports that cannot use the answer.
+
+    WAS 2, IS 1, AND THE GATE IS WHAT NOTICED. `inventory` drew the sales-pace
+    series and was therefore in `TREND_SERIES`, which `TREND_REPORT_TYPES` is
+    derived from and `tasks.py` reads to decide whether to buy twelve months of
+    closings. Design's `_v2` page for `inventory` has no chart slot, so from
+    2026-10-08 the chart cannot render — and leaving the type in the map would
+    have paid for a year of rows nothing could use.
+
+    That is D-113's defect inverted: D-113 was a chart whose data was never
+    bought, this would have been data no chart could spend. The comment on
+    `TREND_REPORT_TYPES` names both directions, and this is the second one
+    arriving.
+
+    So the number went DOWN because a report stopped needing the fetch, which
+    is the one way it can move that is good news. The instruction below still
+    stands for the other direction.
+    """
     assert TREND_REPORT_TYPES < set(ALL_REPORT_TYPES)
-    assert len(TREND_REPORT_TYPES) == 2, (
+    assert len(TREND_REPORT_TYPES) == 1, (
         "if a report type gained a trend, this number moves with it — but "
-        "check the fetch is wanted before updating it"
+        "check the fetch is wanted before updating it. If it went DOWN, a kind "
+        "stopped drawing a chart: make sure it stopped paying for the data too, "
+        "which is the whole reason this set is derived from `TREND_SERIES`."
+    )
+    assert TREND_REPORT_TYPES == frozenset({"market_snapshot"}), (
+        f"the trend reports are now {set(TREND_REPORT_TYPES)}. `inventory` "
+        f"left on 2026-10-08 with its chart; `market_snapshot` is the last "
+        f"kind drawing one and the last kind unwired."
     )
 
 

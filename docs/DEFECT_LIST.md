@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 60 | Real, unfixed |
-| `fixed` | 113 | Corrected in code, with the branch or PR named on the entry |
-| `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
+| `open` | 63 | Real, unfixed |
+| `fixed` | 119 | Corrected in code, with the branch or PR named on the entry |
+| `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **178** | D-001 … D-178, contiguous, no duplicates |
+| **Total** | **189** | D-001 … D-189, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 17 · FRAGILE 15 · ROUGH 24. (Sums to 60, the open total.)
+**Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 63, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -92,7 +92,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > implementations of "how to read this document" is a second answer waiting to be believed.
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`); D-178 (`feat/market-closed-v2`).
-`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
+`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17); D-179 (**not reproducing** — four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository; each absence named on the entry so the same report cannot re-file it).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
 
@@ -5724,6 +5724,35 @@ way, and only the rendering rule is in question.
 A market with six price bands renders four cards. Nothing on the page says the other two exist,
 and nothing in the code says why four.
 
+> **CORRECTION, 2026-10-08 — THE FIX REACHED ONE OF TWO COPIES.** There is a second
+> `{% for band in price_bands[:4] %}`, in **`analytics_layout`** (`macros.jinja2:323`), and this
+> entry's fix did not touch it. Same loop, same slice, same four-of-six truncation, under a
+> different macro. The two-implementations family again (D-163, D-170, D-177), and it was invisible
+> for the usual reason: the entry named `pricebands_layout`, the fix edited `pricebands_layout`, and
+> nothing asked whether the construct existed elsewhere. `grep -n "price_bands\[:4\]"` finds both
+> in one line and was not run.
+>
+> **It is dead, for two independent reasons, and was dead before this entry was filed:**
+>
+> 1. `analytics_layout`'s only report type was `new_listings`, and
+>    **`build_new_listings_result` emits no `price_bands` key** — so `{% if price_bands %}` has never
+>    been true on that path from the real builder. (D-111's entry says this defect "affects the band
+>    cards on `new_listings`". That is overstated in the same direction: `new_listings` has never
+>    carried band data.)
+> 2. `analytics_layout` also has an `{% if report_type == 'price_bands' %}` branch, which has never
+>    been taken either, because `price_bands`' layout was `pricebands_layout`.
+>
+> And as of 2026-10-08 `analytics_layout` is unreachable from any kind at all — `new_listings` moved
+> to Design's `_v2` page — so it is now dead a third way. Recorded rather than edited: **editing a
+> dead slice would produce a diff that looks like a fix and changes no rendered page**, and the
+> decision to remove the two unreachable layouts is D-181's, where the set is pinned.
+>
+> What this costs is only the record: the entry claimed a construct was removed and one instance of
+> it remains. The **severity does not change** and the status stays `fixed`, because the surviving
+> copy cannot render. What *would* have changed is if `new_listings` had ever been given band data —
+> post-D-111 the ladder yields up to six bands, so the slice would truncate two, which is exactly
+> the defect this entry describes, on a page nobody would have re-checked.
+
 **Surfaced by the §7.3 band chart**, which renders every band — so a six-band report now shows four
 cards above six bars. The chart's caption names the discrepancy as a stopgap ("the cards above show
 the first 4; the chart shows all 6"), which is a caption apologising for a layout rather than a fix.
@@ -10803,6 +10832,758 @@ Supplying `closed_history` means generating twelve months of plausible closings 
 a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
 same question as the nineteen orphans. The hole is recorded with its measurement so the decision
 can be taken on the number.
+
+---
+
+### D-184 — Design's page-1 photo grids do not fit under Design's page-1 band
+
+**Severity:** ROUGH · **Affects:** `open_houses` and `featured_listings` page 1 — the stated grid
+against the measured fit · **Found during:** re-measuring #156's gallery fit against the `_v2`
+architecture before trusting 3×3
+**Status:** `open` for `open_houses`; **DECIDED for `featured_listings`** — see below. Built to the
+measured fit, with the shortfall reported to Design as a measurement.
+
+> ### DECIDED 2026-10-12 — the bigger featured card stays, and the two pages are accepted
+>
+> Jerry reviewed the full old-beside-new comparison (all eight kinds, one brand) and approved it
+> as-is. **The `featured_listings` question in that pack was explicit** — *"this one got longer, two
+> pages to four. Is the bigger card worth two extra pages, or should it use the smaller shared
+> card?"* — so the approval answers it.
+>
+> **The bigger card stays. The 2 → 4 page cost is accepted, not an oversight.** Recorded here so
+> nobody re-opens it as one: the card is 326.8px against the shared card's 238.3, two fit under the
+> band where six of the smaller fit, and that is the intended document.
+>
+> **The 4.7px question to Design is still worth asking** and is unaffected by this. It is no longer
+> "should the card be smaller" — that is settled — but "your stated 2×2 misses by five pixels, and
+> closing it would give the approved card three pages instead of four." A free page on an approved
+> design, not a redesign.
+>
+> `open_houses`' 80.1px shortfall remains open and remains cost-free; it was never a page question.
+
+Their per-kind table states a page-1 grid for each gallery kind. Their band, measured on the page
+they specified, is **265.4px**, leaving **662.9px** above the footer:
+
+| kind | Design states | measured fit | verdict |
+|---|---|---|---|
+| `new_listings_gallery` | 3×2 = 6 | **6** | fits, 172.2px spare |
+| `open_houses` | 3×3 = 9 | **6** | **80.1px short** |
+| `featured_listings` | 2×2 = 4 | **2** | **4.7px short** |
+
+**`featured_listings` misses by four and a half pixels.** One point of line-height, or five pixels
+off the photo, and 2×2 fits — which takes that kind from 4 pages to 3.
+
+#### THE BIGGER SHORTFALL IS THE FREE ONE, and that inverts the priority
+
+| kind | short by | pages ours | pages if their grid fitted | cost |
+|---|---|---|---|---|
+| `open_houses` (cap 100) | **80.1px** | 12 | 12 | **nothing** |
+| `featured_listings` (cap 12) | **4.7px** | 4 | 3 | **one page per report** |
+
+`open_houses` renders `[6, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4]` — 100 cards over 12 pages. Design's 3×3
+everywhere would be `ceil(100 / 9)` = also 12, because the three cards page 1 cannot hold are
+absorbed by continuation pages that are not full. **The shortfall moves cards between pages without
+adding one.**
+
+Filed as one entry because it is one class of defect, but it is **two different asks**, and ranking
+them by shortfall size would have put the effort on the wrong one: five pixels on `featured_listings`
+buys a page on every report, and eighty on `open_houses` buys nothing and is purely a page-1 density
+question.
+
+#### Third instance of the same class
+
+After the 13-and-26 row counts (page-1 13 and continuation 26 are not simultaneously satisfiable:
+26 needs a row ≤34.8px, and 13 at that height needs 441–476px of page-1 chrome where their own band
+computes to ~295px and ours measures 265px) and the gradient contradiction. **The pattern is a
+number stated for one part of a page without the rest of the page in it** — and it is the same
+failure mode as this project's own, which is why it is filed rather than just relayed: we shipped
+`ceil((120 - page_1) / 26) + 1` as a built-page formula that was right for four kinds and wrong for
+every capped one.
+
+#### Built to the measurement, not to the spec
+
+`PAGE_1_CAPACITY` records 6 / 6 / 2 because that is what renders. The alternative — honouring the
+stated grid — puts a ninth card 80px below the page edge, where PDFShift breaks it onto page 2 as an
+orphan row. **A spec number that does not fit is not a target to hit by overflowing.**
+
+---
+
+### D-185 — a page-size assertion covered one report type and read as if it covered the market templates
+
+**Severity:** FRAGILE · **Affects:** `tests/test_market_templates.py::TestPrintCSS` — four `_v2`
+kinds unasserted for three days · **Found during:** wiring the gallery kinds, when the one kind the
+test could see finally moved
+**Status:** `fixed` — `feat/market-galleries-v2`
+
+```python
+def test_has_page_size_rule(self, full_data):
+    html = MarketReportBuilder(full_data).render_html()
+    assert "@page" in html, "Missing @page CSS rule"
+```
+
+`full_data` sets one `report_type` — `new_listings_gallery`. So the test reads as *"the market
+templates set a page size"* and means *"`new_listings_gallery` does"*.
+
+**`closed`, `new_listings`, `inventory` and `price_bands` moved to the `_v2` page, which has no
+`@page` rule at all, and shipped that way for three days unobserved.** The test could not see them.
+It failed only when the gallery kind itself moved — the last moment it could have.
+
+#### The tell is the fixture, not the assertion
+
+The assertion is correct, points at the right object and asserts the right thing. What is wrong is
+its **scope**: a single-instance fixture under a class-scoped name. `full_data` with one
+`report_type`, a partial render standing for a page, one theme standing for six. **It reads as
+coverage and is a sample of one.**
+
+This is the direction **D-107** failed in a day earlier, in a document rather than a test: the
+entry's claim was class-scoped ("the price-band stat cards show the first four bands") and its fix
+was instance-scoped (one macro of two), and nothing noticed for ten days. §0.6 now carries the rule.
+
+#### Fixed by pinning per member, not by renaming
+
+`HAS_AT_PAGE_RULE` records the expectation for all eight kinds and the test is parametrised over
+`ALL_REPORT_TYPES`, so an unrecorded kind is an error. Renaming it to
+`test_new_listings_gallery_has_a_page_size_rule` would have been honest and would still have left
+seven kinds unasserted.
+
+**The `_v2` page is left without an `@page` rule, deliberately.** PDFShift sets the page box through
+its API — `format`, `margin`, and the 0.44in/0.89in header and footer reserve — and the measured
+PDFs are correct letter pages without any CSS rule. Adding `@page { margin }` to a document whose box
+is set by the caller risks moving the body, and **every row capacity on this surface is measured
+against that box**, so it would mean re-measuring seven kinds to buy a rule that changes nothing. A
+mutation adding one is recorded and fires.
+
+---
+
+### D-189 — not reproducing: a migration `0062` that re-seeds a themes table on every deploy. Four premises, all absent.
+
+**Severity:** ROUGH — *nominal; `closed-not-live` entries are excluded from the severity sums and a
+defect that does not exist has no severity* · **Affects:** nothing · **Found during:** checking
+whether the theme rename was safe against the migrations, before writing any of it
+**Status:** `closed-not-live` — **the described code does not exist, at four independent levels.**
+Recorded because **a claim about it reached the product owner**, and because the same report will
+otherwise produce it again.
+
+Reported as: migration `0062` does `CREATE TABLE IF NOT EXISTS` then an unconditional
+`INSERT ... ON CONFLICT DO NOTHING`, has been running on every deploy for six days, and would
+resurrect a deleted `bold` theme row as a new id — so the rename is unsafe until it is fixed.
+
+**Every link in that chain is absent, and any one of them alone would be enough:**
+
+| the claim | measured |
+|---|---|
+| migration `0062` exists | **the highest migration is `0058`.** There is no `0059`, `0060`, `0061` or `0062` — `ls db/migrations/` ends at `0058_theme_cut_to_three.sql` |
+| migrations re-run on every deploy | **they do not.** `db/schema_migrations.sql` states the contract both runners implement: *"a file whose basename IS in this table is skipped, never re-executed"* — and *"if a recorded file's checksum no longer matches what was applied, the runner warns and still skips it"* |
+| there is a themes table with rows to delete | **there is no themes table.** `grep -niE "CREATE TABLE[^;]*theme" **/*.sql` returns nothing. Themes live in `apps/worker/src/worker/themes.json` |
+| a deleted row would come back with a new id | **there is no table, so no row and no sequence.** What the database stores is integers: `accounts.default_theme_id INTEGER` (`0043`, `SET DEFAULT 5` by `0058`) and `property_reports.theme INTEGER CHECK (theme >= 1 AND theme <= 5)` |
+
+A fifth claim travelled with it — that this is "the fourth copy of the id→name mapping, in SQL where
+none of the Python-side checks reach." **There is no id→name mapping in SQL.** The mapping lives in
+`themes.json` and is generated into two files by `scripts/gen_theme_registries.py`; `0058` names the
+themes **only in comments**, explaining which ids were retired.
+
+#### The shape is real, and it is closed by the runner rather than by each file
+
+The question that produced this — *"are these literals historical or operative?"* — is the right
+one, and two migrations do carry an unconditional seed with `ON CONFLICT DO NOTHING`:
+`0012_seed_plans.sql` and `0056_seed_free_plan.sql`.
+
+**`ON CONFLICT DO NOTHING` does protect against duplicates and not against re-creation after a
+deliberate delete** — that part of the report is a correct observation about SQL. It does not bite
+here because **the runner never re-executes a recorded file**, so the seed runs once whatever it
+contains. The protection is at the runner, not in the statement, and
+`tests/test_migration_bootstrap_guard.py` gates the runner's half (D-053).
+
+**Worth knowing rather than fixing:** if that contract ever changed — a runner that replayed
+migrations, or a fresh database seeded by replay — those two files would resurrect deleted plan
+rows. The guarantee is one layer away from the statements that depend on it, and neither file says
+so. That is a comment worth adding, not a defect.
+
+#### Why this is recorded rather than dismissed
+
+Nothing was built on it, so there is no code to revert — but **a message describing it as a live
+defect being fixed before the rename reached Jerry.** A non-existent defect has exactly one cost,
+and it is that: a product owner now believes his database has a flaw it does not have, and that work
+is happening which is not. Four named absences are cheaper to check next time than they were to
+check this time.
+
+**The rename's safety was the actual question and it is answered, in the other direction:** a rename
+changes no stored value, because every theme reference in the database is an integer id and ids are
+never reused (`0058`). The only theme *names* in SQL are five column identifiers in
+`0037_property_report_stats.sql` — `theme_classic`, `theme_modern`, `theme_elegant`, `theme_teal`,
+`theme_bold` — which no application code reads, and two of which have already named retired themes
+since the theme cut without consequence.
+
+---
+
+### D-188 — the headline on every market report is the sum of every status count, printed under the report's own title
+
+**Severity:** WRONG · **Affects:** the masthead metric on **all eight** market report types, plus the
+hero on `inventory` and `price_bands` — live on `main` · **Found during:** building the old-beside-new
+review pack, by reading the two documents side by side
+**Status:** `open` — the `_v2` band reads the right field, so seven kinds are fixed *as a side
+effect* of the redesign. **The legacy page is still what `main` renders, and `market_snapshot` still
+renders it even after the redesign lands.**
+
+`_build_header_context`:
+
+```python
+total = sum(counts.values()) if counts else data.get("total_listings", 0)
+```
+
+and `macros.jinja2:697`:
+
+```jinja
+<span class="masthead-metric-value">{{ header.total_count }}</span>
+<span class="masthead-metric-label">{{ header.title }}</span>
+```
+
+**So the number is the sum of every status bucket and the label is the name of the report.** Measured
+from the real builders, not a fixture:
+
+| builder | `counts` | headline shows | correct |
+|---|---|---|---|
+| `build_open_houses_result` | `{OpenHouses: 30, Active: 30}` | **60** | 30 |
+| `build_inventory_result` | `{Active: 10, Pending: 0, Closed: 10}` | **20** | 10 |
+| `build_price_bands_result` | `{Active: 10, Pending: 10, Closed: 10}` | **30** | 10 |
+| `build_closed_result` | `{Active, Pending, Closed}` | all three summed | the Closed count |
+
+**`open_houses` is the clearest: its two counts are the same listings counted twice**, so the
+headline is exactly double. `pricebands_layout` makes it explicit by labelling the hero
+**"Total Active Listings"** over a number that includes pending and closed.
+
+#### Why no gate caught it
+
+Every gate on this surface asks whether a number *renders* and whether it is formatted correctly.
+`total_count` renders, it is an integer, it is never `None` — and D-108's own comment sits directly
+above it defending the right thing for the wrong number: *"0 is a result, not a missing field: the
+report shows the number it matched rather than dropping the block."* The block is shown, the number
+is not the one it matched.
+
+**This is the class §0.6 has no rule for and the structural gates cannot reach**: a value that is
+present, well-typed, correctly formatted and *means something other than its label*. The contrast
+gates measure its colour. The pagination gates measure the space it occupies. Nothing compares it to
+the thing it claims to count.
+
+#### Found by a human-facing artefact, which is the point worth recording
+
+It surfaced because the old and new pages were put on facing pages and the two headlines disagreed —
+117 against 38 on the same data. **Neither document is wrong on its own terms**; only the pair is
+informative. Three weeks of measurement on this surface did not find it, and one render of a
+comparison did.
+
+#### Not fixed here
+
+The fix is one line (`counts.get(<the kind's own bucket>)` rather than `sum`), and it is **not one
+line of decision**: each kind has a different right answer, `market_snapshot`'s headline may
+legitimately be a total of something, and the masthead is shared by eight kinds. It also changes a
+number on a live customer-facing document, which wants Jerry's word rather than a refactor.
+
+**What is urgent is not the redesign** — the `_v2` band reads `closed_count`, `active_count` and the
+rest per kind and is already right. It is that **`main` has this defect on all eight kinds today**,
+and `market_snapshot` keeps it after the redesign lands.
+
+---
+
+### D-187 — thirty-six green tests for four metrics the product does not compute
+
+**Severity:** FRAGILE · **Affects:** `tests/test_new_metrics.py` — and §7.3's unbuilt DOM
+distribution chart, whose computation this is · **Found during:** auditing §07 for unbuilt and
+untracked work at the close of the market surface
+**Status:** `open` — **what to do about it is a decision, not a fix.** Recorded with the measurement.
+
+> ### CORRECTION 2026-10-12 — THIS IS THE TEST-SUITE HALF OF D-167, AND I FILED IT WITHOUT FINDING
+> **D-167 — "three market metric groups have no producer at all, and a bare `except` has been hiding
+> it"** — already records that `compute_price_cut_stats` and `compute_dom_distribution` do not
+> exist, filed on 2026-10-05 while wiring Design's property page 5. **Two of the four functions
+> below are its functions.** This entry was written as though the absence were a new finding; it is
+> not.
+>
+> **What is new here and belongs to this entry:** D-167 is about the **consumer** — `market_trends`
+> imports the three, the import raises every time, and `except (ImportError, Exception)` swallows
+> it, so three of a property report's four headline market numbers have always been `None`. This
+> entry is about the **apparent coverage**: a 36-test suite that reads as a guarantee those
+> computations behave correctly, for computations that have never existed. Neither notices the
+> other, and the pair is why nobody looked: the consumer fails silently, and the tests pass.
+>
+> **The other two** — `comp_confidence` and `parse_options_meta` — are not D-167's and are not
+> imported by anything, so for those the absence genuinely was unfiled.
+>
+> **How the miss happened, because it is the rule this project files most.** "Before building a
+> tool, grep for one" was applied to code and not to the board: the §07 audit grepped `apps/` for
+> the function names and never grepped `DEFECT_LIST.md` for them. One `grep -n
+> "compute_dom_distribution" docs/DEFECT_LIST.md` would have returned D-167. **The board is a
+> codebase and the same rule governs it** — added to §0.6.
+>
+> Severity stays FRAGILE: the WRONG half is D-167's and is already counted there. Counting it twice
+> would overstate the open board.
+
+`tests/test_new_metrics.py` is 36 tests and they all pass. **Every function they test is defined
+inside the test file** — and the first two are the ones D-167 records as having no producer:
+
+| function | in `apps/`? |
+|---|---|
+| function | in `apps/`? | |
+|---|---|---|
+| `compute_price_cut_stats` | **no** | **D-167** — imported by `market_trends`, ImportError swallowed |
+| `compute_dom_distribution` | **no** | **D-167** — same, and §7.3's unbuilt chart needs it |
+| `comp_confidence` | **no** | unfiled before this entry |
+| `parse_options_meta` | **no** | unfiled before this entry |
+
+Its own docstring says so without quite saying so — *"Helpers / pure functions (no project deps)"* —
+and that is accurate about the imports and silent about the consequence: **the file specifies four
+metrics, asserts they behave correctly, and the product computes none of them.**
+
+#### Why this is worse than an empty file
+
+The defect board already carries a note on this suite from the 2026-09-22 sweep: *"`test_new_metrics.py`
+passes completely, which is worth noting: at least one of these suites has been correct and unrun for
+its whole life."* That was about the **runner** — `testpaths` had excluded it. It was then included,
+it went green, and it has been green ever since.
+
+So the suite reads as thirty-six tests' worth of coverage on price-cut rates, DOM buckets, comp
+confidence and OPTIONS parsing. **It is thirty-six tests of a specification.** §0.6: *an assertion
+with no content is worse than none, because it reads as coverage* — this is the largest instance of
+it in the repository, and it survived the sweep that was about exactly this, because the sweep asked
+whether the tests passed rather than what they tested.
+
+#### It is also the unbuilt §7.3 chart, from the other end
+
+`compute_dom_distribution` is the computation `closed`'s DOM distribution histogram needs.
+`DELIVERY_SURFACES_MASTER_PLAN` §7.3 records that chart as open, and for a good reason — the column
+it plots was D-105, every DOM read from the wrong path, and a histogram makes a number authoritative
+so it waits for a live payload. **What nothing records is that the computation is already specified
+and tested.** And `scripts/gen_la_verne_all_themes.py:505` feeds a hand-written
+`"dom_distribution": {"fast": 55, "normal": 30, "slow": 15}` into sample data, so the SHAPE is in a
+fixture with nothing producing it — the read-with-no-producer family, with the test suite standing in
+for the producer.
+
+#### Three dispositions, and this entry does not pick one
+
+1. **Move the four functions into `apps/` and import them.** The tests become real. But two of the
+   four (`comp_confidence`, `parse_options_meta`) describe behaviour the product may already
+   implement differently elsewhere, so this is not a move — it is a reconciliation, and it needs each
+   one checked against what ships.
+2. **Delete the file.** Honest, and it discards a specification of the DOM distribution that §7.3
+   will want when D-105 is confirmed in production.
+3. **Rename it to say what it is** — a specification with executable examples, not a test of the
+   product — and leave it until §7.3's chart is unblocked.
+
+**Not picked here because it is four separate decisions**, one per function, and the one that matters
+(`compute_dom_distribution`) is blocked on the same live payload the chart is. What this entry does is
+stop the suite being counted as coverage.
+
+---
+
+### D-186 — three facts the gallery card dropped on the way to Design's page, each guarded by a gate written because zero is the interesting value
+
+**Severity:** WRONG · **Affects:** the three gallery kinds — a studio's bed count, a same-day
+listing's date, and an empty search · **Found during:** wiring the galleries, by three gates that
+had been written for exactly these values
+**Status:** `fixed` — `feat/market-galleries-v2`. All three found and fixed in the same change.
+
+Design's gallery card is price plate · address · `{hood} · {specs}`. Three things the legacy card
+carried are absent from that spec, and all three were caught by `test_zero_conditionals.py` — a file
+whose whole subject is values an `or` chain eats:
+
+| what was lost | the gate | fixed by |
+|---|---|---|
+| **"Studio"** for 0 bedrooms | `test_zero_bedrooms_renders_as_a_studio` | `_v2_card_specs` names it. `0 bd` is not wrong so much as not what the thing is called, and it reads as missing data to the agent's client |
+| **a same-day listing's date** | `test_zero_days_on_market_renders_as_new` | the card's third line — Design's own slot, which `open_houses` puts its viewing time in — carries `Today` / `n d ago`. Their word, their structure |
+| **the empty state** | `test_an_empty_result_set_says_so_in_the_terms_of_the_search` | an empty grid was a bare `<section>`; it now names the city and `filters_label` |
+
+#### Why the third one matters most
+
+"No listings matched this search" **alone cannot tell an empty market from an over-tight filter**,
+which is the entire point of that gate: the reader has to know whether to widen the filter or believe
+the market. The first version of the fix named the report title instead of `filters_label` and would
+have passed a test asserting only the sentence.
+
+This is the same empty-state shape as `price_bands`' bands body rendering five column headings over
+nothing, two days earlier, on the same page. Standing instruction unchanged: **the report renders and
+says the search returned nothing; it does not change whether the report sends** (D-110).
+
+#### The one judgement call, flagged
+
+The date line is **not in Design's gallery spec.** It is placed in the slot their own card already
+has for per-kind information, because the alternative was losing the most interesting fact on a
+new-listings report to a spec that did not ask for it to go. One `{% elif %}` removes it if they want
+the card bare — but that should be their sentence, not a silent omission.
+
+---
+
+### D-183 — the inventory trend lost its page and nearly kept its vendor fetch
+
+**Severity:** FRAGILE · **Affects:** the `inventory` report — the sales-pace chart, and one SimplyRETS
+query per render · **Found during:** wiring `inventory` onto Design's `_v2` page, by looking for
+D-181's shape before building rather than after
+**Status:** `fixed` — `feat/market-inventory-v2`. **The information loss is not a defect and is not
+fixed; it is Design's call and is flagged for Jerry below.**
+
+Design's `_v2` page for `inventory` is the shared band over the listings table. It specifies **no
+chart**. `inventory` was the only report type drawing the **sales-pace** series — "Homes sold per
+month", with the note saying it is *not* months-of-supply because past inventory levels are not
+recoverable from a feed fetched as Active/Pending/Closed.
+
+So the chart stops rendering. That part is forced by the spec. **What would have gone wrong quietly
+is the fetch:**
+
+```python
+TREND_REPORT_TYPES = frozenset(MarketReportBuilder.TREND_SERIES)
+```
+
+`TREND_SERIES` is both the drawing map and the shopping list — `tasks.py` reads the derived set to
+decide whether to buy twelve months of closings (D-113). Leaving `inventory` in it would have paid
+for a year of rows on every inventory report for a chart that cannot draw.
+
+**That is D-113 exactly inverted.** D-113 was a chart whose data was never bought; this would have
+been data no chart could spend. The comment on `TREND_REPORT_TYPES` names both directions —
+*"two copies fail the quiet way in both directions: a fetch whose answer is never used, or a chart
+whose data was never bought"* — and this is the second one arriving, against a map that was
+deliberately single-sourced to prevent it. **The single source is what made it one line instead of
+two, and the gate is what noticed:**
+`test_only_the_trend_reports_pay_for_a_second_query` pins the count, it went 2 → 1, and the test
+asked why.
+
+#### Found before the fact, which is the only interesting part
+
+D-181 was a producer surviving its only consumer, discovered after the fact by repointing a test.
+One kind later the same shape was *looked for* — "what did the old path produce that nobody else
+produces" is now the question asked when a kind moves — and it was here. The pace series, its note,
+`compute/monthly_trend.count_series` and the chart macro are all untouched and all unreachable.
+
+`apps/worker/tests/test_monthly_trend.py` is repointed rather than deleted, the same way
+`test_band_chart.py` was: the four assertions were about **the series and its marks**, not about
+which report carried them, and every one is live again the moment the chart is restored — a zero
+month dropped as a gap, a count axis floating off zero, a pace line read as supply. They render
+through `pace_report`, which lends `market_snapshot` the count series, and
+`test_no_report_type_draws_the_pace_series_today` asserts the fact so the suite states it rather
+than implying the feature works.
+
+> **The first version of `pace_report` lent the series back to `inventory` and rendered nothing** —
+> because `inventory` is in `V2_KINDS` now and Design's page has no chart slot at all. The series
+> map and the page layout are two separate gates and the kind moved through both. Worth recording:
+> re-enabling a feature by patching the flag that used to enable it is not enough once the surface
+> it drew on has been replaced.
+
+#### [JERRY] What is lost, and it is a decision rather than a cleanup
+
+**The inventory report now carries no trend at all.** §7.3 asked for a months-of-supply trend; that
+is not buildable. The pace is MOI's *denominator*, which is knowable, so that is what shipped —
+**labelled as what it is**, which is what made it honest. Design's page replaces it with nothing.
+
+Restoring it is this one line plus a chart slot on the `_v2` page, and the slot is the part Design
+would have to agree to. Recorded here so the decision is taken on purpose rather than discovered by
+an agent who used to show a client a twelve-month line.
+
+---
+
+### D-182 — "seller's market" means under four months on the PDF and under three in the email
+
+**Severity:** WRONG · **Affects:** every surface that classifies a market — property PDFs, market
+PDFs, scheduled emails, and the AI insight prompt · **Found during:** building Design's `inventory`
+pill, which needed the classification and would have been a seventh copy of it
+**Status:** `fixed` for the divergence's cause — `feat/market-inventory-v2`. **The four `moi < 3`
+sites are UNCHANGED and are flagged below**, because moving a threshold under live customer copy is
+a behaviour change and not part of wiring a report kind.
+
+`compute/moi.py` exists because two MOI formulas disagreed (D-056), and its `describe()` says so:
+
+> *"The render-ready shape. One place decides how 'no number' looks, so the surfaces cannot disagree
+> about it the way the two formulas did."*
+
+**The classification was the one piece of MOI interpretation that module did not own**, and it was
+therefore reimplemented **six times at two different thresholds:**
+
+| site | threshold | what it says |
+|---|---|---|
+| `compute/market_trends.py:484` | `moi < 4` | `"Seller's Market"` — docstring cites NAR |
+| `property_builder.py:2680` | `moi < 4` | `"It's a seller's market"` |
+| `ai_insights.py:238` | **`moi < 3`** | `market_vibe = "competitive (seller's market)"` |
+| `email/template.py:1915` | **`moi < 3`** | `"Great news for sellers in {area}"` |
+| `email/template.py:1959` | **`moi < 3`** | `"Inventory is tight in {area}"` |
+| `email/template.py:2087` | **`moi < 3`** | `"Seller's market conditions"` |
+
+**A market at 3.5 months of supply is "a seller's market" on the property PDF and nothing at all in
+the email for the same account on the same day.** The buyer's boundary agrees at `> 6` everywhere,
+so only the seller's side diverges — which is the half an agent forwards.
+
+Nothing in a grep distinguishes them: six sites, two answers, no shared symbol. It is the
+same-name/two-implementations family (D-163, D-170, D-177, and D-086's `_median` three deep) in its
+most diffuse form — **not two implementations under one name, but six under no name at all.**
+
+#### Fixed: the classification moved to where the module's own docstring says it belongs
+
+`compute/moi.py` now holds `SELLERS_MARKET_BELOW = 4`, `BUYERS_MARKET_ABOVE = 6`, the four canonical
+labels, and `condition(moi)`. `market_trends._classify_market_condition` reads them instead of
+repeating the numbers and the strings — **boundaries and wording unchanged**, `moi < 4` was always
+the documented NAR figure and this is simply the module that now holds it.
+
+`condition()` returns **`None`** for no estimate rather than `"Insufficient Data"`, so a caller that
+wants to omit a claim gets a value it cannot accidentally render as a classification. And **zero is
+a real answer**: `active_count = 0` with enough closings gives an MOI of exactly `0.0` — nothing is
+for sale, the most seller-favourable market there can be — so the test is `moi is None` and not
+truthiness. That is D-108's shape on the one input where the wrong answer is the exact opposite of
+the right one.
+
+Design's `inventory` pill reads both halves from that module and nothing else:
+`describe(moi)["formatted_current"]` for *"1.9 months"* and `condition(moi)` for *"seller's
+market"*. **No number means no pill** — not a dash. The pill is a claim about the market, and
+`"— months of inventory · "` is a claim with the evidence taken out of the middle of it.
+
+#### [JERRY] Not fixed: which threshold is right
+
+The four `moi < 3` sites are customer-facing email copy and an LLM prompt. Aligning them on 4 would
+make more markets read as sellers' markets in email, which is a **content change** and wants a
+decision rather than a refactor. What this change buys is that the decision is now a one-line edit
+in one file instead of four edits in three, and that a fifth surface cannot pick a third number.
+
+One smaller divergence noted rather than changed: `describe()` formats `f"{moi} months"` and prints
+a whole number as **`"4.0 months"`**, while `property_builder.py:2683` does
+`f"{moi:.1f}".rstrip("0").rstrip(".")` and prints **`"4"`**. Two formatters for the same number in
+the module whose job is that there is one. Left alone because `describe`'s output is pinned by other
+tests and the fix is cosmetic on a surface this ticket does not touch.
+
+---
+
+### D-181 — a disclosure's only consumer was deleted and its test, which asserted the producer, stayed green
+
+**Severity:** WRONG · **Affects:** the `price_bands` report's statement of where its band boundaries
+came from — D-111's honesty disclosure · **Found during:** repointing `test_price_bands.py` at the
+`_v2` page while wiring `price_bands`
+**Status:** `fixed` — `feat/market-price-bands-v2`. Found and fixed inside the same change; filed
+because the **mechanism** is general and this is its second appearance in two days.
+
+D-111 rebuilt price bands on round boundaries anchored to twelve months of closings, because
+quartiles of this week's result set moved the dividers by a median of $105,500 between runs. When a
+market has under twelve months of history there is no extent to anchor to, so the boundaries fall
+back to this period's results — and the page **says so**:
+
+> *"Bands may shift between reports"*
+
+That sentence is why the fallback is acceptable. Bands that may move look identical to bands that
+will not, and the whole point of round boundaries is that a reader can compare two runs.
+
+**The sentence stopped reaching any page.** It is produced by
+`MarketReportBuilder._band_chart_note`, which was passed to `band_distribution_chart`, which is
+called only from `pricebands_layout`, whose only report type is `price_bands` — and `price_bands`
+left the macro dispatch entirely when it joined `V2_KINDS`. One kind moving made a four-link chain
+dead from the far end.
+
+#### Why nothing failed
+
+The gate was:
+
+```python
+note = MarketReportBuilder({...})._band_chart_note()
+assert "may shift between reports" in note
+```
+
+**A producer with no consumer still produces.** The method kept returning the string, the assertion
+kept passing, and the document stopped carrying it. This is `§0.6`'s *a gate on a document must
+assert its claims, not its text* read one level out: the gate was on the *producer* of the text, not
+on the document, so it could not notice the document losing it.
+
+It is also this project's **read-with-no-producer** family pointed the other way. That family —
+nine instances — is a consumer reading a key nothing writes. This is a producer writing a value
+nothing reads, and it is harder to see, because the read-with-no-producer shape at least renders
+something empty.
+
+#### Fixed
+
+`_v2_bands_body` now carries `note`, the `_v2` page renders it in `.bnote`, and the test renders the
+page:
+
+```python
+assert "may shift between reports" in builder._band_chart_note()   # the producer
+html = builder.render_html()
+assert "may shift between reports" in html                          # the document
+```
+
+Both halves, because the producer assertion is still worth having — it just is not the one that
+matters. The note is **reused, not rewritten**: a second "N listings across M bands" would be a
+second derivation of a figure the table above it already shows, which is this project's most-filed
+defect family in a new template.
+
+`_band_chart_note` returns `None` under two counted bands, where there is no distribution to
+caption; the caveat is carried on its own in that case, because a market thin enough to have one
+band is exactly the market whose history is too thin to anchor to.
+
+#### What is not fixed here
+
+`pricebands_layout` and `band_distribution_chart` are now dead — no report type reaches them — and
+so is `analytics_layout`, which went dead one day earlier when `new_listings` moved and which
+**nothing recorded at the time**. `derive_template_reachability.py` works at file level and
+`market/_base/macros.jinja2` stays live while any one macro in it is reached, so a layout going
+dead inside a live file is invisible to it. `test_market_layout_map.py::test_the_layouts_no_report_type_reaches_are_recorded`
+now pins the set, so the next one is a decision rather than a drift. Removing them is a separate
+call: they are the rollback path for the seam while five kinds are still unwired.
+
+#### The generalisable half: two implementations that share a NAME
+
+Filed against this entry on request, with the instances corrected to the ones that exist.
+
+**The rule.** Two implementations of the same derivation under *different* names are findable by
+grep: you search the concept, you get two hits, you compare them. Two implementations under the
+**same name in different modules** are findable only by tracing the call, because every tool that
+works on text — grep, a symbol index, a reviewer's eye on a diff — shows one name and gives no
+reason to think there are two. **It is worse than the usual case**, and the usual case is already
+this repository's most-filed family (D-163, D-170, D-177).
+
+**The instance that exists here is `_median`, and it is three deep:**
+
+| | returns for `[]` |
+|---|---|
+| `report_builders.py:43` | **`0.0`** |
+| `compute/price_bands.py:240` | `None` |
+| `email/template.py:1798` | `None` — and a *different signature entirely* (`kind, metrics`) |
+
+D-086 is the entry: `report_builders._median` answers an empty list with `0.0`, which reaches
+`median_close_price`, `median_list_price` and four other price fields as "$0". D-111's rebuild gave
+`compute/price_bands.py` its own `_median` that returns `None`, which is the fix D-086 asks for —
+**so the defect is live on the paths it was filed against and fixed on one new one**, and nothing in
+a grep for `_median` distinguishes which of the three a given call reaches. The board already
+records this as D-086 being *partially* superseded; what it did not say is that the name collision is
+the reason the partial fix was invisible.
+
+**This entry's own defect is not an instance of it** and the distinction is worth keeping straight:
+`_band_chart_note` has exactly one definition and had exactly one consumer. Its failure is a chain
+going dead from the far end, not two implementations diverging. The two shapes travel together
+because both survive a grep, but the remedies differ — a name collision needs the call traced, a
+dead chain needs the consumer side checked when a seam moves.
+
+#### Checked and not reproducing: a duplicate `cap` at 8 and 4
+
+Reported alongside this entry and **absent**, recorded so it is not re-filed from the same report:
+
+| the claim | measured |
+|---|---|
+| `_price_band_rows` caps at 8 while `PDF_CONFIG` caps at 4, both named `cap` | **there is no `_price_band_rows`** anywhere in `apps/`, `scripts/` or `tests/`. `PDF_CONFIG["price_bands"]["cap"]` is **8**, and there is **no `cap` of 4** in any Python file in the repository |
+| both reachable, so a sixteen-band test was green on the half that was right | **there is no sixteen-band test**, and `compute/price_bands.MAX_BANDS = 6` caps the band count at six, so sixteen bands cannot be produced |
+| `show_more` survives its only producer — the template honours a key nothing emits | **`show_more` does not appear** in any `.py`, `.jinja2`, `.ts` or `.tsx` file |
+
+**There is a real finding in the vicinity and it is a different one** — D-107's `[:4]` slice reached
+one of two copies. Recorded as a correction on D-107 rather than here, because it is that entry's
+fix that was partial.
+
+
+---
+
+### D-180 — `_v2_bands_body` read an absent listing count as zero, and three more defects the old chart's tests caught on their way out
+
+**Severity:** WRONG · **Affects:** the `price_bands` report's band rows and its page-1 band
+· **Found during:** repointing `apps/worker/tests/test_band_chart.py` at Design's `_v2` page instead
+of deleting it
+**Status:** `fixed` — `feat/market-price-bands-v2`. All four found and fixed inside the same change.
+
+`price_bands` moved to Design's `_v2` page, whose body is a five-column band table with an inline bar
+per row, replacing a hero card, a six-card stat row and an SVG bar chart. **Ten assertions in
+`test_band_chart.py` were about a document that no longer renders.** Deleting the file was the
+obvious move and would have been wrong: six of the ten were about *the distribution* rather than
+about the SVG, and repointing those four found four defects in code written the same day.
+
+| repointed assertion | what it found |
+|---|---|
+| *a band with no `count` key is dropped* | `_v2_bands_body` had `count = band.get("count") or 0`, so an **uncounted** band rendered as a hard `0` — "nothing is for sale above $1.6M", asserted of a band nobody counted. **D-137's shape** (absent is not a default), on a row that reads as fact. The old chart got it right by dropping such bands. |
+| *one band is not a distribution* | `hottest_and_slowest` returns the single band as **both** fastest and slowest, so a lone band was tagged **"Fastest"** against nothing. A comparative tag needs two things to compare. The headline already refused for the same arithmetic — a band is 0 days ahead of an average that is itself — and the body's tag did not. |
+| *no bands renders no chart* | `v2_bands` is a **dict**, so it is truthy for this kind whether or not there are bands: an empty search rendered **five column headings over empty space**, which reads as a broken page rather than as an empty result. |
+| *bars are proportional to their counts* | held — and `max` over a list containing `None` would have raised once an uncounted band reached production, so the first defect's second symptom was a 500 rather than a wrong picture. The one mercy in it. |
+
+And a fifth, from a gate that was not repointed but began covering this kind for the first time:
+
+| gate | what it found |
+|---|---|
+| `tests/test_market_templates.py::test_no_undefined_values[price_bands]` | `_v2_fastest_headline` returns `label=None` **whenever it refuses**, which is most of the time by design. The template's label span was unconditional and `_BLOCK_ENV` has `autoescape=False`, so the band read `{Area} · Price Bands` / **`None`** at 22px. |
+
+#### And a sixth, from reading the render
+
+Not found by a test — found by printing the page and looking at it. The note added beside the label
+guard was written as an **HTML comment** and quoted the expression it was about:
+
+```jinja
+<!-- ... an unguarded `{{ v2_band.label }}` printed the literal string `None` ... -->
+```
+
+**Jinja does not treat `<!-- -->` as a comment.** It substituted the expression, so the rendered page
+carried `None` *inside a comment* — hidden from the very gate that had just been pointed at bare
+`None` on this page, and visible in the template source as apparent evidence that the guard was not
+working. A note about a defect that reintroduced the defect, in the comment explaining the fix.
+
+Two independent reasons the `_v2` page now has none: a template comment must be `{# #}`, which never
+renders; and an HTML comment ships to PDFShift and from there to an agent's customer.
+`test_the_v2_page_ships_no_html_comment` is parametrised over `V2_KINDS` and also rejects an
+unrendered `{{` or `{%`.
+
+#### The argument for repointing rather than deleting
+
+A contrast baseline may not outlive the template it recorded — that is settled policy here, and the
+same reasoning says a test may not outlive its document. But *"the document changed"* and *"the
+concern went away"* are different claims, and only the first was true of six of these ten. The file
+now records both lists explicitly:
+
+* **carried over** — a zero band is drawn not dropped · no-count is not zero · bars proportional ·
+  no text wears the raw brand colour · labels do not wear the series colour · no script and no
+  unrecorded external reference
+* **died with the old chart** — only the largest bar carries a number (Design puts the count beside
+  every bar) · the caption counts the bands drawn (no caption on this page) · the cards and the
+  chart agree, D-107 (no stat cards, so no second place to disagree) · the refusal at n=1 (which
+  moved to the headline, where it is gated)
+
+Writing the second list down is the point. **A concern that stops being asserted and is not recorded
+is how coverage disappears quietly** — the same rule that put `test_a_v2_kind_calls_no_layout_macro`
+there when `closed` dropped out of the layout-map parametrisation.
+
+#### The bar is a fill, and that is why `--primary` is right on it
+
+The old test asserted the bar fills took `primary_ink` and never the raw brand colour. On the `_v2`
+row the bar is a filled rectangle **with nothing on it** — Design moved the count out beside it,
+which is also the only placement that survives a count of zero — so the contrast rules, which govern
+text, do not reach it. The repointed version asserts the inverse pair: the fill **keeps**
+`--primary`, and `.blabel` / `.bcount` / `.bcell` must never take it. Those are 13px, where the raw
+brand colour measures as low as 1.98:1 on a shipped palette (D-170, D-177).
+
+---
+
+### D-179 — not reproducing: four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository
+
+**Severity:** ROUGH — *nominal, and it has to be something: the board's own gate requires every entry
+to carry one, and `closed-not-live` entries are excluded from the severity sums, so the value counts
+nothing. A defect that does not exist has no severity, and the lowest band is the least misleading
+place to park one.* · **Affects:** nothing · **Found during:** checking the ticket's premises against
+the code before acting on them
+**Status:** `closed-not-live` — **the described code does not exist.** Recorded so it is not re-filed
+from the same report.
+
+Filed as "the gate reading its own subject", to be fixed before the second market kind because every
+later capacity number would go through it. Checked first. **All four premises are absent.**
+
+| the claim | measured |
+|---|---|
+| `PDF_CONFIG` holds `pages: 1` for types that render 2-16 | `PDF_CONFIG` has **four keys** — `cap`, `more_template`, `section_label`, `truncation_template`. **There is no `pages` key**, so nothing reads one. |
+| five consumers read `pages`, one of them a capacity gate | there is nothing to read, and therefore no gate reading the thing it validates |
+| `MARKET_PAGE_CONFIG` is measured against rendered content and derived from it | **`MARKET_PAGE_CONFIG` does not exist** anywhere in `apps/`, `scripts/` or `tests/` |
+| `PAGE_1_CAPACITY` holds two unrelated numbers under one name — a property comp count and a market row count — imported by four files | **one definition** (`apps/worker/tests/test_narrative_box.py:79`), **one meaning**: market page-1 row counts. The four other references are **prose in comments and docstrings**, not a second symbol. There is no comp count sharing the name. |
+
+A fifth claim travelled with it and is also absent: that `closed`'s page-1 running head was resolved
+with a 48px spacer on a `.cover-page`. There is no `.cover-page` and no spacer in
+`templates/market/_v2/report.jinja2`. The running head is PDFShift's `header` at `start_at = 1` on
+**every** page and the band is body content below it, so page 1 never had the problem a spacer would
+solve.
+
+And the measurement it travelled with was wrong in the same direction: `closed` renders
+`[17, 26, 26, 26, 25]` — **5 pages, page 1 of 17, continuation of 26** — not 11 and 28 across 6
+pages. Re-measured on the day the ticket arrived.
+
+#### Why this is recorded rather than deleted
+
+Nothing was built on it, so there is no code to revert. What there is to prevent is **the same
+report producing the same ticket again**, which is the only cost a non-existent defect has. Four
+named absences and a measurement are cheaper to check next time than the premises were to check this
+time.
+
+The one real thing in the vicinity: `PAGE_1_CAPACITY` IS referenced from five files, which is more
+coupling than a test constant usually has. Four of the five are prose; the fifth is its definition.
+That is worth knowing and is not a defect.
 
 ---
 

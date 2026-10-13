@@ -67,7 +67,7 @@ SEED = 20260923
 #: Was five entries; `teal` (#18235c) and `classic` (#1B365D) left with the
 #: theme cut on 2026-10-05.
 THEME_DARK_BG = {
-    "modern": "#1A1F36", "bold": "#15216E", "elegant": "#1a1a1a",
+    "harbor": "#1A1F36", "atlas": "#15216E", "linen": "#1a1a1a",
 }
 
 

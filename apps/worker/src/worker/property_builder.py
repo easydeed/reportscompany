@@ -1866,9 +1866,9 @@ class PropertyReportBuilder:
     #: rather than a theme — a lead page with no brand colour needs one, and
     #: changing what strangers see was not part of the theme cut.
     _THEME_DEFAULT_COLORS = {
-        "modern":  "#FF6B5B",
-        "bold":    "#15216E",
-        "elegant": "#1a1a1a",
+        "harbor":  "#FF6B5B",
+        "atlas":    "#15216E",
+        "linen": "#1a1a1a",
     }
 
     # Per-theme dark background colour — used by compute_color_roles() to
@@ -1882,9 +1882,9 @@ class PropertyReportBuilder:
     #: platform default dark that the market reports and the six picker
     #: presets are all measured against — not a theme's private value.
     _THEME_DARK_BG = {
-        "modern":  "#1A1F36",  # --midnight
-        "bold":    "#15216E",  # --navy
-        "elegant": "#1a1a1a",  # --charcoal
+        "harbor":  "#1A1F36",  # --midnight
+        "atlas":    "#15216E",  # --navy
+        "linen": "#1a1a1a",  # --charcoal
     }
 
     def _get_theme_color(self) -> str:
@@ -1968,7 +1968,7 @@ class PropertyReportBuilder:
     #: themes. `test_the_migration_seam_is_still_needed` fails when it is,
     #: so the seam cannot outlive its reason the way an excuse in an
     #: allowed-list does.
-    V2_THEMES = frozenset({"bold"})
+    V2_THEMES = frozenset({"atlas"})
 
     #: The nine-page set the un-migrated themes render.
     DEFAULT_PAGE_SET = ["cover", "contents", "aerial", "property", "analysis",

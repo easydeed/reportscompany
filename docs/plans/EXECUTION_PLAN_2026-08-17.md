@@ -1421,6 +1421,203 @@ it.**
   Operationally: `grep -rl` the concept, not the filename. "regression harness" would not have found
   `regress.py`; `grep -rn "MUTATION DID NOT APPLY"` or a look in `scripts/` would have.
 
+- **A PREDICTION AND A MEASUREMENT CANNOT SHARE A GATE.** *Added 2026-10-08.*
+
+  `docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md` §2a forecast what Design's row counts would cost
+  per kind, against our capacity at the time. Its gate recomputed the "ours" column from
+  `PAGE_1_CAPACITY` — correct for a document that must stay current, and **it broke the moment the
+  first kind was built**, because the pin moved to the built figure and the forecast did not.
+
+  The tempting fix is to update the forecast. That destroys the only thing it was for: §2a is worth
+  reading *because* it can be compared with what happened, and a forecast edited to match the result
+  predicts nothing. The same edit would also have hidden the interesting part — both built kinds
+  landed on **5 pages** where the formula said **6**, so the forecast was wrong in a direction worth
+  knowing.
+
+  **So the two were split, and the split is the rule.** A forecast records **the inputs it was taken
+  with** and its gate checks that its arithmetic is internally consistent against *those*; a
+  measurement section carries the built figures and its gate checks them against the live pin. One
+  is checkable forever, the other is checkable now, and neither can be made to do the other's job.
+
+  The general form: **a gate enforces either currency or fidelity to a past state, and a document
+  that holds both needs one gate per region.** The giveaway is a gate that starts failing because
+  something it describes *succeeded* — which is what happened here, and which reads as a broken test
+  rather than as a category error.
+
+- **A GATE ON A PRODUCER IS NOT A GATE ON THE DOCUMENT.** *Added 2026-10-08, from D-181.*
+
+  §0.6 already says *a gate on a document must assert its claims, not its text*. This is that rule
+  one level further out, and it needed its own line because the failure mode is the opposite of
+  loud: the gate does not get weaker, it gets **pointed at the wrong object**, and then it is as
+  strong as ever about something nobody reads.
+
+  D-111's price-band rebuild puts a disclosure on the page — *"bands may shift between reports"* —
+  whenever the boundaries came from this period's results instead of from twelve months of closings.
+  It is the sentence that makes the fallback honest. Its gate was:
+
+      note = builder._band_chart_note()
+      assert "may shift between reports" in note
+
+  `_band_chart_note`'s only consumer was a macro reached only from `pricebands_layout`, whose only
+  report type was `price_bands` — and `price_bands` left the macro dispatch when it joined the `_v2`
+  seam. **One kind moving made a four-link chain dead from the far end.** The method kept returning
+  the string, the assertion kept passing, and the document stopped carrying it.
+
+  **A producer with no consumer still produces.** This is the repository's *read-with-no-producer*
+  family (nine instances) pointed the other way, and it is harder to see: a consumer reading a key
+  nothing writes at least renders something empty, while a producer writing a value nothing reads
+  renders nothing at all and looks like a page that never had the line.
+
+  Operationally: when a claim has to appear in an artefact, **assert it on the artefact**. Keep the
+  producer assertion if it is cheap — it localises a failure — but it is never the one that matters.
+  And when a seam moves a kind, surface or path off one code path onto another, the question is not
+  only "does the new path work" but **"what did the old path produce that nobody else produces"**.
+
+- **THE DEFECT BOARD IS A CODEBASE, AND "GREP FOR ONE FIRST" GOVERNS IT TOO.**
+  *Added 2026-10-12, from filing D-187 on top of D-167.*
+
+  §0.6 already says: before building a tool, grep for one — a rule that cost a file when
+  `scripts/regress.py` was overwritten by a reimplementation of itself. **The same rule applies to
+  entries**, and it was not being applied: an audit of §07's unbuilt work grepped `apps/` for four
+  function names, found them missing, and filed it — without grepping `DEFECT_LIST.md` for the same
+  names. Two of the four were already **D-167**, filed seven days earlier.
+
+  The duplicate was not harmless. It would have **double-counted the open board** and split one
+  situation across two entries that do not reference each other, which is precisely the condition
+  that lets a defect be "known" and unfixed indefinitely: each entry looks like a partial view of
+  something someone else is handling.
+
+  Operationally: **the last step of filing an entry is `grep -n "<the symbol>" docs/DEFECT_LIST.md`,
+  for every symbol the entry names.** Not the title, not the description — the symbols. D-187's title
+  shares no words with D-167's and a prose search would have missed it; `compute_dom_distribution`
+  appears in both.
+
+  The board has 188 entries and nobody can hold them. That is not a reason to skip the check — it is
+  the reason the check exists.
+
+- **A VALUE FORMATTED FOR DISPLAY AND CONSUMED AS DATA FAILS TWICE, AND THE SECOND FAILURE IS THE
+  WORSE ONE.** *Added 2026-10-11.*
+
+  A number that has been through a display formatter is a **string**. Hand it to something that wants
+  a number and it fails in two directions, in this order:
+
+  1. **As a crash, or as nothing.** The consumer raises, or silently renders empty — loud enough to
+     notice, or at least obviously wrong.
+  2. **As a plausible value**, once somebody adds a guard. `| default(0, true) | float` turns
+     `"$412"` into `0.0`, and a chart of zeros is a chart. It paginates, it passes a smoke test, and
+     it says the market is at zero.
+
+  **The second is worse and it is caused by fixing the first.** The guard converts a visible failure
+  into an invisible one, which is why the remedy is **the boundary, not the guard**: a value crosses
+  from data to presentation exactly once, and nothing downstream of that crossing may be read as
+  data. Format at the edge, keep the number until then.
+
+  The live instance in this repository is **D-178** — `close_to_list_ratio` arrives as `0.982` from
+  one producer and `98.2` from another, and two template sites reconciled them with
+  `ratio * 100 if ratio < 2 else ratio`. Not a formatted string, but the same shape one step earlier:
+  a value whose scale is a presentation decision, consumed as data, with a guard standing in for a
+  boundary. It is fixed by normalising once in Python, which is the boundary.
+
+  The *exact* shape — `| default(0, true) | float` over a currency-formatted value — exists at
+  `templates/property/_base/_macros.jinja2:469`, and that file is **dead** (no `get_template` literal
+  reaches it; 5,570 dead lines by `derive_template_reachability.py`). Recorded with its reachability
+  rather than fixed, because editing dead code produces a diff that looks like a fix and changes no
+  rendered page — the same disposition as D-107's surviving `[:4]`.
+
+  *Checked and absent:* a `volume_label` carrying dollars, a count and dollars under one name is
+  **not in this repository** — the symbol does not exist in any `.py` or `.jinja2`. Recorded so it is
+  not re-filed.
+
+- **AN ASSERTION SCOPED TO ONE INSTANCE, NAMED AS IF SCOPED TO THE CLASS.** *Added 2026-10-10.*
+
+  §0.6 already says a gate on a document must assert its claims, not its text, and that a gate on a
+  producer is not a gate on the document. This is the third face of it: the gate is pointed at the
+  right object, asserts the right thing, and **covers one member of a set whose name it borrows.**
+
+  `TestPrintCSS::test_has_page_size_rule` reads as *"the market templates set a page size"*. Its
+  fixture sets one `report_type`, so it meant *"`new_listings_gallery` does"*. **Four `_v2` kinds
+  shipped with no `@page` rule for three days and it was unobserved** — the test could not see them,
+  and it failed only when the one kind it did see moved, which is the last moment it could have.
+
+  The tell is in the **fixture, not the assertion**: a single-instance fixture under a class-scoped
+  name. `full_data` with one `report_type`, a partial render standing for a page, one theme standing
+  for six. The assertion reads as coverage and is a sample of one.
+
+  **This is also the direction D-107 failed in**, a day earlier and in a document rather than a test:
+  the entry's claim was class-scoped (*"the price-band stat cards show the first four bands"*) and
+  its fix was instance-scoped (one macro of two). Same mismatch, and nothing noticed for ten days.
+
+  Two remedies, and which one depends on whether the members differ:
+
+  * **They do not differ** → parametrise over the set. `ALL_REPORT_TYPES`, every theme, every kind.
+  * **They do differ** → pin the expectation per member and make an unrecorded member an error, the
+    way `HAS_AT_PAGE_RULE` now records that the legacy page has an `@page` rule and the `_v2` page
+    deliberately has none.
+
+  What is NOT a remedy is renaming the test to match its scope. `test_new_listings_gallery_has_a_
+  page_size_rule` would be honest and would still leave seven kinds unasserted. **The name should
+  carry the scope, and the scope should be the class.**
+
+  *Checked and absent:* a test asserting exactly one `<table` in a document that has two, passing
+  because its fixture was a partial render, is **not in this repository** — there is no such
+  assertion and no `test_html` fixture. Recorded so it is not re-filed; the real instance is the
+  `@page` one above.
+
+- **A POSITIVE CONTROL DRAWN FROM THE SET BEING MIGRATED IS CONSUMED BY THE MIGRATION.**
+  *Added 2026-10-08.*
+
+  §0.6 already requires a positive control: a checker whose normal output is "match" is
+  indistinguishable from one that has stopped matching anything. The trap is **where the control
+  comes from.** Four tests named a report type as "the kind that has NOT moved", and each stopped
+  being a control the moment that kind moved:
+
+  | test | named | consumed when |
+  |---|---|---|
+  | `test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout` | `closed`, then `inventory` | twice |
+  | `test_a_kind_without_a_band_spec_raises_rather_than_rendering_empty` | `inventory` | 2026-10-08 |
+  | `test_a_v2_render_does_not_pay_for_a_narrative_it_discards` | `inventory` | 2026-10-08 |
+  | `test_the_comparison_is_against_the_no_narrative_column` | `inventory` | 2026-10-08 |
+
+  **None of them failed in a way that said "your control is gone."** Three failed with the control's
+  own assertion inverted, which reads as the feature breaking; one would have passed while proving
+  nothing, because a kind inside the seam satisfies "calls no layout macro" trivially. One of them
+  even carried the comment *"`inventory`, not `closed`: closed renders the `_v2` page now"* — the
+  same substitution, one kind earlier, by someone who had just watched it happen.
+
+  **The remedy is to compute the control and assert the remainder is non-empty.**
+  `sorted(set(ALL_REPORT_TYPES) - V2_KINDS)` with an assertion that it is not empty, so when the
+  last member moves the test says *"there is no kind left to act as the control; these tests are no
+  longer proving what they say"* instead of quietly passing.
+
+  And when the control genuinely has no replacement, **say that rather than patch it.** The 15/11
+  page-1 swing existed only on the two kinds whose layout put a narrative box above a long table,
+  and both moved — so "one kind still shows the swing" became "no kind's capacity depends on prose
+  length", asserted over all eight. A weaker-looking assertion over the whole set beats a strong one
+  over a sample of zero.
+
+- **A CONSTANT THAT IS RIGHT FOR EVERY MEMBER OF A SET IS INDISTINGUISHABLE FROM A CONSTANT THAT IS
+  RIGHT FOR THE SET — UNTIL THE SET GROWS.** *Added 2026-10-08.*
+
+  Four gates written while the `_v2` seam held only table kinds encoded a table kind's property as
+  the seam's property, and all four broke on the first kind that was not a table:
+
+  | gate | what it said | what it meant |
+  |---|---|---|
+  | `test_a_v2_kind_calls_no_layout_macro` | `class="trow thead"` is on the page | *a table kind's* body rendered |
+  | `test_the_built_figures_match_the_live_pin` | `ceil((120 - page_1) / 26) + 1` | 26 is *the table body's* continuation capacity |
+  | `test_the_cap_is_what_limits_the_listings` | rendered rows == `PDF_CONFIG` cap | the kind *has* a listings table |
+  | the §2a forecast gate | live `PAGE_1_CAPACITY` is the forecast's input | the kind *has not been built yet* |
+
+  None was wrong when written and each was wrong one kind later. The remedy in all four was the
+  same and it is the general one: **pin the varying thing per member, and make an unrecorded member
+  an error rather than a default.** `V2_BODY_MARKER`, `V2_CONTINUATION` and `RENDERED_DESPITE_CAP`
+  each raise on a kind they do not know, so the next kind to join the seam is told what to record
+  instead of inheriting the third kind's geometry.
+
+  This is `V2_KINDS`-subtraction's counterpart. Subtracting the seam from a parametrisation stops a
+  moved kind from being silently excluded; pinning per member stops the kinds that remain from
+  sharing one member's properties.
+
 ---
 
 ## Phase 0 — Security & Tooling

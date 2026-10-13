@@ -11,7 +11,7 @@
     "surface; text against the brand colour it sits on. All three must be >= 4.5."
   ],
   "property_themes": {
-    "modern": {
+    "harbor": {
       "brand": "#ff6b5b",
       "dark_surface": "#1a1f36",
       "theme_color": "#FF6B5B",
@@ -27,7 +27,7 @@
         "raw_brand_vs_white": 2.8
       }
     },
-    "bold": {
+    "atlas": {
       "brand": "#0f1629",
       "dark_surface": "#15216e",
       "theme_color": "#0F1629",
@@ -43,7 +43,7 @@
         "raw_brand_vs_white": 17.99
       }
     },
-    "elegant": {
+    "linen": {
       "brand": "#1a1a1a",
       "dark_surface": "#1a1a1a",
       "theme_color": "#1A1A1A",

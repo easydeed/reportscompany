@@ -42,9 +42,9 @@ import {
 import { DEFAULT_THEME_ID, resolveThemeId } from "@/lib/themes.generated"
 
 const THEMES = [
-  { id: 2, name: "Modern", style: "Clean & Contemporary", font: "DM Sans", gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", previewImage: "/previews/2.jpg" },
-  { id: 3, name: "Elegant", style: "Sophisticated & Refined", font: "Playfair Display", gradient: "linear-gradient(135deg, #1a1a1a 0%, #C9A962 100%)", previewImage: "/previews/3.jpg" },
-  { id: 5, name: "Bold", style: "Impactful & Striking", font: "Clash Display + DM Sans", gradient: "linear-gradient(135deg, #15216E 0%, #D69649 100%)", previewImage: "/previews/5.jpg" },
+  { id: 2, name: "Harbor", style: "Clean & Contemporary", font: "DM Sans", gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", previewImage: "/previews/2.jpg" },
+  { id: 3, name: "Linen", style: "Sophisticated & Refined", font: "Playfair Display", gradient: "linear-gradient(135deg, #1a1a1a 0%, #C9A962 100%)", previewImage: "/previews/3.jpg" },
+  { id: 5, name: "Atlas", style: "Impactful & Striking", font: "Clash Display + DM Sans", gradient: "linear-gradient(135deg, #15216E 0%, #D69649 100%)", previewImage: "/previews/5.jpg" },
 ]
 
 const COLOR_PRESETS = [

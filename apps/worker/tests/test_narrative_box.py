@@ -78,7 +78,13 @@ CHARS_PER_LINE = 97
 #: these are properties of the layout rather than of a fixture.
 PAGE_1_CAPACITY = {
     "new_listings_gallery": {"no_narrative": 6, "with_narrative": 6},
-    "featured_listings": {"no_narrative": 6, "with_narrative": 6},
+    # 6 -> 2, AND IT IS DESIGN'S CARD, NOT A REGRESSION IN OURS. Their
+    # featured card is 326.8px against the shared gallery card's 238.3 —
+    # 18px price plate, 15px address, and a 2-column grid whose photo is
+    # 260px tall because the column is 349px wide. Two fit under the band
+    # where six did. See §8 of the capacity document: this is the one kind
+    # the market adoption COSTS pages on.
+    "featured_listings": {"no_narrative": 2, "with_narrative": 2},
     "open_houses": {"no_narrative": 6, "with_narrative": 6},
     "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
     # 17 IN BOTH STATES since `closed` moved to Design's `_v2` page, and that
@@ -86,8 +92,22 @@ PAGE_1_CAPACITY = {
     # page-1 capacity is one number rather than a property of prose length.
     # It was 15 / 11 — a four-row swing — on the old page.
     "closed": {"no_narrative": 17, "with_narrative": 17},
-    "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
-    "price_bands": {"no_narrative": 3, "with_narrative": 2},
+    # 17/17, ONE STATE — and the third number is gone, not just equalised.
+    # `with_trend: 5` recorded the inventory page's capacity when it carried
+    # the sales-pace chart; Design's `_v2` page has no chart slot, so the
+    # pace series has no report type at all (see `TREND_SERIES`). A
+    # `with_trend` key here would be a capacity for a state the kind can no
+    # longer be in.
+    "inventory": {"no_narrative": 17, "with_narrative": 17},
+    # ZERO, AND IT IS NOT A REGRESSION. `price_bands` moved to Design's `_v2`
+    # page, which renders seven fixed band rows and NO LISTINGS TABLE — so the
+    # number of listings that fit on page 1 is zero because none are rendered,
+    # not because none fit. The kind went from 2 pages to 1.
+    #
+    # A capacity of 0 reading as a failure is the risk here, which is why the
+    # measurement script prints "n/a (no listings table)" for it rather than a
+    # bare 0.
+    "price_bands": {"no_narrative": 0, "with_narrative": 0},
     # 17 in both states since `new_listings` moved to the `_v2` page, from
     # 3 / 2 on the analytics layout. The biggest single change on this surface:
     # 16 pages to 5 for 120 listings.

@@ -111,38 +111,45 @@ def test_the_tint_gap_is_recorded_as_found_and_fixed():
     assert "two implementations" in body
 
 
-def test_the_market_baseline_is_all_one_construct():
-    """The heuristic's input, asserted so the estimate cannot go stale.
+def test_the_market_baseline_is_spent():
+    """The heuristic's output, now that every row it described is closed.
 
-    "Ask where it paints before estimating what it closes" is only usable if
-    the baseline's market rows are what the document says they are. All six are
-    badge selectors on two kinds; `closed` has none, which is why wiring it
-    closes nothing and why that was knowable in advance.
+    THE WHOLE PREDICTION, MADE BEFORE ANY TEMPLATE WAS WRITTEN. All six
+    `market__*` baseline rows were badge selectors — three tier badges on
+    `new_listings`, three status badges on `price_bands`, and none on `closed`.
+    So the heuristic said: wiring `closed` closes 0, `new_listings` closes 3,
+    `price_bands` closes 3. Measured on 2026-10-07/08: 0, 3, 3.
+
+    It is the estimate that matters, not the zero. "Ask where a token paints
+    before estimating what it closes" came out of D-171 (a token adoption that
+    closed twenty rows) and D-177 (the same ticket shape closing none), and it
+    is a grep of the baseline rather than a render — which is why it could be
+    stated in advance and then checked.
+
+    WHAT THIS GATE MEANS AT ZERO. It no longer constrains the heuristic's
+    input; it holds the surface at zero, which is the thing that makes every
+    later kind's baseline diff attributable. A market row reappearing means
+    either a kind moved and brought a failure with it, or a `_v2` element took
+    a token that does not clear at the size it paints — and the diff says which
+    kind without anyone having to bisect.
     """
     baseline = (REPO / "apps/worker/tests/pdf_contrast_baseline.txt"
                 ).read_text(encoding="utf-8")
     rows = [line.split("\t") for line in baseline.splitlines()
             if line.startswith("market__")]
-    # WAS 6 ACROSS TWO KINDS. `new_listings` moved to the `_v2` page on
-    # 2026-10-08 and its three tier-badge rows closed — exactly what the
-    # heuristic predicted before any template was written. What remains is the
-    # other half of the prediction: three status-badge rows on `price_bands`.
-    assert len(rows) == 3, f"{len(rows)} market baseline rows, expected 3"
-    by_kind = {}
-    for family, selector, *_ in rows:
-        by_kind.setdefault(family, []).append(selector)
-    assert set(by_kind) == {"market__price_bands"}, (
-        f"market baseline rows now span {sorted(by_kind)}. After wiring "
-        f"`closed` (0 rows) and `new_listings` (3, all closed), the remaining "
-        f"payoff is price_bands' three status badges and nothing else."
-    )
-    assert all("badge" in sel for sels in by_kind.values() for sel in sels), (
-        f"not every market baseline row is a badge selector: {by_kind}. "
-        f"Design's spec removes that construct; a non-badge row means the "
-        f"payoff estimate covers something their spec does not address."
+    assert rows == [], (
+        f"{len(rows)} market baseline rows are back: "
+        f"{sorted({r[0] for r in rows})}. The market surface reached zero on "
+        f"2026-10-08 and a new row is a failure this change introduced, not "
+        f"one it inherited."
     )
     body = DOC.read_text(encoding="utf-8")
     assert "**`closed` closes zero contrast failures**" in body
+    assert "0, 3, 3" in body, (
+        "the document no longer records the three measured outcomes against "
+        "the three predicted ones, which is the only evidence the heuristic "
+        "was worth stating"
+    )
     # And the prediction, now half-redeemed, must stay stated: the value of the
     # heuristic is that it was written down BEFORE the measurement agreed.
     assert "| `new_listings` | 3 (tier badges) | **3 pairings** |" in body

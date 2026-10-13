@@ -129,7 +129,21 @@ def report_data_reads(path: Path):
         if key is not None and is_report_data(recv):
             direct.add(key)
 
-    return direct, {k: v for k, v in via_alias.items() if k not in direct}
+    # TWO SHAPES, AND THE DIFFERENCE MATTERS TO TWO DIFFERENT CALLERS.
+    #
+    # The filtered one answers "which keys would a direct-receiver scan MISS" —
+    # the gap analysis, which is what `filters_label` was originally found by.
+    # The unfiltered one answers "does the alias rule work at all", which is a
+    # question about the SCANNER and not about any key.
+    #
+    # They were one value, and the gate on the alias rule read the filtered
+    # one. On 2026-10-10 `filters_label` gained a second, DIRECT read in
+    # `_v2_gallery` — so it dropped out of the filtered set, every key in the
+    # aliased block was by then also read directly, the filtered set went empty
+    # and the gate failed saying the alias rule had been narrowed. **It had
+    # not.** The gate was scoped to a key when it meant to be scoped to the
+    # rule, which is §0.6's instance-named-as-class, in a gate about scanning.
+    return direct, {k: v for k, v in via_alias.items() if k not in direct}, via_alias
 
 
 def surface_text():
@@ -158,11 +172,15 @@ def main() -> int:
         SUPPORTED_SAMPLE_REPORT_TYPES, get_sample_data,
     )
 
-    direct, via_alias = report_data_reads(MB)
-    reads = direct | set(via_alias)
+    direct, via_alias, via_alias_all = report_data_reads(MB)
+    reads = direct | set(via_alias_all)
     report = {
         "builder_reads": sorted(reads),
+        # Keys a direct-receiver scan would MISS — the gap analysis.
         "builder_reads_via_alias": via_alias,
+        # Every aliased read the rule found, whether or not the key is also
+        # read directly — the evidence that the rule itself still works.
+        "builder_reads_via_alias_all": via_alias_all,
         "injected_by_the_route": sorted(INJECTED_BY_THE_ROUTE),
         "consumer_surfaces": sorted(CONSUMER_SURFACES),
         "per_type": {},
