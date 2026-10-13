@@ -1473,6 +1473,37 @@ it.**
   And when a seam moves a kind, surface or path off one code path onto another, the question is not
   only "does the new path work" but **"what did the old path produce that nobody else produces"**.
 
+- **A PULL REQUEST'S CONTENTS ARE ITS BRANCH MINUS ITS BASE, AND NEITHER IS WHAT YOU INTENDED.**
+  *Added 2026-10-13, from merging four PRs under one title.*
+
+  `chore/theme-rename-...` was cut from `feat/market-galleries-v2` — whatever happened to be checked
+  out — and its PR base was set to `main`. Both choices were individually reasonable and together
+  they made the PR's diff *everything since main*: **65 files, 5,925 insertions**, squashed into one
+  commit titled after the rename. Three other open PRs were merged by it without being named, and
+  their history was collapsed.
+
+  **Nothing broke.** The code was the same code, tested green on the merge commit. What was destroyed
+  was **provenance**: four reviewable units became one, and three PRs stayed open describing work
+  already on `main`, which the next person would have tried to merge into a wide conflict.
+
+  **The free check that would have caught it**, before opening any PR:
+
+      git log --oneline <base>..HEAD
+
+  It prints what the PR will contain. One commit was written; twelve were listed. **That gap is the
+  whole signal** and it costs one command.
+
+  **A tool is not worth building here, and the reason is worth stating.** A pre-push hook lives in
+  `.git/hooks` and is not shared, so it protects whoever installs it and nobody else. A CI test
+  asserting `merge-base == origin/main` would fail every deliberately stacked branch — and stacking
+  is a legitimate pattern this project used for four consecutive kinds — so it needs an opt-out, and
+  an opt-out on a guard against carelessness is a switch that gets flipped by the carelessness. The
+  check is free and unconditional; the enforcement is neither.
+
+  **Two habits, not one.** Cut the branch from what the PR will target, *and* read the commit list
+  before opening it. The first prevents it; the second catches it when the first is forgotten, which
+  is the case that actually happened.
+
 - **THE DEFECT BOARD IS A CODEBASE, AND "GREP FOR ONE FIRST" GOVERNS IT TOO.**
   *Added 2026-10-12, from filing D-187 on top of D-167.*
 
