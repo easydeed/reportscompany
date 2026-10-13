@@ -8,6 +8,16 @@
 --   * a file in db/migrations/*.sql whose basename is NOT in this table is
 --     executed, then recorded
 --   * a file whose basename IS in this table is skipped, never re-executed
+--
+-- WHO DEPENDS ON THAT SECOND LINE, stated here because a guarantee named only
+-- at its dependents drifts the moment someone changes the runner without
+-- reading them. `0012_seed_plans.sql` and `0056_seed_free_plan.sql` carry
+-- UNCONDITIONAL seeds with `ON CONFLICT DO NOTHING`, which protects against
+-- duplicates and NOT against re-creation after a row is deliberately deleted.
+-- They are safe only because of the skip above. A runner that replayed
+-- migrations — or a fresh database seeded by replay — would resurrect any plan
+-- row removed since. Both files now say so at their end of the contract; this
+-- is the other end. (D-189)
 --   * if a recorded file's checksum no longer matches what was applied, the
 --     runner warns and still skips it — editing an already-applied migration is
 --     something you want to be told about, not something a runner should
