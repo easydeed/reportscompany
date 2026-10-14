@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 63 | Real, unfixed |
-| `fixed` | 119 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 120 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **189** | D-001 … D-189, contiguous, no duplicates |
+| **Total** | **190** | D-001 … D-190, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 63, the open total.)
 
@@ -11276,6 +11276,15 @@ Restoring it is this one line plus a chart slot on the `_v2` page, and the slot 
 would have to agree to. Recorded here so the decision is taken on purpose rather than discovered by
 an agent who used to show a client a twelve-month line.
 
+**This absence is now reported rather than assumed.**
+`apps/worker/tests/test_specified_outputs_render.py` holds §7.3's charts against the kinds the plan
+names, and the pace series on `inventory` is a **strict xfail citing this entry** — so it is counted
+as an outstanding specified output on every run, not treated as the baseline. **When it is
+restored, that xfail goes XPASS and the build breaks**: clear the `defect` field in
+`SPECIFIED_OUTPUT["pace trend"]` and the assertion becomes an ordinary one. Named here because the
+other half of §0.6's xfail rule is *entry -> test*, and the person who fixes this should not have to
+discover the gate by breaking it.
+
 ---
 
 ### D-182 — "seller's market" means under four months on the PDF and under three in the email
@@ -12057,6 +12066,51 @@ sentence is built from the registry's labels, so a future cut cannot leave a ret
 copy. **The function's behaviour is unchanged on purpose.** Deciding whether a compact theme exists
 is a product question about what the three rewired themes do, and Design's packages replace this
 metadata; inventing a `compact` flag now would be asserting a fact to keep a function company.
+
+---
+
+### D-190 — two chart assertions are matched against the stylesheet, so one of them proves nothing
+
+**Severity:** FRAGILE · **Affects:** `test_monthly_trend.py` and `test_market_v2_kinds.py` — the
+tests holding §7.3's trend chart on `market_snapshot` and its absence on `inventory` ·
+**Found during:** scoping the specified-output gate, by checking whether the failure that gate is
+built for was already present in the tests meant to prevent it
+**Status:** `fixed` — `tools/specified-output-gate`
+
+Both are the substring-is-not-a-construct family (§0.6), in its specific chart form: **`.trend-chart`
+is a CSS rule as well as an element**, and a bare substring match cannot tell them apart.
+
+**1 · The vacuous one.** `test_market_snapshot_page_1_carries_the_chart_and_the_listings_start_after_it`
+asserted the ordering as:
+
+    assert html.index("trend-chart") < html.index('class="gallery-section')
+
+Measured on a rendered `market_snapshot`: the first `trend-chart` is at offset **21,948**, inside a
+`<style>` block that ends at **40,771**; the chart ELEMENT is at **42,324** and the listings section
+at **45,070**. So the comparison was between the stylesheet and the section, and it held **wherever
+the element sat** — the chart could render below the listings and this line would still pass. The
+claim in its message ("the chart must close page 1") was never tested.
+
+**It was not load-bearing, and that is worth stating rather than glossing.** The assertion directly
+above it is `svg_of(html) is not None`, which is element-anchored by regex and does the real work,
+and the `force-new-page` assertion beside it is matched as markup by the file's own
+`section_markup()` helper — whose docstring cites this exact rule, twelve lines above the line that
+breaks it.
+
+**2 · The fragile one.** `test_the_inventory_page_draws_no_trend` asserted `"trend-chart" not in html`.
+That is true today only because `_v2/report.jinja2` defines no `.trend-chart` rule. Adding one — the
+first thing anyone does when giving a `_v2` kind a chart slot — fails this test without changing a
+single rendered element. It fails loud rather than silent, so it is a nuisance rather than a hazard,
+but it is the same mistake with the sign flipped.
+
+**Both now match the element** (`'<div class="trend-chart'`), and
+`test_specified_outputs_render.py` makes the property structural rather than remembered: every
+marker in that registry is asserted to contain `class="` or `<`, which a CSS rule cannot.
+
+**Why this entry exists at all, given nothing shipped wrong.** The same error, in the same construct,
+produced a wrong table in the chart-scope measurement four days ago — `'band-chart' in html` reported
+a band chart on every kind that shares the stylesheet. Three instances is a family, and the third was
+found only because the second was written down.
 
 ---
 

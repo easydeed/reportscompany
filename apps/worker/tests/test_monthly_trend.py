@@ -527,7 +527,15 @@ def test_market_snapshot_page_1_carries_the_chart_and_the_listings_start_after_i
         "the listings no longer break to page 2, so the chart and the cards are "
         "competing for page 1 again"
     )
-    assert html.index("trend-chart") < html.index('class="gallery-section'), (
+    # MATCHED AS MARKUP, like `section_markup` above and for the same reason.
+    # This line read `html.index("trend-chart")` until 2026-10-13, and
+    # `.trend-chart` is a rule in the stylesheet — at offset 21,948 of a
+    # document whose <style> ends at 40,771 and whose chart element is at
+    # 42,324. The comparison was between the RULE and the section, so it held
+    # wherever the element sat, and the assertion below it would have passed
+    # with the chart rendered under the listings. D-190. The assertion above
+    # is element-anchored and was carrying the test on its own.
+    assert html.index('<div class="trend-chart') < html.index('class="gallery-section'), (
         "the chart must close page 1, so it precedes the listings section"
     )
 
