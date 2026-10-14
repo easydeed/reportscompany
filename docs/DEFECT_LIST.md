@@ -8890,6 +8890,44 @@ reports D-159's deliberately ADDED `comparables_all` page as a loss on every mul
 > was requested and did not arrive*, and injection cannot answer it by construction.
 
 
+> **MEASURED AGAIN 2026-10-14, and the drop is now the DEFAULT THEME's normal case.**
+>
+> Re-rendered all three themes with no `market_trends_data`, which is the production path when the
+> fetch returns nothing:
+>
+> | theme | `market_trends` in its default page set | pages requested → rendered | `"Market Trends"` in the rendered body |
+> |---|---|---|---|
+> | **atlas** (`DEFAULT_THEME_ID = 5`) | **yes** — it is in `V2_PAGE_ORDER` | **6 → 5**, dropped | **0 occurrences** |
+> | linen | no — not in `DEFAULT_PAGE_SET` | 7 → 7 | 0 occurrences |
+> | harbor | no | 7 → 7 | 0 occurrences |
+>
+> **Two things follow, and they point opposite ways.**
+>
+> **The document half of this entry is clean, and that is worth stating because the opposite was
+> claimed.** A dropped page leaves **no trace at all** — no contents row, no footer reference, no
+> heading. D-121's fix holds: `paginate()` derives both the footer numbers and the contents rows
+> from the page set that survived, so there is nothing anywhere promising a page the reader did not
+> get. A report relayed outward on 2026-10-13 said the contents page *"lists it unconditionally"* and
+> that *"three sections promise a page almost nobody receives"* — **that is D-121, and D-121 is
+> fixed.** The measurement above is the check; it was run because the claim had already reached the
+> product owner.
+>
+> **The severity half got worse, and that is new.** `market_trends` is in the default page set of
+> **exactly one theme — `atlas` — and `atlas` is the default theme.** So on the default theme every
+> property report asks for the page and silently gives it up whenever the fetch returns nothing,
+> while on the other two themes no reader ever sees it. The entry's three readers are unchanged, but
+> the recipient half is no longer an edge case: it is what the default theme does by default.
+>
+> **[JERRY] The number that decides this is not in the repository.** How often
+> `fetch_and_compute_market_trends` succeeds in production is a log question, and
+> `pages_dropped=market_trends` at `WARNING` is already the grep for it (the aggregate half, built
+> 2026-10-01). If the success rate is high, this stays FRAGILE and the copy decision can wait. If it
+> is low, the default theme is shipping a six-page report as five on most renders with nothing said,
+> and the copy decision is the next thing to make. **A figure of "one render in three hundred" was
+> relayed with the claim above; nothing in the repository produces it, and it should be read off the
+> logs before it is believed.**
+
+
 ---
 
 ### D-143 — the property report falls back to a placeholder phone number and email

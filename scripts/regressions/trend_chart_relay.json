@@ -1,0 +1,37 @@
+[
+  {
+    "name": "the relay quotes a page total the arithmetic no longer gives",
+    "file": "docs/TREND_CHART_FOR_DESIGN_2026-10-14.md",
+    "old": "| **three table kinds** | **15** | **18** |",
+    "new": "| **three table kinds** | **15** | **17** |",
+    "test": "tests/test_trend_chart_relay_is_current.py"
+  },
+  {
+    "name": "the pinned continuation count drifts from the built page count",
+    "file": "tests/test_market_capacity_doc_is_current.py",
+    "old": "V2_CONTINUATION = {\n    \"closed\": 26,",
+    "new": "V2_CONTINUATION = {\n    \"closed\": 20,",
+    "test": "tests/test_trend_chart_relay_is_current.py"
+  },
+  {
+    "name": "the chart height is re-pinned without the document being updated",
+    "file": "tests/test_trend_chart_relay_is_current.py",
+    "old": "    \"chart_px\": 179.5,",
+    "new": "    \"chart_px\": 150.0,",
+    "test": "tests/test_trend_chart_relay_is_current.py"
+  },
+  {
+    "name": "the relay arrives with a proposal instead of a question",
+    "file": "docs/TREND_CHART_FOR_DESIGN_2026-10-14.md",
+    "old": "Nothing here asks you to change the page.",
+    "new": "We would like the band reduced to 148.6px.",
+    "test": "tests/test_trend_chart_relay_is_current.py"
+  },
+  {
+    "name": "the relay re-opens the band distribution Design already solved",
+    "file": "docs/TREND_CHART_FOR_DESIGN_2026-10-14.md",
+    "old": "Same comparison, same rules on legends and labels. No question here.",
+    "new": "Same comparison, same rules on legends and labels.",
+    "test": "tests/test_trend_chart_relay_is_current.py"
+  }
+]
