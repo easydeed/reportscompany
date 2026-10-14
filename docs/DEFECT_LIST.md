@@ -8926,6 +8926,23 @@ reports D-159's deliberately ADDED `comparables_all` page as a loss on every mul
 > and the copy decision is the next thing to make. **A figure of "one render in three hundred" was
 > relayed with the claim above; nothing in the repository produces it, and it should be read off the
 > logs before it is believed.**
+>
+> **The exact query, so the answer is not paraphrased either.** Worker service logs, longest window
+> retention allows, three counts over the SAME window:
+>
+> | | search string | what it counts |
+> |---|---|---|
+> | numerator | `pages_dropped=` *(report the distinct values)* | renders that lost a conditional page. The field is comma-joined over `PAGE_ORDER`, so a render losing both pages reads `pages_dropped=market_trends,overview` — counting `market_trends` alone needs the values, not the line count |
+> | denominator | `Property report complete:` | property renders that finished. The right denominator for "reports a reader received" |
+> | sanity | `Starting property report generation:` | renders that began. The gap between this and the line above is renders that died before the drop check and must not be counted as successes |
+>
+> Also needed: **the breakdown by `theme=`** from the same lines, and **the window's start and end
+> dates**. The theme split is the whole point — only `atlas` requests the page, so a rate computed
+> across all three themes understates it by however much of the traffic is `linen` and `harbor`.
+>
+> **What the line cannot answer:** it does not say whether a render came from the agent wizard or the
+> consumer path, and those have different page sets. If that split is wanted it is one more field on
+> the log line, which is ours to add — not something to infer from these counts.
 
 
 ---
