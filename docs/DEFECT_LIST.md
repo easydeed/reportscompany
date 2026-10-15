@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 64 | Real, unfixed |
-| `fixed` | 120 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 63 | Real, unfixed |
+| `fixed` | 121 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **191** | D-001 … D-191, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 64, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 18 · FRAGILE 16 · ROUGH 24. (Sums to 63, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -1603,7 +1603,20 @@ Chrome findings #7 and #8. A nav entry that opens a blank email client is a dead
 
 ### D-050 — `components/v0/` is six files with no importers
 **Severity:** ROUGH · **Affects:** nobody at runtime — this is dead weight and a re-litigation risk
-**Status:** `open`
+**Status:** `fixed` — `chore/phase-1-app-routes-detokenise`. **The condition this entry set has
+lapsed:** it said *"PR #27 is still unmerged — this should go in with it."* #27 merged, took
+`v0-report-builder/` with it, and left these six behind. Waiting for a merged PR is waiting for
+nothing, so they are deleted here, in the branch that would otherwise have had to retokenise 34
+colour literals inside them.
+
+**Proof, to the standard the entry's own neighbours use and the one `/print/[runId]` taught:**
+zero importers by resolved path (the import graph walk from all 264 route entry points);
+zero references to `components/v0` anywhere outside the directory — the only `components/v0*`
+matches are `components/v0-styling/`, a DIFFERENT and live directory whose shells three routes
+import; each of the six basenames grepped as a bare STRING across the whole repository, whose only
+hits are separate copies in `packages/ui/src/components/` and the vendored `_intake/` app (D-052),
+not references to these files; and no dynamic or constructed import exists anywhere in `apps/web`
+(`import(` / `require(` with interpolation or concatenation returns nothing).
 
 `apps/web/components/v0/` contains `Navbar.tsx`, `code-tabs.tsx`, `dashboard-overview.tsx`, `new-report-wizard.tsx`, `segmented-control.tsx`, `tag-input.tsx`. **All six have zero importers.**
 

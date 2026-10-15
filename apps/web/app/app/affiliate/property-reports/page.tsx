@@ -82,7 +82,7 @@ interface AffiliateStats {
 // retired themes still own most of the history. Not the themes' own brand
 // colours — these are chart swatches.
 const THEME_COLORS: Record<string, string> = {
-  classic: 'bg-slate-100 text-slate-700 border-slate-300',
+  classic: 'bg-muted text-slate-700 border-slate-300',
   harbor: 'bg-blue-100 text-blue-700 border-blue-300',
   linen: 'bg-indigo-100 text-indigo-700 border-indigo-300',
   teal: 'bg-teal-100 text-teal-700 border-teal-300',

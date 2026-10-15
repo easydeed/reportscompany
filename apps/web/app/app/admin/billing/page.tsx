@@ -326,7 +326,7 @@ export default function AdminBillingPage() {
                     </div>
                     <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-indigo-500 transition-all"
+                        className="h-full rounded-full bg-primary transition-all"
                         style={{ width: `${Math.max(pct, 2)}%` }}
                       />
                     </div>

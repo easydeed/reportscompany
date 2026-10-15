@@ -92,7 +92,7 @@ function StatusBadge({ status }: { status: ReportRow["status"] }) {
 function UserTypeBadge({ type }: { type: "rep" | "agent" }) {
   if (type === "rep")
     return <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] ml-1.5">Rep</Badge>
-  return <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px] ml-1.5">Agent</Badge>
+  return <Badge variant="outline" className="bg-background text-slate-600 border-border text-[10px] ml-1.5">Agent</Badge>
 }
 
 // ─── Metric card ──────────────────────────────────────────────────────────────

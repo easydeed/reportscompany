@@ -805,7 +805,7 @@ export default function AdminLeadPagesPage() {
                           <div className="mt-2">
                             <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-indigo-500 rounded-full transition-all"
+                                className="h-full bg-primary rounded-full transition-all"
                                 style={{ width: `${Math.max(step.pct, 2)}%` }}
                               />
                             </div>
