@@ -16,6 +16,29 @@
 > default, so it alone would have looked correct. `theme_registry.FORMER_NAME_IDS` fixes it and
 > `test_a_former_name_resolves_to_the_theme_it_became_not_the_default` holds it.
 >
+> ### WHAT `resolve()` ACTUALLY DOES, because a wrong version of this was relayed
+>
+> It was reported outward that stale theme references now **error**. **They do not, and they never
+> did.** Recorded here so nobody inherits that version:
+>
+> | input | result | why |
+> |---|---|---|
+> | `harbor` · `linen` · `atlas` | that theme | live names |
+> | `2` · `3` · `5`, as int or string | that theme | live ids; the string arm exists because `report_generations.theme_id` is VARCHAR (D-164) |
+> | **`modern` · `elegant` · `bold`** | **the theme it became** | `FORMER_NAME_IDS`, checked before the digit arm. **This is the only thing the rename changed.** |
+> | `classic` · `teal` | the **default** | retired: no template to render. Deliberate (D-166) — the value can arrive from an `accounts` row written before the cut, and a report in the current default beats one that does not render |
+> | `1` · `4` | the **default** | retired ids, same reason |
+> | `None`, junk, a bool | the **default** | same |
+>
+> **Nothing raises.** The fallback is the pre-existing, intentional behaviour and the rename left it
+> exactly as it was. What the rename fixed is narrow and specific: three strings that used to resolve
+> correctly and would have started defaulting, which would have silently relabelled stored reports.
+>
+> **Why the fallback is right even though it hides a stale reference**: the inputs are rows, not
+> code. A name in live *code* is caught by
+> `test_no_live_code_path_names_a_retired_theme`, which is where strictness belongs. A name in a
+> *row* written in 2026 cannot be fixed by failing a render in 2027.
+>
 > This document said *"nothing in the database holds a theme name that anything reads"*, and the
 > qualifier was doing the work: `property_report_stats.theme_<name>` are column identifiers nothing
 > reads, but `report_generations.theme_id` holds names **as values** and something does read it.
