@@ -40,7 +40,7 @@ type BillingData = PlanUsage & {
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
   const isUnlimited = limit >= 99999
   const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
-  const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-indigo-500"
+  const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-primary"
 
   return (
     <div className="space-y-1">
@@ -399,7 +399,7 @@ export default function BillingPage() {
               </div>
               <div className="p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                     <CreditCard className="w-5 h-5 text-slate-600" />
                   </div>
                   <div>
@@ -421,7 +421,7 @@ export default function BillingPage() {
               </div>
               <div className="p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                     <Receipt className="w-5 h-5 text-slate-600" />
                   </div>
                   <div>

@@ -127,7 +127,7 @@ function formatArea(city: string | null, zips: string[] | null): string {
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
   const isUnlimited = limit >= 99999
   const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
-  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-indigo-500'
+  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-primary'
 
   return (
     <div className="space-y-1">

@@ -302,7 +302,7 @@ export default function SecurityPage() {
             {/* Password Row */}
             <div className="p-5 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
                   <KeyRound className="w-5 h-5 text-slate-600" />
                 </div>
                 <div>
