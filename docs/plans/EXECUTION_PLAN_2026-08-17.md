@@ -214,10 +214,30 @@ it.**
   all. When a real parser is available — an AST, a CSS parser, an HTML parser, the config
   loader — use it; text search is the fallback, and its needle has to carry its own boundaries.
 
-  **AND THE HONEST PART: THIS RULE HAS NOW BEEN BROKEN FOUR TIMES BY THE PERSON WHO FILED IT, AND
-  CAUGHT FOUR TIMES BY A REGRESSION RATHER THAN BY RECALL.** A fourth instance landed three days
+  **AND THE HONEST PART: THIS RULE HAS NOW BEEN BROKEN SEVEN TIMES BY THE PERSON WHO FILED IT, AND
+  CAUGHT SEVEN TIMES BY A REGRESSION RATHER THAN BY RECALL.** A fourth instance landed three days
   after the rule was written — `force-new-page`, matched in the stylesheet instead of the markup —
   in a test written by someone who had the rule in mind that week.
+
+  **Instances five, six and seven landed in one sitting, 2026-10-15, in the script and test written
+  to make a red CI check say which test failed** (D-191) — and they are the sharpest evidence for
+  the paragraph below:
+
+  | the needle | what it matched instead |
+  |---|---|
+  | `"failed" not in counts` | **`xfailed`.** This suite's GREEN counts line reads `2901 passed, 67 skipped, 20 xfailed`, so every passing run reported itself red |
+  | `"ci_annotate_failures.py" in workflow` | **the comment explaining the step** — so the assertion passed with the step deleted |
+  | `"if: failure()" in workflow` | **the comment explaining the `if`** — same, and the step could run on every build |
+
+  The first was caught by the file's own green-run test. **The second and third were caught by two
+  applied regressions that DID NOT FIRE**, which is the harness doing the one job it was built for:
+  a mutation that deletes the step and leaves the gate green is the only way either of those was
+  ever going to be visible. Both are now asserted against the PARSED YAML, as
+  `test_ci_table_matches_workflows.py` had already done for the same reason.
+
+  Note what instances six and seven were: **the comment describing the assertion satisfied the
+  assertion.** The row about the masthead comment above is the same shape, and it did not stop
+  either — which is the point of the next paragraph rather than an argument against it.
 
   Read as a scorecard that looks like a dead rule. It is not, and the distinction matters for
   anyone deciding whether to keep it: **this class is not preventable prospectively.** At the
