@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 63 | Real, unfixed |
-| `fixed` | 121 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 122 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **191** | D-001 … D-191, contiguous, no duplicates |
+| **Total** | **192** | D-001 … D-192, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 18 · FRAGILE 16 · ROUGH 24. (Sums to 63, the open total.)
 
@@ -12270,6 +12270,67 @@ Until then the pairing can be read from the run's log by anyone who can open it 
 not the pairing: it is that a check ran 25 times, knew the answer every time, and said `exit code
 1`. The pairing is a one-line baseline decision. **That it took two weeks and a new tool to learn
 the name of one test is the defect.**
+
+---
+
+### D-192 — a global element selector in the token layer recoloured every sidebar nav item, and nothing could see it
+
+**Severity:** WRONG · **Affects:** every authenticated route — the primary navigation of the product,
+live on `main` through two merges · **Found during:** changing the button above it, by looking at a
+rendered logged-in page
+**Status:** `fixed` — #172
+
+Phase 0 (#169) adopted Design's `tokens.css` plus the three base rules their `ADOPTION.md` lists.
+The third is:
+
+```css
+a { color: var(--link); }
+```
+
+`SidebarMenuButton` (`components/ui/sidebar.tsx:489`) sets no text colour, and every nav item renders
+a `<Link>` inside it. So the rule coloured **Dashboard, Market Reports, Property Reports, Schedules,
+Lead Pages, Contacts, Settings and Help Center indigo** — a navigation rail of prose links.
+
+Design's own `App v3.dc.html` never hits this: every nav button there carries an explicit
+`color:{{ it.color }}`, `#334155` inactive and ink active. **The rule is correct for the design it
+was written against and wrong for the markup it was applied to** — the same shape as "restyle-only",
+one layer down.
+
+#### Why it survived two merges
+
+**Nothing can see the authenticated product.** `frontend-tests.yml` dies at `Install deps` (the
+`pngjs` lockfile, red since 2026-09-30), there is no DOM contrast auditor for `apps/web`, and every
+screenshot taken of this app before 2026-10-15 was of `/` and `/login` — the two routes that render
+without a session. The first render of a logged-in page in this project's history was two turns
+before this entry was written, and the defect was visible in it immediately.
+
+So the detection story is not "a gate was missing". It is **"the surface had never been looked at"**.
+
+#### The generalisable part
+
+**A global element selector in a token layer has a blast radius nothing in this repository
+measures.** `:root { --x: … }` changes only what reads `--x`; `a { … }` changes every anchor in
+every component, including ones whose authors assumed they inherited. A token file that also carries
+element rules is two different kinds of change wearing one name, and the second kind is the one that
+reaches past its consumers.
+
+Fixed at the component rather than by weakening the rule — `SidebarMenuButton` now sets
+`text-sidebar-foreground`, which `data-[active=true]:text-sidebar-accent-foreground` still overrides
+— because the rule is right for prose links and the nav was wrong to depend on inheritance.
+
+#### WHAT THIS IMPLIES AND HAS NOT BEEN CHECKED
+
+**Phase 0 may have other unobserved effects on authenticated routes.** Two of its three base rules
+are global element selectors (`a` and `h1`), and `h1 { font-size: 34px; font-weight: 800;
+letter-spacing: -0.03em }` has had exactly the same opportunity to reach past its intended consumers
+— on pages nobody has rendered. The 22 changed token values are safe by construction (only their
+readers move); the element rules are not.
+
+**The pass that would answer it:** render the main authenticated routes against `main` as of
+`6dd354b^` (immediately pre-Phase-0) and against `main` today, and diff. The harness exists — a
+locally minted JWT renders the chrome (the middleware decodes without verifying), and the noise floor
+must be measured per route, because `/app`'s is 4.56% and `/app/reports`' is 0.00%. **Not done
+here**, and recorded so it is a decision rather than an oversight.
 
 ---
 
