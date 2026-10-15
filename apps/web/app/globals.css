@@ -8,6 +8,28 @@ html {
 }
 
 
+/* ── PHASE 0 (2026-10-15): these values are Design's, and they are the RENDERED
+   values, not just the ones their token file states.
+   
+   WHY THIS IS WRITTEN HERE. An earlier review reported that `tokens.css`
+   disagreed with Design's own reference files in three places — cards cream not
+   white, borders #ECEAE3 not #E4E2DA, radius 14px not 16px — and recommended
+   reconciling to the render. That finding came from ONE card, on ONE view, of
+   ONE of their four files: the dashboard's "Next send" row, which is cream
+   because `--surface-cream` is specified for exactly that kind of row.
+
+   Re-measured across all four rendered files (App v3, Wizards v3, Landing v4,
+   Home Value Page), counting every bordered or rounded box, the usage is:
+
+       backgrounds   #FFFFFF 17  ·  cream variants 3      -> --card: #FFFFFF  correct
+       borders       #E4E2DA 12  ·  #ECEAE3 9  ·  #D6D3CB 7 -> --border: #E4E2DA correct
+       radii         8px 15 · 10px 12 · 12px 6 · 14px 3   -> --radius: 0.625rem correct
+                                                              (rounded-xl = 14px, which is
+                                                               what their cards measure)
+
+   So the token file agrees with the render and the three-way disagreement was a
+   bound derived from one sample. Nothing to reconcile in Phase 1, and nothing to
+   raise with Design. Recorded because the opposite was nearly acted on. */
 :root {
   /* ── Backgrounds ── */
   --background: #FFFFFF;            /* was #F8FAFC. App pages are white; cream is the sidebar/marketing ground */
