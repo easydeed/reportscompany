@@ -148,10 +148,43 @@ jobs:
       # than a skip. Locally the contrast gate skips when Chromium is absent;
       # in CI a skip would mean the suite reports green on documents nothing
       # looked at, which is precisely the state this gate was added to end.
+      #
+      # PIPED INTO A FILE SO THE NEXT STEP CAN NAME WHAT FAILED. `set -o
+      # pipefail` is load-bearing and not style: without it the step takes
+      # `tee`'s exit code, which is 0 whatever pytest did, and **a red suite
+      # would report green** — a worse defect than the one this exists to fix.
+      # `tests/test_ci_annotate_failures.py` asserts this file still has it.
       - name: Run tests
-        run: .venv/bin/pytest
+        run: |
+          set -o pipefail
+          .venv/bin/pytest -rf 2>&1 | tee pytest-output.txt
         env:
           PDF_CONTRAST_REQUIRE_BROWSER: "1"
+
+      # A RED CHECK THAT SAYS WHICH TEST FAILED (D-191).
+      #
+      # `Backend Tests` was red on `main` for 25 consecutive runs and the only
+      # thing any API client could learn was `Process completed with exit code
+      # 1`: the log body is served from a blob host not every client follows,
+      # and a check run has no `output.text` unless something writes one. Two
+      # weeks of merges happened on top of a signal that existed and carried no
+      # information — which is the shape of half the entries on the defect
+      # board, and D-038/D-041's mechanism for the third time.
+      #
+      # `::error::` on stdout becomes an ANNOTATION, which
+      # `GET /repos/{o}/{r}/check-runs/{id}/annotations` serves to everyone. One
+      # annotation, not one per test: GitHub caps them at ten per step and a cap
+      # that truncates silently turns forty failures into a list of ten that
+      # reads as complete.
+      #
+      # `if: failure()` because annotating a green run would make the
+      # annotation meaningless — the same reason D-142's `pages_dropped` line
+      # is emitted only on a drop. The reporter always exits 0: it runs on an
+      # already-red build, and one that could fail would add a second failure
+      # mode to the thing it was meant to explain.
+      - name: Name the failures
+        if: failure()
+        run: python3 scripts/ci_annotate_failures.py pytest-output.txt
 
       # Workstream A's acceptance criterion: no brand hex literal in a template.
       # A ratchet, not a gate — there are 111 today and removing them changes

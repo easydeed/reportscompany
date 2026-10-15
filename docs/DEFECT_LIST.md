@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 63 | Real, unfixed |
+| `open` | 64 | Real, unfixed |
 | `fixed` | 120 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **190** | D-001 … D-190, contiguous, no duplicates |
+| **Total** | **191** | D-001 … D-191, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 63, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 64, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -12166,6 +12166,97 @@ marker in that registry is asserted to contain `class="` or `<`, which a CSS rul
 produced a wrong table in the chart-scope measurement four days ago — `'band-chart' in html` reported
 a band chart on every kind that shares the stylesheet. Three instances is a family, and the third was
 found only because the second was written down.
+
+---
+
+### D-191 — Backend Tests has been red on `main` for 25 consecutive runs, and the check said only "exit code 1"
+
+**Severity:** BROKEN · **Affects:** every merge to `main` since 2026-10-01 — nothing in that window
+has been verified by CI · **Found during:** merging #165 and #167, by checking mergeability and
+reading the check list
+**Status:** `open` — **the fact is filed; the mechanism is not known yet.** Filed without it
+deliberately: what let this run for two weeks is that nothing was written down.
+
+`Backend Tests` concluded `failure` on **every** run on `main` that the Actions API returns, from
+`b435c50` (2026-10-01) to `7695d2e` (2026-10-15) — **25 consecutive**, including the merges of #163,
+#164, #166, #165 and #167. The failing step is **`Run tests`** in all of them, and the only
+machine-readable detail GitHub carried was `Process completed with exit code 1`.
+
+**This is D-038 and D-041's mechanism for the third time**, and this entry's severity follows D-038's
+own test: *"a suite in this state cannot have been run recently by anyone."* The red tick was
+already there when the window opened, so the next red tick carried no news — which is also D-089's
+sentence, *"a baseline nobody can act on is not a baseline, it is a disabled check."* The difference
+is that D-089's red was known and recorded as a baseline. **This one was not recorded anywhere**, by
+anyone, for two weeks.
+
+#### Every green reported in that window was LOCAL
+
+The work merged between 2026-10-01 and 2026-10-15 — the seven market kinds on Design's `_v2` page,
+the theme rename, the specified-output gate — was each verified by running the suites in a
+development container and reading them green. Those runs were real and the numbers in those commit
+messages are accurate. **They are not CI.** If the cause turns out to be a real failure in the
+repository rather than an environmental one, the commits in that window are the set to re-check:
+`b435c50` through `7695d2e` on `main`.
+
+#### What has been eliminated
+
+| hypothesis | how it was tested | result |
+|---|---|---|
+| the contrast gate, which CI alone forces on with `PDF_CONTRAST_REQUIRE_BROWSER=1` | ran `test_pdf_contrast.py` with that variable set, against a real Chromium | **14 passed** (105s) |
+| the interpreter — CI pins **3.12**, the dev container runs **3.11.15** | built a 3.12 venv, installed `apps/api` then `apps/worker` through Poetry exactly as the workflow does, ran the whole suite from the repo root with CI's flag on `82fb720` | **2901 passed, 67 skipped, 20 xfailed** |
+| the database and Redis skips behaving differently | the 67 skips come from `apps/api/tests/conftest.py`'s default URL (`host 'fake'`, unreachable) and `BRIDGE_TEST_REDIS_URL` being unset — neither is supplied by the workflow either | identical in CI |
+
+**So the repository content is not the cause**, on CI's interpreter with CI's flag. What is left is
+the runner: `npm ci`, `npx playwright install --with-deps chromium`, or the runner's network. The
+first two fail identically forever once they start, which fits 25 consecutive identical failures
+better than anything flaky.
+
+#### Why the mechanism is not in this entry
+
+**The log body cannot be read from here.** GitHub serves job logs from a blob host, the built-in
+`gh` in this environment refuses that redirect, and the check run carries no `output.text` because
+nothing in the workflow wrote one. The step's annotations say `Process completed with exit code 1`
+and nothing else.
+
+That is itself the defect to fix first, and it is fixed on the same branch as this entry:
+`scripts/ci_annotate_failures.py` + the `Name the failures` step in `backend-tests.yml` write
+pytest's failure summary as a GitHub **annotation**, which the checks API serves to any client. **A
+signal that exists and carries no information is the shape of half the entries on this board** — it
+is D-142's `info`-level log, D-181's producer with no consumer, and D-183's chart that stopped
+rendering while its tests stayed green. This is that shape on the one check meant to catch the
+others.
+
+#### THE MECHANISM — named by the reporter's first run, 2026-10-15
+
+The annotation from PR #168's own run, which is the whole point of the change:
+
+```
+FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
+  - AssertionError: 1 colour pairing(s) below their WCAG threshold that are not on the baseline
+1 failed, 2917 passed, 67 skipped, 20 xfailed in 346.43s
+```
+
+**One test, and it is the contrast gate** — the one test CI alone forces on with
+`PDF_CONTRAST_REQUIRE_BROWSER=1`. Two weeks of `exit code 1` was one unbaselined colour pairing.
+
+**And it is browser-dependent, which is why the elimination above was clean and still wrong-footed.**
+That same gate was run here with CI's own flag against a real Chromium and passed, 14 tests. The
+difference is WHICH Chromium: CI installs Playwright's (`npx playwright install --with-deps
+chromium`), this container has one pre-installed at a pinned path. The gate measures what a browser
+PAINTS — `getComputedStyle`, deliberately, because PDFShift renders with Chromium and a CSS cascade
+modelled in Python can disagree in silence — so a different Chromium build is a different ground
+truth, and the ratchet's baseline was captured against one of them.
+
+**What is still not known: WHICH pairing.** `1 colour pairing(s)` is the first line of the assertion
+message and the reporter prints pytest's summary line, which stops there. The detail is in the
+`FAILURES` block the reporter does not yet include. That is the next change and it is small —
+widening the reporter to carry the first N lines of the failure body for a small number of failures.
+Until then the pairing can be read from the run's log by anyone who can open it in a browser.
+
+**Severity stands at BROKEN and the status stays `open`**, because the thing this entry is about is
+not the pairing: it is that a check ran 25 times, knew the answer every time, and said `exit code
+1`. The pairing is a one-line baseline decision. **That it took two weeks and a new tool to learn
+the name of one test is the defect.**
 
 ---
 
