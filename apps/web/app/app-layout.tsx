@@ -237,7 +237,7 @@ function getNavigation({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Ti
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
   const isUnlimited = limit >= 99999
   const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
-  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-indigo-400'
+  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-primary'
 
   return (
     <div className="space-y-0.5">
@@ -282,7 +282,7 @@ function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }:
         {/* Quick Action — hide for admin / company admin users */}
         {!isAdmin && !isCompanyAdmin && (
           <div className="px-3 mb-2">
-            <Button size="sm" className="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-sm" asChild>
+            <Button size="sm" className="w-full bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground" asChild>
               <Link href="/app/reports/new" prefetch={false}>
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 New Report
