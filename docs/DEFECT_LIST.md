@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 63 | Real, unfixed |
-| `fixed` | 119 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 120 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **189** | D-001 … D-189, contiguous, no duplicates |
+| **Total** | **190** | D-001 … D-190, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 16 · ROUGH 25. (Sums to 63, the open total.)
 
@@ -8890,6 +8890,61 @@ reports D-159's deliberately ADDED `comparables_all` page as a loss on every mul
 > was requested and did not arrive*, and injection cannot answer it by construction.
 
 
+> **MEASURED AGAIN 2026-10-14, and the drop is now the DEFAULT THEME's normal case.**
+>
+> Re-rendered all three themes with no `market_trends_data`, which is the production path when the
+> fetch returns nothing:
+>
+> | theme | `market_trends` in its default page set | pages requested → rendered | `"Market Trends"` in the rendered body |
+> |---|---|---|---|
+> | **atlas** (`DEFAULT_THEME_ID = 5`) | **yes** — it is in `V2_PAGE_ORDER` | **6 → 5**, dropped | **0 occurrences** |
+> | linen | no — not in `DEFAULT_PAGE_SET` | 7 → 7 | 0 occurrences |
+> | harbor | no | 7 → 7 | 0 occurrences |
+>
+> **Two things follow, and they point opposite ways.**
+>
+> **The document half of this entry is clean, and that is worth stating because the opposite was
+> claimed.** A dropped page leaves **no trace at all** — no contents row, no footer reference, no
+> heading. D-121's fix holds: `paginate()` derives both the footer numbers and the contents rows
+> from the page set that survived, so there is nothing anywhere promising a page the reader did not
+> get. A report relayed outward on 2026-10-13 said the contents page *"lists it unconditionally"* and
+> that *"three sections promise a page almost nobody receives"* — **that is D-121, and D-121 is
+> fixed.** The measurement above is the check; it was run because the claim had already reached the
+> product owner.
+>
+> **The severity half got worse, and that is new.** `market_trends` is in the default page set of
+> **exactly one theme — `atlas` — and `atlas` is the default theme.** So on the default theme every
+> property report asks for the page and silently gives it up whenever the fetch returns nothing,
+> while on the other two themes no reader ever sees it. The entry's three readers are unchanged, but
+> the recipient half is no longer an edge case: it is what the default theme does by default.
+>
+> **[JERRY] The number that decides this is not in the repository.** How often
+> `fetch_and_compute_market_trends` succeeds in production is a log question, and
+> `pages_dropped=market_trends` at `WARNING` is already the grep for it (the aggregate half, built
+> 2026-10-01). If the success rate is high, this stays FRAGILE and the copy decision can wait. If it
+> is low, the default theme is shipping a six-page report as five on most renders with nothing said,
+> and the copy decision is the next thing to make. **A figure of "one render in three hundred" was
+> relayed with the claim above; nothing in the repository produces it, and it should be read off the
+> logs before it is believed.**
+>
+> **The exact query, so the answer is not paraphrased either.** Worker service logs, longest window
+> retention allows, three counts over the SAME window:
+>
+> | | search string | what it counts |
+> |---|---|---|
+> | numerator | `pages_dropped=` *(report the distinct values)* | renders that lost a conditional page. The field is comma-joined over `PAGE_ORDER`, so a render losing both pages reads `pages_dropped=market_trends,overview` — counting `market_trends` alone needs the values, not the line count |
+> | denominator | `Property report complete:` | property renders that finished. The right denominator for "reports a reader received" |
+> | sanity | `Starting property report generation:` | renders that began. The gap between this and the line above is renders that died before the drop check and must not be counted as successes |
+>
+> Also needed: **the breakdown by `theme=`** from the same lines, and **the window's start and end
+> dates**. The theme split is the whole point — only `atlas` requests the page, so a rate computed
+> across all three themes understates it by however much of the traffic is `linen` and `harbor`.
+>
+> **What the line cannot answer:** it does not say whether a render came from the agent wizard or the
+> consumer path, and those have different page sets. If that split is wanted it is one more field on
+> the log line, which is ours to add — not something to infer from these counts.
+
+
 ---
 
 ### D-143 — the property report falls back to a placeholder phone number and email
@@ -11276,6 +11331,15 @@ Restoring it is this one line plus a chart slot on the `_v2` page, and the slot 
 would have to agree to. Recorded here so the decision is taken on purpose rather than discovered by
 an agent who used to show a client a twelve-month line.
 
+**This absence is now reported rather than assumed.**
+`apps/worker/tests/test_specified_outputs_render.py` holds §7.3's charts against the kinds the plan
+names, and the pace series on `inventory` is a **strict xfail citing this entry** — so it is counted
+as an outstanding specified output on every run, not treated as the baseline. **When it is
+restored, that xfail goes XPASS and the build breaks**: clear the `defect` field in
+`SPECIFIED_OUTPUT["pace trend"]` and the assertion becomes an ordinary one. Named here because the
+other half of §0.6's xfail rule is *entry -> test*, and the person who fixes this should not have to
+discover the gate by breaking it.
+
 ---
 
 ### D-182 — "seller's market" means under four months on the PDF and under three in the email
@@ -12057,6 +12121,51 @@ sentence is built from the registry's labels, so a future cut cannot leave a ret
 copy. **The function's behaviour is unchanged on purpose.** Deciding whether a compact theme exists
 is a product question about what the three rewired themes do, and Design's packages replace this
 metadata; inventing a `compact` flag now would be asserting a fact to keep a function company.
+
+---
+
+### D-190 — two chart assertions are matched against the stylesheet, so one of them proves nothing
+
+**Severity:** FRAGILE · **Affects:** `test_monthly_trend.py` and `test_market_v2_kinds.py` — the
+tests holding §7.3's trend chart on `market_snapshot` and its absence on `inventory` ·
+**Found during:** scoping the specified-output gate, by checking whether the failure that gate is
+built for was already present in the tests meant to prevent it
+**Status:** `fixed` — `tools/specified-output-gate`
+
+Both are the substring-is-not-a-construct family (§0.6), in its specific chart form: **`.trend-chart`
+is a CSS rule as well as an element**, and a bare substring match cannot tell them apart.
+
+**1 · The vacuous one.** `test_market_snapshot_page_1_carries_the_chart_and_the_listings_start_after_it`
+asserted the ordering as:
+
+    assert html.index("trend-chart") < html.index('class="gallery-section')
+
+Measured on a rendered `market_snapshot`: the first `trend-chart` is at offset **21,948**, inside a
+`<style>` block that ends at **40,771**; the chart ELEMENT is at **42,324** and the listings section
+at **45,070**. So the comparison was between the stylesheet and the section, and it held **wherever
+the element sat** — the chart could render below the listings and this line would still pass. The
+claim in its message ("the chart must close page 1") was never tested.
+
+**It was not load-bearing, and that is worth stating rather than glossing.** The assertion directly
+above it is `svg_of(html) is not None`, which is element-anchored by regex and does the real work,
+and the `force-new-page` assertion beside it is matched as markup by the file's own
+`section_markup()` helper — whose docstring cites this exact rule, twelve lines above the line that
+breaks it.
+
+**2 · The fragile one.** `test_the_inventory_page_draws_no_trend` asserted `"trend-chart" not in html`.
+That is true today only because `_v2/report.jinja2` defines no `.trend-chart` rule. Adding one — the
+first thing anyone does when giving a `_v2` kind a chart slot — fails this test without changing a
+single rendered element. It fails loud rather than silent, so it is a nuisance rather than a hazard,
+but it is the same mistake with the sign flipped.
+
+**Both now match the element** (`'<div class="trend-chart'`), and
+`test_specified_outputs_render.py` makes the property structural rather than remembered: every
+marker in that registry is asserted to contain `class="` or `<`, which a CSS rule cannot.
+
+**Why this entry exists at all, given nothing shipped wrong.** The same error, in the same construct,
+produced a wrong table in the chart-scope measurement four days ago — `'band-chart' in html` reported
+a band chart on every kind that shares the stylesheet. Three instances is a family, and the third was
+found only because the second was written down.
 
 ---
 

@@ -819,7 +819,12 @@ def test_inventory_draws_no_trend_and_the_pace_series_has_no_report_type():
     is D-113's defect inverted.
     """
     html = inv().render_html()
-    assert "trend-chart" not in html
+    # The ELEMENT, not the class name. `_v2/report.jinja2` defines no
+    # `.trend-chart` rule today, so the bare-substring form happened to be
+    # right — and the first thing anyone does when giving a `_v2` kind a chart
+    # slot is add that rule, which would have failed this test without
+    # changing a single rendered element. D-190.
+    assert '<div class="trend-chart' not in html
     assert "Homes sold per month" not in html
     assert "inventory" not in MarketReportBuilder.TREND_SERIES, (
         "`inventory` is back in TREND_SERIES, so `tasks.py` will fetch twelve "

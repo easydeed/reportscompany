@@ -1473,6 +1473,35 @@ it.**
   And when a seam moves a kind, surface or path off one code path onto another, the question is not
   only "does the new path work" but **"what did the old path produce that nobody else produces"**.
 
+- **A GATE THAT LEARNS ITS EXPECTATIONS FROM THE CURRENT RENDER RATIFIES THE GAP IT WAS BUILT TO
+  CATCH.** *Added 2026-10-13, building the specified-output gate; the correction is the product
+  owner's.*
+
+  The first design for that gate held a registry of §7.3's charts where an output that does not
+  render carries an `absent_because` string. It would have passed on the day it was written, and
+  **D-183's missing pace chart would have become its baseline** — the gate's own record would then
+  say the absence was expected, which is precisely the claim the gate exists to disprove.
+
+  A gate holds a **specification**; a baseline records a **measurement**. The two are
+  indistinguishable on the day they are written and opposite a month later, because the
+  specification is what should be true and the measurement is what happened to be. Whenever a check
+  is seeded from a render, ask which one it is — and if it is holding a spec, every departure is a
+  **finding it reports**, never a row it stores. Here that is a strict `xfail` citing the defect: it
+  is counted on every run, and it breaks the build the day the output comes back.
+
+  **The corollary, which is where the ratification actually happens.** The cheap repair for a gate
+  that goes red is to tell it the absence is fine. So an absence must cite either a defect that is
+  **on the board** or a sentence that is **verbatim in the plan**, and the gate checks the file it
+  names. "We decided not to" is not writable from inside the gate.
+
+  **And a third face of the same thing: a fixture that does not feed the producer makes "absent"
+  ambiguous.** The trend chart renders only with `closed_history` in the report data, and the
+  fixture most of this surface's tests use carries none — so a gate built on it reports §7.3's first
+  chart as missing on day one, and the obvious repair is to declare it absent. The inputs are
+  therefore asserted by a test that **never xfails**, which leaves the render assertion exactly one
+  way to fail. **A positive control that cannot distinguish "lost" from "never fed" is not a
+  control.**
+
 - **A PULL REQUEST'S CONTENTS ARE ITS BRANCH MINUS ITS BASE, AND NEITHER IS WHAT YOU INTENDED.**
   *Added 2026-10-13, from merging four PRs under one title.*
 
