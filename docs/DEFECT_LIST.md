@@ -12226,7 +12226,37 @@ is D-142's `info`-level log, D-181's producer with no consumer, and D-183's char
 rendering while its tests stayed green. This is that shape on the one check meant to catch the
 others.
 
-**The mechanism gets added to this entry when the next run names it.**
+#### THE MECHANISM — named by the reporter's first run, 2026-10-15
+
+The annotation from PR #168's own run, which is the whole point of the change:
+
+```
+FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
+  - AssertionError: 1 colour pairing(s) below their WCAG threshold that are not on the baseline
+1 failed, 2917 passed, 67 skipped, 20 xfailed in 346.43s
+```
+
+**One test, and it is the contrast gate** — the one test CI alone forces on with
+`PDF_CONTRAST_REQUIRE_BROWSER=1`. Two weeks of `exit code 1` was one unbaselined colour pairing.
+
+**And it is browser-dependent, which is why the elimination above was clean and still wrong-footed.**
+That same gate was run here with CI's own flag against a real Chromium and passed, 14 tests. The
+difference is WHICH Chromium: CI installs Playwright's (`npx playwright install --with-deps
+chromium`), this container has one pre-installed at a pinned path. The gate measures what a browser
+PAINTS — `getComputedStyle`, deliberately, because PDFShift renders with Chromium and a CSS cascade
+modelled in Python can disagree in silence — so a different Chromium build is a different ground
+truth, and the ratchet's baseline was captured against one of them.
+
+**What is still not known: WHICH pairing.** `1 colour pairing(s)` is the first line of the assertion
+message and the reporter prints pytest's summary line, which stops there. The detail is in the
+`FAILURES` block the reporter does not yet include. That is the next change and it is small —
+widening the reporter to carry the first N lines of the failure body for a small number of failures.
+Until then the pairing can be read from the run's log by anyone who can open it in a browser.
+
+**Severity stands at BROKEN and the status stays `open`**, because the thing this entry is about is
+not the pairing: it is that a check ran 25 times, knew the answer every time, and said `exit code
+1`. The pairing is a one-line baseline decision. **That it took two weeks and a new tool to learn
+the name of one test is the defect.**
 
 ---
 
