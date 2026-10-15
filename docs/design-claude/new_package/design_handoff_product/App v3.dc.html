@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap"></link>
+<style>body{margin:0;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#0F172A;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}a{color:#4F46E5;text-decoration:none}a:hover{color:#3730A3}button,input{font-family:inherit}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;background:#fff">
+  <aside style="width:236px;flex-shrink:0;background:#FAFAF7;border-right:1px solid #ECEAE3;display:flex;flex-direction:column;padding:22px 14px 18px;gap:22px;position:sticky;top:0;height:100vh;box-sizing:border-box;overflow-y:auto">
+    <img src="apps/web/public/indigo.png" alt="TrendyReports" style="height:26px;width:auto;align-self:flex-start;margin-left:10px"></img>
+    <a href="#" style="display:flex;align-items:center;justify-content:center;gap:8px;height:42px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600" style-hover="background:#1E293B;color:#fff"><span style="width:15px;height:15px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>New report</a>
+    <nav style="display:flex;flex-direction:column;gap:20px">
+      <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#94A3B8;padding:0 10px 8px">{{ g.label }}</span>
+          <sc-for list="{{ g.items }}" as="it" hint-placeholder-count="4">
+            <button onClick="{{ it.go }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;height:38px;padding:0 10px;border-radius:8px;font-size:14px;font-weight:{{ it.weight }};color:{{ it.color }};background:{{ it.bg }}" style-hover="background:#F1EFE8">
+              <span style="width:17px;height:17px;flex-shrink:0;background:{{ it.color }};mask:url({{ it.icon }}) center/contain no-repeat"></span>{{ it.name }}
+            </button>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:14px">
+      <button onClick="{{ goHelp }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;height:38px;padding:0 10px;border-radius:8px;font-size:14px;font-weight:{{ helpWeight }};color:#334155;background:{{ helpBg }}" style-hover="background:#F1EFE8"><span style="width:17px;height:17px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/circle-help.svg) center/contain no-repeat"></span>Help</button>
+      <sc-if value="{{ showUsage }}" hint-placeholder-val="{{ true }}">
+        <div style="border-top:1px solid #E4E2DA;padding:14px 10px 0;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;font-weight:700">Free plan</span><button onClick="{{ goBilling }}" style="all:unset;cursor:pointer;font-size:12px;font-weight:600;color:#4F46E5">Upgrade</button></div>
+          <sc-for list="{{ usage }}" as="u" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748B"><span>{{ u.label }}</span><span style="font-variant-numeric:tabular-nums;color:#0F172A;font-weight:600">{{ u.text }}</span></div>
+              <div style="height:4px;border-radius:2px;background:#E4E2DA;overflow:hidden"><div style="height:100%;border-radius:2px;background:{{ u.color }};width:{{ u.pct }}"></div></div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px 0;border-top:1px solid #E4E2DA">
+        <div style="width:32px;height:32px;border-radius:999px;background:{{ primary }};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">JM</div>
+        <div style="min-width:0;display:flex;flex-direction:column;line-height:1.25"><span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Jennifer Martinez</span><span style="font-size:12px;color:#64748B">Agent</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="max-width:1120px;width:100%;box-sizing:border-box;padding:44px 48px 80px;display:flex;flex-direction:column;gap:36px">
+
+      <!-- DASHBOARD -->
+      <sc-if value="{{ is.dashboard }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="Dashboard" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-if value="{{ firstRun }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:6px 12px;border-radius:999px;background:#D1FAE5;color:#065F46;font-size:13px;font-weight:600;margin-bottom:6px"><span style="width:14px;height:14px;background:#047857;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span>You're set up</div></sc-if>
+            <h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em;text-wrap:balance">{{ dashTitle }}</h1>
+            <p style="margin:0;font-size:17px;color:#475569;text-wrap:pretty">{{ dashLead }}<strong style="color:#0F172A;font-weight:600">{{ dashStrong }}</strong>{{ dashTail }}</p>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:40px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Latest report</span><button onClick="{{ goReports }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:600;color:#4F46E5">All reports →</button></div>
+              <div style="position:relative;height:520px">
+                <div style="position:absolute;left:50%;top:14px;transform:translateX(-50%) rotate(-2deg);width:360px;height:466px;border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 30px 60px -20px rgba(15,23,42,0.32),0 0 0 1px rgba(15,23,42,0.06)">
+                  <div style="width:816px;height:1056px;transform:scale(0.4412);transform-origin:0 0">
+                    <dc-import name="Report Page" kind="snapshot" primary="{{ primary }}" accent="{{ accent }}" area="{{ homeCity }}" brand-name="Jennifer Realty" agent-name="Jennifer Martinez" agent-phone="(949) 555-0123" agent-email="jennifer@jenniferrealty.com" hint-size="816px,1056px"></dc-import>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                <div style="display:flex;flex-direction:column"><span style="font-size:16px;font-weight:700">Market Snapshot · {{ homeCity }}</span><span style="font-size:14px;color:#64748B">{{ latestSub }}</span></div>
+                <div style="display:flex;gap:8px">
+                  <a href="#" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:8px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A"><span style="width:15px;height:15px;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/download.svg) center/contain no-repeat"></span>PDF</a>
+                  <a href="#" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:8px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A"><span style="width:15px;height:15px;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/share-2.svg) center/contain no-repeat"></span>Share</a>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:36px">
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Next send</span>
+                <div style="border:1px solid #ECEAE3;border-radius:14px;padding:18px 20px;display:flex;gap:14px;align-items:center;background:#FAFAF7">
+                  <span style="width:12px;height:12px;border-radius:999px;background:{{ nextDot }};box-shadow:0 0 0 5px {{ nextDotRing }};flex-shrink:0"></span>
+                  <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:16px;font-weight:700">{{ nextTitle }}</span><span style="font-size:14px;color:#64748B">{{ nextSub }}</span></div>
+                  <button onClick="{{ goSchedules }}" style="all:unset;cursor:pointer;margin-left:auto;font-size:14px;font-weight:600;color:#4F46E5;white-space:nowrap">{{ nextAction }}</button>
+                </div>
+              </div>
+              <sc-if value="{{ firstRun }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Before the first send</span>
+                  <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                    <sc-for list="{{ firstSteps }}" as="f" hint-placeholder-count="3">
+                      <button onClick="{{ f.go }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid #ECEAE3" style-hover="color:#4F46E5">
+                        <span style="width:36px;height:36px;border-radius:9px;background:#FAFAF7;border:1px solid #ECEAE3;display:flex;align-items:center;justify-content:center"><span style="width:16px;height:16px;background:#0F172A;mask:url({{ f.icon }}) center/contain no-repeat"></span></span>
+                        <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ f.t }}</span><span style="font-size:13px;color:#64748B">{{ f.sub }}</span></span>
+                        <span style="width:16px;height:16px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-right.svg) center/contain no-repeat"></span>
+                      </button>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">{{ hotLabel }}</span><button onClick="{{ goContacts }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:600;color:#4F46E5">All contacts →</button></div>
+                <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                  <sc-if value="{{ firstRun }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 0;border-bottom:1px solid #ECEAE3;font-size:14px;color:#5E636B">No contacts yet. Who opens shows up here the morning after each send.</div></sc-if>
+                  <sc-for list="{{ hotContacts }}" as="c" hint-placeholder-count="4">
+                    <div style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid #ECEAE3">
+                      <div style="width:40px;height:40px;border-radius:999px;background:{{ c.bg }};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ c.ini }}</div>
+                      <div style="min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="font-size:13px;color:#64748B">{{ c.tag }}</span></div>
+                      <span style="font-size:12px;font-weight:700;color:{{ c.stateColor }};background:{{ c.stateBg }};padding:4px 10px;border-radius:999px;white-space:nowrap">{{ c.state }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Recent</span>
+                <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                  <sc-for list="{{ activity }}" as="a" hint-placeholder-count="4">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #ECEAE3">
+                      <div style="min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.title }}</span><span style="font-size:13px;color:#64748B">{{ a.sub }}</span></div>
+                      <span style="font-size:13px;color:#64748B;white-space:nowrap">{{ a.when }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- MARKET REPORTS -->
+      <sc-if value="{{ is.reports }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Market Reports" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Market reports</h1><p style="margin:0;font-size:16px;color:#64748B">12 this month · 3 left on Free</p></div>
+            <a href="#" style="display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600" style-hover="background:#1E293B;color:#fff"><span style="width:15px;height:15px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>New report</a>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ kindFilters }}" as="f" hint-placeholder-count="4">
+              <button onClick="{{ f.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }}">{{ f.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <div style="display:grid;grid-template-columns:72px minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto auto;gap:18px;padding:10px 0;border-bottom:1px solid #ECEAE3;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#8A8E95"><span></span><span>Report</span><span>Area</span><span>Sent</span><span>Opens</span><span style="width:112px"></span></div>
+            <sc-for list="{{ reports }}" as="r" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:72px minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) auto auto;gap:18px;align-items:center;padding:12px 0;border-bottom:1px solid #ECEAE3" style-hover="background:#FAFAF7">
+                <div style="width:72px;height:94px;border-radius:3px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,0.08),0 6px 14px -8px rgba(15,23,42,0.4)"><div style="width:816px;height:1056px;transform:scale(0.0882);transform-origin:0 0"><dc-import name="Report Page" kind="{{ r.kind }}" primary="{{ primary }}" accent="{{ accent }}" area="{{ r.area }}" brand-name="Jennifer Realty" agent-name="Jennifer Martinez" agent-phone="(949) 555-0123" agent-email="jennifer@jenniferrealty.com" hint-size="816px,1056px"></dc-import></div></div>
+                <div style="min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ r.name }}</span><span style="font-size:13px;color:#64748B">{{ r.via }}</span></div>
+                <span style="font-size:15px;color:#334155">{{ r.area }}</span>
+                <span style="font-size:15px;color:#334155">{{ r.date }}</span>
+                <span style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ r.opensColor }}">{{ r.opens }}</span>
+                <div style="display:flex;gap:4px;width:112px;justify-content:flex-end">
+                  <a href="#" aria-label="Preview" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/eye.svg) center/contain no-repeat"></span></a>
+                  <a href="#" aria-label="Download PDF" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/download.svg) center/contain no-repeat"></span></a>
+                  <a href="#" aria-label="Share" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:16px;height:16px;background:#4F46E5;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/share-2.svg) center/contain no-repeat"></span></a>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- PROPERTY REPORTS -->
+      <sc-if value="{{ is.property }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Property Reports" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Property reports</h1><p style="margin:0;font-size:16px;color:#64748B">4 this month · 211 page views · 9 leads</p></div>
+            <a href="#" style="display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600" style-hover="background:#1E293B;color:#fff"><span style="width:15px;height:15px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>New property report</a>
+          </div>
+          <div style="position:relative;display:flex;gap:10px;max-width:640px">
+            <span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/map-pin.svg) center/contain no-repeat"></span>
+            <input placeholder="Type an address to start a seller report" style="flex:1;height:50px;border-radius:10px;border:1.5px solid #D6D3CB;background:#fff;padding:0 16px 0 44px;font-size:16px;outline:none"></input>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <div style="display:grid;grid-template-columns:minmax(0,1.8fr) auto minmax(0,1fr) auto auto auto;gap:18px;padding:10px 0;border-bottom:1px solid #ECEAE3;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#8A8E95"><span>Property</span><span>For</span><span>Created</span><span>Views</span><span>Leads</span><span style="width:112px"></span></div>
+            <sc-for list="{{ propertyReports }}" as="p" hint-placeholder-count="4">
+              <div style="display:grid;grid-template-columns:minmax(0,1.8fr) auto minmax(0,1fr) auto auto auto;gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3" style-hover="background:#FAFAF7">
+                <div style="min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.address }}</span><span style="font-size:13px;color:#64748B">{{ p.city }} · {{ p.value }}</span></div>
+                <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:{{ p.typeBg }};color:{{ p.typeColor }}">{{ p.type }}</span>
+                <span style="font-size:15px;color:#334155">{{ p.date }}</span>
+                <span style="font-size:15px;font-variant-numeric:tabular-nums;color:#334155;min-width:36px">{{ p.views }}</span>
+                <span style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ p.leadsColor }};min-width:36px">{{ p.leads }}</span>
+                <div style="display:flex;gap:4px;width:112px;justify-content:flex-end">
+                  <a href="#" aria-label="Download PDF" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/download.svg) center/contain no-repeat"></span></a>
+                  <a href="#" aria-label="Public page &amp; QR" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:16px;height:16px;background:#4F46E5;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/qr-code.svg) center/contain no-repeat"></span></a>
+                  <a href="#" aria-label="Delete" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#FEE2E2"><span style="width:16px;height:16px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/trash-2.svg) center/contain no-repeat"></span></a>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- SCHEDULES -->
+      <sc-if value="{{ is.schedules }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Schedules" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Schedules</h1><p style="margin:0;font-size:16px;color:#64748B">2 active · next send Oct 1, 9:00 AM</p></div>
+            <a href="#" style="display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600" style-hover="background:#1E293B;color:#fff"><span style="width:15px;height:15px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>New schedule</a>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) auto auto;gap:18px;padding:10px 0;border-bottom:1px solid #ECEAE3;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#8A8E95"><span>Schedule</span><span>Area</span><span>Cadence</span><span>Next send</span><span>On</span><span style="width:34px"></span></div>
+            <sc-for list="{{ schedules }}" as="s" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) auto auto;gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3;opacity:{{ s.opacity }}">
+                <div style="min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ s.name }}</span><span style="font-size:13px;color:#64748B">{{ s.kind }} · {{ s.recipients }} contacts</span></div>
+                <span style="font-size:15px;color:#334155">{{ s.area }}</span>
+                <span style="font-size:15px;color:#334155">{{ s.cadence }}</span>
+                <span style="font-size:15px;color:{{ s.nextColor }};font-weight:{{ s.nextWeight }}">{{ s.next }}</span>
+                <button onClick="{{ s.toggle }}" aria-label="Toggle schedule" style="all:unset;cursor:pointer;width:40px;height:24px;border-radius:999px;background:{{ s.switchBg }};position:relative;transition:background 0.2s"><span style="position:absolute;top:3px;left:{{ s.knobLeft }};width:18px;height:18px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s"></span></button>
+                <a href="#" aria-label="More" style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/ellipsis.svg) center/contain no-repeat"></span></a>
+              </div>
+            </sc-for>
+          </div>
+          <p style="margin:0;font-size:14px;color:#64748B;max-width:560px;text-wrap:pretty">Each send uses one report from your monthly allowance. Weekly cadence needs Growth.</p>
+        </div>
+      </sc-if>
+
+      <!-- LEAD PAGE -->
+      <sc-if value="{{ is.leads }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Lead page" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Home-value page</h1><p style="margin:0;font-size:16px;color:#64748B">38 visits · 9 leads · 4 called you back</p></div>
+            <button onClick="{{ toggleLeadSettings }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A"><span style="width:15px;height:15px;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/settings-2.svg) center/contain no-repeat"></span>{{ leadSettingsLabel }}</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:40px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Your link</span>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <div style="flex:1;min-width:240px;height:46px;border-radius:9px;background:#FAFAF7;border:1px solid #ECEAE3;padding:0 16px;display:flex;align-items:center;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">trendyreports.io/cma/jennifer</div>
+                  <a href="#" style="display:inline-flex;align-items:center;gap:7px;height:46px;padding:0 16px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600"><span style="width:15px;height:15px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/copy.svg) center/contain no-repeat"></span>Copy</a>
+                  <a href="#" aria-label="Open" style="width:46px;height:46px;border-radius:9px;border:1px solid #D6D3CB;display:flex;align-items:center;justify-content:center"><span style="width:16px;height:16px;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/external-link.svg) center/contain no-repeat"></span></a>
+                </div>
+                <span style="font-size:14px;color:#64748B">Put it in your email signature, your reports, your open-house sign.</span>
+              </div>
+              <div style="display:flex;gap:18px;align-items:center">
+                <div style="width:104px;height:104px;border-radius:12px;border:1px solid #ECEAE3;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="width:72px;height:72px;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/qr-code.svg) center/contain no-repeat"></span></div>
+                <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:15px;font-weight:600">QR code</span><a href="#" style="display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 14px;border-radius:8px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A;align-self:flex-start"><span style="width:15px;height:15px;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/download.svg) center/contain no-repeat"></span>Download PNG</a></div>
+              </div>
+              <sc-if value="{{ leadSettingsOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="border:1px solid #ECEAE3;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:16px;background:#FAFAF7">
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Headline<input value="What's your Irvine home worth today?" style="height:44px;border-radius:8px;border:1px solid #D6D3CB;background:#fff;padding:0 14px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Subheadline<input value="Based on this month's closed sales near you." style="height:44px;border-radius:8px;border:1px solid #D6D3CB;background:#fff;padding:0 14px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:12px"><span style="font-size:13px;font-weight:600;color:#334155">Color</span><sc-for list="{{ themes }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.pick }}" aria-label="Color" style="width:26px;height:26px;border-radius:999px;border:none;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.ring }}"></button></sc-for></div>
+                    <a href="#" style="display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:8px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Save</a>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <div style="display:flex;gap:8px"><sc-for list="{{ leadFilters }}" as="f" hint-placeholder-count="3"><button onClick="{{ f.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }}">{{ f.label }}</button></sc-for></div>
+                <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                  <sc-for list="{{ leads }}" as="l" hint-placeholder-count="4">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid #ECEAE3">
+                      <div style="min-width:0;display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.address }}</span><span style="font-size:13px;color:#64748B">{{ l.phone }} · {{ l.views }} views · {{ l.when }}</span></div>
+                      <span style="font-size:12px;font-weight:700;color:{{ l.stateColor }};background:{{ l.stateBg }};padding:4px 10px;border-radius:999px;white-space:nowrap">{{ l.state }}</span>
+                      <a href="#" aria-label="Call" style="width:38px;height:38px;border-radius:9px;background:#0F172A;display:flex;align-items:center;justify-content:center"><span style="width:15px;height:15px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/phone.svg) center/contain no-repeat"></span></a>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="position:relative;height:640px;min-width:0">
+              <div style="position:absolute;left:50%;top:10px;transform:translateX(-50%) rotate(2deg);width:320px;border-radius:44px;background:#0F172A;padding:13px;box-shadow:0 40px 80px -24px rgba(15,23,42,0.45)">
+                <div style="border-radius:32px;background:#fff;overflow:hidden;display:flex;flex-direction:column;height:560px">
+                  <div style="display:flex;justify-content:center;padding:12px 0 8px"><div style="width:96px;height:26px;border-radius:999px;background:#0F172A"></div></div>
+                  <div style="padding:22px 22px 0;display:flex;flex-direction:column;gap:16px">
+                    <div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;border-radius:999px;background:{{ primary }};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">JM</div><div style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:700">Jennifer Martinez</span><span style="font-size:11px;color:#64748B">Jennifer Realty</span></div></div>
+                    <div style="font-size:26px;font-weight:800;line-height:1.05;letter-spacing:-0.03em;text-wrap:balance">What's your Irvine home worth today?</div>
+                    <div style="font-size:14px;color:#64748B">Based on this month's closed sales near you.</div>
+                    <div style="height:48px;border-radius:12px;border:1.5px solid #D6D3CB;padding:0 16px;display:flex;align-items:center;font-size:15px;color:#94A3B8">Your address</div>
+                    <div style="height:48px;border-radius:12px;background:{{ primary }};color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center">Get my estimate</div>
+                    <div style="font-size:12px;color:#94A3B8;text-align:center">Takes 10 seconds · No obligation</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- CONTACTS -->
+      <sc-if value="{{ is.contacts }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Contacts" style="display:flex;flex-direction:column;gap:28px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Contacts</h1><p style="margin:0;font-size:16px;color:#64748B">{{ contactsSub }}</p></div>
+            <div style="display:flex;gap:8px"><button onClick="{{ startImport }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:9px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A;white-space:nowrap"><span style="width:15px;height:15px;flex-shrink:0;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/upload.svg) center/contain no-repeat"></span>Import CSV</button><button onClick="{{ toggleAdd }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600;white-space:nowrap"><span style="width:15px;height:15px;flex-shrink:0;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/plus.svg) center/contain no-repeat"></span>Add contact</button></div>
+          </div>
+
+          <sc-if value="{{ importOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #ECEAE3;border-radius:14px;background:#FAFAF7;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px"><sc-for list="{{ importSteps }}" as="s" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:{{ s.weight }};color:{{ s.color }}"><span style="width:18px;height:18px;border-radius:999px;background:{{ s.dotBg }};color:{{ s.dotFg }};font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ s.n }}</span>{{ s.label }}</span></sc-for></div><button onClick="{{ closeImport }}" aria-label="Close" style="all:unset;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:14px;height:14px;flex-shrink:0;background:#64748B;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/x.svg) center/contain no-repeat"></span></button></div>
+              <sc-if value="{{ importStep1 }}" hint-placeholder-val="{{ true }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:20px;align-items:center">
+                  <button onClick="{{ importPickSample }}" style="all:unset;cursor:pointer;border:1.5px dashed #C9C6BC;border-radius:12px;background:#fff;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center" style-hover="border-color:#0F172A"><span style="width:22px;height:22px;flex-shrink:0;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/file-up.svg) center/contain no-repeat"></span><span style="font-size:15px;font-weight:600">Drop a CSV, or click to choose</span><span style="font-size:13px;color:#64748B">Exports from Follow Up Boss, kvCORE, Google Contacts all work</span></button>
+                  <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:14px;color:#475569;text-wrap:pretty">We read four columns — <strong style="color:#0F172A;font-weight:600">name, email, phone, group</strong>. Anything else is ignored. Existing emails get updated, not duplicated.</span><a href="#" style="font-size:14px;font-weight:600">Download the sample file →</a></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ importStep2 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <span style="font-size:15px">Found <strong style="font-weight:700">5 people</strong> in <span style="font-weight:600">sample-contacts.csv</span>. Check the columns matched.</span>
+                  <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr) minmax(0,2fr);gap:14px;padding:9px 0;border-bottom:1px solid #ECEAE3;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#8A8E95"><span>Your column</span><span></span><span>Becomes</span><span>First row</span></div>
+                    <sc-for list="{{ importMap }}" as="m" hint-placeholder-count="4">
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr) minmax(0,2fr);gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #ECEAE3;font-size:14px"><span style="font-family:ui-monospace,monospace;font-size:13px;color:#334155">{{ m.from }}</span><span style="width:14px;height:14px;flex-shrink:0;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-right.svg) center/contain no-repeat"></span><span style="font-weight:600">{{ m.to }}</span><span style="color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ m.sample }}</span></div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:13px;color:#64748B">Groups in the file that don't exist yet will be created.</span><button onClick="{{ importRun }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Import 5 contacts</button></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ importStep3 }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;align-items:center;gap:12px"><span style="width:36px;height:36px;border-radius:999px;background:#D1FAE5;display:flex;align-items:center;justify-content:center"><span style="width:16px;height:16px;flex-shrink:0;background:#047857;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></span><span style="font-size:17px;font-weight:700">5 added · 0 updated · 0 skipped</span></div>
+                  <span style="font-size:14px;color:#475569">New groups: Buyer Leads, My Team, Investor Network. Past Clients already existed.</span>
+                  <div style="display:flex;gap:10px"><button onClick="{{ closeImport }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Done</button><button onClick="{{ goReports }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:9px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A">Send them something</button></div>
+                </div>
+              </sc-if></div>
+          </sc-if>
+
+          <sc-if value="{{ addOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #ECEAE3;border-radius:14px;background:#FAFAF7;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:16px;font-weight:700">New contact</span><button onClick="{{ toggleAdd }}" aria-label="Close" style="all:unset;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:14px;height:14px;flex-shrink:0;background:#64748B;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/x.svg) center/contain no-repeat"></span></button></div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Name<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Email<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Phone (optional)<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Groups</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ addGroups }}" as="g" hint-placeholder-count="4"><button onClick="{{ g.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ g.bg }};color:{{ g.color }};border:1px solid {{ g.border }}">{{ g.label }}</button></sc-for></div></div>
+              <div style="display:flex;justify-content:flex-end;gap:10px"><button onClick="{{ toggleAdd }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:9px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A">Cancel</button><button onClick="{{ toggleAdd }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600;white-space:nowrap">Add contact</button></div></div>
+          </sc-if>
+
+          <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><sc-for list="{{ contactFilters }}" as="f" hint-placeholder-count="4"><button onClick="{{ f.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }}">{{ f.label }}</button></sc-for><button onClick="{{ toggleGroupsView }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 10px;color:#4F46E5">{{ groupsViewLabel }}</button></div>
+            <div style="position:relative;width:260px;max-width:100%"><span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:15px;height:15px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/search.svg) center/contain no-repeat"></span><input value="{{ contactQuery }}" onChange="{{ onContactQuery }}" placeholder="Search name or email" style="width:100%;box-sizing:border-box;height:40px;border-radius:9px;border:1px solid #D6D3CB;background:#fff;padding:0 12px 0 36px;font-size:14px;outline:none"></input></div>
+          </div>
+
+          <sc-if value="{{ listView }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:{{ contactsCols }};gap:32px;align-items:start">
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A;min-width:0">
+                <div style="display:grid;grid-template-columns:{{ rowCols }};gap:16px;padding:10px 0;border-bottom:1px solid #ECEAE3;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#8A8E95"><span></span><span>Name</span><sc-if value="{{ wideRows }}" hint-placeholder-val="{{ true }}"><span>Email</span><span>Groups</span></sc-if><span>September</span></div>
+                <sc-for list="{{ contacts }}" as="c" hint-placeholder-count="6">
+                  <button onClick="{{ c.open }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:{{ rowCols }};gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid #ECEAE3;background:{{ c.rowBg }}" style-hover="background:#FAFAF7">
+                    <div style="width:44px;height:44px;border-radius:999px;background:{{ c.bg }};color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ c.ini }}</div>
+                    <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><sc-if value="{{ compactRows }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.email }}</span></sc-if></span>
+                    <sc-if value="{{ wideRows }}" hint-placeholder-val="{{ true }}"><span style="font-size:14px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.email }}</span>
+                    <span style="font-size:14px;color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.groupsText }}</span></sc-if>
+                    <span style="font-size:12px;font-weight:700;color:{{ c.stateColor }};background:{{ c.stateBg }};padding:4px 10px;border-radius:999px;white-space:nowrap;justify-self:end">{{ c.state }}</span>
+                  </button>
+                </sc-for>
+                <sc-if value="{{ noContacts }}" hint-placeholder-val="{{ false }}"><div style="padding:24px 0;font-size:14px;color:#5E636B">Nobody matches. Clear the search or pick another group.</div></sc-if>
+              </div>
+              <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+                <sc-if value="{{ drawerOverlay }}" hint-placeholder-val="{{ false }}"><div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(15,23,42,0.28);z-index:40"></div></sc-if>
+                <div style="position:{{ drawerPos }};top:{{ drawerTop }};right:{{ drawerRight }};height:{{ drawerH }};width:{{ drawerW }};box-sizing:border-box;overflow-y:auto;z-index:50;border:1px solid #ECEAE3;border-radius:{{ drawerRadius }};background:#fff;padding:22px;display:flex;flex-direction:column;gap:20px;box-shadow:0 24px 48px -24px rgba(15,23,42,0.35)">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                    <div style="display:flex;align-items:center;gap:12px;min-width:0"><div style="width:48px;height:48px;border-radius:999px;background:{{ d.bg }};color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ d.ini }}</div><div style="display:flex;flex-direction:column;min-width:0;line-height:1.3"><span style="font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.name }}</span><span style="font-size:13px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.email }}</span></div></div>
+                    <button onClick="{{ closeDrawer }}" aria-label="Close" style="all:unset;cursor:pointer;width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0" style-hover="background:#ECEAE3"><span style="width:14px;height:14px;flex-shrink:0;background:#64748B;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/x.svg) center/contain no-repeat"></span></button>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><a href="#" style="display:flex;align-items:center;justify-content:center;gap:8px;height:40px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600"><span style="width:14px;height:14px;flex-shrink:0;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/mail.svg) center/contain no-repeat"></span>Email</a><a href="#" style="display:flex;align-items:center;justify-content:center;gap:8px;height:40px;border-radius:9px;border:1px solid #D6D3CB;color:#0F172A;font-size:14px;font-weight:600"><span style="width:14px;height:14px;flex-shrink:0;background:#0F172A;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/phone.svg) center/contain no-repeat"></span>{{ d.phoneLabel }}</a></div>
+                  <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Groups</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ d.groupPills }}" as="g" hint-placeholder-count="4"><button onClick="{{ g.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ g.bg }};color:{{ g.color }};border:1px solid {{ g.border }}">{{ g.label }}</button></sc-for></div></div>
+                  <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Last three sends</span><div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A"><sc-for list="{{ d.activity }}" as="a" hint-placeholder-count="3"><div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #ECEAE3;font-size:14px"><span style="display:flex;flex-direction:column"><span style="font-weight:600">{{ a.t }}</span><span style="font-size:12px;color:#64748B">{{ a.when }}</span></span><span style="font-size:12px;font-weight:700;align-self:center;color:{{ a.stateColor }};background:{{ a.stateBg }};padding:3px 9px;border-radius:999px">{{ a.state }}</span></div></sc-for></div></div>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Notes<textarea placeholder="Anything worth remembering" style="min-height:72px;border-radius:8px;border:1px solid #D6D3CB;padding:10px 12px;font-size:14px;font-weight:400;letter-spacing:0;text-transform:none;color:#0F172A;outline:none;resize:vertical;font-family:inherit" value="{{ d.notes }}" onChange="{{ noop }}"></textarea></label>
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px"><span style="color:#64748B">Added {{ d.added }}</span><button style="all:unset;cursor:pointer;font-weight:600;color:#B91C1C">Remove</button></div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ groupsView }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <div style="display:grid;grid-template-columns:minmax(0,1.4fr) auto minmax(0,1.6fr) auto;gap:18px;padding:10px 0;border-bottom:1px solid #ECEAE3;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#8A8E95"><span>Group</span><span>People</span><span>Used by</span><span style="width:120px"></span></div>
+                <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+                  <div style="display:grid;grid-template-columns:minmax(0,1.4fr) auto minmax(0,1.6fr) auto;gap:18px;align-items:center;padding:13px 0;border-bottom:1px solid #ECEAE3">
+                    <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ g.name }}</span><span style="font-size:13px;color:#64748B">{{ g.desc }}</span></span>
+                    <span style="font-size:15px;font-variant-numeric:tabular-nums;min-width:32px">{{ g.count }}</span>
+                    <span style="font-size:14px;color:{{ g.usedColor }}">{{ g.usedBy }}</span>
+                    <div style="display:flex;gap:4px;width:120px;justify-content:flex-end"><button onClick="{{ g.view }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;color:#4F46E5;padding:6px 8px">View</button><button style="all:unset;cursor:pointer;font-size:13px;font-weight:600;color:#64748B;padding:6px 8px">Rename</button></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;max-width:520px"><input value="{{ newGroupName }}" onChange="{{ onNewGroup }}" placeholder="New group, e.g. Woodbridge owners" style="flex:1;height:42px;border-radius:9px;border:1px solid #D6D3CB;padding:0 12px;font-size:14px;outline:none;background:#fff"></input><button onClick="{{ createGroup }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Create</button></div>
+              <span style="font-size:13px;color:#64748B;max-width:560px;text-wrap:pretty">Groups are who a schedule sends to. A person can be in several; nobody gets the same report twice.</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- BRANDING -->
+      <sc-if value="{{ is.branding }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Branding" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Branding</h1><p style="margin:0;font-size:16px;color:#64748B">What goes on every report, email and page.</p></div>
+            <a href="#" style="display:inline-flex;align-items:center;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600" style-hover="background:#1E293B;color:#fff">Save</a>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:48px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:30px">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Colors</span>
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                  <sc-for list="{{ themes }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.pick }}" aria-label="Color theme" style="width:40px;height:40px;border-radius:999px;border:none;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.ring }}"></button></sc-for>
+                  <div style="display:flex;gap:8px;margin-left:8px">
+                    <label style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:8px;border:1px solid #D6D3CB;font-size:14px;font-variant-numeric:tabular-nums"><span style="width:14px;height:14px;border-radius:4px;background:{{ primary }}"></span>{{ primary }}</label>
+                    <label style="display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:8px;border:1px solid #D6D3CB;font-size:14px;font-variant-numeric:tabular-nums"><span style="width:14px;height:14px;border-radius:4px;background:{{ accent }}"></span>{{ accent }}</label>
+                  </div>
+                </div>
+                <span style="font-size:14px;color:#64748B">Primary carries the cover band and headings. Accent marks highlights. Text stays legible on every brand — we never move the fill.</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Logo</span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div style="border:1.5px dashed #D6D3CB;border-radius:12px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:#FAFAF7"><span style="font-size:14px;font-weight:600">Jennifer Realty</span><span style="font-size:12px;color:#64748B">Dark · for light surfaces</span></div>
+                  <div style="border-radius:12px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:{{ primary }};color:#fff"><span style="font-size:14px;font-weight:600">Jennifer Realty</span><span style="font-size:12px;color:rgba(255,255,255,0.8)">White · for the cover band</span></div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Contact block</span>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Name<input value="Jennifer Martinez" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Brokerage<input value="Jennifer Realty" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Phone<input value="(949) 555-0123" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Email<input value="jennifer@jenniferrealty.com" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;grid-column:1 / -1">License<input value="DRE #01234567" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Live preview</span><a href="#" style="font-size:14px;font-weight:600">Send me a test →</a></div>
+              <div style="position:relative;height:580px">
+                <div style="position:absolute;left:50%;top:16px;transform:translateX(-50%) rotate(2deg);width:400px;max-width:100%;height:518px;border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 30px 60px -20px rgba(15,23,42,0.32),0 0 0 1px rgba(15,23,42,0.06)">
+                  <div style="width:816px;height:1056px;transform:scale(0.4902);transform-origin:0 0">
+                    <dc-import name="Report Page" kind="closed" primary="{{ primary }}" accent="{{ accent }}" area="Irvine" brand-name="Jennifer Realty" agent-name="Jennifer Martinez" agent-phone="(949) 555-0123" agent-email="jennifer@jenniferrealty.com" hint-size="816px,1056px"></dc-import>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- BILLING -->
+      <sc-if value="{{ is.billing }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Billing" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Plan &amp; billing</h1><p style="margin:0;font-size:16px;color:#64748B">{{ planSub }}</p></div>
+          <sc-if value="{{ planJustChanged }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:6px 12px;border-radius:999px;background:#D1FAE5;color:#065F46;font-size:13px;font-weight:600"><span style="width:14px;height:14px;flex-shrink:0;background:#047857;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span>You're on {{ planName }}. Limits updated now; receipt is in your inbox.</div></sc-if>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:28px;padding:24px 0;border-top:1.5px solid #0F172A;border-bottom:1px solid #ECEAE3">
+            <sc-for list="{{ usage }}" as="u" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:13px;color:#64748B">{{ u.label }}</span><span style="font-size:32px;font-weight:800;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums">{{ u.text }}</span><div style="height:5px;border-radius:3px;background:#E4E2DA;overflow:hidden"><div style="height:100%;border-radius:3px;background:{{ u.color }};width:{{ u.pct }}"></div></div><span style="font-size:13px;color:#64748B">{{ u.note }}</span></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ planConfirmOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #ECEAE3;border-radius:14px;background:#FAFAF7;padding:22px 24px;display:flex;flex-direction:column;gap:16px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:6px;max-width:560px"><span style="font-size:18px;font-weight:700">{{ pc.title }}</span><span style="font-size:15px;color:#475569;text-wrap:pretty">{{ pc.body }}</span><span style="font-size:13px;color:#64748B">{{ pc.fine }}</span></div>
+              <div style="display:flex;gap:10px"><button onClick="{{ planCancel }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 16px;border-radius:9px;border:1px solid #D6D3CB;font-size:14px;font-weight:600;color:#0F172A">Not now</button><button onClick="{{ planDo }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">{{ pc.cta }}</button></div>
+            </div></div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Plans</span>
+            <div style="display:flex;flex-direction:column;border-top:1px solid #E4E2DA">
+              <sc-for list="{{ plans }}" as="p" hint-placeholder-count="3">
+                <div style="display:grid;grid-template-columns:130px minmax(0,1fr) auto;gap:24px;align-items:center;padding:24px 0;border-bottom:1px solid #E4E2DA">
+                  <div style="display:flex;align-items:baseline;gap:4px"><span style="font-size:38px;font-weight:800;letter-spacing:-0.035em;line-height:1">{{ p.price }}</span><span style="font-size:13px;color:#64748B">{{ p.per }}</span></div>
+                  <div style="min-width:0;display:flex;flex-direction:column;gap:3px">
+                    <div style="display:flex;align-items:center;gap:10px"><span style="font-size:17px;font-weight:700">{{ p.name }}</span><sc-if value="{{ p.current }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#334155;background:#ECEAE3;padding:3px 9px;border-radius:999px">Current</span></sc-if></div>
+                    <span style="font-size:14px;color:#64748B">{{ p.fits }} · {{ p.summary }}</span>
+                  </div>
+                  <button onClick="{{ p.pick }}" style="all:unset;cursor:{{ p.cursor }};display:inline-flex;align-items:center;justify-content:center;height:40px;padding:0 16px;border-radius:9px;font-size:14px;font-weight:600;white-space:nowrap;background:{{ p.ctaBg }};color:{{ p.ctaFg }};border:{{ p.ctaBorder }}">{{ p.cta }}</button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ isPaid }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:40px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:14px"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Payment</span><div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A"><div style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #ECEAE3"><span style="display:flex;align-items:center;gap:12px"><span style="width:18px;height:18px;flex-shrink:0;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/credit-card.svg) center/contain no-repeat"></span><span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Visa ending 4242</span><span style="font-size:13px;color:#64748B">Renews {{ renewDate }} · {{ planPrice }}</span></span></span><a href="#" style="font-size:14px;font-weight:600">Update</a></div><div style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #ECEAE3"><span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Billing email</span><span style="font-size:13px;color:#64748B">jennifer@jenniferrealty.com</span></span><a href="#" style="font-size:14px;font-weight:600">Change</a></div></div></div>
+              <div style="display:flex;flex-direction:column;gap:14px"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Invoices</span><div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A"><sc-for list="{{ invoices }}" as="i" hint-placeholder-count="3"><a href="#" style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:13px 0;border-bottom:1px solid #ECEAE3;font-size:14px;color:#0F172A"><span style="font-weight:600">{{ i.date }}</span><span style="font-variant-numeric:tabular-nums;color:#334155">{{ i.amount }}</span><span style="width:15px;height:15px;flex-shrink:0;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/download.svg) center/contain no-repeat"></span></a></sc-for></div></div>
+            </div>
+          </sc-if>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;font-size:14px;color:#64748B"><span>{{ billingFoot }}</span><sc-if value="{{ isPaid }}" hint-placeholder-val="{{ false }}"><button onClick="{{ planDowngrade }}" style="all:unset;cursor:pointer;font-weight:600;color:#64748B">Cancel plan</button></sc-if></div>
+        </div>
+      </sc-if>
+
+      <!-- SETTINGS -->
+      <sc-if value="{{ is.settings }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Settings" style="display:flex;flex-direction:column;gap:36px;max-width:720px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap"><div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Settings</h1><p style="margin:0;font-size:16px;color:#64748B">Who you are on reports, how you sign in, what we send you.</p></div><button  style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Save changes</button></div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Profile</span>
+            <div style="display:grid;grid-template-columns:112px minmax(0,1fr);gap:24px;align-items:start">
+              <div style="display:flex;flex-direction:column;gap:8px;align-items:center"><div style="width:96px;height:96px;border-radius:999px;background:{{ primary }};color:#fff;font-size:30px;font-weight:700;display:flex;align-items:center;justify-content:center">JM</div><button style="all:unset;cursor:pointer;font-size:13px;font-weight:600;color:#4F46E5">Add photo</button></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">First name<input value="Jennifer" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Last name<input value="Martinez" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Title<input value="Realtor®" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Brokerage<input value="Jennifer Realty" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Phone<input value="(949) 555-0123" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Website<input value="jenniferrealty.com" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label></div>
+            </div>
+            <span style="font-size:13px;color:#64748B">This is the contact block on every report and email. Logo and colors live under Branding.</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Sign in</span>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <div style="display:flex;flex-direction:column;border-bottom:1px solid #ECEAE3">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0"><div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px">Email <span style="font-size:11px;font-weight:700;color:#065F46;background:#D1FAE5;padding:2px 8px;border-radius:999px">Verified</span></span><span style="font-size:13px;color:#64748B">jennifer@jenniferrealty.com</span></div><button onClick="{{ editEmail }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:600;color:#4F46E5">{{ emailEditLabel }}</button></div>
+                <sc-if value="{{ emailEditing }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;padding:0 0 16px;align-items:end"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">New email<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Current password<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><div style="display:flex;gap:8px"><button onClick="{{ editEmail }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Update email</button></div></div><span style="font-size:13px;color:#64748B;padding-bottom:14px">We'll send a confirmation to the new address. Reports keep going out from the old one until you confirm.</span></sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;border-bottom:1px solid #ECEAE3">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0"><div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Password</span><span style="font-size:13px;color:#64748B">Changed 4 months ago</span></div><button onClick="{{ editPassword }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:600;color:#4F46E5">{{ passwordEditLabel }}</button></div>
+                <sc-if value="{{ passwordEditing }}" hint-placeholder-val="{{ false }}"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:12px;padding:0 0 10px;align-items:end"><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Current<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">New (8+ characters)<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label><label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155;">Again<input value="" style="height:42px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none;background:#fff"></input></label></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:14px;flex-wrap:wrap"><span style="font-size:13px;color:#64748B">Other devices get signed out.</span><button onClick="{{ editPassword }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:42px;padding:0 18px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Update password</button></div></sc-if>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #ECEAE3"><div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Time zone</span><span style="font-size:13px;color:#64748B">Pacific — schedules send at 9:00 AM here</span></div><a href="#" style="font-size:14px;font-weight:600">Change</a></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Notifications</span>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #ECEAE3">
+                  <div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ n.title }}</span><span style="font-size:13px;color:#64748B">{{ n.sub }}</span></div>
+                  <button onClick="{{ n.toggle }}" aria-label="Toggle" style="all:unset;cursor:pointer;width:40px;height:24px;border-radius:999px;background:{{ n.switchBg }};position:relative;flex-shrink:0;transition:background 0.2s"><span style="position:absolute;top:3px;left:{{ n.knobLeft }};width:18px;height:18px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s"></span></button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Account</span>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #ECEAE3"><div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Re-run setup</span><span style="font-size:13px;color:#64748B">Walk through area, look and autopilot again</span></div><a href="Wizards v3.dc.html" style="font-size:14px;font-weight:600">Start</a></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #ECEAE3"><div style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">Delete account</span><span style="font-size:13px;color:#64748B;max-width:440px;text-wrap:pretty">Email us and we'll remove your reports, contacts and lead page within 30 days. Scheduled sends stop immediately.</span></div><a href="mailto:support@trendyreports.io?subject=Account%20deletion" style="font-size:14px;font-weight:600;color:#B91C1C;white-space:nowrap">Request deletion</a></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- HELP -->
+      <sc-if value="{{ is.help }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Help" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;flex-direction:column;gap:16px;max-width:620px">
+            <h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">How can we help?</h1>
+            <div style="position:relative"><span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/search.svg) center/contain no-repeat"></span><input placeholder="Search guides, e.g. pause a schedule" style="width:100%;box-sizing:border-box;height:52px;border-radius:10px;border:1.5px solid #D6D3CB;background:#fff;padding:0 16px 0 46px;font-size:16px;outline:none"></input></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px">
+            <sc-for list="{{ helpTopics }}" as="h" hint-placeholder-count="8">
+              <a href="#" style="display:flex;flex-direction:column;gap:6px;padding:20px;border-radius:14px;border:1px solid #ECEAE3;background:#FAFAF7;color:#0F172A" style-hover="border-color:#0F172A;color:#0F172A"><span style="font-size:16px;font-weight:700">{{ h.title }}</span><span style="font-size:13px;color:#64748B">{{ h.count }} guides</span></a>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Common questions</span>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A;max-width:760px">
+              <sc-for list="{{ faqs }}" as="q" hint-placeholder-count="6">
+                <a href="#" style="display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid #ECEAE3;font-size:15px;font-weight:600;color:#0F172A"><span>{{ q }}</span><span style="width:16px;height:16px;flex-shrink:0;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-right.svg) center/contain no-repeat"></span></a>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:20px 24px;border-radius:14px;background:#0F172A;color:#fff"><span style="font-size:15px">Still stuck? A person replies within a business day.</span><a href="mailto:support@trendyreports.io" style="font-size:14px;font-weight:600;color:#fff;height:38px;padding:0 16px;border-radius:8px;background:rgba(255,255,255,0.12);display:inline-flex;align-items:center" style-hover="background:rgba(255,255,255,0.2);color:#fff">support@trendyreports.io</a></div>
+        </div>
+      </sc-if>
+
+      <!-- ADMIN -->
+      <sc-if value="{{ is.admin }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Admin" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="margin:0;font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Platform</h1><p style="margin:0;font-size:16px;color:#64748B">Last 7 days</p></div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap">
+              <sc-for list="{{ health }}" as="h" hint-placeholder-count="4"><span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#334155"><span style="width:8px;height:8px;border-radius:999px;background:{{ h.color }}"></span>{{ h.label }}</span></sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:28px;padding:24px 0;border-top:1.5px solid #0F172A;border-bottom:1px solid #ECEAE3">
+            <sc-for list="{{ adminMetrics }}" as="m" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:13px;color:#64748B">{{ m.label }}</span><span style="font-size:32px;font-weight:800;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums;color:{{ m.color }}">{{ m.value }}</span><span style="font-size:13px;color:#64748B">{{ m.sub }}</span></div>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:40px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Recent renders</span><a href="#" style="font-size:14px;font-weight:600">All →</a></div>
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <sc-for list="{{ adminReports }}" as="r" hint-placeholder-count="6">
+                  <div style="display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto auto auto;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #ECEAE3;font-size:14px">
+                    <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.account }}</span>
+                    <span style="color:#334155;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.type }}</span>
+                    <span style="font-size:12px;font-weight:700;color:{{ r.stateColor }};background:{{ r.stateBg }};padding:3px 9px;border-radius:999px">{{ r.state }}</span>
+                    <span style="font-variant-numeric:tabular-nums;color:#5E636B;min-width:40px;text-align:right">{{ r.dur }}</span>
+                    <span style="color:#64748B;min-width:48px;text-align:right">{{ r.when }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Manage</span>
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <sc-for list="{{ adminLinks }}" as="l" hint-placeholder-count="8">
+                  <a href="#" style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid #ECEAE3;color:#0F172A" style-hover="color:#4F46E5">
+                    <span style="font-size:15px;font-weight:600">{{ l.name }}</span>
+                    <span style="font-size:14px;color:#64748B;font-variant-numeric:tabular-nums">{{ l.count }}</span>
+                    <span style="width:16px;height:16px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-right.svg) center/contain no-repeat"></span>
+                  </a>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;indigo&quot;,&quot;options&quot;:[&quot;navy&quot;,&quot;indigo&quot;,&quot;green&quot;,&quot;wine&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Brand&quot;},&quot;firstRun&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;State&quot;},&quot;showAdmin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Role&quot;},&quot;showUsage&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Sidebar&quot;}}">
+class Component extends DCLogic {
+  static groupsFor(S) { return Component.GROUPS.map(g => ({ id: g[0], name: g[1], desc: g[2], count: g[3], usedBy: g[4] })).concat(S.extraGroups.map((n, i) => ({ id: "x" + i, name: n, desc: "New group", count: 0, usedBy: "—" }))); }
+  state = { page: "dashboard", theme: 1, kindFilter: "all", leadFilter: "all", contactFilter: "all", leadSettingsOpen: false, schedOn: [true, true, false], notifs: [true, true, false],
+    contactQuery: "", drawer: null, addOpen: false, importStep: 0, groupsView: false, newGroupName: "", extraGroups: [], memberships: {},
+    plan: "free", planConfirm: null, planJustChanged: false, emailEditing: false, passwordEditing: false };
+  static GROUPS = [["sphere", "My Sphere", "Everyone you want hearing from you monthly", 107, "Monthly Irvine Snapshot"], ["past", "Past clients", "Closed deals, any year", 64, "—"], ["leads", "Leads", "From your home-value page", 9, "—"], ["tustin", "Tustin owners", "Imported from CRM", 41, "Tustin new listings"]];
+  static THEMES = [["#18235c", "#0d9488"], ["#4F46E5", "#D97706"], ["#14532D", "#CA8A04"], ["#7F1D1D", "#DB2777"]];
+  static ICON = n => `https://unpkg.com/lucide-static@0.460.0/icons/${n}.svg`;
+  componentDidMount() {
+    this._rs = () => this.setState({ vw: window.innerWidth }); this._rs(); window.addEventListener("resize", this._rs);
+    const q = new URLSearchParams(location.search);
+    if (q.get("from") === "onboarding") this.setState({ firstRun: true, homeCity: q.get("city") || "Irvine", theme: Number(q.get("theme") ?? 1) || 0, autopilot: q.get("autopilot") !== "0" });
+  }
+  componentWillUnmount() { window.removeEventListener("resize", this._rs); }
+  renderVals() {
+    const S = this.state, TH = Component.THEMES, I = Component.ICON;
+    const overlay = (S.vw || 1200) < 1100;
+    const firstRun = S.firstRun ?? (this.props.firstRun ?? false);
+    const homeCity = S.homeCity || "Irvine";
+    const autopilot = S.autopilot ?? true;
+    const themeIdx = S.firstRun ? S.theme : this.props.theme != null ? ["navy", "indigo", "green", "wine"].indexOf(this.props.theme) : S.theme;
+    const [primary, accent] = TH[themeIdx < 0 ? 1 : themeIdx];
+    const go = p => () => this.setState({ page: p });
+    const navItem = (name, icon, page) => { const a = S.page === page; return { name, icon: I(icon), go: go(page), bg: a ? "#ECEAE3" : "transparent", color: a ? "#0F172A" : "#334155", weight: a ? 700 : 500 }; };
+    const showAdmin = this.props.showAdmin ?? false;
+    const navGroups = [
+      { label: "Reports", items: [navItem("Dashboard", "layout-dashboard", "dashboard"), navItem("Market reports", "file-text", "reports"), navItem("Property reports", "house", "property"), navItem("Schedules", "calendar", "schedules")] },
+      { label: "Engage", items: [navItem("Home-value page", "link-2", "leads"), navItem("Contacts", "users", "contacts")] },
+      { label: "Account", items: [navItem("Branding", "palette", "branding"), navItem("Plan & billing", "credit-card", "billing"), navItem("Settings", "settings", "settings")].concat(showAdmin ? [navItem("Admin", "shield", "admin")] : []) }
+    ];
+    const pill = (on, label) => ({ label, bg: on ? "#0F172A" : "#fff", color: on ? "#fff" : "#475569", border: on ? "#0F172A" : "#E4E2DA" });
+    const ST = { opened: ["#065F46", "#D1FAE5"], clicked: ["#fff", accent], sent: ["#64748B", "#F1F5F9"], lead: ["#fff", "#0F172A"], bounced: ["#991B1B", "#FEE2E2"], done: ["#065F46", "#D1FAE5"], running: ["#1E40AF", "#DBEAFE"], failed: ["#991B1B", "#FEE2E2"], hot: ["#92400E", "#FEF3C7"], called: ["#065F46", "#D1FAE5"], new: ["#fff", "#0F172A"] };
+    const st = k => ({ stateColor: ST[k][0], stateBg: ST[k][1] });
+    const planIdx0 = { free: 0, growth: 1, plus: 2 }[S.plan];
+    const LIM = [[3, 1, 1], [25, 3, 5], [999, 999, 25]][planIdx0];
+    const usageRaw = [["Market reports", 2, LIM[0], "Resets Nov 1"], ["Schedules", 1, LIM[1], "Active right now"], ["Property reports", 1, LIM[2], "Resets Nov 1"]];
+    const usage = usageRaw.map(([label, u, l, note]) => ({ label, text: l >= 999 ? `${u} · unlimited` : `${u} / ${l}`, pct: l >= 999 ? "8%" : Math.round(u / l * 100) + "%", color: l < 999 && u / l >= 1 ? "#B91C1C" : l < 999 && u / l >= 0.8 ? "#D97706" : primary, note }));
+    const groupsAll = Component.groupsFor(S);
+    const contactsRaw = [
+      ["Maria Chen", "maria.chen@gmail.com", "Past client", "Opened", "opened", primary], ["David Okafor", "dokafor@me.com", "Sphere", "Clicked", "clicked", "#475569"],
+      ["The Nguyens", "nguyen.family@yahoo.com", "Past client", "Opened", "opened", "#7C3AED"], ["Sam Whitaker", "sam.w@outlook.com", "Lead", "New lead", "lead", primary],
+      ["Priya Raman", "priya@ramanlaw.com", "Sphere", "Sent", "sent", "#B45309"], ["Luis Herrera", "luis.herrera@gmail.com", "Past client", "Opened", "opened", "#0E7490"],
+      ["Grace Kim", "gkim@icloud.com", "Lead", "Bounced", "bounced", "#9F1239"]
+    ].map((c, i) => { const def = ["sphere"].concat(c[2] === "Past client" ? ["past"] : c[2] === "Lead" ? ["leads"] : []).concat(i === 1 || i === 4 ? ["tustin"] : []); const gs = S.memberships[i] || def; return { i, name: c[0], email: c[1], tag: c[2], state: c[3], ...st(c[4]), bg: c[5], ini: c[0].split(" ").map(w => w[0]).join("").slice(0, 2), gs, groupsText: gs.map(g => (groupsAll.find(x => x.id === g) || {}).name).filter(Boolean).join(", "), open: () => this.setState({ drawer: i }), rowBg: S.drawer === i ? "#FAFAF7" : "transparent" }; });
+    const contactFilter = S.contactFilter, cq = S.contactQuery.trim().toLowerCase();
+    const contacts = contactsRaw.filter(c => (contactFilter === "all" || (contactFilter === "opened" && c.state === "Opened") || c.gs.includes(contactFilter)) && (!cq || c.name.toLowerCase().includes(cq) || c.email.toLowerCase().includes(cq)));
+    const dc = S.drawer != null ? contactsRaw[S.drawer] : null;
+    const planIdx = { free: 0, growth: 1, plus: 2 }[S.plan];
+    const PLAN = [["Free", "$0", "forever", 3, 1, 1], ["Growth", "$19", "/mo", 25, 3, 5], ["Growth Plus", "$29", "/mo", 999, 999, 25]][planIdx];
+    const reportsRaw = [
+      ["snapshot", "Market Snapshot", "Irvine", "Sep 1", "Schedule · Monthly Irvine", "64 / 107"], ["closed", "Closed Sales", "Irvine", "Aug 28", "Manual", "—"],
+      ["listings", "New Listings", "Tustin", "Aug 15", "Manual", "—"], ["snapshot", "Market Snapshot", "Irvine", "Aug 1", "Schedule · Monthly Irvine", "58 / 104"],
+      ["bands", "Price Bands", "Newport Beach", "Jul 22", "Manual", "—"], ["gallery", "Open Houses", "Irvine", "Jul 18", "Manual", "—"],
+      ["snapshot", "Market Snapshot", "Irvine", "Jul 1", "Schedule · Monthly Irvine", "61 / 102"]
+    ].map(r => ({ kind: r[0], name: r[1], area: r[2], date: r[3], via: r[4], opens: r[5], opensColor: r[5] === "—" ? "#5E636B" : "#0F172A" }));
+    const kf = S.kindFilter;
+    const reports = reportsRaw.filter(r => kf === "all" || (kf === "sent" && r.opens !== "—") || (kf === "manual" && r.opens === "—") || r.kind === kf);
+    const mk = (name, price, per, fits, summary, cta, current) => ({ name, price, per, fits, summary, cta, current, ctaBg: current ? "#fff" : "#0F172A", ctaFg: current ? "#94A3B8" : "#fff", ctaBorder: current ? "1px solid #E4E2DA" : "none" });
+    const sw = on => ({ switchBg: on ? "#059669" : "#CBD5E1", knobLeft: on ? "19px" : "3px" });
+    const schedRaw = [["Monthly Irvine Snapshot", "Market Snapshot", "Irvine", "Monthly · 1st, 9:00 AM", "Oct 1", 107], ["Tustin new listings", "New Listings", "Tustin", "Monthly · 15th, 8:00 AM", "Oct 15", 41], ["Newport closed sales", "Closed Sales", "Newport Beach", "Weekly · Mon, 7:00 AM", "Paused", 23]];
+    const leadsRaw = [["89 Maple Heights", "(949) 555-0187", 3, "just now", "Hot", "hot"], ["14 Cartwheel", "(714) 555-0142", 1, "Yesterday", "New", "new"], ["7 Mustang", "(949) 555-0119", 4, "Sep 28", "Called", "called"], ["22 Canopy", "(949) 555-0163", 1, "Sep 24", "New", "new"], ["63 Hedgerow", "(562) 555-0171", 2, "Sep 20", "Called", "called"]];
+    const lf = S.leadFilter;
+    return {
+      primary, accent, is: Object.fromEntries(["dashboard", "reports", "property", "schedules", "leads", "contacts", "branding", "billing", "settings", "help", "admin"].map(p => [p, S.page === p])),
+      navGroups, goHelp: go("help"), goBilling: go("billing"), goReports: go("reports"), goSchedules: go("schedules"), goContacts: go("contacts"),
+      helpBg: S.page === "help" ? "#ECEAE3" : "transparent", helpWeight: S.page === "help" ? 700 : 500,
+      showUsage: this.props.showUsage ?? true, usage, firstRun, homeCity,
+      dashTitle: firstRun ? `Your ${homeCity} Snapshot is in your inbox.` : "Good morning, Jennifer.",
+      dashLead: firstRun ? (autopilot ? "Autopilot is on. The next one goes to " : "Autopilot is off. Turn it on from ") : "Your ",
+      dashStrong: firstRun ? (autopilot ? "My Sphere on Nov 1" : "Schedules") : `Monthly ${homeCity} Snapshot`,
+      dashTail: firstRun ? (autopilot ? " — import your contacts before then." : " whenever you're ready.") : " goes out Oct 1 to 107 contacts. 3 reports left this month on Free.",
+      latestSub: firstRun ? "Sent to you just now · live MLS data" : "Sent Sep 1 to 107 contacts · 64 opened",
+      nextTitle: firstRun ? (autopilot ? `Monthly ${homeCity} Snapshot → My Sphere` : "Nothing scheduled") : `Monthly ${homeCity} Snapshot → 107 contacts`,
+      nextSub: firstRun ? (autopilot ? "Nov 1, 9:00 AM · 0 contacts so far" : "Your sphere won't hear from you automatically") : "Oct 1, 9:00 AM · then Nov 1",
+      nextAction: firstRun && !autopilot ? "Turn on" : "Edit", nextDot: firstRun && !autopilot ? "#94A3B8" : "#059669", nextDotRing: firstRun && !autopilot ? "#F1F5F9" : "#D1FAE5",
+      hotLabel: firstRun ? "Who opened" : "Call these first",
+      firstSteps: [{ icon: I("upload"), t: "Import your contacts", sub: "CSV from your CRM. Groups come along.", go: go("contacts") }, { icon: I("link-2"), t: "Set up your home-value page", sub: "One link for your signature and signs", go: go("leads") }, { icon: I("image-plus"), t: "Add your logo", sub: "Your name is on the reports until you do", go: go("branding") }],
+      themes: TH.map(([p, ac], i) => ({ bg: `linear-gradient(135deg, ${p} 50%, ${ac} 50%)`, ring: i === themeIdx ? `0 0 0 2px #fff, 0 0 0 4px ${p}` : "inset 0 0 0 1px rgba(0,0,0,0.1)", pick: () => this.setState({ theme: i }) })),
+      hotContacts: firstRun ? [] : contactsRaw.filter(c => c.state === "Clicked" || c.state === "New lead" || c.state === "Opened").slice(0, 4),
+      activity: firstRun ? [{ title: `Market Snapshot · ${homeCity} sent to you`, sub: "jennifer@jenniferrealty.com", when: "Just now" }, { title: autopilot ? `Monthly ${homeCity} Snapshot turned on` : "Account created", sub: autopilot ? "First run Nov 1, 9:00 AM" : "Free plan", when: "Just now" }] : [{ title: "Market Snapshot · Irvine sent", sub: "107 contacts · 64 opened", when: "Sep 1" }, { title: "New lead · 89 Maple Heights", sub: "Sam Whitaker from your home-value page", when: "Aug 30" }, { title: "Closed Sales · Irvine", sub: "PDF downloaded", when: "Aug 28" }, { title: "Property report · 14 Cartwheel", sub: "Seller report, 12 page views", when: "Aug 22" }],
+      kindFilters: [["all", "All"], ["sent", "Sent to contacts"], ["manual", "Downloaded only"], ["snapshot", "Snapshot"], ["closed", "Closed"], ["listings", "Listings"]].map(([k, l]) => ({ ...pill(kf === k, l), pick: () => this.setState({ kindFilter: k }) })),
+      reports,
+      propertyReports: [["14 Cartwheel", "Irvine", "$1.41M", "Seller", "Aug 22", 48, 3], ["89 Maple Heights", "Irvine", "$1.18M", "Seller", "Aug 30", 112, 4], ["310 Via Lido", "Newport Beach", "$3.9M", "Buyer", "Aug 9", 31, 1], ["1920 Irvine Blvd", "Tustin", "$945K", "Seller", "Jul 30", 20, 1]].map(p => ({ address: p[0], city: p[1], value: p[2], type: p[3], typeBg: p[3] === "Seller" ? "#EEF2FF" : "#F1F5F9", typeColor: p[3] === "Seller" ? "#3730A3" : "#334155", date: p[4], views: p[5], leads: p[6], leadsColor: p[6] > 0 ? "#0F172A" : "#5E636B" })),
+      schedules: schedRaw.map((s, i) => { const on = S.schedOn[i]; return { name: s[0], kind: s[1], area: s[2], cadence: s[3], recipients: s[5], next: on ? s[4] : "Paused", nextColor: on ? "#0F172A" : "#5E636B", nextWeight: on ? 600 : 400, opacity: on ? 1 : 0.7, ...sw(on), toggle: () => this.setState(st => { const a = st.schedOn.slice(); a[i] = !a[i]; return { schedOn: a }; }) }; }),
+      toggleLeadSettings: () => this.setState({ leadSettingsOpen: !S.leadSettingsOpen }), leadSettingsOpen: S.leadSettingsOpen, leadSettingsLabel: S.leadSettingsOpen ? "Done" : "Customize",
+      leadFilters: [["all", "All · 9"], ["hot", "Hot · 3"], ["called", "Called · 4"]].map(([k, l]) => ({ ...pill(lf === k, l), pick: () => this.setState({ leadFilter: k }) })),
+      leads: leadsRaw.filter(l => lf === "all" || (lf === "hot" && l[5] === "hot") || (lf === "called" && l[5] === "called")).map(l => ({ address: l[0], phone: l[1], views: l[2], when: l[3], state: l[4], ...st(l[5]) })),
+      contactFilters: [["all", "All · 107"]].concat(groupsAll.map(g => [g.id, `${g.name} · ${g.count}`])).concat([["opened", "Opened Sept · 64"]]).map(([k, l]) => ({ ...pill(contactFilter === k, l), pick: () => this.setState({ contactFilter: k, drawer: null }) })),
+      contacts, noContacts: contacts.length === 0, contactsSub: firstRun ? "No contacts yet. Import a CSV or add a few by hand." : `107 people · ${groupsAll.length} groups · 64 opened September`,
+      contactQuery: S.contactQuery, onContactQuery: e => this.setState({ contactQuery: e.target.value }),
+      startImport: () => this.setState({ importStep: 1, addOpen: false }), closeImport: () => this.setState({ importStep: 0 }), importOpen: S.importStep > 0, importStep1: S.importStep === 1, importStep2: S.importStep === 2, importStep3: S.importStep === 3,
+      importPickSample: () => this.setState({ importStep: 2 }), importRun: () => this.setState({ importStep: 3 }),
+      importSteps: ["Choose file", "Match columns", "Done"].map((label, i) => { const n = i + 1, cur = S.importStep === n, done = S.importStep > n; return { label, n: done ? "✓" : n, weight: cur ? 700 : 500, color: cur ? "#0F172A" : done ? "#334155" : "#94A3B8", dotBg: cur ? "#0F172A" : done ? "#D1FAE5" : "#ECEAE3", dotFg: cur ? "#fff" : done ? "#047857" : "#64748B" }; }),
+      importMap: [["name", "Name", "John Smith"], ["email", "Email", "john.smith@email.com"], ["type", "(ignored)", "client"], ["group", "Group", "Buyer Leads"]].map(m => ({ from: m[0], to: m[1], sample: m[2] })),
+      toggleAdd: () => this.setState({ addOpen: !S.addOpen, importStep: 0 }), addOpen: S.addOpen,
+      addGroups: groupsAll.map((g, i) => ({ ...pill(i === 0, g.name), pick: () => {} })),
+      toggleGroupsView: () => this.setState({ groupsView: !S.groupsView, drawer: null }), groupsViewLabel: S.groupsView ? "← Back to people" : "Manage groups", listView: !S.groupsView, groupsView: S.groupsView,
+      groups: groupsAll.map(g => ({ ...g, usedBy: g.usedBy, usedColor: g.usedBy === "—" ? "#5E636B" : "#334155", view: () => this.setState({ groupsView: false, contactFilter: g.id }) })),
+      newGroupName: S.newGroupName, onNewGroup: e => this.setState({ newGroupName: e.target.value }), createGroup: () => { const n = S.newGroupName.trim(); if (n) this.setState({ extraGroups: [...S.extraGroups, n], newGroupName: "" }); },
+      contactsCols: dc && !overlay ? "minmax(0,1fr) 340px" : "minmax(0,1fr)", drawerOpen: !!dc, noop: () => {},
+      drawerOverlay: overlay, drawerPos: overlay ? "fixed" : "sticky", drawerTop: overlay ? "0" : "24px", drawerRight: overlay ? "0" : "auto", drawerH: overlay ? "100vh" : "auto", drawerW: overlay ? "min(380px, 92vw)" : "auto", drawerRadius: overlay ? "0" : "16px",
+      wideRows: !dc || overlay, compactRows: !!dc && !overlay, rowCols: dc && !overlay ? "44px minmax(0,1fr) auto" : "44px minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,1fr) auto", closeDrawer: () => this.setState({ drawer: null }),
+      d: dc ? { ...dc, phoneLabel: dc.i % 2 ? "(949) 555-01" + (20 + dc.i) : "Add phone", notes: dc.i === 0 ? "Sold Woodbridge 2021. Thinking about downsizing in 2027." : "", added: ["Mar 2024", "Jan 2025", "Aug 2023", "Sep 2026", "Jun 2025", "Nov 2022", "Sep 2026"][dc.i],
+        groupPills: groupsAll.map(g => ({ ...pill(dc.gs.includes(g.id), g.name), pick: () => this.setState({ memberships: { ...S.memberships, [dc.i]: dc.gs.includes(g.id) ? dc.gs.filter(x => x !== g.id) : [...dc.gs, g.id] } }) })),
+        activity: [["September Snapshot", "Sep 1", dc.state === "Bounced" ? "Bounced" : dc.state === "Sent" ? "Sent" : dc.state === "Clicked" ? "Clicked" : "Opened"], ["August Snapshot", "Aug 1", dc.i % 3 ? "Opened" : "Sent"], ["July Snapshot", "Jul 1", "Opened"]].map(a => ({ t: a[0], when: a[1], state: a[2], ...st(a[2].toLowerCase()) })) } : {},
+      plan: S.plan, planName: PLAN[0], planPrice: PLAN[1] + PLAN[2], isPaid: S.plan !== "free", planJustChanged: S.planJustChanged,
+      planSub: S.plan === "free" ? "You're on Free. Resets Nov 1." : `You're on ${PLAN[0]} · ${PLAN[1]}${PLAN[2]} · renews Nov 6.`,
+      renewDate: "Nov 6, 2026", invoices: [["Oct 6, 2026", PLAN[1] + ".00"], ["Sep 6, 2026", PLAN[1] + ".00"], ["Aug 6, 2026", PLAN[1] + ".00"]].map(x => ({ date: x[0], amount: x[1] })),
+      billingFoot: S.plan === "free" ? "No card on file. Invoices appear here once you upgrade." : "Cancelling keeps your plan until Nov 6, then drops to Free. Reports and contacts stay.",
+      planConfirmOpen: !!S.planConfirm, planCancel: () => this.setState({ planConfirm: null }), planDowngrade: () => this.setState({ planConfirm: "free" }),
+      planDo: () => this.setState({ plan: S.planConfirm, planConfirm: null, planJustChanged: true }),
+      pc: (() => { const to = S.planConfirm; if (!to) return {}; const T = { free: ["Free", "$0"], growth: ["Growth", "$19/mo"], plus: ["Growth Plus", "$29/mo"] }[to]; const up = { free: 0, growth: 1, plus: 2 }[to] > planIdx; return up ? { title: `Switch to ${T[0]} · ${T[1]}`, body: to === "growth" ? "25 reports a month, 3 schedules, weekly cadence, CSV import. Takes effect now." : "Unlimited reports and schedules, 25 property reports a month. Takes effect now.", fine: S.plan === "free" ? "Card collected on the next screen. Cancel any time." : "Prorated — you only pay the difference this month.", cta: `Switch to ${T[0]}` } : { title: `Drop to ${T[0]}`, body: to === "free" ? "You keep Growth until Nov 6. After that: 3 reports a month, 1 schedule. Schedules over the limit pause, nothing is deleted." : "You keep Growth Plus until Nov 6, then Growth limits apply.", fine: "You can come back any time.", cta: "Confirm" }; })(),
+      plans: [["free", "Free", "$0", "forever", "1 city, monthly", "3 reports a month"], ["growth", "Growth", "$19", "/mo", "Up to 3 cities, weekly", "25 reports a month, CSV import"], ["plus", "Growth Plus", "$29", "/mo", "Any number of cities", "Unlimited reports and schedules"]].map(([slug, name, price, per, fits, summary], i) => { const cur = slug === S.plan, up = i > planIdx; return { name, price, per, fits, summary, current: cur, cta: cur ? "Current plan" : up ? "Upgrade" : "Downgrade", cursor: cur ? "default" : "pointer", ctaBg: cur ? "#fff" : up ? "#0F172A" : "#fff", ctaFg: cur ? "#94A3B8" : up ? "#fff" : "#334155", ctaBorder: cur || !up ? "1px solid #E4E2DA" : "none", pick: () => !cur && this.setState({ planConfirm: slug, planJustChanged: false }) }; }),
+      editEmail: () => this.setState({ emailEditing: !S.emailEditing }), emailEditing: S.emailEditing, emailEditLabel: S.emailEditing ? "Cancel" : "Change",
+      editPassword: () => this.setState({ passwordEditing: !S.passwordEditing }), passwordEditing: S.passwordEditing, passwordEditLabel: S.passwordEditing ? "Cancel" : "Change",
+      notifs: [["When someone opens a report", "One email per send, the morning after"], ["New lead", "Email and text, immediately"], ["Product updates", "Once a month at most"]].map((n, i) => ({ title: n[0], sub: n[1], ...sw(S.notifs[i]), toggle: () => this.setState(st => { const a = st.notifs.slice(); a[i] = !a[i]; return { notifs: a }; }) })),
+      helpTopics: [["Getting started", 6], ["Creating reports", 8], ["Scheduling", 5], ["Contacts", 5], ["Lead capture", 6], ["Branding", 4], ["Plan & billing", 5], ["For title companies", 4]].map(h => ({ title: h[0], count: h[1] })),
+      faqs: ["How do I pause a schedule?", "Which MLS data do you use?", "Can I edit a report after it's generated?", "What counts toward my monthly report limit?", "Where do leads from my home-value page go?", "How do I change my brand colors?"],
+      health: [["API", true], ["Database", true], ["Redis", true], ["Worker", false]].map(h => ({ label: h[0], color: h[1] ? "#059669" : "#DC2626" })),
+      adminMetrics: [["Accounts", "1,284", "38 title companies", "#0F172A"], ["Active users", "612", "of 2,106 · 30d", "#0F172A"], ["Reports", "4,318", "611 today", "#0F172A"], ["Error rate", "1.2%", "52 failed", "#047857"], ["Avg render", "6.4s", "p95 14.1s", "#0F172A"], ["Schedules", "891", "of 1,040 active", "#0F172A"]].map(m => ({ label: m[0], value: m[1], sub: m[2], color: m[3] })),
+      adminReports: [["Pacific Coast Title", "Market Snapshot", "Done", "done", "5.8s", "2m"], ["Jennifer Realty", "Closed Sales", "Done", "done", "7.1s", "9m"], ["Harbor Escrow", "New Listings", "Running", "running", "—", "11m"], ["Coastline Realty", "Price Bands", "Failed", "failed", "—", "24m"], ["Sunset Title", "Open Houses", "Done", "done", "9.3s", "41m"], ["Brightwater Homes", "Market Snapshot", "Done", "done", "5.2s", "1h"]].map(r => ({ account: r[0], type: r[1], state: r[2], ...st(r[3]), dur: r[4], when: r[5] })),
+      adminLinks: [["Companies", 38], ["Title reps", 142], ["Accounts", "1,284"], ["Users", "2,106"], ["Market reports", "4,318"], ["Schedules", "1,040"], ["Property reports", "2,771"], ["Lead pages", 864], ["Emails", "61k"], ["Plans", 3], ["Security", "12 blocked IPs"], ["System", ""]].map(l => ({ name: l[0], count: l[1] }))
+    };
+  }
+}
+</script>
+</body>
+</html>

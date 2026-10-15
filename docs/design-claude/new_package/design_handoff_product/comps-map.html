@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700&display=swap">
+<style>
+html,body,#map{margin:0;height:100%;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+.leaflet-container{background:#F4F3EE}
+.leaflet-tile-pane{filter:grayscale(1) contrast(0.92) brightness(1.04)}
+.pin{display:flex;align-items:center;justify-content:center;height:24px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:-0.01em;white-space:nowrap;cursor:pointer;box-shadow:0 2px 6px rgba(15,23,42,0.25);transition:transform .15s;transform:translate(-50%,-50%)}
+.pin:hover{transform:translate(-50%,-50%) scale(1.08)}
+.pin.on{background:#0F172A;color:#fff;border:1.5px solid #0F172A}
+.pin.off{background:#fff;color:#64748B;border:1.5px solid #CBD5E1}
+.subject{width:30px;height:30px;border-radius:999px;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px rgba(255,255,255,0.9),0 4px 12px rgba(15,23,42,0.35)}
+.subject span{width:15px;height:15px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/house.svg) center/contain no-repeat}
+.leaflet-control-attribution{font-size:9px;background:rgba(255,255,255,0.7)}
+.radius{pointer-events:none}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+const SUBJECT = { lat: 33.6938, lng: -117.7800, label: "14 Cartwheel" };
+// Offsets are in miles from the subject; converted to lat/lng below.
+const COMPS = [
+  ["22 Canopy", 1380000, 0.22, 0.20], ["41 Cedarbrook", 1412000, -0.30, 0.26], ["7 Mustang", 1468000, 0.48, -0.36], ["63 Hedgerow", 1095000, -0.52, -0.47],
+  ["118 Trailwood", 1890000, 0.10, 0.49], ["9 Cartwheel", 1395000, 0.06, -0.08], ["30 Rockrose", 1340000, -0.55, 0.24], ["55 Bluebell", 1255000, 0.62, 0.33],
+  ["14 Sagebrush", 905000, -0.28, -0.30], ["72 Fallingstar", 1520000, 0.35, -0.66]
+];
+const MI_LAT = 1 / 69, MI_LNG = 1 / (69 * Math.cos(SUBJECT.lat * Math.PI / 180));
+const fmt = n => "$" + (n / 1e6).toFixed(2) + "M";
+function parse() { const h = new URLSearchParams(location.hash.slice(1)); return { sel: (h.get("sel") || "").split(",").filter(Boolean).map(Number), brand: h.get("brand") || "#0D9488" }; }
+
+const map = L.map("map", { zoomControl: false, attributionControl: true, scrollWheelZoom: false }).setView([SUBJECT.lat, SUBJECT.lng], 14);
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "© OpenStreetMap contributors", maxZoom: 18 }).addTo(map);
+L.control.zoom({ position: "bottomright" }).addTo(map);
+const radius = L.circle([SUBJECT.lat, SUBJECT.lng], { radius: 0.75 * 1609.34, color: "#0F172A", weight: 1, dashArray: "4 4", fillColor: "#0F172A", fillOpacity: 0.03, className: "radius" }).addTo(map);
+map.fitBounds(radius.getBounds(), { padding: [12, 12] });
+
+let subjectMarker = null;
+const markers = COMPS.map((c, i) => {
+  const m = L.marker([SUBJECT.lat + c[3] * MI_LAT, SUBJECT.lng + c[2] * MI_LNG], { icon: L.divIcon({ className: "", html: "", iconSize: [0, 0] }) }).addTo(map);
+  m.on("click", () => parent.postMessage({ type: "comp-toggle", index: i }, "*"));
+  return m;
+});
+function render() {
+  const { sel, brand } = parse();
+  markers.forEach((m, i) => m.setIcon(L.divIcon({ className: "", iconSize: [0, 0], html: `<div class="pin ${sel.includes(i) ? "on" : "off"}" title="${COMPS[i][0]}">${fmt(COMPS[i][1])}</div>` })));
+  if (subjectMarker) subjectMarker.remove();
+  subjectMarker = L.marker([SUBJECT.lat, SUBJECT.lng], { icon: L.divIcon({ className: "", iconSize: [0, 0], html: `<div class="subject" style="background:${brand}" title="${SUBJECT.label}"><span></span></div>` }), zIndexOffset: 1000 }).addTo(map);
+}
+render();
+addEventListener("hashchange", render);
+</script>
+</body>
+</html>
