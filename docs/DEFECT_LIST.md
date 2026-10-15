@@ -12329,8 +12329,54 @@ readers move); the element rules are not.
 **The pass that would answer it:** render the main authenticated routes against `main` as of
 `6dd354b^` (immediately pre-Phase-0) and against `main` today, and diff. The harness exists — a
 locally minted JWT renders the chrome (the middleware decodes without verifying), and the noise floor
-must be measured per route, because `/app`'s is 4.56% and `/app/reports`' is 0.00%. **Not done
-here**, and recorded so it is a decision rather than an oversight.
+must be measured per route, because `/app`'s is 4.56% and `/app/reports`' is 0.00%.
+
+#### THE PASS WAS RUN — 2026-10-15. The `h1` question closes NEGATIVE; the headline is elsewhere.
+
+Isolated to the stylesheet: the working tree held `main`, and only `apps/web/app/globals.css` was
+swapped between `6dd354b^` and today, so every difference below is Phase 0's and not #171's or
+#172's. Both states were **verified live in the browser** before capture (see the third note below).
+
+**1 · The `h1` rule did nothing, and here is why it could not.** All **51** `<h1>` elements on
+authenticated routes carry their own type classes; **zero** are bare. Tailwind utilities are class
+selectors and sit above `@layer base`, so `text-3xl font-display font-bold` wins on size and weight
+every time. Measured on `/app/admin`'s "Admin Console":
+
+| | pre-Phase-0 | today |
+|---|---|---|
+| font-size | 30px | **30px** |
+| font-weight | 700 | **700** |
+| letter-spacing | −0.75px | **−0.9px** |
+
+The only residual is **0.15px of letter-spacing** — `tracking-tight` (−0.025em) giving way to the new
+rule's −0.03em — on the **45** h1s that set no `tracking-` class. The other 6 set their own and are
+untouched (`/app/settings/billing` measures −0.5px in both states). **A negative result, written
+down: the second global selector reached nothing that had not already claimed the property.**
+
+**2 · But Phase 0 itself was twenty times larger here than anywhere it had been seen.**
+
+| route | noise floor | Phase 0's effect |
+|---|---|---|
+| `/app/schedules` | 0.00% | **25.42%** |
+| `/app/settings/security` | 0.00% | **19.86%** |
+| `/app/settings/billing` | 0.01% | **17.76%** |
+| `/app/people` | 2.59% | **20.95%** |
+| `/app/reports` | 13.38% | **31.57%** |
+| `/` and `/login`, measured 2026-10-15 | 0.04% | **0.36% / 1.30%** |
+
+Phase 0 was reported as a 0.36–1.30% change because those were the only two routes anyone could
+render. On the authenticated product it moved **a fifth to a third of every page**. Nothing was
+wrong with it — that is the light sidebar, the white ground and the warm neutrals arriving — but
+**the size of what shipped was unknown for three merges**, and the one defect inside it (the indigo
+nav) was invisible for the same reason.
+
+**3 · The stale-stylesheet trap fired a third time, and was caught a third time by the same check.**
+Next's dev server did not recompile `globals.css` on the restore, so an `h1` measurement came back
+**identical in both states** — which reads as "the rule did nothing" and was really "the rule was
+never loaded". Caught by reading `--primary` out of `getComputedStyle(documentElement)` and finding
+the pre-Phase-0 value against a post-Phase-0 file on disk. **Every state in the table above was
+verified that way before it was captured.** A browser is a cache like any other; assert the mutation
+landed.
 
 ---
 
