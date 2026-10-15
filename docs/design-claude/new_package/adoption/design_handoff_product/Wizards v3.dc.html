@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap"></link>
+<style>body{margin:0;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#0F172A;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}a{color:#4F46E5;text-decoration:none}a:hover{color:#3730A3}button,input{font-family:inherit}@keyframes tr-spin{to{transform:rotate(360deg)}}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;background:#fff">
+  <div style="display:flex;justify-content:center;gap:4px;padding:8px;background:#0F172A">
+    <sc-for list="{{ flows }}" as="f" hint-placeholder-count="4">
+      <button onClick="{{ f.pick }}" style="all:unset;cursor:pointer;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;color:{{ f.color }};background:{{ f.bg }}">{{ f.label }}</button>
+    </sc-for>
+  </div>
+
+  <header style="height:62px;border-bottom:1px solid #ECEAE3;display:flex;align-items:center;justify-content:space-between;padding:0 28px;gap:24px">
+    <a href="#" style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:#334155" style-hover="color:#0F172A"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-left.svg) center/contain no-repeat"></span>{{ backLabel }}</a>
+    <div style="display:flex;align-items:center;gap:6px">
+      <sc-for list="{{ steps }}" as="st" hint-placeholder-count="4">
+        <button onClick="{{ st.go }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;font-size:13px;font-weight:{{ st.weight }};color:{{ st.color }}"><span style="width:20px;height:20px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:{{ st.dotBg }};color:{{ st.dotFg }}">{{ st.n }}</span>{{ st.label }}</button>
+      </sc-for>
+    </div>
+    <a href="#" style="font-size:14px;font-weight:600;color:#64748B" style-hover="color:#0F172A">{{ exitLabel }}</a>
+  </header>
+
+  <div style="flex:1;display:grid;grid-template-columns:minmax(0,480px) minmax(0,1fr)">
+    <section style="padding:40px 40px 32px;display:flex;flex-direction:column;gap:28px;border-right:1px solid #ECEAE3;min-height:calc(100vh - 100px);box-sizing:border-box">
+
+      <!-- Madlib summary -->
+      <sc-if value="{{ showSummary }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 6px;font-size:17px;line-height:1.7;color:#475569;padding-bottom:22px;border-bottom:1px solid #ECEAE3">
+          <sc-for list="{{ summary }}" as="w" hint-placeholder-count="6">
+            <button onClick="{{ w.go }}" style="all:unset;cursor:{{ w.cursor }};font-weight:{{ w.weight }};color:{{ w.color }};border-bottom:{{ w.border }};padding-bottom:1px">{{ w.t }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ working }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:28px;flex:1">
+          <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">{{ workingTitle }}</h2><p style="margin:0;font-size:15px;color:#64748B">Usually under a minute. You can leave — we'll email you.</p></div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <sc-for list="{{ progress }}" as="p" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #ECEAE3;color:{{ p.color }};font-weight:{{ p.weight }}">
+                <span style="width:22px;height:22px;border-radius:999px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:{{ p.bg }};border:{{ p.ring }};animation:{{ p.anim }}"><span style="width:12px;height:12px;background:{{ p.iconColor }};mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></span>
+                <span style="font-size:15px">{{ p.t }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:28px;flex:1">
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <span style="width:48px;height:48px;border-radius:999px;background:#D1FAE5;display:flex;align-items:center;justify-content:center"><span style="width:22px;height:22px;background:#047857;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></span>
+            <h2 style="margin:0;font-size:30px;line-height:1.08;font-weight:800;letter-spacing:-0.03em;text-wrap:balance">{{ doneTitle }}</h2>
+            <p style="margin:0;font-size:16px;color:#475569;text-wrap:pretty">{{ doneSub }}</p>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <sc-for list="{{ doneActions }}" as="d" hint-placeholder-count="3">
+              <a href="#" style="display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3;color:#0F172A" style-hover="color:#4F46E5">
+                <span style="width:36px;height:36px;border-radius:9px;background:#FAFAF7;border:1px solid #ECEAE3;display:flex;align-items:center;justify-content:center"><span style="width:16px;height:16px;background:#0F172A;mask:url({{ d.icon }}) center/contain no-repeat"></span></span>
+                <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">{{ d.t }}</span><span style="font-size:13px;color:#64748B">{{ d.sub }}</span></span>
+                <span style="width:16px;height:16px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-right.svg) center/contain no-repeat"></span>
+              </a>
+            </sc-for>
+          </div>
+          <div style="margin-top:auto;display:flex;gap:10px"><button onClick="{{ restart }}" style="all:unset;cursor:pointer;height:46px;padding:0 18px;border-radius:9px;border:1px solid #D6D3CB;font-size:14px;font-weight:600">{{ againLabel }}</button><a href="{{ dashboardHref }}" style="display:inline-flex;align-items:center;height:46px;padding:0 20px;border-radius:9px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Go to dashboard</a></div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ editing }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:28px;flex:1">
+
+          <!-- ===== MARKET: REPORT ===== -->
+          <sc-if value="{{ s.report }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:22px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">What should your sphere hear about?</h2><p style="margin:0;font-size:15px;color:#64748B">Snapshot is the one most agents send monthly. Pick another to see it on the right.</p></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="7">
+                  <button onClick="{{ k.pick }}" style="all:unset;cursor:{{ k.cursor }};opacity:{{ k.opacity }};display:flex;gap:12px;align-items:center;padding:10px 12px 10px 10px;border-radius:12px;border:1.5px solid {{ k.border }};background:{{ k.bg }}" style-hover="border-color:#0F172A">
+                    <span style="width:34px;height:44px;border-radius:2px;overflow:hidden;flex-shrink:0;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,0.1)"><span style="display:block;width:816px;height:1056px;transform:scale(0.0417);transform-origin:0 0"><dc-import name="Report Page" kind="{{ k.id }}" primary="{{ primary }}" accent="{{ accent }}" area="{{ areaLabel }}" brand-name="Jennifer Realty" agent-name="Jennifer Martinez" agent-phone="(949) 555-0123" agent-email="jennifer@jenniferrealty.com" hint-size="816px,1056px"></dc-import></span></span>
+                    <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:14px;font-weight:700">{{ k.name }}</span><span style="font-size:12px;color:#64748B;line-height:1.35">{{ k.note }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== MARKET: AUDIENCE ===== -->
+          <sc-if value="{{ s.audience }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:22px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Who is it for?</h2><p style="margin:0;font-size:15px;color:#64748B">Filters which homes make the page. "All" is right for a general sphere.</p></div>
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <sc-for list="{{ audiences }}" as="a" hint-placeholder-count="6">
+                  <button onClick="{{ a.pick }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:22px minmax(0,1fr);gap:14px;align-items:start;padding:13px 0;border-bottom:1px solid #ECEAE3">
+                    <span style="width:20px;height:20px;border-radius:999px;margin-top:2px;border:{{ a.ring }};background:{{ a.dot }};box-sizing:border-box"></span>
+                    <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:{{ a.weight }}">{{ a.label }}</span><span style="font-size:13px;color:#64748B">{{ a.desc }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== MARKET: AREA & WINDOW ===== -->
+          <sc-if value="{{ s.area }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:26px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Where, and how far back?</h2><p style="margin:0;font-size:15px;color:#64748B">One city or up to five ZIPs. The window sets which sales count.</p></div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;gap:6px"><sc-for list="{{ areaModes }}" as="m" hint-placeholder-count="2"><button onClick="{{ m.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ m.bg }};color:{{ m.color }};border:1px solid {{ m.border }}">{{ m.label }}</button></sc-for></div>
+                <sc-if value="{{ areaIsCity }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:relative"><span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/map-pin.svg) center/contain no-repeat"></span><input value="{{ city }}" onChange="{{ onCity }}" placeholder="City, e.g. Irvine" style="width:100%;box-sizing:border-box;height:52px;border-radius:10px;border:1.5px solid #D6D3CB;background:#fff;padding:0 16px 0 46px;font-size:17px;outline:none"></input></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ nearby }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:500;padding:6px 12px;border-radius:999px;border:1px solid #E4E2DA;color:#475569" style-hover="border-color:#0F172A;color:#0F172A">{{ c.name }}</button></sc-for></div>
+                </sc-if>
+                <sc-if value="{{ areaIsZip }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:8px"><input value="{{ zipInput }}" onChange="{{ onZip }}" onKeyDown="{{ zipKey }}" placeholder="5-digit ZIP, press Enter" style="flex:1;height:52px;border-radius:10px;border:1.5px solid #D6D3CB;background:#fff;padding:0 16px;font-size:17px;outline:none"></input><button onClick="{{ addZip }}" style="all:unset;cursor:pointer;height:52px;padding:0 18px;border-radius:10px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Add</button></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ zips }}" as="z" hint-placeholder-count="2"><button onClick="{{ z.remove }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;background:#0F172A;color:#fff">{{ z.zip }} ×</button></sc-for><span style="font-size:13px;color:#94A3B8;align-self:center">{{ zipHint }}</span></div>
+                </sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Window</span>
+                <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px"><sc-for list="{{ lookbacks }}" as="l" hint-placeholder-count="5"><button onClick="{{ l.pick }}" style="all:unset;cursor:pointer;text-align:center;padding:12px 0;border-radius:10px;border:1.5px solid {{ l.border }};background:{{ l.bg }};color:{{ l.color }}"><span style="display:block;font-size:18px;font-weight:700;line-height:1">{{ l.days }}</span><span style="display:block;font-size:11px;margin-top:3px">days</span></button></sc-for></div>
+                <span style="font-size:13px;color:#64748B">{{ lookbackNote }}</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== MARKET: DELIVER ===== -->
+          <sc-if value="{{ s.deliver }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">{{ deliverTitle }}</h2><p style="margin:0;font-size:15px;color:#64748B">{{ deliverSub }}</p></div>
+              <sc-if value="{{ showDeliverChoice }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                  <sc-for list="{{ delivers }}" as="d" hint-placeholder-count="3">
+                    <button onClick="{{ d.pick }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3">
+                      <span style="width:20px;height:20px;border-radius:999px;border:{{ d.ring }};background:{{ d.dot }};box-sizing:border-box"></span>
+                      <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:{{ d.weight }}">{{ d.label }}</span><span style="font-size:13px;color:#64748B">{{ d.desc }}</span></span>
+                      <span style="font-size:12px;color:#5E636B;white-space:nowrap">{{ d.cost }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ needsRecipients }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">To</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ recipientOpts }}" as="r" hint-placeholder-count="4"><button onClick="{{ r.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ r.bg }};color:{{ r.color }};border:1px solid {{ r.border }}">{{ r.label }}</button></sc-for><button style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px dashed #D6D3CB;color:#475569">+ email</button></div>
+                  <span style="font-size:13px;color:#64748B">{{ recipientNote }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ isSchedule }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:18px">
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Cadence</span>
+                    <div style="display:flex;gap:6px"><sc-for list="{{ cadences }}" as="c" hint-placeholder-count="2"><button onClick="{{ c.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ c.bg }};color:{{ c.color }};border:1px solid {{ c.border }}">{{ c.label }}</button></sc-for></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ dayOpts }}" as="d" hint-placeholder-count="7"><button onClick="{{ d.pick }}" style="all:unset;cursor:pointer;min-width:38px;text-align:center;font-size:13px;font-weight:600;padding:7px 10px;border-radius:8px;background:{{ d.bg }};color:{{ d.color }};border:1px solid {{ d.border }}">{{ d.label }}</button></sc-for></div>
+                    <span style="font-size:13px;color:#64748B">{{ cadenceNote }}</span>
+                  </div>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Name<input value="{{ scheduleName }}" onChange="{{ onName }}" style="height:44px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:500;letter-spacing:0;text-transform:none;color:#0F172A;outline:none"></input></label>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ===== ONBOARDING: AREA ===== -->
+          <sc-if value="{{ s.obArea }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#4F46E5">Two minutes</span><h2 style="margin:0;font-size:32px;line-height:1.05;font-weight:800;letter-spacing:-0.035em;text-wrap:balance">Where do your people live?</h2><p style="margin:0;font-size:16px;color:#64748B;text-wrap:pretty">We'll build this month's Market Snapshot for that city from live MLS data. Watch it fill in on the right.</p></div>
+              <div style="position:relative"><span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/map-pin.svg) center/contain no-repeat"></span><input value="{{ obCity }}" onChange="{{ onObCity }}" placeholder="Your city" style="width:100%;box-sizing:border-box;height:56px;border-radius:10px;border:1.5px solid #D6D3CB;background:#fff;padding:0 16px 0 46px;font-size:18px;outline:none"></input></div>
+              <div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:#64748B">Near you</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ obNearby }}" as="c" hint-placeholder-count="5"><button onClick="{{ c.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:500;padding:6px 12px;border-radius:999px;border:1px solid #E4E2DA;color:#475569" style-hover="border-color:#0F172A;color:#0F172A">{{ c.name }}</button></sc-for></div></div>
+            </div>
+          </sc-if>
+
+          <!-- ===== ONBOARDING: LOOK ===== -->
+          <sc-if value="{{ s.obLook }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:32px;line-height:1.05;font-weight:800;letter-spacing:-0.035em;text-wrap:balance">Make it yours.</h2><p style="margin:0;font-size:16px;color:#64748B;text-wrap:pretty">Pick your colors. Everything else is already filled from your signup; fix anything that's off.</p></div>
+              <div style="display:flex;align-items:center;gap:12px"><sc-for list="{{ obThemes }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.pick }}" aria-label="Color" style="width:40px;height:40px;border-radius:999px;border:none;cursor:pointer;background:{{ t.bg }};box-shadow:{{ t.ring }}"></button></sc-for><span style="font-size:13px;color:#64748B;margin-left:6px">Custom hex later, in Branding</span></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Your name<input value="Jennifer Martinez" style="height:44px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Brokerage<input value="Jennifer Realty" style="height:44px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">Phone<input value="(949) 555-0123" style="height:44px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">License<input placeholder="DRE #" style="height:44px;border-radius:8px;border:1px solid #D6D3CB;padding:0 12px;font-size:15px;font-weight:400;color:#0F172A;outline:none"></input></label>
+              </div>
+              <div style="border:1.5px dashed #D6D3CB;border-radius:12px;padding:18px;display:flex;align-items:center;gap:14px;background:#FAFAF7"><span style="width:38px;height:38px;border-radius:9px;background:#fff;border:1px solid #ECEAE3;display:flex;align-items:center;justify-content:center"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/image-plus.svg) center/contain no-repeat"></span></span><span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:600">Drop your logo</span><span style="font-size:13px;color:#64748B">Optional. Your name is used until you do.</span></span></div>
+            </div>
+          </sc-if>
+
+          <!-- ===== ONBOARDING: SEND TO YOU ===== -->
+          <sc-if value="{{ s.obSend }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:32px;line-height:1.05;font-weight:800;letter-spacing:-0.035em;text-wrap:balance">Send it to yourself first.</h2><p style="margin:0;font-size:16px;color:#64748B;text-wrap:pretty">This is the real report with this month's {{ obAreaLabel }} numbers, not a sample. See how it lands in your inbox before anyone else does.</p></div>
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:600;color:#334155">To<input value="jennifer@jenniferrealty.com" style="height:52px;border-radius:10px;border:1.5px solid #D6D3CB;padding:0 16px;font-size:17px;font-weight:400;color:#0F172A;outline:none"></input></label>
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <div style="display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid #ECEAE3;font-size:14px"><span style="color:#64748B">Subject</span><span style="font-weight:600;text-align:right">{{ obAreaLabel }} market update · October</span></div>
+                <div style="display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid #ECEAE3;font-size:14px"><span style="color:#64748B">From</span><span style="font-weight:600;text-align:right">Jennifer Martinez via TrendyReports</span></div>
+                <div style="display:flex;justify-content:space-between;gap:14px;padding:12px 0;border-bottom:1px solid #ECEAE3;font-size:14px"><span style="color:#64748B">Attached</span><span style="font-weight:600;text-align:right">Market Snapshot PDF · 1 page</span></div>
+              </div>
+              <span style="font-size:13px;color:#64748B">This one's free and doesn't count toward your 3 a month.</span>
+            </div>
+          </sc-if>
+
+          <!-- ===== ONBOARDING: AUTOPILOT ===== -->
+          <sc-if value="{{ s.obAuto }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <sc-if value="{{ obSent }}" hint-placeholder-val="{{ false }}"><div style="display:inline-flex;align-items:center;gap:8px;align-self:flex-start;padding:6px 12px;border-radius:999px;background:#D1FAE5;color:#065F46;font-size:13px;font-weight:600"><span style="width:14px;height:14px;background:#047857;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span>Sent to jennifer@jenniferrealty.com — check your inbox</div></sc-if>
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:32px;line-height:1.05;font-weight:800;letter-spacing:-0.035em;text-wrap:balance">Keep it going every month.</h2><p style="margin:0;font-size:16px;color:#64748B;text-wrap:pretty">The 1st of each month, 9:00 AM, a fresh {{ obAreaLabel }} Snapshot goes to your sphere. You can pause anytime.</p></div>
+              <div style="border:1px solid #ECEAE3;border-radius:14px;background:#FAFAF7;padding:18px 20px;display:flex;align-items:center;gap:14px">
+                <button onClick="{{ toggleObAuto }}" aria-label="Autopilot" style="all:unset;cursor:pointer;width:44px;height:26px;border-radius:999px;background:{{ obAutoBg }};position:relative;flex-shrink:0;transition:background 0.2s"><span style="position:absolute;top:3px;left:{{ obAutoKnob }};width:20px;height:20px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s"></span></button>
+                <span style="display:flex;flex-direction:column"><span style="font-size:16px;font-weight:700">Monthly {{ obAreaLabel }} Snapshot</span><span style="font-size:14px;color:#64748B">{{ obAutoNote }}</span></span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Who gets it</span>
+                <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #ECEAE3"><span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">My Sphere</span><span style="font-size:13px;color:#5E636B">0 contacts yet</span></span><a href="#" style="font-size:14px;font-weight:600">Import CSV</a></div>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid #ECEAE3"><span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:600">You</span><span style="font-size:13px;color:#64748B">jennifer@jenniferrealty.com · always included</span></span><span style="width:16px;height:16px;background:#047857;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></div>
+                </div>
+                <span style="font-size:13px;color:#64748B">No contacts yet is fine. We'll remind you a week before the first send.</span>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== PROPERTY: ADDRESS ===== -->
+          <sc-if value="{{ s.address }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Which home?</h2><p style="margin:0;font-size:15px;color:#64748B">We pull the public record so you don't type it. Correct anything the county has wrong.</p></div>
+              <div style="display:flex;gap:8px"><div style="position:relative;flex:1"><span style="position:absolute;left:16px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:#94A3B8;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/house.svg) center/contain no-repeat"></span><input value="{{ addr }}" onChange="{{ onAddr }}" onKeyDown="{{ addrKey }}" placeholder="Street address, city" style="width:100%;box-sizing:border-box;height:52px;border-radius:10px;border:1.5px solid #D6D3CB;background:#fff;padding:0 16px 0 46px;font-size:17px;outline:none"></input></div><button onClick="{{ lookup }}" style="all:unset;cursor:pointer;height:52px;padding:0 18px;border-radius:10px;background:#0F172A;color:#fff;font-size:14px;font-weight:600">Look up</button></div>
+              <sc-if value="{{ looked }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Public record</span><span style="font-size:12px;color:#64748B">Orange County · APN 530-071-12</span></div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                    <sc-for list="{{ facts }}" as="f" hint-placeholder-count="6">
+                      <label style="display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:10px;border:1px solid #ECEAE3;background:#FAFAF7"><span style="font-size:11px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;color:#64748B">{{ f.k }}</span><input value="{{ f.v }}" style="border:none;background:transparent;padding:0;font-size:16px;font-weight:600;color:{{ f.color }};outline:none;width:100%"></input></label>
+                    </sc-for>
+                  </div>
+                  <span style="font-size:13px;color:#64748B">Bathrooms wasn't on record — we show lot size there instead. Owner names never print.</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ notLooked }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-wrap:wrap;gap:6px"><span style="font-size:13px;color:#64748B;align-self:center">Recent</span><sc-for list="{{ recentAddrs }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:500;padding:6px 12px;border-radius:999px;border:1px solid #E4E2DA;color:#475569" style-hover="border-color:#0F172A;color:#0F172A">{{ r.a }}</button></sc-for></div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <!-- ===== PROPERTY: COMPS ===== -->
+          <sc-if value="{{ s.comps }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:20px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Which sales count?</h2><p style="margin:0;font-size:15px;color:#64748B">We picked the six closest in size and distance. The estimate on the right follows your checks.</p></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;padding:16px 18px;border-radius:12px;background:#0F172A;color:#fff">
+                <span style="display:flex;flex-direction:column"><span style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.7)">Estimated value</span><span style="font-size:34px;font-weight:800;letter-spacing:-0.035em;line-height:1.05;font-variant-numeric:tabular-nums">{{ estimate }}</span></span>
+                <span style="display:flex;flex-direction:column;text-align:right"><span style="font-size:13px;color:rgba(255,255,255,0.8)">{{ compCount }} comps · {{ ppsf }}/sf</span><span style="font-size:13px;color:rgba(255,255,255,0.8)">{{ rangeText }}</span></span>
+              </div>
+              <div style="height:240px;border-radius:12px;overflow:hidden;border:1px solid #ECEAE3;position:relative">
+                <iframe src="comps-map.html#{{ mapHash }}" title="Comparable sales map" style="width:100%;height:100%;border:0;display:block"></iframe>
+                <span style="position:absolute;left:10px;top:10px;font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.92);color:#334155;box-shadow:0 1px 3px rgba(15,23,42,0.15)">Tap a price to include or drop it</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Closed · 6 months · 0.75 mi</span><button onClick="{{ autoComps }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;color:#4F46E5">Auto-pick</button></div>
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <sc-for list="{{ compList }}" as="c" hint-placeholder-count="8">
+                  <button onClick="{{ c.toggle }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #ECEAE3;opacity:{{ c.opacity }}">
+                    <span style="width:18px;height:18px;border-radius:5px;border:{{ c.ring }};background:{{ c.boxBg }};box-sizing:border-box;display:flex;align-items:center;justify-content:center"><span style="width:11px;height:11px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/check.svg) center/contain no-repeat"></span></span>
+                    <span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.address }}</span><span style="font-size:12px;color:#64748B">{{ c.specs }} · {{ c.sold }}</span></span>
+                    <span style="font-size:12px;color:#5E636B">{{ c.dist }}</span>
+                    <span style="font-size:14px;font-weight:600;font-variant-numeric:tabular-nums">{{ c.price }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== PROPERTY: LOOK ===== -->
+          <sc-if value="{{ s.look }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">How should it feel?</h2><p style="margin:0;font-size:15px;color:#64748B">Three typefaces, one brand color. The cover on the right updates.</p></div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                <sc-for list="{{ pThemes }}" as="t" hint-placeholder-count="3">
+                  <button onClick="{{ t.pick }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:8px;padding:8px;border-radius:12px;border:1.5px solid {{ t.border }};background:{{ t.bg }}" style-hover="border-color:#0F172A">
+                    <span style="display:block;width:100%;aspect-ratio:816/1056;border-radius:3px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,0.08)"><span style="display:block;width:816px;height:1056px;transform:scale(0.148);transform-origin:0 0"><dc-import name="Property Report Cover" theme="{{ t.id }}" brand="{{ pBrand }}" street="{{ pStreet }}" city="Irvine" zip="92620" brand-name="Jennifer Realty" agent-name="Jennifer Martinez" agent-phone="(949) 555-0123" agent-email="jennifer@jenniferrealty.com" beds="4" baths-known="{{ false }}" sqft="2140" year-built="1998" hint-size="816px,1056px"></dc-import></span></span>
+                    <span style="display:flex;flex-direction:column;padding:0 4px 2px"><span style="font-size:14px;font-weight:700">{{ t.name }}</span><span style="font-size:12px;color:#64748B">{{ t.note }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Brand color</span><div style="display:flex;align-items:center;gap:12px"><sc-for list="{{ pBrands }}" as="b" hint-placeholder-count="6"><button onClick="{{ b.pick }}" aria-label="Brand" style="width:36px;height:36px;border-radius:999px;border:none;cursor:pointer;background:{{ b.hex }};box-shadow:{{ b.ring }}"></button></sc-for></div><span style="font-size:13px;color:#64748B">Text stays dark where your color is light. We never shift your color to fix contrast.</span></div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#64748B">Pages</span><span style="font-size:13px;color:#64748B">{{ pageCount }} of 6</span></div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ pPages }}" as="p" hint-placeholder-count="6"><button onClick="{{ p.toggle }}" style="all:unset;cursor:{{ p.cursor }};font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;background:{{ p.bg }};color:{{ p.color }};border:1px solid {{ p.border }}">{{ p.label }}</button></sc-for></div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ===== PROPERTY: GENERATE ===== -->
+          <sc-if value="{{ s.generate }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;flex-direction:column;gap:8px"><h2 style="margin:0;font-size:28px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Who's reading it?</h2><p style="margin:0;font-size:15px;color:#64748B">Sellers get the value story. Buyers get the neighborhood story. Same data, different first page.</p></div>
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <sc-for list="{{ audiencesP }}" as="a" hint-placeholder-count="2">
+                  <button onClick="{{ a.pick }}" style="all:unset;cursor:pointer;display:grid;grid-template-columns:22px minmax(0,1fr);gap:14px;align-items:start;padding:13px 0;border-bottom:1px solid #ECEAE3">
+                    <span style="width:20px;height:20px;border-radius:999px;margin-top:2px;border:{{ a.ring }};background:{{ a.dot }};box-sizing:border-box"></span>
+                    <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:{{ a.weight }}">{{ a.label }}</span><span style="font-size:13px;color:#64748B">{{ a.desc }}</span></span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="border:1px solid #ECEAE3;border-radius:14px;background:#FAFAF7;padding:16px 18px;display:flex;align-items:center;gap:14px">
+                <button onClick="{{ togglePublic }}" aria-label="Public page" style="all:unset;cursor:pointer;width:44px;height:26px;border-radius:999px;background:{{ publicBg }};position:relative;flex-shrink:0;transition:background 0.2s"><span style="position:absolute;top:3px;left:{{ publicKnob }};width:20px;height:20px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:left 0.2s"></span></button>
+                <span style="display:flex;flex-direction:column"><span style="font-size:15px;font-weight:700">Public page + QR code</span><span style="font-size:14px;color:#64748B">Homeowner scans, enters their phone, gets the PDF. You get the lead.</span></span>
+              </div>
+              <span style="font-size:13px;color:#64748B">Uses 1 of your 1 remaining property reports this month.</span>
+            </div>
+          </sc-if>
+
+          <!-- Footer nav -->
+          <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:12px">
+            <button onClick="{{ back }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:600;color:#64748B;visibility:{{ backVis }}">← Back</button>
+            <div style="display:flex;gap:10px;align-items:center">
+              <sc-if value="{{ showSecondary }}" hint-placeholder-val="{{ false }}"><button onClick="{{ secondary }}" style="all:unset;cursor:pointer;height:48px;padding:0 16px;border-radius:9px;font-size:14px;font-weight:600;color:#334155">{{ secondaryLabel }}</button></sc-if>
+              <button onClick="{{ next }}" style="all:unset;cursor:{{ nextCursor }};display:inline-flex;align-items:center;gap:8px;height:48px;padding:0 22px;border-radius:10px;background:{{ nextBg }};color:{{ nextFg }};font-size:15px;font-weight:600">{{ nextLabel }}<span style="width:16px;height:16px;background:{{ nextFg }};mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-right.svg) center/contain no-repeat"></span></button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </section>
+
+    <!-- Artifact -->
+    <section ref="{{ artRef }}" style="background:#F4F3EE;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px 32px;position:sticky;top:0;height:calc(100vh - 100px);box-sizing:border-box;overflow:hidden;min-width:0">
+      <div style="width:{{ previewW }};height:{{ previewH }};flex-shrink:0;border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 40px 80px -28px rgba(15,23,42,0.4),0 0 0 1px rgba(15,23,42,0.06);transform:rotate({{ tilt }});transition:transform 0.5s cubic-bezier(0.2,0.8,0.2,1)">
+        <div style="width:816px;height:1056px;transform:scale({{ previewScale }});transform-origin:0 0">
+          <sc-if value="{{ previewIsMarket }}" hint-placeholder-val="{{ true }}">
+            <dc-import name="Report Page" kind="{{ previewKind }}" primary="{{ primary }}" accent="{{ accent }}" area="{{ areaLabel }}" brand-name="Jennifer Realty" agent-name="Jennifer Martinez" agent-phone="(949) 555-0123" agent-email="jennifer@jenniferrealty.com" hint-size="816px,1056px"></dc-import>
+          </sc-if>
+          <sc-if value="{{ previewIsProperty }}" hint-placeholder-val="{{ false }}">
+            <dc-import name="Property Report Cover" theme="{{ pTheme }}" brand="{{ pBrand }}" street="{{ pStreet }}" city="Irvine" zip="92620" brand-name="Jennifer Realty" agent-name="Jennifer Martinez" agent-phone="(949) 555-0123" agent-email="jennifer@jenniferrealty.com" path="{{ pPath }}" beds="4" baths-known="{{ false }}" sqft="2140" year-built="1998" hint-size="816px,1056px"></dc-import>
+          </sc-if>
+        </div>
+      </div>
+      <span style="font-size:13px;color:#64748B">{{ previewCaption }}</span>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;flow&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;onboarding&quot;,&quot;options&quot;:[&quot;onboarding&quot;,&quot;report&quot;,&quot;schedule&quot;,&quot;property&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Flow&quot;}}">
+class Component extends DCLogic {
+  state = {
+    flow: null, step: 0, status: "idle", prog: 0,
+    kind: "snapshot", audience: "all", areaMode: "city", city: "Irvine", zips: [], zipInput: "", lookback: null,
+    deliver: null, recips: { sphere: true, past: false, leads: false }, cadence: "monthly", dow: 1, dom: 1, name: "",
+    obCity: "", obTheme: 1, obAuto: true,
+    addr: "", looked: false, sel: [0, 1, 2, 3, 5, 6], pTheme: "elegant", pBrand: "teal", pages: { cover: true, overview: true, property: true, comps: true, trends: true, range: true }, forWhom: "seller", publicPage: true
+  };
+  static THEMES = [["#18235c", "#0d9488"], ["#4F46E5", "#D97706"], ["#14532D", "#CA8A04"], ["#7F1D1D", "#DB2777"]];
+  static BRANDS = { red: "#DC2626", teal: "#0D9488", cyan: "#0E7490", amber: "#F59E0B", lime: "#84CC16", violet: "#7C3AED" };
+  static I = n => `https://unpkg.com/lucide-static@0.460.0/icons/${n}.svg`;
+  static KINDS = [
+    ["snapshot", "Market Snapshot", "Median, days, list-to-sale. The monthly one.", 30, false],
+    ["closed", "Closed Sales", "Who sold, for how much. Seller prospecting.", 30, true],
+    ["listings", "New Listings", "What just hit. Buyer prospecting.", 14, true],
+    ["inventory", "Active Inventory", "Everything for sale and months of supply.", 30, true],
+    ["bands", "Price Bands", "Which price range is moving.", 30, false],
+    ["featured", "Featured Listings", "Four homes to show off.", 90, false],
+    ["gallery", "Open Houses", "Paused — open-house data isn't reliable yet.", 7, false, true]
+  ];
+  static AUD = [["all", "Everyone", "No price or size filter"], ["first_time", "First-time buyers", "Under 70% of median · 2+ bed, 2+ bath"], ["luxury", "Luxury", "Above 150% of median, single-family"], ["families", "Families", "3+ bed, 2+ bath, single-family"], ["condo", "Condo watch", "Condos and townhomes only"], ["investors", "Investors", "Under 50% of median"]];
+  static COMPS = [["22 Canopy", "4 bd · 3 ba · 2,380 sf", "Aug 12", 0.3, 1380000, 2380], ["41 Cedarbrook", "3 bd · 2 ba · 1,540 sf", "Jul 30", 0.4, 1412000, 1540], ["7 Mustang", "4 bd · 3 ba · 2,290 sf", "Sep 3", 0.6, 1468000, 2290], ["63 Hedgerow", "3 bd · 2 ba · 1,480 sf", "Jun 18", 0.7, 1095000, 1480], ["118 Trailwood", "5 bd · 4 ba · 3,100 sf", "Aug 2", 0.5, 1890000, 3100], ["9 Cartwheel", "4 bd · 3 ba · 2,210 sf", "Sep 15", 0.1, 1395000, 2210], ["30 Rockrose", "4 bd · 2 ba · 2,050 sf", "Jul 9", 0.6, 1340000, 2050], ["55 Bluebell", "3 bd · 3 ba · 1,900 sf", "May 28", 0.7, 1255000, 1900], ["14 Sagebrush", "2 bd · 2 ba · 1,180 sf", "Aug 21", 0.4, 905000, 1180], ["72 Fallingstar", "4 bd · 3 ba · 2,460 sf", "Jun 2", 0.75, 1520000, 2460]];
+  artRef = React.createRef();
+  static fitScale(w, h) { return Math.max(0.2, Math.min(520 / 816, (w - 64) / 816, (h - 116) / 1056)); }
+  constructor(p) { super(p); this.state.sc = Component.fitScale(Math.max(0, window.innerWidth - 480), window.innerHeight - 100); }
+  measure() { this._ro = true; const sc = Component.fitScale(Math.max(0, window.innerWidth - 480), window.innerHeight - 100); if (Math.abs(sc - this.state.sc) > 0.002) this.setState({ sc }); }
+  componentDidMount() { this._m = () => this.measure(); window.addEventListener("resize", this._m); this.measure(); this._retry = setTimeout(this._m, 400); this._msg = e => { if (e.data && e.data.type === "comp-toggle") this.setState(s => ({ sel: s.sel.includes(e.data.index) ? s.sel.filter(x => x !== e.data.index) : [...s.sel, e.data.index] })); }; window.addEventListener("message", this._msg); }
+  componentWillUnmount() { clearInterval(this._t); clearTimeout(this._retry); window.removeEventListener("resize", this._m); window.removeEventListener("message", this._msg); }
+  run(n) { clearInterval(this._t); this.setState({ status: "working", prog: 0 }); this._t = setInterval(() => { this.setState(s => { if (s.prog + 1 >= n) { clearInterval(this._t); return { status: "done", prog: n }; } return { prog: s.prog + 1 }; }); }, 1100); }
+  renderVals() {
+    const S = this.state, C = Component, I = C.I;
+    const flow = S.flow || this.props.flow || "report";
+    const isOnb = flow === "onboarding", isProp = flow === "property", isSchedule = flow === "schedule", isMarket = flow === "report" || isSchedule;
+    const set = p => () => this.setState(p);
+    const pill = (on, label) => ({ label, bg: on ? "#0F172A" : "#fff", color: on ? "#fff" : "#475569", border: on ? "#0F172A" : "#E4E2DA" });
+    const radio = on => ({ ring: on ? "6px solid #0F172A" : "1.5px solid #CBD5E1", dot: "#fff", weight: on ? 700 : 500 });
+    const kindCfg = C.KINDS.find(k => k[0] === S.kind) || C.KINDS[0];
+    const hasAud = kindCfg[4];
+    const lookback = S.lookback || kindCfg[3];
+    const areaLabel = isOnb ? (S.obCity.trim() || "Your city") : S.areaMode === "zip" ? (S.zips.length ? (S.zips.length === 1 ? "ZIP " + S.zips[0] : S.zips.length + " ZIPs") : "ZIPs") : (S.city.trim() || "Irvine");
+    const deliver = S.deliver || (isSchedule ? "schedule" : "download");
+    const steps = isOnb ? [["obArea", "Your area"], ["obLook", "Your look"], ["obSend", "Send it to you"], ["obAuto", "Autopilot"]]
+      : isProp ? [["address", "Address"], ["comps", "Comparables"], ["look", "Look"], ["generate", "Generate"]]
+      : [["report", "Report"], ...(hasAud ? [["audience", "Audience"]] : []), ["area", "Area & window"], ["deliver", isSchedule ? "Schedule" : "Deliver"]];
+    const step = Math.min(S.step, steps.length - 1), cur = steps[step][0], last = step === steps.length - 1;
+    const s = Object.fromEntries(steps.map(([id]) => [id, id === cur]));
+    const goStep = i => () => i <= step && this.setState({ step: i, status: "idle" });
+    const recipCount = (S.recips.sphere ? 107 : 0) + (S.recips.past ? 0 : 0) + (S.recips.leads ? 9 : 0);
+    const anyRecip = S.recips.sphere || S.recips.past || S.recips.leads;
+    const estSel = S.sel.map(i => C.COMPS[i]);
+    const ppsfN = estSel.length ? estSel.reduce((a, c) => a + c[4] / c[5], 0) / estSel.length : 0;
+    const estN = Math.round(ppsfN * 2140 / 10000) * 10000;
+    const M = n => "$" + (n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : Math.round(n / 1000) + "K");
+    const canNext = isOnb ? (cur !== "obArea" || !!S.obCity.trim()) : isProp ? (cur !== "address" || S.looked) && (cur !== "comps" || S.sel.length >= 3) : (cur !== "area" || (S.areaMode === "city" ? !!S.city.trim() : S.zips.length > 0)) && (cur !== "deliver" || deliver === "download" || anyRecip);
+    const kindName = kindCfg[1];
+    const scheduleName = S.name || `${S.cadence === "weekly" ? "Weekly" : "Monthly"} ${areaLabel} ${kindName.replace("Market ", "")}`;
+    const dowName = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][S.dow];
+    const ord = n => n + (n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th");
+    const cadenceText = S.cadence === "weekly" ? `weekly on ${dowName}` : `monthly on the ${ord(S.dom)}`;
+    const audLabel = (C.AUD.find(a => a[0] === S.audience) || C.AUD[0])[1];
+    const nextLabel = !last ? "Continue" : isOnb ? (cur === "obAuto" ? (S.obAuto ? "Turn on autopilot" : "Finish") : "") : isProp ? "Generate report" : deliver === "download" ? "Generate PDF" : deliver === "send" ? `Send to ${recipCount} contacts` : "Turn on schedule";
+    const obSendLabel = "Send me this report";
+    const idx = (id) => steps.findIndex(x => x[0] === id);
+    const slot = (t, id) => ({ t, slot: true, go: goStep(idx(id)), weight: 700, color: "#0F172A", border: cur === id ? "2px solid #4F46E5" : "2px solid #D6D3CB", cursor: "pointer" });
+    const word = t => ({ t, go: () => {}, weight: 400, color: "#475569", border: "none", cursor: "default" });
+    let summary = [];
+    if (isMarket) { summary = [word("A"), slot(kindName, "report"), ...(hasAud && S.audience !== "all" ? [word("for"), slot(audLabel.toLowerCase(), "audience")] : []), word("for"), slot(areaLabel, "area"), word("over"), slot(lookback + " days", "area"), word(","), ...(deliver === "download" ? [slot("as a PDF", "deliver")] : deliver === "send" ? [word("sent to"), slot(recipCount + " contacts", "deliver")] : [word("sent"), slot(cadenceText, "deliver"), word("to"), slot(recipCount + " contacts", "deliver")]), word(".")]; }
+    if (isProp) { summary = [word("A"), slot(S.forWhom === "seller" ? "seller report" : "buyer report", "generate"), word("for"), slot(S.looked ? (S.addr.trim() || "14 Cartwheel") : "—", "address"), word("on"), slot(S.sel.length + " comps", "comps"), word("in"), slot(S.pTheme[0].toUpperCase() + S.pTheme.slice(1), "look"), word(".")]; }
+    const progressLines = isOnb ? [`Pulling 30 days of ${areaLabel} sales from CRMLS`, "Applying your colors and contact block", "Rendering the PDF", "Sending to jennifer@jenniferrealty.com"]
+      : isProp ? ["Reading the county record", `Scoring ${S.sel.length} comparable sales`, "Laying out " + Object.values(S.pages).filter(Boolean).length + " pages in " + S.pTheme, S.publicPage ? "Building the public page and QR code" : "Rendering the PDF"]
+      : [`Pulling ${lookback} days of ${areaLabel} data from CRMLS`, "Checking 118 closed · 94 active listings", "Writing the headline from the numbers", deliver === "download" ? "Rendering the PDF" : deliver === "send" ? `Sending to ${recipCount} contacts` : "Saving the schedule"];
+    const n = progressLines.length;
+    const working = S.status === "working", done = S.status === "done", editing = S.status === "idle";
+    const doneTitle = isOnb ? (S.obAuto ? `Your sphere is on autopilot.` : "Your first report is in your inbox.") : isProp ? "Your seller report is ready." : deliver === "download" ? `Your ${kindName} is ready.` : deliver === "send" ? `Sent to ${recipCount} contacts.` : `${scheduleName} is on.`;
+    const doneSub = isOnb ? (S.obAuto ? `The ${areaLabel} Snapshot is in your inbox now. The next one goes out Nov 1 at 9:00 AM.` : "Turn on monthly sending whenever you're ready, from Schedules.") : isProp ? `${S.sel.length} comps · estimate ${M(estN)} · ${Object.values(S.pages).filter(Boolean).length} pages.` : deliver === "schedule" ? `First send ${S.cadence === "weekly" ? "next " + dowName : "the " + ord(S.dom)} at 9:00 AM. You'll see who opens it the morning after.` : "We'll tell you who opens it the morning after.";
+    const doneActions = isOnb ? [{ icon: I("mail"), t: "Open the email", sub: "Sent to jennifer@jenniferrealty.com" }, { icon: I("users"), t: "Import contacts", sub: "CSV from your CRM, or add a few by hand" }, { icon: I("link-2"), t: "Set up your home-value page", sub: "Capture leads from your signature and signs" }]
+      : isProp ? [{ icon: I("download"), t: "Download PDF", sub: "6 pages · 2.1 MB" }, ...(S.publicPage ? [{ icon: I("qr-code"), t: "Public page & QR", sub: "trendyreports.io/p/k7m2q" }] : []), { icon: I("mail"), t: "Email it to the homeowner", sub: "From you, with the PDF attached" }]
+      : deliver === "download" ? [{ icon: I("download"), t: "Download PDF", sub: "1 page · 640 KB" }, { icon: I("share-2"), t: "Share to social", sub: "1080×1920 story image" }, { icon: I("send"), t: "Send it to contacts instead", sub: "Pick who, from your list" }]
+      : deliver === "send" ? [{ icon: I("eye"), t: "See who opens", sub: "Opens show up on Contacts the next morning" }, { icon: I("calendar"), t: "Make this monthly", sub: "Same report, same people, the 1st at 9 AM" }]
+      : [{ icon: I("calendar"), t: "View schedule", sub: `${scheduleName} · ${cadenceText}` }, { icon: I("send"), t: "Send one now too", sub: "Don't wait for the first run" }];
+    return {
+      flows: [["onboarding", "Get started"], ["report", "New report"], ["schedule", "New schedule"], ["property", "Property report"]].map(([id, label]) => ({ label, pick: () => this.setState({ flow: id, step: 0, status: "idle" }), bg: flow === id ? "#fff" : "transparent", color: flow === id ? "#0F172A" : "#94A3B8" })),
+      backLabel: isOnb ? "TrendyReports" : isProp ? "Property reports" : isSchedule ? "Schedules" : "Market reports", exitLabel: isOnb ? "Finish later" : "Save draft",
+      steps: steps.map(([id, label], i) => ({ label, n: i < step ? "✓" : i + 1, go: goStep(i), weight: i === step ? 700 : 500, color: i === step ? "#0F172A" : i < step ? "#334155" : "#94A3B8", dotBg: i === step ? "#0F172A" : i < step ? "#D1FAE5" : "#ECEAE3", dotFg: i === step ? "#fff" : i < step ? "#047857" : "#64748B" })),
+      showSummary: !isOnb && editing, summary, s, working, done, editing, primary: C.THEMES[isOnb ? S.obTheme : 1][0], accent: C.THEMES[isOnb ? S.obTheme : 1][1],
+      workingTitle: isOnb ? "Building your first report…" : isProp ? "Building the report…" : deliver === "send" ? "Building and sending…" : "Building your report…",
+      progress: progressLines.map((t, i) => { const d = i < S.prog, a = i === S.prog && working; return { t, color: d ? "#0F172A" : a ? "#0F172A" : "#94A3B8", weight: a ? 600 : 500, bg: d ? "#047857" : "transparent", ring: a ? "2px dashed #0F172A" : d ? "none" : "1.5px solid #CBD5E1", anim: a ? "tr-spin 1.4s linear infinite" : "none", iconColor: d ? "#fff" : "transparent" }; }),
+      doneTitle, doneSub, doneActions, dashboardHref: isOnb ? `App v3.dc.html?from=onboarding&city=${encodeURIComponent(areaLabel)}&theme=${S.obTheme}&autopilot=${S.obAuto ? 1 : 0}` : "App v3.dc.html", restart: () => this.setState({ status: "idle", step: 0 }), againLabel: isOnb ? "Start over" : "Make another",
+      kinds: C.KINDS.map(k => ({ id: k[0], name: k[1], note: k[2], cursor: k[5] ? "not-allowed" : "pointer", opacity: k[5] ? 0.5 : 1, border: S.kind === k[0] ? "#0F172A" : "#ECEAE3", bg: S.kind === k[0] ? "#FAFAF7" : "#fff", pick: () => !k[5] && this.setState({ kind: k[0], lookback: null }) })),
+      audiences: C.AUD.map(a => ({ label: a[1], desc: a[2], ...radio(S.audience === a[0]), pick: set({ audience: a[0] }) })),
+      areaModes: [["city", "City"], ["zip", "ZIP codes"]].map(([m, l]) => ({ ...pill(S.areaMode === m, l), pick: set({ areaMode: m }) })), areaIsCity: S.areaMode === "city", areaIsZip: S.areaMode === "zip",
+      city: S.city, onCity: e => this.setState({ city: e.target.value }), nearby: ["Irvine", "Tustin", "Newport Beach", "Costa Mesa", "Lake Forest"].map(name => ({ name, pick: set({ city: name }) })),
+      zipInput: S.zipInput, onZip: e => this.setState({ zipInput: e.target.value.replace(/\D/g, "").slice(0, 5) }), addZip: () => S.zipInput.length === 5 && S.zips.length < 5 && !S.zips.includes(S.zipInput) && this.setState({ zips: [...S.zips, S.zipInput], zipInput: "" }), zipKey: e => { if (e.key === "Enter" && S.zipInput.length === 5 && S.zips.length < 5) this.setState({ zips: [...S.zips, S.zipInput], zipInput: "" }); },
+      zips: S.zips.map(zip => ({ zip, remove: () => this.setState({ zips: S.zips.filter(z => z !== zip) }) })), zipHint: S.zips.length ? `${5 - S.zips.length} more allowed` : "Up to 5",
+      lookbacks: [7, 14, 30, 60, 90].map(d => ({ days: d, border: lookback === d ? "#0F172A" : "#ECEAE3", bg: lookback === d ? "#0F172A" : "#fff", color: lookback === d ? "#fff" : "#334155", pick: set({ lookback: d }) })), lookbackNote: lookback === kindCfg[3] ? `${kindCfg[3]} days is the default for ${kindName}.` : `Default for ${kindName} is ${kindCfg[3]} days.`,
+      areaLabel, previewKind: isOnb ? "snapshot" : S.kind, previewIsMarket: !isProp, previewIsProperty: isProp, pTheme: S.pTheme, pBrand: S.pBrand, pStreet: (S.looked ? S.addr.trim() : "") .replace(/,.*$/, "") || "14 Cartwheel", pPath: S.forWhom === "buyer" ? "consumer" : "agent",
+      artRef: this.artRef, previewScale: S.sc, previewW: Math.round(S.sc * 816) + "px", previewH: Math.round(S.sc * 1056) + "px",
+      tilt: done ? "-2deg" : "0deg", previewCaption: done ? "Generated just now · live MLS data" : isProp ? (S.looked ? `Cover · ${S.addr.trim() || "14 Cartwheel"}` : "Cover · sample home until you look one up") : `Live preview · sample numbers until generated`,
+      deliverTitle: isSchedule ? "When should it go out?" : "What happens with it?", deliverSub: isSchedule ? "Every run uses one report from your allowance and pulls fresh data that morning." : "You can always do the others afterwards.",
+      showDeliverChoice: !isSchedule, isSchedule: deliver === "schedule",
+      delivers: [["download", "Download the PDF", "Print it, attach it, post it.", "1 report"], ["send", "Send it to contacts now", "From you, with the PDF attached. You'll see who opens.", "1 report"], ["schedule", "Put it on a schedule", "Fresh data every send. The autopilot.", "1 report per send"]].map(d => ({ label: d[1], desc: d[2], cost: d[3], ...radio(deliver === d[0]), pick: set({ deliver: d[0] }) })),
+      needsRecipients: deliver !== "download",
+      recipientOpts: [["sphere", "My Sphere · 107"], ["past", "Past clients · 64"], ["leads", "Leads · 9"]].map(([k, l]) => ({ ...pill(S.recips[k], l), pick: () => this.setState({ recips: { ...S.recips, [k]: !S.recips[k] } }) })), recipientNote: anyRecip ? `${recipCount} people. Groups overlap; nobody gets it twice.` : "Pick at least one group.",
+      cadences: [["monthly", "Monthly"], ["weekly", "Weekly · Growth"]].map(([c, l]) => ({ ...pill(S.cadence === c, l), pick: set({ cadence: c }) })),
+      dayOpts: S.cadence === "weekly" ? ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((l, i) => ({ ...pill(S.dow === i, l), pick: set({ dow: i }) })) : [1, 5, 10, 15, 20, 25, 28].map(d => ({ ...pill(S.dom === d, ord(d)), pick: set({ dom: d }) })),
+      cadenceNote: `Sends ${cadenceText} at 9:00 AM Pacific. Change the hour in Settings.`, scheduleName, onName: e => this.setState({ name: e.target.value }),
+      obCity: S.obCity, onObCity: e => this.setState({ obCity: e.target.value }), obNearby: ["Irvine", "Tustin", "Newport Beach", "Costa Mesa", "Lake Forest"].map(name => ({ name, pick: set({ obCity: name }) })), obAreaLabel: areaLabel,
+      obThemes: C.THEMES.map(([p, ac], i) => ({ bg: `linear-gradient(135deg, ${p} 50%, ${ac} 50%)`, ring: i === S.obTheme ? `0 0 0 2px #fff, 0 0 0 4px ${p}` : "inset 0 0 0 1px rgba(0,0,0,0.1)", pick: set({ obTheme: i }) })),
+      obSent: !!S.obSent, toggleObAuto: set({ obAuto: !S.obAuto }), obAutoBg: S.obAuto ? "#059669" : "#CBD5E1", obAutoKnob: S.obAuto ? "21px" : "3px", obAutoNote: S.obAuto ? "First send Nov 1, 9:00 AM · uses 1 of 3 monthly reports" : "Off — you'll send by hand from Market reports",
+      addr: S.addr, onAddr: e => this.setState({ addr: e.target.value, looked: false }), addrKey: e => { if (e.key === "Enter") this.setState({ looked: true, addr: S.addr.trim() || "14 Cartwheel, Irvine" }); }, lookup: () => this.setState({ looked: true, addr: S.addr.trim() || "14 Cartwheel, Irvine" }), looked: S.looked, notLooked: !S.looked,
+      recentAddrs: ["14 Cartwheel, Irvine", "89 Maple Heights, Irvine", "310 Via Lido, Newport Beach"].map(a => ({ a, pick: set({ addr: a, looked: true }) })),
+      facts: [["Beds", "4", "#0F172A"], ["Baths", "—", "#5E636B"], ["Sq ft", "2,140", "#0F172A"], ["Lot", "5,200 sf", "#0F172A"], ["Built", "1998", "#0F172A"], ["Last sale", "$985K · 2016", "#0F172A"]].map(f => ({ k: f[0], v: f[1], color: f[2] })),
+      estimate: M(estN), compCount: S.sel.length, ppsf: "$" + Math.round(ppsfN), rangeText: estSel.length ? `${M(Math.min(...estSel.map(c => c[4])))} – ${M(Math.max(...estSel.map(c => c[4])))}` : "—",
+      autoComps: set({ sel: [5, 0, 2, 6, 1, 9] }), mapHash: `sel=${S.sel.join(",")}&brand=${encodeURIComponent(C.BRANDS[S.pBrand])}`,
+      compList: C.COMPS.map((c, i) => { const on = S.sel.includes(i); return { address: c[0], specs: c[1], sold: c[2], dist: c[3] + " mi", price: "$" + c[4].toLocaleString(), opacity: on ? 1 : 0.6, ring: on ? "none" : "1.5px solid #CBD5E1", boxBg: on ? "#0F172A" : "#fff", toggle: () => this.setState({ sel: on ? S.sel.filter(x => x !== i) : [...S.sel, i] }) }; }),
+      pThemes: [["elegant", "Elegant", "Serif, quiet, square corners"], ["bold", "Bold", "Heavy display, big numbers"], ["modern", "Modern", "Geometric, airy"]].map(t => ({ id: t[0], name: t[1], note: t[2], border: S.pTheme === t[0] ? "#0F172A" : "#ECEAE3", bg: S.pTheme === t[0] ? "#FAFAF7" : "#fff", pick: set({ pTheme: t[0] }) })),
+      pBrands: Object.entries(C.BRANDS).map(([k, hex]) => ({ hex, ring: S.pBrand === k ? `0 0 0 2px #fff, 0 0 0 4px ${hex}` : "inset 0 0 0 1px rgba(0,0,0,0.1)", pick: set({ pBrand: k }) })),
+      pPages: [["cover", "Cover", true], ["overview", "Summary", false], ["property", "The home", true], ["comps", "Comparables", true], ["trends", "Market trends", false], ["range", "Range of sales", false]].map(([k, l, req]) => ({ ...pill(S.pages[k], l + (req ? "" : "")), cursor: req ? "default" : "pointer", toggle: () => !req && this.setState({ pages: { ...S.pages, [k]: !S.pages[k] } }) })), pageCount: Object.values(S.pages).filter(Boolean).length,
+      audiencesP: [["seller", "The homeowner (seller report)", "Leads with the estimate and comparable sales"], ["buyer", "A buyer", "Leads with the home, the area and what's selling"]].map(a => ({ label: a[1], desc: a[2], ...radio(S.forWhom === a[0]), pick: set({ forWhom: a[0] }) })),
+      togglePublic: set({ publicPage: !S.publicPage }), publicBg: S.publicPage ? "#059669" : "#CBD5E1", publicKnob: S.publicPage ? "21px" : "3px",
+      back: () => step > 0 && this.setState({ step: step - 1 }), backVis: step > 0 ? "visible" : "hidden",
+      showSecondary: isOnb && cur === "obSend", secondary: () => this.setState({ step: step + 1 }), secondaryLabel: "Skip, just download",
+      nextLabel: isOnb && cur === "obSend" ? obSendLabel : nextLabel, nextCursor: canNext ? "pointer" : "not-allowed", nextBg: canNext ? "#0F172A" : "#E4E2DA", nextFg: canNext ? "#fff" : "#94A3B8",
+      next: () => { if (!canNext) return; if (isOnb && cur === "obSend") { this.run(4); this._afterRun = "obAuto"; return; } if (!last) this.setState({ step: step + 1 }); else this.run(n); }
+    };
+  }
+  componentDidUpdate(_, prev) {
+    if (!this._ro) this.measure();
+    if (prev.status === "working" && this.state.status === "done" && this._afterRun) { const a = this._afterRun; this._afterRun = null; if (a === "obAuto") this.setState({ status: "idle", step: 3, obSent: true }); }
+  }
+}
+</script>
+</body>
+</html>
