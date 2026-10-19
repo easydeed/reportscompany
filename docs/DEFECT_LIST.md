@@ -13092,10 +13092,26 @@ to it; a live 401 is not. Only CI or a deployment can produce that, and `apps/ap
 run in this container. **If the shape is wrong, CI is what will say so** — which is the trade that
 was taken knowingly, because an open door in production authentication is the worse risk.
 
-**Two things remain unknown and both bound how bad this was:** whether anything in front of the API
-strips unknown headers, and what `ENVIRONMENT` is actually set to in production. The second now
-matters less — the guard fails closed when it is unset — but it is still the difference between
-"this was never reachable" and "it was".
+**Two things remain unknown and both bound how bad this was.** Neither is a reason to doubt the
+guard; both are the difference between "the door was reachable" and "the door was theoretical", and
+a reader who finds this entry later should not have to guess which of those was established.
+
+**1. Does anything in front of the API strip unknown headers?** **ASKED AND UNKNOWN — 2026-10-19.**
+Put to Jerry directly, who does not know whether Render or anything else in front of the service
+drops headers it does not recognise. **Recorded as unknown, not as either answer**, and the working
+assumption for everything on this entry is therefore the unfavourable one: **`X-Demo-Account`
+reached the API from the public internet.** Every severity judgement above is written on that
+assumption.
+
+This is worth noting here rather than dropping, for two reasons. It is the kind of question that
+gets silently resolved into whichever answer is more comfortable the second time somebody reads the
+entry — and it has a bearing on **D-201**, whose route sits under a `_PUBLIC_PREFIXES` path and is
+reachable or not by the same mechanism. If it is ever established, it belongs on both entries. It
+does not need chasing: the guard makes it moot going forward, and it only changes the history.
+
+**2. What is `ENVIRONMENT` actually set to in production?** Still unread. It matters less now — the
+guard fails closed when the variable is unset — but it is what decides whether **D-201** is WRONG
+or BROKEN, and it is on the §T2 list of configuration facts that need one trip to Render.
 
 #### The admin-route behaviour is NOT a mitigation, and must not be recorded as one
 
@@ -13161,6 +13177,12 @@ questions need.**
 
 Like D-200, it needs an `account_id`. Like D-200, that is not a control: a UUID in a URL, an email
 header or a support ticket is not a secret.
+
+**And like D-200, whether the route is reachable from outside at all is unknown.** Jerry was asked
+on 2026-10-19 whether anything in front of the API strips unknown headers and does not know; the
+same uncertainty covers whether an unauthenticated request reaches a `_PUBLIC_PREFIXES` path from
+the internet. **Assumed reachable here**, which is why this is filed at WRONG rather than ROUGH.
+Recorded as unknown rather than as either answer — see D-200's "What the fix does not prove".
 
 #### The fix
 
@@ -13288,6 +13310,8 @@ back ambiguous in a way a summary would have hidden.
 
 - **Is production's DB role a superuser?** D-005/D-006's real-world severity depends on it. If production also connects as owner/superuser, D-005 is live exactly as reproduced. If production uses a restricted role, D-005 is contained but D-006 means the portal is showing zeros.
 - **Production env values** (T2.9/T2.10). Partially answered by the P2B trace above for the API service; the worker and Vercel sets are still outstanding — see "What I still need" above for exactly which variables settle which defect.
+- **`ENVIRONMENT` on the API service — one string, and it decides a severity.** If it is set to anything, `routes/unsubscribe.py:180`'s guard holds and **D-201** is a latent fail-open form. If it is unset, `os.getenv("ENVIRONMENT", "dev")` resolves to `"dev"`, the token-generating route is live on a `_PUBLIC_PREFIXES` path, and D-201 is BROKEN rather than WRONG. It no longer affects **D-200**, whose guard is written against `settings.ENVIRONMENT` and fails closed when unset — but the same string is what proves that.
+- ~~**Does anything in front of the API strip unknown headers?**~~ **ASKED 2026-10-19 — UNKNOWN, and recorded as unknown.** Jerry does not know whether Render or anything else in front of the service drops unrecognised headers. It bounds how reachable **D-200** and **D-201** were and changes nothing about either fix, so it does not need chasing. Listed here so that it is not quietly resolved into whichever answer is more comfortable on a later reading: **the working assumption on both entries is that an unauthenticated request reached the API from the public internet.** If it is ever established, it belongs on both.
 - **Scheduled delivery end-to-end** (T2.3). Needs a real send and a readable inbox.
 - **Does a deployed E2E environment exist?** (D-045). `e2e.yml` is disabled until someone can confirm a host these tests can run against *and* that all five `E2E_*` repository secrets are populated. Not a defect — a fact about the deployment that cannot be read from the repository. If the answer is no, the workflow should be deleted rather than re-enabled.
 - ~~**Is `apps/api/migrations/phase4_indexes.sql` applied in production?**~~ **ANSWERED (2026-08-18): no, and neither is `0042`.** `signup_tokens` exists but 5 of the 7 indexes do not, and the 2 that do are each declared by an *other*, applied migration. The file never ran; the table arrived by the route its own header describes — created inline by an old request handler. See **Production evidence reconciliation** for the proof, the confirming query, and the corrected bootstrap order.
