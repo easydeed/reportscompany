@@ -276,7 +276,7 @@ export default function AdminUserDetailPage() {
                 className="h-12 w-12 rounded-full object-cover"
               />
             ) : (
-              <div className="h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg font-bold">
+              <div className="h-12 w-12 rounded-full bg-[var(--agent-primary)] text-[var(--primary-foreground)] flex items-center justify-center text-lg font-bold">
                 {initials}
               </div>
             )}

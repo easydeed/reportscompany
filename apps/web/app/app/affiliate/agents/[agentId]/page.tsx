@@ -137,12 +137,17 @@ function UsageBar({ label, used, limit }: { label: string; used: number; limit: 
           {isUnlimited ? `${used} / ∞` : `${used} / ${limit}`}
         </span>
       </div>
-      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${isUnlimited ? 'bg-indigo-200' : color}`}
-          style={{ width: isUnlimited ? '20%' : `${pct}%` }}
-        />
-      </div>
+      {/* No bar for an unlimited allowance (D-195, Design 2026-10-19): a
+          fraction of an undefined whole is not a measurement. This rendered a
+          20%-wide fill against infinity. */}
+      {!isUnlimited && (
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${color}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
     </div>
   )
 }
@@ -444,7 +449,7 @@ export default function AgentDetailPage() {
                         <Badge
                           variant="outline"
                           className={report.is_scheduled
-                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200 text-[11px] gap-1'
+                            ? 'bg-accent text-accent-foreground border-transparent text-[11px] gap-1'
                             : 'bg-muted text-muted-foreground text-[11px]'}
                         >
                           {report.is_scheduled ? (
@@ -460,7 +465,7 @@ export default function AgentDetailPage() {
                             href={report.pdf_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                            className="inline-flex items-center gap-1 text-xs text-[var(--link)] hover:text-[var(--link-hover)] hover:underline"
                           >
                             <Download className="w-3.5 h-3.5" />
                             Download

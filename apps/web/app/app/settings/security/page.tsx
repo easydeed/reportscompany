@@ -199,7 +199,7 @@ export default function SecurityPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--body)] mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">Loading security settings...</p>
         </div>
       </div>
@@ -223,8 +223,8 @@ export default function SecurityPage() {
             {/* Email Row */}
             <div className="p-5 flex items-center justify-between gap-4">
               <div className="flex items-center gap-4 min-w-0">
-                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
-                  <Mail className="w-5 h-5 text-indigo-600" />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-5 h-5 text-[var(--body)]" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -242,7 +242,7 @@ export default function SecurityPage() {
 
               <Dialog open={emailModalOpen} onOpenChange={setEmailModalOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 flex-shrink-0">
+                  <Button variant="ghost" size="sm" className="text-[var(--link)] hover:text-[var(--link-hover)] hover:bg-muted flex-shrink-0">
                     Change
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
@@ -313,7 +313,7 @@ export default function SecurityPage() {
 
               <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 flex-shrink-0">
+                  <Button variant="ghost" size="sm" className="text-[var(--link)] hover:text-[var(--link-hover)] hover:bg-muted flex-shrink-0">
                     Change
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </Button>
@@ -438,7 +438,7 @@ export default function SecurityPage() {
                       )}&body=${encodeURIComponent(
                         `Hi TrendyReports team,\n\nI would like to request deletion of my account and all associated data.\n\nAccount email: ${profile?.email ?? ""}\n\nThank you.`,
                       )}`}
-                      className="text-indigo-600 hover:text-indigo-700 hover:underline"
+                      className="text-[var(--link)] hover:text-[var(--link-hover)] hover:underline"
                     >
                       support@trendyreports.io
                     </a>

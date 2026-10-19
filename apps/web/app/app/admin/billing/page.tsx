@@ -428,7 +428,7 @@ export default function AdminBillingPage() {
                             variant={isPaid ? "default" : "secondary"}
                             className={
                               isPaid
-                                ? "bg-indigo-100 text-indigo-700 border-indigo-200"
+                                ? "bg-accent text-accent-foreground border-transparent"
                                 : ""
                             }
                           >

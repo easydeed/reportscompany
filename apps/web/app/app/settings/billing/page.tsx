@@ -197,7 +197,7 @@ export default function BillingPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--body)] mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">Loading billing information...</p>
         </div>
       </div>
@@ -321,12 +321,12 @@ export default function BillingPage() {
                       key={plan.slug}
                       className={cn(
                         "border rounded-xl p-4 relative transition-all",
-                        plan.popular && !isCurrent && "border-indigo-300 ring-1 ring-indigo-100",
+                        plan.popular && !isCurrent && "border-[1.5px] border-[var(--border-selected)]",
                         isCurrent && "bg-muted/30 border-border"
                       )}
                     >
                       {plan.popular && !isCurrent && (
-                        <Badge className="absolute -top-2 right-3 bg-indigo-600 text-white border-0 text-[10px]">
+                        <Badge className="absolute -top-2 right-3 bg-primary text-primary-foreground border-0 text-[10px]">
                           <Sparkles className="w-3 h-3 mr-0.5" />
                           Popular
                         </Badge>

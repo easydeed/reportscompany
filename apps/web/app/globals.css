@@ -120,6 +120,28 @@ html {
   --duration-fast: 0.2s;                     /* hover bg, switch knob */
   --duration-slow: 0.5s;                     /* artifact transforms */
 
+  /* ── Selection, from Design's 2026-10-19 answer on tints ──
+     THERE IS NO TINT RAMP, AND NO TINTED SURFACE ON CHROME. Asked whether the
+     25 `bg-indigo-50/100/200` surfaces in this app map to a ramp we should be
+     reading, Design answered that they do not exist: with the primary now ink,
+     a tinted indigo panel is the strongest colour on the page and competes with
+     the report, which is the thing the agent is selling.
+     Selection is therefore STRUCTURE, not fill. */
+  --surface-selected: #FFFFFF;
+  --border-selected: #0F172A;
+
+  /* The semantic status pairs above are the ONLY tinted fills permitted on
+     chrome. Anything else that wants a tint wants a border, a label, or
+     nothing.
+
+     ONE EXCEPTION, sanctioned by Design in the same answer: the initials
+     circle may be filled with --agent-primary, because the circle IS the
+     agent. It is the one place on chrome where the account's own brand colour
+     is the subject rather than decoration. Read without this line, the avatar
+     looks like a surface that survived the sweep; it did not, it was kept
+     deliberately. Everything else that used to be a tinted icon chip is now a
+     bare glyph in --body. */
+
   /* ── Carried from the pre-adoption :root ──
      The ONE name tokens.css does not define (7 uses in apps/web). Dropping it in a
      "drop-in replacement" would leave those seven reading an undefined variable. */

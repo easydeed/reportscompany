@@ -553,7 +553,7 @@ function DashboardTopbar({ accountType, isAdmin, isCompanyAdmin, isAffiliate, is
         </span>
       )}
       {!isAdmin && accountType === "REGULAR" && !isSponsored && (
-        <span className="rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-2.5 py-0.5 uppercase tracking-wide">
+        <span className="rounded-full bg-accent text-accent-foreground text-[11px] font-semibold px-2.5 py-0.5 uppercase tracking-wide">
           Agent
         </span>
       )}
