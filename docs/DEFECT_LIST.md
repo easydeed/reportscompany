@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 64 | Real, unfixed |
-| `fixed` | 122 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 123 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **193** | D-001 … D-193, contiguous, no duplicates |
+| **Total** | **194** | D-001 … D-195, no duplicates. **D-194 is absent on this branch only** — it is filed in PR #176 and unmerged, so `scripts/derive.py` here reports `missing [194]`. The range closes when #176 merges; no edit is needed to close it |
 
 **Open by severity:** BROKEN 5 · WRONG 18 · FRAGILE 17 · ROUGH 24. (Sums to 64, the open total.)
 
@@ -12440,6 +12440,60 @@ immediately rather than speculatively.
 Nothing is currently wrong. But the two instances above are what the gap produces, they arrived
 eight days apart from a single change, and the next visual change to `apps/web` has exactly the same
 cover. The entry is open so that "we could not see it" stops being available as an explanation.
+
+---
+
+### D-195 — an unlimited allowance drew a 20%-full bar, in the one copy of `UsageBar` out of five that nobody reconciled
+
+**Severity:** WRONG · **Affects:** `/app/affiliate/agents/[agentId]` — the per-agent detail page an
+affiliate opens to see what an agent they sponsor has used · **Found during:** applying Design's
+2026-10-19 answer on tints, which named this surface as a defect rather than a restyle
+**Status:** `fixed` — the bar is gone. The condition that produced it is not; see below.
+
+**What it drew.** `limit >= 99999` is this codebase's sentinel for "unlimited". On that branch the
+component painted a track and filled a fifth of it:
+
+    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all ${isUnlimited ? 'bg-indigo-200' : color}`}
+        style={{ width: isUnlimited ? '20%' : `${pct}%` }}
+      />
+    </div>
+
+The number beside it read `147 / ∞`. The bar beneath it read *one fifth used* — of nothing, because
+there is no whole. **A fraction of an undefined denominator is not a measurement**, and the
+direction it errs in is the bad one: a filled track is the universal shape for "you are consuming
+your allowance", shown to exactly the accounts that have none to consume. The 20% is not derived
+from anything; it is a literal, chosen to make the bar look alive.
+
+Design's wording, which is why this is filed rather than restyled: *"'Unlimited' with a full-width
+tinted track reads as 100% used, which is the opposite. That one is a DEFECT, file it separately."*
+
+**The part worth keeping.** `UsageBar` is defined **five times**, in five files, with a
+character-identical signature and the same `99999` sentinel, and is called three times at each site:
+
+| definition | on unlimited |
+|---|---|
+| `app/app-layout.tsx:237` | no bar — `{!isUnlimited && …}` |
+| `app/app/settings/billing/page.tsx:40` | no bar — `{!isUnlimited && …}` |
+| `app/app/company/page.tsx:114` | no bar — `{!isUnlimited && …}` |
+| `components/v0-styling/AffiliateDashboardShell.tsx:103` | no bar **ever**, for anybody — same name, different component |
+| `app/app/affiliate/agents/[agentId]/page.tsx:127` | **a 20%-wide fill against infinity** |
+
+So the thing Design ruled on was already the behaviour of three of the four bar-drawing copies. This
+was not a decision anyone made and then applied inconsistently — it is **one copy that never
+received a fix the others got**, and nothing in the repository could have reported the divergence,
+because there is no shared component to diff against. Four of the five also compute
+`pct = isUnlimited ? 0` and then never read it, which is the fossil of the fix: whoever wrote the
+guard left the dead expression behind, four times, and the fifth file had the guard omitted.
+
+**What is not fixed.** The five copies. This entry fixes the rendering on the one route that was
+wrong; the next change to how an allowance is drawn still has to be made five times, and the same
+failure is available again. `app/app/company/page.tsx:114` additionally hard-codes `bg-[#6366F1]`,
+which is a Phase 1 seam in its own right.
+
+**Fixed:** `chore/tint-removal-design-answer` — the track is now inside `{!isUnlimited && …}`, so an
+unlimited allowance renders its count and `∞` and no bar at all.
 
 ---
 

@@ -230,7 +230,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
           }
         />
 
-        <Card className="border-indigo-200/60 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm">
+        <Card className="border-border bg-card">
           <div className="p-5 space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -239,8 +239,8 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                   {isCompanyRep ? 'Title Rep Dashboard' : 'Affiliate Dashboard'}
                 </p>
               </div>
-              <div className="rounded-xl bg-indigo-100 p-2.5">
-                <TrendingUp className="h-5 w-5 text-indigo-600" />
+              <div className="p-2.5">
+                <TrendingUp className="h-5 w-5 text-[var(--body)]" />
               </div>
             </div>
 
@@ -381,7 +381,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent text-accent-foreground border border-transparent">
                             {account.plan_slug}
                           </span>
                         </td>

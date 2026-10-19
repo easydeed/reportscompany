@@ -263,7 +263,7 @@ export default function PropertyReportsPage() {
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
                           report.report_type === "seller" 
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-200" 
+                            ? "bg-accent text-accent-foreground border-transparent" 
                             : "bg-blue-50 text-blue-700 border-blue-200"
                         }`}>
                           {report.report_type === "seller" ? "Seller" : "Buyer"}

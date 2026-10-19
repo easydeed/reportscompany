@@ -152,8 +152,8 @@ const CompCard = memo(function CompCard({
               ${
                 comp.status.toLowerCase() === "closed" ||
                 comp.status.toLowerCase() === "sold"
-                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300"
-                  : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                  ? "bg-[var(--success-muted)] text-[var(--success-foreground)]"
+                  : "bg-[var(--info-muted)] text-[var(--info-foreground)]"
               }
             `}
           >

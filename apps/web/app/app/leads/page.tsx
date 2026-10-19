@@ -186,7 +186,7 @@ export default function LeadsPage() {
 
   const getSourceBadge = (source: string) => {
     return source === "qr_scan" 
-      ? <Badge variant="outline" className="border-indigo-300 text-indigo-700">QR Scan</Badge>
+      ? <Badge variant="outline" className="bg-accent text-accent-foreground border-transparent">QR Scan</Badge>
       : <Badge variant="outline" className="border-blue-300 text-blue-700">Direct Link</Badge>
   }
 

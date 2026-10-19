@@ -379,7 +379,7 @@ export default function AdminAccountDetailPage() {
 
       {/* Sponsor / Affiliate Info */}
       {account.account.sponsor_account_id && (
-        <Card className="mb-6 border-indigo-200 bg-indigo-50/30">
+        <Card className="mb-6 border-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <Building className="h-5 w-5 text-indigo-500" />
@@ -399,7 +399,7 @@ export default function AdminAccountDetailPage() {
       )}
 
       {account.account.account_type === "INDUSTRY_AFFILIATE" && (
-        <Card className="mb-6 border-indigo-200 bg-indigo-50/30">
+        <Card className="mb-6 border-border">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <Users className="h-5 w-5 text-indigo-500" />
@@ -429,7 +429,7 @@ export default function AdminAccountDetailPage() {
             <Link href={`/app/admin/reports?account_id=${accountId}`}>
               <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors group">
                 <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-md bg-indigo-100 flex items-center justify-center">
+                  <div className="h-9 w-9 rounded-md flex items-center justify-center">
                     <FileText className="h-4 w-4 text-indigo-600" />
                   </div>
                   <div>
