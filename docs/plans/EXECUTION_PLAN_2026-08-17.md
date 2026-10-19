@@ -400,6 +400,28 @@ it.**
   the tool until the tool is shown to have run.** Same class as "a number in a tool's output is a
   property of the tool" — one rule up, one layer down.
 
+  **WIDENED 2026-10-19: A BROWSER IS A CACHE LIKE ANY OTHER, AND SO IS A DEV SERVER.** The `.pyc`
+  above is one instance of a shape that has now fired **three times in a browser** while measuring
+  the `apps/web` redesign. Next's dev server did not recompile `app/globals.css` after an edit, so:
+
+  * a token swap measured **0.00% of pixels changed on two routes** — screenshots byte-identical,
+    entirely convincing, and reporting that the change did nothing;
+  * an `h1` rule measured **identical computed type in both states**, which reads as "the rule has
+    no effect" and meant "the rule was never loaded";
+  * and in between, a server that looked restarted was the old process still holding the port, so a
+    third measurement was taken against a stylesheet two edits stale.
+
+  The remedy is the same one rung lower: **read the value back out of the running thing, not off
+  the disk.** `getComputedStyle(document.documentElement).getPropertyValue('--primary')` returning
+  `#4f46e5` against a file on disk that says `#0F172A` is the whole check, it costs one evaluate
+  call, and it caught every instance. Pair it with the process check — `ps -o etimes` on the server
+  you think you restarted — because "I restarted it" is a claim about a command's exit code, not
+  about the process listening on the port.
+
+  Every state in the authenticated-route table on D-193 was verified that way **before** capture,
+  not only the one that failed. That is the difference between catching it once and not being
+  caught by it again.
+
 - **A check that cannot be fixed yet belongs in `xfail(strict=True)` with its defect named — not
   in a permanently red build, and never in a `skip`.** Unfixable red is not honesty, it is the
   mechanism that hid D-038 and D-041: a check nobody can act on trains everyone to ignore the

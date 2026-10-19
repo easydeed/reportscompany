@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 63 | Real, unfixed |
+| `open` | 64 | Real, unfixed |
 | `fixed` | 122 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **192** | D-001 … D-192, contiguous, no duplicates |
+| **Total** | **193** | D-001 … D-193, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 18 · FRAGILE 16 · ROUGH 24. (Sums to 63, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 18 · FRAGILE 17 · ROUGH 24. (Sums to 64, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -12377,6 +12377,69 @@ never loaded". Caught by reading `--primary` out of `getComputedStyle(documentEl
 the pre-Phase-0 value against a post-Phase-0 file on disk. **Every state in the table above was
 verified that way before it was captured.** A browser is a cache like any other; assert the mutation
 landed.
+
+---
+
+### D-193 — an unauthenticated render is not a sample of an authenticated product, and this repository had no way to look at the latter
+
+**Severity:** FRAGILE · **Affects:** every visual change to `apps/web` — 98 routes, of which the
+**six** that render without a session are the only ones anyone had ever seen · **Found during:**
+verifying D-192, which was itself only findable once a logged-in page had been rendered
+**Status:** `open` — this is a capability gap, not a code defect. Nothing is broken; the product
+cannot be looked at.
+
+**Two defects in eight days came from the same cause, and neither was a gate failure.**
+
+| | what happened |
+|---|---|
+| **D-192** | Phase 0's `a { color: var(--link) }` turned every sidebar nav item indigo. Live on `main` through two merges. |
+| **the size of Phase 0 itself** | reported as **0.36% / 1.30%** of pixels changed for three merges. Measured on authenticated routes once they could be rendered: **17.76% – 31.57%**. |
+
+The second is the one worth generalising, because **the number was never wrong**. `/` and `/login`
+really did change by about a percent. They are simply the two pages the redesign touches least —
+they carry their own hard-coded colours and no sidebar — and they were the only two anyone could
+open. **A measurement taken where the effect is smallest, reported as the effect.**
+
+#### Why both were invisible, stated as a property rather than a failure
+
+There is no gate to blame. `frontend-tests.yml` has died at `Install deps` since 2026-09-30, but
+even green it runs 58 jsdom unit tests that render no page. The contrast auditor is PDF-only. What
+is missing is not a check — it is **the ability to see the thing at all**: every screenshot taken of
+this product before 2026-10-15 was of `/` or `/login`, because `middleware.ts` redirects `/app/*`
+without an `mr_token` cookie and nobody had ever minted one.
+
+#### WHAT IT WOULD TAKE, roughly, because that is the thing that would have caught both
+
+The pieces exist and were assembled by hand twice last week:
+
+1. **A session.** `middleware.ts:10` decodes the JWT and checks `exp`; it does **not** verify the
+   signature. A locally minted token renders the whole authenticated chrome. One helper, ~15 lines.
+   *(This is a property of the dev middleware, not an invitation: it is why a LOCAL render works,
+   and it is also worth knowing that the only thing standing between a forged cookie and the app
+   shell is the API refusing the data behind it.)*
+2. **A render script** — boot `next dev`, mint the token, visit N routes, capture. ~60 lines; the
+   version used for D-192 and this entry is in the session scratch and should be committed rather
+   than rewritten a third time.
+3. **Assertions that are not pixels.** The pixel diff is what made the finding, but it is a poor
+   gate here: `/app`'s noise floor measured **0.04%** one hour and **4.56%** the next, and
+   `/app/reports` **0.00%** then **13.38%**, because skeleton loading states settle differently
+   between captures. A durable gate reads **computed styles off named elements** — the same choice
+   `test_pdf_contrast.py` made for the same reason — and a per-route noise floor must be measured
+   before any pixel number is believed.
+4. **The frontend CI has to install first.** `pnpm install --frozen-lockfile` fails because root
+   `package.json` gained `pngjs` in #109 and `pnpm-lock.yaml` was never regenerated. One command.
+   Until that is fixed, nothing added here runs anywhere but a developer's machine.
+
+**Estimate, and it is an estimate:** a day for (1)–(3) against a handful of routes, and the real
+decision is which assertions are worth pinning — not the harness, which is the easy part. **Phase
+1's remaining groups are all behind this same login**, so whatever is built here is used
+immediately rather than speculatively.
+
+#### Why this is FRAGILE rather than ROUGH
+
+Nothing is currently wrong. But the two instances above are what the gap produces, they arrived
+eight days apart from a single change, and the next visual change to `apps/web` has exactly the same
+cover. The entry is open so that "we could not see it" stops being available as an explanation.
 
 ---
 
