@@ -13,7 +13,10 @@ that did not fire (exit 1) and a harness that could not prove its state
 """
 import importlib.util
 import json
+import signal
+import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -196,3 +199,174 @@ def test_the_predecessor_is_left_in_place():
     predecessor = REPO / "scripts/regress.py"
     assert predecessor.is_file()
     assert "themes.py" in predecessor.read_text(encoding="utf-8")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# D-196 — the failure that corrupts everything measured after it
+#
+# The harness was piped to `head -40`. head exited, the next `print()` raised
+# BrokenPipeError, and the process died AFTER writing the mutation and BEFORE
+# the restore, with no exit code, because stdout was already gone. These run
+# the harness as a real subprocess, because a signal and a dead pipe are
+# properties of a process and cannot be asserted in-process.
+#
+# The kill window is found by POLLING FOR THE SENTINEL rather than by sleeping
+# a guessed interval: the sentinel exists exactly between "about to mutate" and
+# "restore verified", so waiting for it is the deterministic way to be inside
+# the window this entry is about.
+# ─────────────────────────────────────────────────────────────────────────────
+
+SENTINEL = REPO / ".regress-mutation-in-progress.json"
+
+
+def _slow_spec(tmp_path, n=12):
+    """A spec whose gate is green and inert, long enough to be interrupted."""
+    targets = []
+    muts = []
+    for i in range(n):
+        t = tmp_path / f"f{i}.txt"
+        t.write_text(f"ORIGINAL {i}\n", encoding="utf-8")
+        targets.append(t)
+        muts.append({
+            "name": f"m{i}",
+            "file": str(t),
+            "old": f"ORIGINAL {i}",
+            "new": f"MUTATED {i}",
+            "test": ("--collect-only -q "
+                     "tests/test_regression_harness_guards_itself.py"),
+        })
+    spec = tmp_path / "spec.json"
+    spec.write_text(json.dumps(muts), encoding="utf-8")
+    return spec, targets
+
+
+def _launch(spec, stdout=subprocess.DEVNULL, shell_cmd=None):
+    if shell_cmd:
+        return subprocess.Popen(shell_cmd, cwd=REPO, shell=True)
+    return subprocess.Popen(
+        [sys.executable, str(HARNESS), str(spec)],
+        cwd=REPO, stdout=stdout, stderr=subprocess.DEVNULL)
+
+
+def _wait_for_sentinel(proc, timeout=30.0):
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if SENTINEL.exists():
+            return True
+        if proc.poll() is not None:
+            return False
+        time.sleep(0.01)
+    return False
+
+
+@pytest.fixture(autouse=True)
+def _no_stale_sentinel():
+    """Never let one of these tests leave the real repo's sentinel behind.
+
+    If it survived, every later run of the harness would refuse to start —
+    which is the correct behaviour and a terrible thing to inherit from a test.
+    """
+    yield
+    SENTINEL.unlink(missing_ok=True)
+
+
+def test_a_dead_consumer_does_not_abort_the_cycle(tmp_path):
+    """The reported bug, reproduced through a real pipe to `head`.
+
+    Before the fix this left the mutated file on disk. The assertion is about
+    the TREE, not about the output: nothing this harness prints is worth a
+    corrupted working copy.
+    """
+    spec, targets = _slow_spec(tmp_path, n=4)
+    cmd = f"{sys.executable} {HARNESS} {spec} 2>&1 | head -2"
+    proc = _launch(spec, shell_cmd=cmd)
+    proc.wait(timeout=120)
+    for i, t in enumerate(targets):
+        assert t.read_text(encoding="utf-8") == f"ORIGINAL {i}\n", (
+            f"{t.name} was left mutated after the consumer closed the pipe"
+        )
+    assert not SENTINEL.exists(), (
+        "the run completed but left its sentinel, so the next run would refuse"
+    )
+
+
+def test_sigterm_mid_mutation_still_restores_and_exits_2(tmp_path):
+    """`SIGTERM`'s default disposition kills the process outright, skipping
+    every `finally`. It is turned into an exception for exactly this reason."""
+    spec, targets = _slow_spec(tmp_path)
+    proc = _launch(spec)
+    assert _wait_for_sentinel(proc), "never entered a mutation window"
+    proc.send_signal(signal.SIGTERM)
+    assert proc.wait(timeout=120) == 2, (
+        "a harness killed mid-mutation has said nothing about any gate, which "
+        "is exit 2 and not exit 1"
+    )
+    for i, t in enumerate(targets):
+        assert t.read_text(encoding="utf-8") == f"ORIGINAL {i}\n"
+    assert not SENTINEL.exists()
+
+
+def test_sigkill_leaves_a_sentinel_and_the_next_run_refuses_to_start(tmp_path):
+    """The one case code in this process cannot cover.
+
+    No handler runs, no `finally` runs, and the mutation stays on disk. What
+    must happen instead is that the NEXT run declines to measure anything
+    against a tree it cannot vouch for — and that `--restore` recovers it only
+    after proving the file is still the text this harness wrote.
+    """
+    spec, targets = _slow_spec(tmp_path)
+    proc = _launch(spec)
+    assert _wait_for_sentinel(proc), "never entered a mutation window"
+    proc.kill()
+    proc.wait(timeout=30)
+
+    assert SENTINEL.exists(), "a SIGKILL left nothing to recover from"
+    record = json.loads(SENTINEL.read_text(encoding="utf-8"))
+    victim = Path(record["file"])
+    assert victim.read_text(encoding="utf-8") == record["mutated"]
+
+    # A later run must do NOTHING while that is true.
+    second = subprocess.run(
+        [sys.executable, str(HARNESS), str(spec)],
+        cwd=REPO, capture_output=True, text=True)
+    assert second.returncode == 2, (
+        f"a run started against a tree holding someone else's mutation: "
+        f"{second.returncode}"
+    )
+    assert "left a mutation applied" in second.stderr
+    assert victim.read_text(encoding="utf-8") == record["mutated"], (
+        "the refusing run modified the file it refused to measure against"
+    )
+
+    # And --restore puts it back.
+    third = subprocess.run(
+        [sys.executable, str(HARNESS), "--restore"],
+        cwd=REPO, capture_output=True, text=True)
+    assert third.returncode == 0, third.stderr
+    assert victim.read_text(encoding="utf-8") == record["original"]
+    assert not SENTINEL.exists()
+    for i, t in enumerate(targets):
+        assert t.read_text(encoding="utf-8") == f"ORIGINAL {i}\n"
+
+
+def test_restore_refuses_when_the_file_moved_on_after_the_mutation(tmp_path):
+    """Misfire (2), one level up: a recovery source on disk can be older than a
+    legitimate later edit. `--restore` holds the MUTATED text too, so it can
+    prove the file is still the one it broke before writing to it."""
+    target = tmp_path / "moved-on.txt"
+    target.write_text("ORIGINAL\n", encoding="utf-8")
+    SENTINEL.write_text(json.dumps({
+        "file": str(target),
+        "original": "SOMETHING OLDER\n",
+        "mutated": "WHAT THE HARNESS WROTE\n",
+        "pid": 1,
+    }), encoding="utf-8")
+
+    out = subprocess.run(
+        [sys.executable, str(HARNESS), "--restore"],
+        cwd=REPO, capture_output=True, text=True)
+    assert out.returncode == 2
+    assert "refused" in out.stderr
+    assert target.read_text(encoding="utf-8") == "ORIGINAL\n", (
+        "--restore discarded an edit made after the mutation"
+    )

@@ -5,6 +5,20 @@ import os
 import sys
 from pathlib import Path
 
+# ── D-200. This must happen BEFORE anything imports `api.settings` ──────────
+#
+# `X-Demo-Account` is how eight files in this directory authenticate, and
+# `authn.py` now accepts it only when `settings.ENVIRONMENT` is exactly
+# "test". `settings` is a pydantic-settings object built at import time from
+# the environment, so setting this after the first `from api.settings import
+# settings` would have no effect — and the symptom would be eight test files
+# getting 401 with nothing to say why.
+#
+# conftest is imported before any test module, so this is the one place it can
+# go. `setdefault`, not assignment: a CI job that sets ENVIRONMENT itself keeps
+# its value rather than having it silently overwritten here.
+os.environ.setdefault("ENVIRONMENT", "test")
+
 # Add src to Python path for imports
 src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))

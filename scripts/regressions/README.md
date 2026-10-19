@@ -9,6 +9,15 @@ Exit 0 means every mutation fired. Exit 1 means one did not, which is a gate
 that does not guard. Exit 2 means the harness could not prove its own state and
 has told you nothing about the gate.
 
+**Redirect, do not pipe** — `> out.txt 2>&1` — and run `git status` afterwards.
+D-196: piping this to `head` once killed it between writing a mutation and
+restoring it, leaving `middleware.ts` mutated with no exit code at all. That is
+fixed (`_say` survives a dead consumer, `SIGINT`/`SIGTERM` raise so the restore
+still runs, and `.regress-mutation-in-progress.json` makes a later run refuse to
+start after a `SIGKILL` — recover with `--restore`), and the habit is still the
+right one. `harness_restore.json` holds the six mutations that prove it, and
+they mutate the harness that runs them.
+
 **Why these are recorded rather than re-invented.** "Seen to fail" is the only
 evidence a gate works, and a mutation described in a commit message cannot be
 re-run. Keeping the mutation itself means the claim can be checked a year later

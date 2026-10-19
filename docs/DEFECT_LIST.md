@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 68 | Real, unfixed |
-| `fixed` | 123 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 69 | Real, unfixed |
+| `fixed` | 125 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **198** | D-001 … D-198, contiguous, no duplicates |
+| **Total** | **201** | D-001 … D-201, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 19 · ROUGH 24. (Sums to 68, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 19 · ROUGH 24. (Sums to 69, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -12519,7 +12519,8 @@ unlimited allowance renders its count and `∞` and no bar at all.
 **Severity:** WRONG · **Affects:** `scripts/apply_regressions.py` — the instrument behind every
 "seen to fail" claim in this remediation, 10 spec files, 60-odd recorded mutations ·
 **Found during:** running `tint_answer.json` for #177, by tripping it
-**Status:** `open` — filed, not fixed. The remedy is scoped below and is about ten lines.
+**Status:** `fixed` — `fix/d196-harness-restore`. All four parts of the remedy below are built, and
+each is held by a test that kills a real run.
 
 **What happened.** The harness output was piped to `head -40`. `head` exited after forty lines,
 the next `print()` raised `BrokenPipeError`, and Python terminated the process — **after the
@@ -12573,10 +12574,44 @@ it survives only because `tail` consumes all of stdin. `head` and `grep -m` do n
 
 (3) is the only one that covers `SIGKILL` and a dead container, which (1) and (2) cannot.
 
-**Operational note until it is fixed.** Redirect to a file and read the file —
+**Operational note, still worth following.** Redirect to a file and read the file —
 `python3 scripts/apply_regressions.py spec.json > out.txt 2>&1; echo $?` — rather than piping to a
 pager or a head. And `git status` after any regression run, which would have shown this in one
 line.
+
+#### Built, and each part held by a test that kills a real run
+
+All four, in `fix/d196-harness-restore`:
+
+| part | what it closes | proved by |
+|---|---|---|
+| nothing between `apply_mutation` and the `try` whose `finally` restores — the `print` that sat there is inside it now | the exact reported death | `R6` puts the statement back; the SIGTERM test fails |
+| `_say` survives a dead consumer (and redirects its own stdout to `/dev/null` so the interpreter does not re-raise at shutdown); `SIGINT`/`SIGTERM` raise `Interrupted` so the `finally` runs | the pipe, and an ordinary `kill` | `test_a_dead_consumer_does_not_abort_the_cycle` pipes a real run to `head -2`; `test_sigterm_mid_mutation_still_restores_and_exits_2` |
+| `.regress-mutation-in-progress.json`, written **before** the mutation reaches disk and deleted after a verified restore. A later run **refuses to do anything** while it exists; `--restore` recovers it | `SIGKILL`, and a container that disappears | `test_sigkill_leaves_a_sentinel_and_the_next_run_refuses_to_start` |
+| `--restore` holds the **mutated** text as well, and refuses if the file on disk is not it | misfire (2) one level up: a recovery source older than a legitimate later edit | `test_restore_refuses_when_the_file_moved_on_after_the_mutation` |
+
+**`signal.SIGPIPE` is deliberately NOT set to `SIG_DFL`.** That is the usual advice for a CLI tool
+and it is exactly wrong here: it makes the death immediate and silent, which is the failure rather
+than the fix.
+
+**The startup check reports and refuses; it does not restore on its own.** A tool that silently
+writes files when it starts is a worse problem than the one being fixed, and `--keep` leaves a
+mutation applied on purpose. The refusal is what protects the measurements: *"Nothing was run.
+Every measurement taken against this tree since that run is suspect."*
+
+**Signal handlers are installed in `__main__`, not in `main()`**, because this harness's own tests
+call `main()` in-process and replacing pytest's `SIGINT` handler for the rest of a session is a
+side effect a test must not have.
+
+**The six regressions mutate the harness that is running them** —
+`scripts/regressions/harness_restore.json`, 6/6 fired. That works because the running process uses
+its already-loaded code while the pytest subprocess reads the mutated file fresh, and it means the
+remedy is guarded by the instrument it repairs.
+
+**One thing the fix found in itself:** `_write_sentinel` first used `path.relative_to(ROOT)`, which
+**raises** for a path outside the repo — and the harness's own tests mutate files under `tmp_path`.
+It now uses `_rel`, the helper added for the same reason the last time this file was wrong about a
+path it did not own.
 
 ---
 
@@ -12806,9 +12841,14 @@ the only reason the outcome differs is that the layer behind it happens to be so
 
 #### Before anything is changed, two things need establishing
 
-1. **Does any API endpoint lack the dependency?** `get_admin_user` was confirmed on the admin
-   router and `authn.py` verifies on every request, but "every endpoint" was not enumerated. Until
-   it is, the third exposure above is a possibility rather than a finding.
+1. ~~**Does any API endpoint lack the dependency?**~~ **ANSWERED 2026-10-19: no.** 187 routes
+   across 30 router files, parsed from the decorators: `routes/admin.py` 58/58 and
+   `routes/admin_metrics.py` 7/7 carry `get_admin_user` **per route**, and no other router has an
+   admin dependency because none of them is an admin router. The third exposure above is **ruled
+   out** for authorization. **The same enumeration found D-200**, which is the same worry in the
+   other half of the problem: the API's *authorization* is right on every endpoint, and its
+   *authentication* accepts an unguarded `X-Demo-Account` header as proof of identity. D-194 said
+   the API was the only thing standing; D-200 is that it has a door of its own.
 2. **What does verifying in the middleware cost?** The comment explains the current design: *"no
    external library, no API call"*, because Edge runtime. Verifying HS256 needs the secret in the
    edge environment and a WebCrypto implementation (`jose` works in Edge); the alternative is moving
@@ -12839,6 +12879,301 @@ case: the gate does not have to live in the middleware at all.
 deprecated authenticates, and the implementation that replaced it does not. **The dead code is the
 reference implementation for this fix**, which is why D-197 quotes it in full and why it must be
 copied out before that tree is ever deleted.
+
+---
+
+### D-199 — three labels on the consumer report are hard-coded violet on a surface whose colour is the agent's brand
+
+**Severity:** WRONG · **Affects:** `/r/[id]`, the public home-value report an agent sends a lead —
+every account whose brand is not the default indigo · **Found during:** counting the four tinted
+surfaces left in the report viewer for Design (#178), which is why it was nearly filed as a styling
+question
+**Status:** `open`
+
+`apps/web/components/mobile-report/MobileReportViewer.tsx:253` paints the hero panel with **the
+agent's brand**:
+
+    <div className="rounded-2xl p-6 text-white" style={{ background:
+      `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%,
+                               ${report.branding?.accent_color  || '#8b5cf6'} 100%)` }}>
+
+Three labels inside it are hard-coded:
+
+| line | |
+|---|---|
+| 254 | `<p className="text-violet-200 text-sm mb-1">Estimated Value Range</p>` |
+| 258 | `<p className="text-violet-200 text-sm">` — the comparables sentence under the figure |
+| 271 | `<span className="text-violet-200 text-xs">` — the confidence line |
+
+`violet-200` is `#DDD6FE`. It was chosen against the **fallback** gradient
+(`#6366f1` → `#8b5cf6`), and it is correct for exactly one case: **an agent who has set no brand at
+all.** Every agent who has set one gets `#DDD6FE` on a surface of their own colour. A teal brand
+gives violet labels on a teal gradient.
+
+**This is not a tint question and not Design's to rule on.** The rest of the panel already solved
+it: the container sets `text-white`, which follows any background. These three override it with a
+fixed hue. The defect is that **a colour chosen to match a default was applied to a surface that is
+not the default** — the same shape as a fixture encoding an older contract, in CSS.
+
+**Two further consequences, both unmeasured here** (this container cannot render):
+
+1. **Contrast.** `#DDD6FE` was never audited against anything but the fallback gradient. Against a
+   light brand — a pale gold, a mint — it is plausibly below 4.5:1 on the largest headline a
+   consumer sees. `tests/test_pdf_contrast.py` covers the PDF and nothing covers this surface.
+2. **It is the consumer-facing artifact.** Design's whole argument for the chrome sweep is that
+   chrome must not compete with the report. This is *inside* the report, on the first panel, and it
+   is the one surface a lead sees before deciding whether the agent is worth replying to.
+
+#### Scope of the fix, which needs no decision from anybody
+
+Delete the three `text-violet-200` classes. The container's `text-white` then applies, which is what
+the other text in that panel already does, and which follows whatever the brand is. If a softer
+label is wanted, `text-white/80` is brand-independent and stays inside the same decision.
+
+**What is still Design's** is the separate question in
+`docs/REPORT_VIEWER_TINTS_FOR_DESIGN_2026-10-19.md`: whether the no-tinted-surfaces rule reaches
+inside the report at all, and if so which of the **other eleven** hard-coded indigo/violet sites
+become brand-driven and which become neutral. That question is unaffected by this fix, and this
+defect should not wait for it.
+
+**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
+In `tests/test_consumer_report_brand_colours.py`, marked `xfail(strict=True)` with `D-199` named in
+the reason — delete the marker when the three classes go, and the strict marker will insist:
+
+- `test_no_text_inside_the_brand_hero_hard_codes_a_hue`
+
+`test_the_hero_panel_is_still_painted_with_the_agents_brand` in the same file is **not** gated: it
+is the guard on the one above, and it passes today. If the hero stopped reading `primary_color`,
+the gated assertion would be checking a panel that no longer exists.
+
+---
+
+### D-200 — the API accepts `X-Demo-Account` as proof of identity, unguarded, in production
+
+**Severity:** BROKEN · **Affects:** `apps/api` — every one of the **122 non-admin routes** that
+scopes its data by `request.state.account_id` · **Found during:** establishing D-194's point (1),
+"does any API endpoint lack the dependency" — the answer to which is no, and this is what the
+enumeration found instead
+**Status:** `fixed` — `fix/d196-harness-restore`. The header is now accepted only when
+`settings.ENVIRONMENT` is a test environment, and the decision function is tested from the shipped
+source. **Read "What the fix does not prove" before believing it is closed.**
+
+`apps/api/src/api/middleware/authn.py:129-133`, the third of three ways the middleware resolves an
+identity:
+
+    # ── 3) Demo header fallback ──────────────────────────────────────
+    if not acct:
+        demo = request.headers.get("X-Demo-Account")
+        if demo:
+            acct = demo
+
+**There is no guard.** No environment check, no debug flag, no allowlist, no signature.
+`AuthContextMiddleware` is registered unconditionally at `main.py:69`. A request carrying
+`X-Demo-Account: <some account uuid>` and no credential of any kind is served as that account.
+
+#### What it grants, traced
+
+| | |
+|---|---|
+| `request.state.account_id` | **the attacker's chosen value** |
+| `request.state.user` | `{"account_id": acct, "role": "USER"}` — the DB enrichment at `:143` is skipped, because it is keyed on `claims["user_id"]` and there are no claims |
+| `get_admin_user` | **403.** `user_info.get("is_platform_admin", False)` finds no key and defaults to `False`. Admin routes hold — **by a default value, not by a check of this path** |
+| every non-admin route | scopes by `request.state.account_id`, so it serves the named account |
+| RLS | `set_rls(cur, account_id)` is keyed on **the same value**, so where it is applied it enforces the attacker's chosen scope |
+
+**So this is D-005's shape with D-005's outcome.** D-194 said *"complete dependence on the API being
+right on every endpoint, with nothing behind it."* The enumeration confirms the API is right about
+**authorization** — and finds that its **authentication** has a door in it. The middleware that
+D-194 is about decodes a token it does not verify; this one does not require a token at all.
+
+#### Why it exists, which is the only sympathetic part
+
+It is the test suite's authentication mechanism. Eight API test files set this header as their way
+of being logged in, and say so in their own comments — `test_schedules_report_types.py:29` and
+`test_billing_checkout.py:148` both document it as *"the `X-Demo-Account` header, which that
+middleware accepts as an account id."* The docstring at `:68` calls it a *"temporary fallback"*. It
+has survived because removing it breaks ~8 test files, and nothing failed to remind anyone.
+
+#### The enumeration that found it, since that was the assignment
+
+187 routes across 30 router files, parsed from the decorators rather than counted by hand:
+
+| | routes | carrying `get_admin_user` |
+|---|---|---|
+| `routes/admin.py` | 58 | **58** |
+| `routes/admin_metrics.py` | 7 | **7** |
+| the other 28 router files | 122 | 0, correctly — they are not admin routes |
+
+**65 of 65 admin routes carry the dependency, per route, not merely on the router.** D-194's third
+exposure — "one endpoint missing its `Depends`" — **is ruled out.** That was worth establishing and
+it is now established.
+
+#### The fix, and the trap in the obvious version of it
+
+Four lines. The guard already exists in this codebase, 100 lines from here, applied to a far less
+dangerous endpoint — `routes/unsubscribe.py:180`, a token *generator*, refuses to exist in
+production:
+
+    if os.getenv("ENVIRONMENT", "dev") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+
+**Do not copy that line.** `os.getenv("ENVIRONMENT", "dev")` defaults to **dev**, so it fails
+**OPEN** when the variable is unset — which is the one condition under which nobody notices.
+`settings.ENVIRONMENT` defaults to `"production"` (`settings.py:12`), so the guard must be written
+against that and must require an explicit opt-in:
+
+    if not acct and settings.ENVIRONMENT in ("dev", "test"):
+        demo = request.headers.get("X-Demo-Account")
+        ...
+
+and the API test suite then has to set `ENVIRONMENT` (one `conftest.py` line) or mint a real
+HS256 token. **Minting the token is the better fix** and makes the tests exercise the path
+production uses; the env guard is the one that can ship today.
+
+**Three things this entry does not claim.** It was not tested against a deployment — read from
+source. Whether an outsider can obtain an `account_id` was **not** established: public prefixes
+were checked for one in a response body and none was found, but a UUID that appears in a URL, an
+email, a support ticket or a QR link is not a secret and must not be treated as the control. And
+`ENVIRONMENT`'s value in production was not read — if it is unset there, the `unsubscribe.py` guard
+above is also open.
+
+#### The guard that shipped
+
+`authn.py`, at the call site:
+
+    # ── 3) Demo header fallback — TEST ENVIRONMENT ONLY (D-200) ──────
+    if not acct and _demo_header_allowed():
+
+and the decision:
+
+    _DEMO_HEADER_ENVIRONMENTS = frozenset({"test"})
+
+    def _demo_header_allowed() -> bool:
+        return (settings.ENVIRONMENT or "").strip().lower() in _DEMO_HEADER_ENVIRONMENTS
+
+**An allowlist of one value, which is narrower than this codebase's own convention, deliberately.**
+`routes/auth.py:204` and `routes/devfiles.py:18` gate dev-only routes on
+`settings.ENVIRONMENT == "production"`. Two reasons not to copy that here:
+
+1. **An inverted test fails OPEN for every value nobody anticipated** — `"Production"`, `"prod"`,
+   `"staging"`, a trailing space from a deploy variable. An allowlist fails closed on all of them,
+   and the tests enumerate those cases rather than describing them.
+2. **`settings.py:11` says staging and local development both run `ENVIRONMENT=development`.**
+   Those are deployed, reachable environments with real sessions in them. A seed endpoint belongs
+   there; an authentication bypass does not. The header's only legitimate consumer is the test
+   suite, so the allowlist is the test environment and nothing else.
+
+`settings.ENVIRONMENT` defaults to `"production"` (`settings.py:12`), so an unset variable disables
+it — the property the whole fix rests on, and asserted by its own test. A `logger.warning` fires at
+import if the header is ever enabled, so an `ENVIRONMENT` set wrong in production is loud rather
+than quiet.
+
+**The eight test files keep working** via one line in `apps/api/tests/conftest.py`:
+`os.environ.setdefault("ENVIRONMENT", "test")`, placed above every `api` import because `settings`
+is built at import time — set it later and eight files get a 401 with nothing to say why.
+`setdefault` rather than assignment, so a CI job that sets `ENVIRONMENT` itself keeps its value.
+
+#### Where the tests live, and why it is not where they belong
+
+`tests/test_api_auth_boundary.py` — the **root** suite, not `apps/api/tests/`. Because it runs:
+`apps/api`'s suite needs `pydantic_settings`, `httpx`, `redis` and `psycopg`, none of which the
+container this was fixed in has. The predicate is lifted out of `authn.py` **by AST and executed
+against a stub `settings`** — not imported (that pulls in all four packages) and not copied (a copy
+of a security predicate is a second implementation that will drift from the one that ships).
+
+11 refused values and 3 accepted ones are enumerated, plus three structural assertions: that the
+header read sits behind the guard, that the conftest line precedes the first `api` import, and that
+the guard does not use `os.getenv` (see D-201).
+
+#### What the fix does not prove
+
+**No request was ever made against this.** The predicate is proved and the call site is proved wired
+to it; a live 401 is not. Only CI or a deployment can produce that, and `apps/api`'s suite has never
+run in this container. **If the shape is wrong, CI is what will say so** — which is the trade that
+was taken knowingly, because an open door in production authentication is the worse risk.
+
+**Two things remain unknown and both bound how bad this was:** whether anything in front of the API
+strips unknown headers, and what `ENVIRONMENT` is actually set to in production. The second now
+matters less — the guard fails closed when it is unset — but it is still the difference between
+"this was never reachable" and "it was".
+
+#### The admin-route behaviour is NOT a mitigation, and must not be recorded as one
+
+An earlier draft of this entry noted that admin routes refuse a forged identity. They do, and the
+reason is that `get_admin_user` reads `user_info.get("is_platform_admin", False)` while the DB
+enrichment that would set that key is skipped on this path. **That is one dictionary default away
+from being the whole story.** Nothing checks this path; a key that is absent happens to be falsy.
+Add a default of `True` anywhere in that chain, or populate `user_info` from an untrusted source,
+and the 403 becomes a 200. It is an accident with a good outcome, not a control, and the fix above
+does not depend on it.
+
+---
+
+### D-201 — the one environment gate in the API written with `os.getenv` defaults to dev, so it fails open when the variable is unset
+
+**Severity:** WRONG · **Affects:** `GET /v1/email/unsubscribe/token` — a token *generator* for any
+`(email, account_id)` pair a caller names, on a **public** path prefix · **Found during:** writing
+D-200's guard, by checking which form the rest of the API uses
+**Status:** `open`
+
+Six places in `apps/api/src` read `ENVIRONMENT`. Five are right. This one is `routes/unsubscribe.py:180`:
+
+    if os.getenv("ENVIRONMENT", "dev") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+
+**The default is `"dev"`, so an unset variable is not production, so the endpoint exists.** Compare
+the two forms the same codebase uses correctly:
+
+| where | form | unset variable |
+|---|---|---|
+| `routes/auth.py:204` (`/v1/auth/seed-dev`) | `settings.ENVIRONMENT == "production"` | **refuses** — `settings.py:12` defaults to `"production"` |
+| `routes/devfiles.py:18` (`/dev-files/*`) | `settings.ENVIRONMENT == "production"` | **refuses** |
+| `routes/admin.py:3004` (a health display) | `os.getenv("ENVIRONMENT", "production")` | harmless, and the safe default anyway |
+| **`routes/unsubscribe.py:180`** | **`os.getenv("ENVIRONMENT", "dev")`** | **serves** |
+
+`settings.py` says why the right default exists, in as many words: *"Defaults to `production` so any
+deploy that forgets to set ENVIRONMENT is treated as production (fail-safe)."* This line opts out of
+that and gets the opposite.
+
+#### What the endpoint hands out
+
+`generate_unsubscribe_token(account_id, email)` — `HMAC-SHA256(f"{account_id}:{email}",
+EMAIL_UNSUB_SECRET)` — for **any** pair the caller supplies, plus the ready-made URL. With that
+token, `POST /v1/email/unsubscribe` suppresses delivery for that address on that account.
+
+**The file already explains this harm, thirty lines above, about a different mechanism.** The
+comment on the signing secret's dev fallback says: *"anyone could then forge a token and suppress
+delivery for any address on any account. Mismatched defaults fail closed; matched defaults fail
+open."* That reasoning is correct and the fallback it defends is correctly built. **The same file
+then leaves a route that issues those tokens on request**, reachable because its guard has the one
+default the rest of the codebase deliberately avoids.
+
+It is also under `/v1/email/unsubscribe`, which `authn.py`'s `_PUBLIC_PREFIXES` exempts from
+authentication entirely — so if the guard is open, the route is open to the internet.
+
+#### Severity, and what decides it
+
+**WRONG rather than BROKEN, on one unread fact.** If production sets `ENVIRONMENT`, the guard holds
+and this is a latent fail-open form. If production does not set it, the endpoint is live and this is
+BROKEN — the same question D-200 leaves open, and the answer is one environment variable that
+nobody here can read. **It needs the same trip to Render that the rest of the §T2 configuration
+questions need.**
+
+Like D-200, it needs an `account_id`. Like D-200, that is not a control: a UUID in a URL, an email
+header or a support ticket is not a secret.
+
+#### The fix
+
+    if settings.ENVIRONMENT != "test":
+        raise HTTPException(status_code=404, detail="Not found")
+
+or delete the route — it is a convenience for generating a test fixture, and `apps/api/tests` can
+call `generate_unsubscribe_token` directly. **Deleting it is the better fix**, for the same reason
+minting a real token is the better fix for D-200: the safest version of a test-only door is no door.
+
+A sweep for the form is worth doing at the same time: `os.getenv("ENVIRONMENT", …)` with any default
+other than `"production"` is the shape, and `tests/test_api_auth_boundary.py` already asserts the
+authentication path does not use it.
 
 ---
 
