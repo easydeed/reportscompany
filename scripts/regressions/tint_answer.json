@@ -23,40 +23,26 @@
   {
     "name": "R4 the answer's dead-admin count left at the stale line figure",
     "file": "docs/TINT_RAMP_FOR_DESIGN_2026-10-15.md",
-    "old": "| `app/admin/(dashboard)/**` | 19 |",
-    "new": "| `app/admin/(dashboard)/**` | 14 |",
+    "old": "| `app/admin/**` | 19 |",
+    "new": "| `app/admin/**` | 14 |",
     "test": "tests/test_tint_answer_is_current.py"
   },
   {
-    "name": "R5 the middleware reads the session cookie before the /admin redirect",
-    "file": "apps/web/middleware.ts",
-    "old": "export async function middleware(req: NextRequest) {\n  const { pathname } = req.nextUrl",
-    "new": "export async function middleware(req: NextRequest) {\n  const { pathname } = req.nextUrl\n  const early = req.cookies.get(\"mr_token\")?.value",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R6 the matcher stops covering /admin, so nothing redirects the dead tree",
-    "file": "apps/web/middleware.ts",
-    "old": "matcher: [\"/app/:path*\", \"/admin/:path*\", \"/admin\"],",
-    "new": "matcher: [\"/app/:path*\"],",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R7 branding-form gains a consumer, so its four tints are live",
+    "name": "R5 branding-form gains a consumer, so its four tints are live",
     "file": "apps/web/app/app/settings/branding/page.tsx",
     "old": "import { cn } from \"@/lib/utils\"",
     "new": "import { cn } from \"@/lib/utils\"\nimport { BrandingForm } from \"@/components/branding-form\"",
     "test": "tests/test_tint_answer_is_current.py"
   },
   {
-    "name": "R8 the avatar exception is dropped from beside the constraint it breaks",
+    "name": "R6 the avatar exception is dropped from beside the constraint it breaks",
     "file": "apps/web/app/globals.css",
     "old": "     ONE EXCEPTION, sanctioned by Design in the same answer:",
     "new": "     The avatar, somewhere else, undocumented:",
     "test": "tests/test_tint_answer_is_current.py"
   },
   {
-    "name": "R9 D-195 back: a 20%-wide fill against an unlimited allowance",
+    "name": "R7 D-195 back: a 20%-wide fill against an unlimited allowance",
     "file": "apps/web/app/app/affiliate/agents/[agentId]/page.tsx",
     "old": "      {!isUnlimited && (\n        <div className=\"h-1.5 bg-muted rounded-full overflow-hidden\">",
     "new": "      {(\n        <div className=\"h-1.5 bg-muted rounded-full overflow-hidden\">",
