@@ -1,0 +1,44 @@
+[
+  {
+    "name": "R1 the sentinel is never written, so a SIGKILL leaves nothing to recover from",
+    "file": "scripts/apply_regressions.py",
+    "old": "    SENTINEL.write_text(json.dumps({",
+    "new": "    return\n    SENTINEL.write_text(json.dumps({",
+    "test": "tests/test_regression_harness_guards_itself.py"
+  },
+  {
+    "name": "R2 _say re-raises on a dead consumer, which is the reported bug",
+    "file": "scripts/apply_regressions.py",
+    "old": "    except (BrokenPipeError, OSError, ValueError):\n        _stdout_is_gone = True",
+    "new": "    except (RuntimeError,):\n        _stdout_is_gone = True",
+    "test": "tests/test_regression_harness_guards_itself.py"
+  },
+  {
+    "name": "R3 a terminating signal keeps its default disposition, skipping every finally",
+    "file": "scripts/apply_regressions.py",
+    "old": "    for sig in (signal.SIGINT, signal.SIGTERM):",
+    "new": "    for sig in ():",
+    "test": "tests/test_regression_harness_guards_itself.py"
+  },
+  {
+    "name": "R4 a later run measures against a tree still holding someone else's mutation",
+    "file": "scripts/apply_regressions.py",
+    "old": "    if not SENTINEL.exists():\n        return",
+    "new": "    if True:\n        return",
+    "test": "tests/test_regression_harness_guards_itself.py"
+  },
+  {
+    "name": "R5 --restore writes back blind, discarding an edit made after the mutation",
+    "file": "scripts/apply_regressions.py",
+    "old": "    still_mutated = current == rec[\"mutated\"]",
+    "new": "    still_mutated = True",
+    "test": "tests/test_regression_harness_guards_itself.py"
+  },
+  {
+    "name": "R6 the print between the mutation and the try comes back",
+    "file": "scripts/apply_regressions.py",
+    "old": "    try:\n        original = apply_mutation(path, mutation[\"old\"], mutation[\"new\"])",
+    "new": "    original = apply_mutation(path, mutation[\"old\"], mutation[\"new\"])\n    _say(\"   mutation verified present on disk\")\n    try:",
+    "test": "tests/test_regression_harness_guards_itself.py"
+  }
+]
