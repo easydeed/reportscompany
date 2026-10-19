@@ -171,7 +171,7 @@ export function LeadPageClient() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--body)] mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">Loading lead page...</p>
         </div>
       </div>
@@ -201,7 +201,7 @@ export function LeadPageClient() {
 
       {/* Settings Panel (Collapsible) */}
       {showSettings && (
-        <Card className="border-indigo-200 bg-indigo-50/50">
+        <Card className="border-border">
           <CardHeader>
             <CardTitle className="text-lg">Customize Your Lead Page</CardTitle>
           </CardHeader>
@@ -285,7 +285,7 @@ export function LeadPageClient() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-indigo-600" />
+            <TrendingUp className="w-5 h-5 text-[var(--body)]" />
             Your Shareable Lead Page
           </CardTitle>
         </CardHeader>

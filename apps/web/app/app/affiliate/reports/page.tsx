@@ -276,7 +276,7 @@ export default function AffiliateReportsPage() {
                       <Badge
                         variant="outline"
                         className={report.is_scheduled
-                          ? "bg-indigo-50 text-indigo-700 border-indigo-200 text-[11px] gap-1"
+                          ? "bg-accent text-accent-foreground border-transparent text-[11px] gap-1"
                           : "bg-muted text-muted-foreground text-[11px] gap-1"}
                       >
                         {report.is_scheduled
@@ -287,7 +287,7 @@ export default function AffiliateReportsPage() {
                     <TableCell>
                       {report.pdf_url ? (
                         <a href={report.pdf_url} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline">
+                          className="inline-flex items-center gap-1 text-xs text-[var(--link)] hover:text-[var(--link-hover)] hover:underline">
                           <Download className="w-3.5 h-3.5" />Download
                         </a>
                       ) : <span className="text-xs text-muted-foreground">—</span>}
@@ -319,11 +319,11 @@ export default function AffiliateReportsPage() {
       {/* Educational card — explains the CMA Lead Page so reps can pitch
           it to their agents. Reps don't use the lead page themselves;
           this is a sales/training tool. */}
-      <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white shadow-[var(--shadow-card)]">
+      <div className="rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
         <div className="p-6">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
-              <Sparkles className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Sparkles className="w-5 h-5 text-[var(--body)]" />
             </div>
             <div className="flex-1 space-y-3">
               <div>
@@ -339,7 +339,7 @@ export default function AffiliateReportsPage() {
                 <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   How to pitch this to your agents
                 </p>
-                <p className="text-sm text-gray-600 italic border-l-2 border-indigo-300 pl-3">
+                <p className="text-sm text-gray-600 italic border-l-2 border-border pl-3">
                   &ldquo;Your TrendyReports account comes with your own home value lead page. Put the link in your bio, business cards, and email signature. Anyone who visits can request a free home value report — and you get a lead in your dashboard. Set it once, runs forever.&rdquo;
                 </p>
               </div>

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "R1 something imports the dead admin tree, so it is no longer dead",
+    "file": "apps/web/app/app/admin/page.tsx",
+    "old": "export default function",
+    "new": "import { AdminLogoutButton } from \"@/app/admin/(dashboard)/logout-button\"\n\nexport default function",
+    "test": "tests/test_tint_answer_is_current.py"
+  },
+  {
+    "name": "R2 a second live reference navigates into the /admin namespace",
+    "file": "apps/web/app/app/admin/page.tsx",
+    "old": "export default function",
+    "new": "const LEGACY = \"/admin/users\"\n\nexport default function",
+    "test": "tests/test_tint_answer_is_current.py"
+  },
+  {
+    "name": "R3 the compat redirect that serves access-denied's link is removed",
+    "file": "apps/web/middleware.ts",
+    "old": "    const newPath = pathname.replace(/^\\/admin/, \"/app/admin\")",
+    "new": "    const newPath = pathname",
+    "test": "tests/test_tint_answer_is_current.py"
+  },
+  {
+    "name": "R4 the matcher stops covering /admin",
+    "file": "apps/web/middleware.ts",
+    "old": "matcher: [\"/app/:path*\", \"/admin/:path*\", \"/admin\"],",
+    "new": "matcher: [\"/app/:path*\"],",
+    "test": "tests/test_tint_answer_is_current.py"
+  },
+  {
+    "name": "R5 the report-viewer relay quotes a hue tally the source no longer has",
+    "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+    "old": "<MapPin className=\"w-5 h-5 text-indigo-600\" />",
+    "new": "<MapPin className=\"w-5 h-5 text-slate-600\" />",
+    "test": "tests/test_report_viewer_relay_is_current.py"
+  },
+  {
+    "name": "R6 the viewer becomes fully hard-coded, so the relay's half-and-half premise is stale",
+    "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+    "old": "            <p className=\"text-center font-semibold\" style={{ color: report.branding?.primary_color || '#6366f1' }}>",
+    "new": "            <p className=\"text-center font-semibold\">",
+    "test": "tests/test_report_viewer_relay_is_current.py"
+  },
+  {
+    "name": "R7 the violet labels leave the brand-gradient hero",
+    "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+    "old": "        <p className=\"text-violet-200 text-sm mb-1\">Estimated Value Range</p>",
+    "new": "        <p className=\"text-sm mb-1\">Estimated Value Range</p>",
+    "test": "tests/test_report_viewer_relay_is_current.py"
+  },
+  {
+    "name": "R8 the relay stops saying it changed nothing",
+    "file": "docs/REPORT_VIEWER_TINTS_FOR_DESIGN_2026-10-19.md",
+    "old": "Nothing in this file is changed.",
+    "new": "The fourteen have been converted.",
+    "test": "tests/test_report_viewer_relay_is_current.py"
+  }
+]

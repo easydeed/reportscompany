@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 65 | Real, unfixed |
-| `fixed` | 122 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 68 | Real, unfixed |
+| `fixed` | 123 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **194** | D-001 … D-194, contiguous, no duplicates |
+| **Total** | **198** | D-001 … D-198, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 19 · FRAGILE 17 · ROUGH 24. (Sums to 65, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 19 · ROUGH 24. (Sums to 68, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -12441,6 +12441,308 @@ Nothing is currently wrong. But the two instances above are what the gap produce
 eight days apart from a single change, and the next visual change to `apps/web` has exactly the same
 cover. The entry is open so that "we could not see it" stops being available as an explanation.
 
+#### Third instance, 2026-10-19 — the first one taken knowingly
+
+**#177 shipped twenty-six files of visual change without rendering any of them.** Design's tint
+answer was applied across every authenticated route: selected states became ink borders, icon chips
+lost their fill, nine type tags changed pair, a status badge's two branches swapped semantics, and
+an avatar became a brand-filled circle. The container had no `node_modules`, so there was no
+screenshot, no computed-style read, and no typecheck behind any of it — every change was a
+class-string substitution read by eye, plus three JSX wrappers.
+
+The first two instances were cases of **not knowing the gap was there**. This one was not: the entry
+was filed eight days earlier, the branch's own PR named it in its uncertainty section, and it
+shipped anyway because the alternative was holding Design's answer indefinitely. That is a
+defensible call and it is also the thing this entry predicted, so it is recorded here rather than
+left in a PR description. **The next one should not be defensible.** Point (4) above — the frontend
+CI being able to `pnpm install` at all — is the cheapest of the four and the one that would have
+turned "read by eye" into "typechecked", which is most of what was missing.
+
+---
+
+### D-195 — an unlimited allowance drew a 20%-full bar, in the one copy of `UsageBar` out of five that nobody reconciled
+
+**Severity:** WRONG · **Affects:** `/app/affiliate/agents/[agentId]` — the per-agent detail page an
+affiliate opens to see what an agent they sponsor has used · **Found during:** applying Design's
+2026-10-19 answer on tints, which named this surface as a defect rather than a restyle
+**Status:** `fixed` — the bar is gone. The condition that produced it is not; see below.
+
+**What it drew.** `limit >= 99999` is this codebase's sentinel for "unlimited". On that branch the
+component painted a track and filled a fifth of it:
+
+    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all ${isUnlimited ? 'bg-indigo-200' : color}`}
+        style={{ width: isUnlimited ? '20%' : `${pct}%` }}
+      />
+    </div>
+
+The number beside it read `147 / ∞`. The bar beneath it read *one fifth used* — of nothing, because
+there is no whole. **A fraction of an undefined denominator is not a measurement**, and the
+direction it errs in is the bad one: a filled track is the universal shape for "you are consuming
+your allowance", shown to exactly the accounts that have none to consume. The 20% is not derived
+from anything; it is a literal, chosen to make the bar look alive.
+
+Design's wording, which is why this is filed rather than restyled: *"'Unlimited' with a full-width
+tinted track reads as 100% used, which is the opposite. That one is a DEFECT, file it separately."*
+
+**The part worth keeping.** `UsageBar` is defined **five times**, in five files, with a
+character-identical signature and the same `99999` sentinel, and is called three times at each site:
+
+| definition | on unlimited |
+|---|---|
+| `app/app-layout.tsx:237` | no bar — `{!isUnlimited && …}` |
+| `app/app/settings/billing/page.tsx:40` | no bar — `{!isUnlimited && …}` |
+| `app/app/company/page.tsx:114` | no bar — `{!isUnlimited && …}` |
+| `components/v0-styling/AffiliateDashboardShell.tsx:103` | no bar **ever**, for anybody — same name, different component |
+| `app/app/affiliate/agents/[agentId]/page.tsx:127` | **a 20%-wide fill against infinity** |
+
+So the thing Design ruled on was already the behaviour of three of the four bar-drawing copies. This
+was not a decision anyone made and then applied inconsistently — it is **one copy that never
+received a fix the others got**, and nothing in the repository could have reported the divergence,
+because there is no shared component to diff against. Four of the five also compute
+`pct = isUnlimited ? 0` and then never read it, which is the fossil of the fix: whoever wrote the
+guard left the dead expression behind, four times, and the fifth file had the guard omitted.
+
+**What is not fixed.** The five copies. This entry fixes the rendering on the one route that was
+wrong; the next change to how an allowance is drawn still has to be made five times, and the same
+failure is available again. `app/app/company/page.tsx:114` additionally hard-codes `bg-[#6366F1]`,
+which is a Phase 1 seam in its own right.
+
+**Fixed:** `chore/tint-removal-design-answer` — the track is now inside `{!isUnlimited && …}`, so an
+unlimited allowance renders its count and `∞` and no bar at all.
+
+---
+
+### D-196 — the regression harness can die mid-mutation and leave the tree modified, reporting nothing at all
+
+**Severity:** WRONG · **Affects:** `scripts/apply_regressions.py` — the instrument behind every
+"seen to fail" claim in this remediation, 10 spec files, 60-odd recorded mutations ·
+**Found during:** running `tint_answer.json` for #177, by tripping it
+**Status:** `open` — filed, not fixed. The remedy is scoped below and is about ten lines.
+
+**What happened.** The harness output was piped to `head -40`. `head` exited after forty lines,
+the next `print()` raised `BrokenPipeError`, and Python terminated the process — **after the
+mutation had been written to disk and before the restore ran.** `apps/web/middleware.ts` was left
+mutated in the working tree. Exit status said nothing, because the harness never reached its
+reporting path; `stdout` was already gone.
+
+The mutation left behind was R6:
+
+    matcher: ["/app/:path*", "/admin/:path*", "/admin"],   ->   matcher: ["/app/:path*"],
+
+which is the line that makes `app/admin/**` unreachable (D-197). Committed, it would have exposed
+a deprecated admin tree. It was caught on the next full-suite run by
+`test_the_spec_files_are_well_formed`, which failed with *"anchor appears 0 times in
+apps/web/middleware.ts"* — a test written to catch a spec whose target had been renamed, catching
+a live mutation instead because the anchor it looks for had been consumed.
+
+**That catch is luck, and three things about it say so.** It is a different test from the gate
+under mutation. It only fires if the mutated anchor happens to be the `old` string of a recorded
+mutation — true here by construction, false for any mutation applied by hand. And it reports as a
+stale-spec problem, which is a different diagnosis from "your working tree is mutated".
+
+**Why this is the one failure this file cannot afford.** Its own docstring is three recorded
+misfires and their remedy, and the third is: *"A mutation that changes nothing and a working guard
+produce the same green."* This is that shape one level up — **a harness that cannot prove its own
+state, failing to say so.** It has an exit code reserved for exactly this (`2`, "the harness could
+not prove its own state, which is not a result about the gate at all") and the path that dies
+before using it is the one ordinary way anyone reads its output: a pipe to `head`, `tail`, `grep`
+or `less`. Every other integrity property it advertises — the anchor count, the read-back from
+disk, the byte-identical restore — assumes the process lives to the end of its own loop.
+
+**Not hypothetical, and not rare.** `tail` is how this output was read in six earlier sessions, and
+it survives only because `tail` consumes all of stdin. `head` and `grep -m` do not.
+
+**Scope of the remedy** — about ten lines, and no new dependency:
+
+1. Wrap the apply/test/restore cycle in `try/finally`, with the restore in the `finally`, so an
+   exception between them still restores. Today the restore is a straight-line statement after the
+   test run.
+2. Install handlers for `SIGINT`, `SIGTERM` and `SIGPIPE` that re-raise as an exception so (1)
+   catches them, rather than letting the default disposition kill the process. `signal.signal(
+   signal.SIGPIPE, signal.SIG_DFL)` is the usual advice for CLI tools and is the **wrong** choice
+   here: it makes death silent and immediate.
+3. Write a sentinel file naming the applied mutation before writing the mutation, and delete it
+   after a verified restore. A sentinel found on startup means the previous run died mid-mutation,
+   and the harness should restore from it and exit `2` rather than apply anything.
+4. A regression for the harness itself: apply, kill the process with `SIGTERM` between apply and
+   restore, assert the file is restored and a non-zero exit reported. `scripts/regressions/` cannot
+   express that — it mutates a file and runs pytest — so it belongs in
+   `tests/test_regression_harness_guards_itself.py`, which already exists for this purpose.
+
+(3) is the only one that covers `SIGKILL` and a dead container, which (1) and (2) cannot.
+
+**Operational note until it is fixed.** Redirect to a file and read the file —
+`python3 scripts/apply_regressions.py spec.json > out.txt 2>&1; echo $?` — rather than piping to a
+pager or a head. And `git status` after any regression run, which would have shown this in one
+line.
+
+---
+
+### D-197 — `apps/web/app/admin/**` is a second dead tree: fifteen route files, a deletion deadline that passed, and deadness enforced by one line of routing config
+
+**Severity:** FRAGILE · **Affects:** nothing that renders — which is the problem. 15 route files,
+19 of the 46 remaining tinted surfaces, and every production build, which must keep compiling them
+· **Found during:** reporting the app-wide scope of Design's tint answer (#177), where this tree
+was 19 of the hits and was being counted as pending work
+**Status:** `open` — documented rather than deleted, for the reason in the last section.
+
+`app/admin/**` is a complete standalone admin panel: 13 URLs, its own sidebar, its own layout, its
+own login. `app/app/admin/**` is the one that ships. **Every URL the dead tree produces has a live
+counterpart**, so the shadowing is total and nothing 404s:
+
+| dead URL | resolves to | exists |
+|---|---|---|
+| `/admin` | `/app/admin` | yes |
+| `/admin/accounts`, `/accounts/[id]`, `/affiliates`, `/emails`, `/lead-pages`, `/plans`, `/property-reports`, `/reports`, `/schedules`, `/users` | same path under `/app/admin` | all yes |
+| `/admin/login` | `/app/admin` | via `ADMIN_REMAP` |
+| `/admin/blocked-ips` | `/app/admin/security` | via `ADMIN_REMAP` |
+| `/admin/settings` | `/app/admin/system` | via `ADMIN_REMAP` |
+
+**Its own first line says it is deletable, and names a deadline that has passed:**
+
+    // DEPRECATED: This standalone admin panel is superseded by /app/admin
+    // Safe to delete after verifying all pages migrated (see ADMIN-MIGRATE tickets)
+    // Target deletion: 1 week after launch
+
+There are **no ADMIN-MIGRATE tickets anywhere in this repository** — `grep -rn ADMIN-MIGRATE`
+returns that comment and nothing else. The condition on its own deletion is unverifiable from the
+repository, which is how a one-week deadline became five months.
+
+#### Established against this project's own standard, not by reading the redirect
+
+`docs/DEAD_CODE.md` sets three conditions, and says the third is the one that matters. Applied:
+
+| condition | result |
+|---|---|
+| **1. Zero importers** | **holds.** No `import`/`from` in `app/`, `components/`, `lib/` or `packages/` resolves to any file under `app/admin/`. The only imports *into* the tree are from within it (`./logout-button`). |
+| **2. Zero route references** | **FAILS, once.** `app/access-denied/page.tsx:12` does `window.location.href = "/admin/login"`. |
+| **3. Zero runtime string construction** | **holds.** A repo-wide search for `/admin` as a string across `.ts/.tsx/.py/.json/.yml/.sql` returns: the tree's own `navItems`, `middleware.ts` itself, that one `access-denied` line, and `/api/proxy/v1/admin/...` — an API path, which the middleware's `pathname.startsWith("/admin")` check never sees. Nothing in `apps/api` or `apps/worker` builds a `/admin` page URL; no email, no `next.config.ts` rewrite (there are none at all), no `basePath`, no `trailingSlash`. |
+
+And every mechanism by which a Next.js route file can execute without a request, checked
+separately: **no parallel routes** (`@slot`), **no intercepting routes** (`(.)`, `(..)`), no
+`@source` narrowing in `globals.css`, and nothing re-exporting a page component.
+
+**So the one live reference points at a URL, not at these files** — and the URL is served by the
+redirect, never by the tree. Following it: `/admin/login` → `ADMIN_REMAP` → `/app/admin` → no
+token → `/login`. It works; the "admin login" link on the access-denied page lands on the ordinary
+user login, via two redirects, which is a separate small wrongness and the reason the compat
+redirect in `middleware.ts` must **not** be deleted along with the tree.
+
+#### The distinction worth keeping, which is the difference from D-131
+
+D-131's five templates are dead because **nothing names them**. This tree is dead because
+**something intercepts it** — one `pathname.replace(/^\/admin/, "/app/admin")` and one matcher
+entry. Those are configuration, and configuration is the weaker guarantee: narrowing the matcher to
+`["/app/:path*"]` is a one-token edit that makes 13 admin URLs live again, and D-196 is a recorded
+instance of that exact edit being left in a working tree by accident.
+
+**What becoming reachable would actually cost: less than it sounds.** This tree's layout verifies
+properly — `createServerApi().get('/v1/me')` and `data.is_platform_admin` read off **the API's
+response**, not off a client-supplied token. Which is the uncomfortable part: **the superseded
+implementation is the one that authenticates correctly, and the implementation that replaced it is
+D-194.** `app/app/admin/**` has no layout of its own and no file under it mentions
+`is_platform_admin` at all; its only gate is the middleware's unverified decode. So this entry
+also records, in case the tree is deleted, the pattern D-194 should be fixed to:
+
+    const api = await createServerApi()
+    if (!api.isAuthenticated()) return { admin: null, redirectTo: '/admin/login' }
+    const { data, error } = await api.get<any>('/v1/me')
+    if (error || !data) return { admin: null, redirectTo: '/admin/login' }
+    if (!data.is_platform_admin) return { admin: null, redirectTo: '/access-denied' }
+
+#### Documented rather than deleted, and why
+
+Three reasons, and the first is the one that decided it:
+
+1. **Deleting these 15 files orphans more than it removes.** `apps/web/components/admin/` — 7
+   files, `admin-overview.tsx`, `email-log-table.tsx`, `recent-reports-table.tsx`,
+   `schedules-table.tsx`, `schedules-table-client.tsx`, `types.ts`, `index.ts` — already has no
+   consumer outside itself, and `packages/ui/src/index.ts:16-19` re-exports a **parallel set of
+   copies** from `packages/ui/src/components/admin/`. A delete that stops at the route files
+   converts a visible dead tree into a larger invisible one: producer-with-no-consumer, created by
+   the cleanup. The deletion is a 20-plus-file sweep across three packages, and it needs its own
+   pass with its own proof.
+2. **It is the only correct admin verification in the codebase**, quoted above so that the pattern
+   survives the eventual deletion. D-194 is open and this is its reference.
+3. **D-131's precedent, stated on D-131:** its gate *"deliberately checks only the five live
+   templates, because failing on dead files would pressure the next person into editing them rather
+   than deleting them."* Same reasoning here — `test_tint_answer_is_current.py` records the tree as
+   out of scope rather than demanding it be de-tinted, so nobody spends an afternoon restyling 19
+   surfaces in a panel that renders for nobody.
+
+#### What it costs while it stays
+
+Fifteen route files that every production build compiles, and that any refactor of `@/lib/*` or
+`@/components/ui/*` must keep compiling — paid by whoever is next in those files, for a panel
+nobody can open. Plus 19 of the 46 tinted surfaces, which is why the sweep in #177 reported a scope
+four times the ticket's and had to explain most of it away.
+
+---
+
+### D-198 — `UsageBar` is defined five times with an identical signature, and that is the condition that produced D-195
+
+**Severity:** FRAGILE · **Affects:** five files, fifteen call sites — every surface that draws a
+plan allowance: the sidebar on every authenticated route, `/app/settings/billing`, `/app/company`,
+`/app/affiliate`, and `/app/affiliate/agents/[agentId]` · **Found during:** fixing D-195, which is
+one of the five
+**Status:** `open` — D-195 fixed the copy that was wrong. This is the condition, and it survives.
+
+**Five definitions, character-identical signature, same `limit >= 99999` sentinel, three call sites
+each:**
+
+| definition | on an unlimited allowance |
+|---|---|
+| `app/app-layout.tsx:237` | no bar — `{!isUnlimited && …}` |
+| `app/app/settings/billing/page.tsx:40` | no bar — `{!isUnlimited && …}` |
+| `app/app/company/page.tsx:114` | no bar — `{!isUnlimited && …}` |
+| `components/v0-styling/AffiliateDashboardShell.tsx:103` | draws no bar **ever**, for anybody — same name, different component |
+| `app/app/affiliate/agents/[agentId]/page.tsx:127` | **was** a hard-coded 20%-wide fill against infinity (D-195) |
+
+**This is not a design decision arriving.** Design's 2026-10-19 ruling — no bar for an unlimited
+allowance — was already the behaviour of three of the four copies that draw a bar. It is **a fix
+that propagated to four copies and missed the fifth**, and the fossil is visible: four of the five
+compute
+
+    const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
+
+and then never read `pct` in the unlimited case, because the guard beneath it makes the branch
+unreachable. Somebody wrote `isUnlimited ? 0`, decided the right answer was no bar at all, added
+the guard, left the expression — and did that four times. The fifth file got neither.
+
+**Nothing in this repository could have reported the divergence**, because there is nothing shared
+to diff against. No test rendered any of them; the only reason the fifth was found is that Design
+was asked about the colour of its track.
+
+**Two further divergences, since the five are not otherwise identical:** the fill colour is
+`bg-primary` in three, `bg-[#6366F1]` hard-coded in `app/app/company/page.tsx:114` (a Phase 1
+seam), and the `AffiliateDashboardShell` copy renders only the numbers. The label/number format
+differs in all five: `147/200`, `147 / 200`, `147 / ∞`, `∞`, and `147 / 200` with
+`toLocaleString()`.
+
+#### Scope of consolidating them — scoped, not done
+
+One `components/ui/usage-bar.tsx` exporting the `app-layout` implementation, which is the one with
+the most call sites and the correct unlimited behaviour. Then:
+
+1. Delete the four local definitions, import the shared one — 4 files, 15 call sites, all passing
+   the same three props, so no call site changes.
+2. **Decide two things first, and they are the reason this is not a mechanical change.** The
+   number format differs five ways (above) and `AffiliateDashboardShell` deliberately draws no
+   track at all. Consolidating silently picks a winner for both; one of them is visible on the
+   sidebar of every authenticated route.
+3. `bg-[#6366F1]` becomes `bg-primary`, which is a Phase 1 literal removal and changes a colour on
+   `/app/company`.
+4. A gate asserting one definition, replacing
+   `test_no_usage_bar_draws_a_fraction_of_an_undefined_whole`, which currently asserts there are
+   exactly five and that each guards the track — written that way deliberately, so that the count
+   is the thing that fails when a sixth copy appears.
+
+**Five surfaces whose rendering changes, none of which can be rendered in this container.** That is
+the whole reason it is scoped and not done: the consolidation's risk is entirely in what the shared
+component looks like on five pages, and that is the one thing nothing here can check (D-193).
+
 ---
 
 ### D-194 — `middleware.ts` authenticates nobody: it decodes the session JWT without verifying the signature
@@ -12515,6 +12817,28 @@ the only reason the outcome differs is that the layer behind it happens to be so
 
 **Neither is a fix, and this entry is not one.** Recorded now because the gap between what the file
 says it does and what a reader assumes it does is exactly the gap that let D-005 ship.
+
+#### The fix already exists in this repository, in the code this one replaced — see D-197
+
+Found two days after this entry, while establishing that `apps/web/app/admin/**` is dead. **That
+superseded admin panel verifies correctly**, server-side, in its layout:
+
+    const api = await createServerApi()
+    if (!api.isAuthenticated()) return { admin: null, redirectTo: '/admin/login' }
+    const { data, error } = await api.get<any>('/v1/me')
+    if (error || !data) return { admin: null, redirectTo: '/admin/login' }
+    if (!data.is_platform_admin) return { admin: null, redirectTo: '/access-denied' }
+
+`is_platform_admin` is read off **the API's response**, not off a client-supplied token, so the
+answer comes from the system that holds the secret. No Edge constraint applies, because this is a
+server component rather than middleware — which disposes of establishing-point (2) for the admin
+case: the gate does not have to live in the middleware at all.
+
+**By contrast, `app/app/admin/**` has no layout of its own, and no file under it mentions
+`is_platform_admin`.** Its only gate is the unverified decode above. So the implementation that was
+deprecated authenticates, and the implementation that replaced it does not. **The dead code is the
+reference implementation for this fix**, which is why D-197 quotes it in full and why it must be
+copied out before that tree is ever deleted.
 
 ---
 

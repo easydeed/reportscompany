@@ -165,7 +165,7 @@ export function RecipientsSection({
                 className={cn(
                   "inline-flex items-center gap-1 px-2 py-1 rounded text-sm",
                   r.type === "manual_email"
-                    ? "bg-indigo-50 text-indigo-600"
+                    ? "bg-accent text-accent-foreground"
                     : "bg-primary/10 text-primary"
                 )}
               >

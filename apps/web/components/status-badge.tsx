@@ -32,12 +32,13 @@ const STATUS_STYLES: Record<Status, string> = {
   inactive: "bg-slate-50 text-slate-500 border-slate-200",
   
   // Email statuses
-  sent: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  // Design's semantic pairs are the only tinted fills allowed on chrome.
+  sent: "bg-[var(--neutral-muted)] text-muted-foreground border-border",
   delivered: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  opened: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  opened: "bg-[var(--success-muted)] text-[var(--success-foreground)] border-transparent",
   
   // Lead statuses
-  new: "bg-indigo-50 text-indigo-700 border-indigo-200",
+  new: "bg-primary text-primary-foreground border-transparent",
   contacted: "bg-amber-50 text-amber-700 border-amber-200",
   converted: "bg-emerald-50 text-emerald-700 border-emerald-200",
 }
