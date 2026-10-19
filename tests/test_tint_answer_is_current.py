@@ -137,7 +137,7 @@ def test_the_answer_quotes_the_counts_the_source_still_has(doc):
     }
     stated = {
         "marketing": int(re.search(r"`app/blog` \| (\d+) \|", doc).group(1)),
-        "dead-admin": int(re.search(r"`app/admin/\(dashboard\)/\*\*` \| (\d+) \|", doc).group(1)),
+        "dead-admin": int(re.search(r"`app/admin/\*\*` \| (\d+) \|", doc).group(1)),
         "branding-form": int(re.search(r"`components/branding-form\.tsx` \| (\d+) \|", doc).group(1)),
         "report-viewer": int(re.search(r"MobileReportViewer\.tsx` \| (\d+) \|", doc).group(1)),
     }
@@ -150,20 +150,68 @@ def test_the_answer_quotes_the_counts_the_source_still_has(doc):
     )
 
 
-def test_the_dead_admin_tree_the_answer_relies_on_is_actually_unreachable():
-    """14 of the 37 are excused because nothing can render them. That is a
-    claim about `middleware.ts`, so it is read there and not taken on trust."""
-    src = MIDDLEWARE.read_text(encoding="utf-8")
-    redirect = src.index('pathname.replace(/^\\/admin/, "/app/admin")')
-    reads_token = src.index('req.cookies.get("mr_token")')
-    assert redirect < reads_token, (
-        "the /admin -> /app/admin redirect no longer precedes the token read, "
-        "so app/admin/(dashboard)/** may now be reachable and its 14 tinted "
-        "surfaces are live"
+#: The one live reference into the `/admin` URL namespace. D-197: it points at
+#: a URL the middleware serves by redirect, never at a file in the tree.
+KNOWN_ADMIN_URL_REFERENCE = "app/access-denied/page.tsx"
+
+
+def test_nothing_imports_the_dead_admin_tree():
+    """D-197, condition 1 of `docs/DEAD_CODE.md`'s three.
+
+    Deadness is established by asking whether any path reaches the tree, not by
+    tracing the redirect that intercepts it — the redirect is one line of
+    config, and D-196 is a recorded instance of that line being edited away by
+    accident."""
+    tree = WEB / "app/admin"
+    assert tree.is_dir(), (
+        "app/admin/ is gone. If it was deleted, delete this test and D-197's "
+        "entry together, and check what the deletion orphaned — "
+        "apps/web/components/admin/ had no other consumer."
     )
+    importers = []
+    for f in sorted(WEB.rglob("*.ts*")):
+        if "node_modules" in f.parts or tree in f.parents:
+            continue
+        for spec in IMPORT.findall(f.read_text(encoding="utf-8")):
+            dep = _resolve(spec, f)
+            if dep is not None and tree in dep.parents:
+                importers.append(f.relative_to(WEB).as_posix())
+                break
+    assert importers == [], (
+        f"app/admin/** is imported by {importers}, so it is no longer dead and "
+        f"its 19 tinted surfaces are live"
+    )
+
+
+def test_only_one_live_reference_constructs_an_admin_url():
+    """D-197, conditions 2 and 3. `access-denied` is the known one; a second
+    appearing means something now navigates into the namespace, and whether it
+    lands on the tree or on the redirect is a question somebody has to answer
+    rather than inherit."""
+    pattern = re.compile(r"""["'`]/admin(?:/|["'`])""")
+    tree = WEB / "app/admin"
+    found = sorted(
+        f.relative_to(WEB).as_posix()
+        for f in WEB.rglob("*.ts*")
+        if "node_modules" not in f.parts
+        and tree not in f.parents
+        and f != MIDDLEWARE
+        and pattern.search(f.read_text(encoding="utf-8"))
+    )
+    assert found == [KNOWN_ADMIN_URL_REFERENCE], (
+        f"the live references into the /admin URL namespace are now {found}, "
+        f"not just [{KNOWN_ADMIN_URL_REFERENCE!r}]"
+    )
+
+
+def test_the_compat_redirect_that_serves_that_one_reference_survives():
+    """It is the reason `/admin/login` on the access-denied page still resolves.
+    Deleting the tree is fine; deleting this is not."""
+    src = MIDDLEWARE.read_text(encoding="utf-8")
+    assert 'pathname.replace(/^\\/admin/, "/app/admin")' in src
     assert '"/admin/:path*"' in src and '"/admin"' in src, (
-        "the middleware matcher no longer covers /admin, so the redirect that "
-        "makes app/admin/** dead does not run"
+        "the middleware matcher no longer covers /admin, so /admin/login on "
+        "the access-denied page resolves to whatever app/admin/** renders"
     )
 
 

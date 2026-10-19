@@ -1,8 +1,8 @@
 # Dead Code Register
 
-**Last updated:** 2026-08-18 (Phase 5, `chore/p5-dead-code`)
+**Last updated:** 2026-10-19 (`docs/d196-d198-dead-admin-tree`)
 
-Two lists: what was removed, and what **looks** dead but is live. The second list is the point of this document — it exists so the same code is not re-litigated by the next person who greps for importers and finds none.
+Three lists: what was removed, what is dead and **not yet** removed, and what **looks** dead but is live. The third is the point of this document — it exists so the same code is not re-litigated by the next person who greps for importers and finds none. The second exists because establishing that something is dead and deleting it are separate pieces of work, and the gap between them is where a deletion deadline quietly expires.
 
 ## The standard applied here
 
@@ -52,10 +52,66 @@ Both files now carry a `NOT DEAD CODE` comment pointing here.
 
 ---
 
+---
+
+## Dead, established, NOT YET REMOVED
+
+One entry, and it is here rather than under **Removed** because the deletion is a bigger sweep than
+it looks.
+
+### `apps/web/app/admin/**` — 15 route files, a standalone admin panel superseded by `/app/admin`
+
+**Filed as D-197.** Its own first line has said so since launch:
+
+    // DEPRECATED: This standalone admin panel is superseded by /app/admin
+    // Safe to delete after verifying all pages migrated (see ADMIN-MIGRATE tickets)
+    // Target deletion: 1 week after launch
+
+There are no ADMIN-MIGRATE tickets in this repository, so the condition on its own deletion cannot
+be checked from here. The deadline was five months ago.
+
+**Against the three conditions above:**
+
+| | |
+|---|---|
+| 1. Zero importers | **holds** — nothing outside the tree resolves an import into it |
+| 2. Zero route references | **one**: `app/access-denied/page.tsx:12` navigates to `/admin/login` |
+| 3. Zero runtime string construction | **holds** — repo-wide, nothing in `apps/api`, `apps/worker`, `next.config.ts` (which has no rewrites at all) or any email builds a `/admin` page URL |
+
+Condition 2's single reference points at a **URL**, not at a file: `middleware.ts` redirects every
+`/admin/*` to `/app/admin/*` before any auth check, so `/admin/login` resolves to `/app/admin` and
+then, with no session, to `/login`. **Nothing reaches the files.** Every one of the tree's 13 URLs
+has a live counterpart under `/app/admin`, so the shadowing is total and nothing 404s.
+
+**This is the weaker kind of deadness, and the distinction is the point of recording it.** D-131's
+templates are dead because nothing names them. This tree is dead because something *intercepts* it
+— one `pathname.replace()` and one matcher entry. Narrowing that matcher is a one-token edit, and
+D-196 is a recorded instance of exactly that edit being left in a working tree by accident.
+
+**Why not deleted yet:**
+
+1. It orphans `apps/web/components/admin/` (7 files, already consumerless) and leaves
+   `packages/ui`'s parallel copies with no caller — a 20-plus-file sweep across three packages,
+   needing its own proof.
+2. Its layout holds **the only correct server-side admin verification in the codebase** —
+   `createServerApi().get('/v1/me')` then `data.is_platform_admin`, read off the API's response
+   rather than a client-supplied token. `app/app/admin/**` has no layout of its own and no file
+   under it mentions `is_platform_admin`; its only gate is the middleware's unverified decode
+   (D-194). The pattern is quoted verbatim on D-197 so it survives the deletion.
+3. **Do not de-tint it.** It holds 19 of the 46 remaining `bg-indigo-*` surfaces and
+   `tests/test_tint_answer_is_current.py` records it as out of scope deliberately — the same
+   reasoning D-131's gate states, so nobody spends an afternoon restyling a panel that renders for
+   nobody.
+
+**When it is deleted, keep the redirect.** `middleware.ts`'s `/admin` → `/app/admin` remap is what
+makes old bookmarks and that one `access-denied` link resolve. It is independent of whether the
+files exist.
+
 ## Candidates not acted on
 
 | Candidate | Why it was left |
 |---|---|
 | `_intake/` extracted directories — including a complete second Next.js application at `_intake/real-estate-saas/` | Unreferenced, and `.gitignore:29` says the directory should not be tracked at all. But removing a vendored application is a larger decision than a cleanup ticket should make unilaterally. Needs an explicit call. |
 | `apps/web/components/report-builder/` | Distinct from the deleted `v0-report-builder/`. Not on the Phase 5 candidate list and not investigated. Its similar name is exactly the sort of thing that invites a careless deletion — check it properly before touching it. |
-| `apps/web/components/v0/`, `apps/web/components/v0-styling/` | Flagged in the 2026-08-17 docs audit as undocumented, never assessed for liveness. |
+| `apps/web/components/v0/`, `apps/web/components/v0-styling/` | **Both assessed since.** `components/v0/` was dead and was **deleted** (D-050, 2026-10-18). `components/v0-styling/` is **LIVE** — `AffiliateDashboardShell.tsx` is imported by `app/app/affiliate/page.tsx` and renders the affiliate dashboard. The directory name is the only thing about it that suggests otherwise. |
+| `apps/web/components/admin/` — 7 files | **No consumer outside itself**, and `packages/ui/src/index.ts:16-19` re-exports a parallel set of copies from `packages/ui/src/components/admin/`. Left because it is the orphan set that deleting `app/admin/**` creates, and the two should be assessed in one pass rather than one of them leaving first. See D-197. |
