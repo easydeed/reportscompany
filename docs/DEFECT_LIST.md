@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 67 | Real, unfixed |
+| `open` | 68 | Real, unfixed |
 | `fixed` | 123 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **197** | D-001 … D-198, no duplicates. **D-194 is absent** — it is filed in PR #176, still unmerged, so `scripts/derive.py` reports `missing [194]`. The range closes when #176 merges; no edit is needed to close it |
+| **Total** | **198** | D-001 … D-198, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 19 · FRAGILE 19 · ROUGH 24. (Sums to 67, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 19 · ROUGH 24. (Sums to 68, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -12742,6 +12742,103 @@ the most call sites and the correct unlimited behaviour. Then:
 **Five surfaces whose rendering changes, none of which can be rendered in this container.** That is
 the whole reason it is scoped and not done: the consolidation's risk is entirely in what the shared
 component looks like on five pages, and that is the one thing nothing here can check (D-193).
+
+---
+
+### D-194 — `middleware.ts` authenticates nobody: it decodes the session JWT without verifying the signature
+
+**Severity:** WRONG — the control does not do the thing it is written to do · **Affects:** every route
+under `/app/*`, including `/app/admin`, `/app/company` and `/app/affiliate` · **Found during:**
+D-192's render pass, by noticing why a locally minted cookie rendered the product at all
+**Status:** `open` — **not fixed in this pass, by instruction.** What it exposes is established
+below; what to do about it is a decision, and one of the options has a cost.
+
+`apps/web/middleware.ts` is the only thing standing between an unauthenticated request and every
+authenticated route. Its own comment says what it does:
+
+```
+ * Decode a JWT payload without any external library.
+ * Uses only atob() which is available in Edge Runtime.
+ * Does NOT verify the signature — just reads the payload.
+```
+
+So the checks it performs — `token` present, `decoded` non-null, `exp` in the future,
+`decoded.is_platform_admin` for `/app/admin`, `decoded.account_type` for `/app/company` and
+`/app/affiliate` — are all performed **against a value the requester wrote.** A cookie is attacker
+controlled. `{"alg":"none"}` with `exp` a year out and `is_platform_admin: true` passes every one
+of them.
+
+#### What it ACTUALLY exposes, traced rather than assumed
+
+| layer | behaviour with a forged cookie |
+|---|---|
+| `middleware.ts` | **passes.** Every `/app/*` route is reachable, admin included |
+| `app/app/layout.tsx:36-48` | sets `isAdmin`, `isCompanyAdmin`, `isAffiliate`, `isSponsored`, `accountType` from the **same unverified payload** — so the chrome renders as that role, Admin nav and all |
+| `app/app/page.tsx:38` | routes by unverified `account_type` |
+| Next route handlers (`app/api/v1/admin/**`, 20+ files) | **check only that the cookie is PRESENT**, then forward it to the API. No verification, and none needed — see the next row |
+| `apps/api` `middleware/authn.py:119` | **verifies.** `verify_jwt(cookie_token, settings.JWT_SECRET)` → `jwt.decode(token, secret, algorithms=["HS256"])`. The algorithm is pinned, so `alg: none` is rejected outright |
+| admin endpoints | additionally `Depends(get_admin_user)` |
+
+**So no data crosses.** Every panel renders its skeleton and then shows an error or stays empty,
+because the API returns 401. What a forged cookie buys is:
+
+1. **the shape of the internal product** — the admin console's layout, its twelve nav destinations,
+   its route names and the client bundle served for them;
+2. **a product that looks compromised to anyone who gets there**, which is a support and trust cost
+   independent of data;
+3. **complete dependence on the API being right on every endpoint, with nothing behind it.** That is
+   the part that matters. One endpoint missing its `Depends`, one route trusting a path parameter
+   over the token's subject, and the forged cookie reaches real data with no second boundary.
+
+#### Why WRONG rather than FRAGILE or BROKEN, stated so it can be argued with
+
+Not BROKEN: nothing is non-functional and **no data exposure was demonstrated** — the API held
+everywhere it was checked. Not FRAGILE either, which is this board's category for code that works
+and breaks silently under a foreseeable change: this code **does not work now**. A function whose
+job is to authenticate, which accepts a value the caller forged, is producing a wrong answer every
+time it is asked. The fact that a second system catches the consequence does not make the first one
+right — that is the same argument as a validator that passes everything because the database has a
+constraint.
+
+**It is D-005's shape without D-005's outcome.** August's cross-tenant leak was a boundary that
+looked like a boundary and was not. This is a boundary that looks like a boundary and is not, and
+the only reason the outcome differs is that the layer behind it happens to be sound.
+
+#### Before anything is changed, two things need establishing
+
+1. **Does any API endpoint lack the dependency?** `get_admin_user` was confirmed on the admin
+   router and `authn.py` verifies on every request, but "every endpoint" was not enumerated. Until
+   it is, the third exposure above is a possibility rather than a finding.
+2. **What does verifying in the middleware cost?** The comment explains the current design: *"no
+   external library, no API call"*, because Edge runtime. Verifying HS256 needs the secret in the
+   edge environment and a WebCrypto implementation (`jose` works in Edge); the alternative is moving
+   the gate out of middleware and letting each route's data fetch be the boundary — which is
+   effectively today's behaviour, honestly labelled.
+
+**Neither is a fix, and this entry is not one.** Recorded now because the gap between what the file
+says it does and what a reader assumes it does is exactly the gap that let D-005 ship.
+
+#### The fix already exists in this repository, in the code this one replaced — see D-197
+
+Found two days after this entry, while establishing that `apps/web/app/admin/**` is dead. **That
+superseded admin panel verifies correctly**, server-side, in its layout:
+
+    const api = await createServerApi()
+    if (!api.isAuthenticated()) return { admin: null, redirectTo: '/admin/login' }
+    const { data, error } = await api.get<any>('/v1/me')
+    if (error || !data) return { admin: null, redirectTo: '/admin/login' }
+    if (!data.is_platform_admin) return { admin: null, redirectTo: '/access-denied' }
+
+`is_platform_admin` is read off **the API's response**, not off a client-supplied token, so the
+answer comes from the system that holds the secret. No Edge constraint applies, because this is a
+server component rather than middleware — which disposes of establishing-point (2) for the admin
+case: the gate does not have to live in the middleware at all.
+
+**By contrast, `app/app/admin/**` has no layout of its own, and no file under it mentions
+`is_platform_admin`.** Its only gate is the unverified decode above. So the implementation that was
+deprecated authenticates, and the implementation that replaced it does not. **The dead code is the
+reference implementation for this fix**, which is why D-197 quotes it in full and why it must be
+copied out before that tree is ever deleted.
 
 ---
 
