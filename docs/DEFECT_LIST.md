@@ -61,12 +61,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 69 | Real, unfixed |
-| `fixed` | 124 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 125 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **200** | D-001 … D-200, contiguous, no duplicates |
+| **Total** | **201** | D-001 … D-201, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 6 · WRONG 20 · FRAGILE 19 · ROUGH 24. (Sums to 69, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 19 · ROUGH 24. (Sums to 69, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -12954,9 +12954,9 @@ the gated assertion would be checking a panel that no longer exists.
 scopes its data by `request.state.account_id` · **Found during:** establishing D-194's point (1),
 "does any API endpoint lack the dependency" — the answer to which is no, and this is what the
 enumeration found instead
-**Status:** `open` — **not fixed here.** A change to the production authentication path is not
-something to make in a container that cannot run the API. The fix is four lines and is specified
-below.
+**Status:** `fixed` — `fix/d196-harness-restore`. The header is now accepted only when
+`settings.ENVIRONMENT` is a test environment, and the decision function is tested from the shipped
+source. **Read "What the fix does not prove" before believing it is closed.**
 
 `apps/api/src/api/middleware/authn.py:129-133`, the third of three ways the middleware resolves an
 identity:
@@ -13037,16 +13037,143 @@ email, a support ticket or a QR link is not a secret and must not be treated as 
 `ENVIRONMENT`'s value in production was not read — if it is unset there, the `unsubscribe.py` guard
 above is also open.
 
-**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
-In `tests/test_api_auth_boundary.py`, marked `xfail(strict=True)` with `D-200` named in the reason —
-it passes the day a guard lands, and `strict=True` makes that a build failure so the marker and this
-entry get closed together:
+#### The guard that shipped
 
-- `test_the_demo_account_header_is_refused_outside_development`
+`authn.py`, at the call site:
 
-The other two tests in that file are **not** gated and pass today: one asserts the fallback is still
-where the gated test looks, and one asserts `settings.ENVIRONMENT` still defaults to `"production"`,
-because the whole fix depends on a default that fails closed.
+    # ── 3) Demo header fallback — TEST ENVIRONMENT ONLY (D-200) ──────
+    if not acct and _demo_header_allowed():
+
+and the decision:
+
+    _DEMO_HEADER_ENVIRONMENTS = frozenset({"test"})
+
+    def _demo_header_allowed() -> bool:
+        return (settings.ENVIRONMENT or "").strip().lower() in _DEMO_HEADER_ENVIRONMENTS
+
+**An allowlist of one value, which is narrower than this codebase's own convention, deliberately.**
+`routes/auth.py:204` and `routes/devfiles.py:18` gate dev-only routes on
+`settings.ENVIRONMENT == "production"`. Two reasons not to copy that here:
+
+1. **An inverted test fails OPEN for every value nobody anticipated** — `"Production"`, `"prod"`,
+   `"staging"`, a trailing space from a deploy variable. An allowlist fails closed on all of them,
+   and the tests enumerate those cases rather than describing them.
+2. **`settings.py:11` says staging and local development both run `ENVIRONMENT=development`.**
+   Those are deployed, reachable environments with real sessions in them. A seed endpoint belongs
+   there; an authentication bypass does not. The header's only legitimate consumer is the test
+   suite, so the allowlist is the test environment and nothing else.
+
+`settings.ENVIRONMENT` defaults to `"production"` (`settings.py:12`), so an unset variable disables
+it — the property the whole fix rests on, and asserted by its own test. A `logger.warning` fires at
+import if the header is ever enabled, so an `ENVIRONMENT` set wrong in production is loud rather
+than quiet.
+
+**The eight test files keep working** via one line in `apps/api/tests/conftest.py`:
+`os.environ.setdefault("ENVIRONMENT", "test")`, placed above every `api` import because `settings`
+is built at import time — set it later and eight files get a 401 with nothing to say why.
+`setdefault` rather than assignment, so a CI job that sets `ENVIRONMENT` itself keeps its value.
+
+#### Where the tests live, and why it is not where they belong
+
+`tests/test_api_auth_boundary.py` — the **root** suite, not `apps/api/tests/`. Because it runs:
+`apps/api`'s suite needs `pydantic_settings`, `httpx`, `redis` and `psycopg`, none of which the
+container this was fixed in has. The predicate is lifted out of `authn.py` **by AST and executed
+against a stub `settings`** — not imported (that pulls in all four packages) and not copied (a copy
+of a security predicate is a second implementation that will drift from the one that ships).
+
+11 refused values and 3 accepted ones are enumerated, plus three structural assertions: that the
+header read sits behind the guard, that the conftest line precedes the first `api` import, and that
+the guard does not use `os.getenv` (see D-201).
+
+#### What the fix does not prove
+
+**No request was ever made against this.** The predicate is proved and the call site is proved wired
+to it; a live 401 is not. Only CI or a deployment can produce that, and `apps/api`'s suite has never
+run in this container. **If the shape is wrong, CI is what will say so** — which is the trade that
+was taken knowingly, because an open door in production authentication is the worse risk.
+
+**Two things remain unknown and both bound how bad this was:** whether anything in front of the API
+strips unknown headers, and what `ENVIRONMENT` is actually set to in production. The second now
+matters less — the guard fails closed when it is unset — but it is still the difference between
+"this was never reachable" and "it was".
+
+#### The admin-route behaviour is NOT a mitigation, and must not be recorded as one
+
+An earlier draft of this entry noted that admin routes refuse a forged identity. They do, and the
+reason is that `get_admin_user` reads `user_info.get("is_platform_admin", False)` while the DB
+enrichment that would set that key is skipped on this path. **That is one dictionary default away
+from being the whole story.** Nothing checks this path; a key that is absent happens to be falsy.
+Add a default of `True` anywhere in that chain, or populate `user_info` from an untrusted source,
+and the 403 becomes a 200. It is an accident with a good outcome, not a control, and the fix above
+does not depend on it.
+
+---
+
+### D-201 — the one environment gate in the API written with `os.getenv` defaults to dev, so it fails open when the variable is unset
+
+**Severity:** WRONG · **Affects:** `GET /v1/email/unsubscribe/token` — a token *generator* for any
+`(email, account_id)` pair a caller names, on a **public** path prefix · **Found during:** writing
+D-200's guard, by checking which form the rest of the API uses
+**Status:** `open`
+
+Six places in `apps/api/src` read `ENVIRONMENT`. Five are right. This one is `routes/unsubscribe.py:180`:
+
+    if os.getenv("ENVIRONMENT", "dev") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+
+**The default is `"dev"`, so an unset variable is not production, so the endpoint exists.** Compare
+the two forms the same codebase uses correctly:
+
+| where | form | unset variable |
+|---|---|---|
+| `routes/auth.py:204` (`/v1/auth/seed-dev`) | `settings.ENVIRONMENT == "production"` | **refuses** — `settings.py:12` defaults to `"production"` |
+| `routes/devfiles.py:18` (`/dev-files/*`) | `settings.ENVIRONMENT == "production"` | **refuses** |
+| `routes/admin.py:3004` (a health display) | `os.getenv("ENVIRONMENT", "production")` | harmless, and the safe default anyway |
+| **`routes/unsubscribe.py:180`** | **`os.getenv("ENVIRONMENT", "dev")`** | **serves** |
+
+`settings.py` says why the right default exists, in as many words: *"Defaults to `production` so any
+deploy that forgets to set ENVIRONMENT is treated as production (fail-safe)."* This line opts out of
+that and gets the opposite.
+
+#### What the endpoint hands out
+
+`generate_unsubscribe_token(account_id, email)` — `HMAC-SHA256(f"{account_id}:{email}",
+EMAIL_UNSUB_SECRET)` — for **any** pair the caller supplies, plus the ready-made URL. With that
+token, `POST /v1/email/unsubscribe` suppresses delivery for that address on that account.
+
+**The file already explains this harm, thirty lines above, about a different mechanism.** The
+comment on the signing secret's dev fallback says: *"anyone could then forge a token and suppress
+delivery for any address on any account. Mismatched defaults fail closed; matched defaults fail
+open."* That reasoning is correct and the fallback it defends is correctly built. **The same file
+then leaves a route that issues those tokens on request**, reachable because its guard has the one
+default the rest of the codebase deliberately avoids.
+
+It is also under `/v1/email/unsubscribe`, which `authn.py`'s `_PUBLIC_PREFIXES` exempts from
+authentication entirely — so if the guard is open, the route is open to the internet.
+
+#### Severity, and what decides it
+
+**WRONG rather than BROKEN, on one unread fact.** If production sets `ENVIRONMENT`, the guard holds
+and this is a latent fail-open form. If production does not set it, the endpoint is live and this is
+BROKEN — the same question D-200 leaves open, and the answer is one environment variable that
+nobody here can read. **It needs the same trip to Render that the rest of the §T2 configuration
+questions need.**
+
+Like D-200, it needs an `account_id`. Like D-200, that is not a control: a UUID in a URL, an email
+header or a support ticket is not a secret.
+
+#### The fix
+
+    if settings.ENVIRONMENT != "test":
+        raise HTTPException(status_code=404, detail="Not found")
+
+or delete the route — it is a convenience for generating a test fixture, and `apps/api/tests` can
+call `generate_unsubscribe_token` directly. **Deleting it is the better fix**, for the same reason
+minting a real token is the better fix for D-200: the safest version of a test-only door is no door.
+
+A sweep for the form is worth doing at the same time: `os.getenv("ENVIRONMENT", …)` with any default
+other than `"production"` is the shape, and `tests/test_api_auth_boundary.py` already asserts the
+authentication path does not use it.
 
 ---
 

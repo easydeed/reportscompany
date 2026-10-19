@@ -1,0 +1,51 @@
+[
+  {
+    "name": "R1 the guard is removed, so X-Demo-Account is an unconditional identity assertion again",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "        if not acct and _demo_header_allowed():",
+    "new": "        if not acct:",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R2 the allowlist becomes an inverted test, which fails open on 'Production' and 'staging'",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "    return (settings.ENVIRONMENT or \"\").strip().lower() in _DEMO_HEADER_ENVIRONMENTS",
+    "new": "    return settings.ENVIRONMENT != \"production\"",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R3 the allowlist widens to the dev-route convention, enabling it on staging",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "_DEMO_HEADER_ENVIRONMENTS = frozenset({\"test\"})",
+    "new": "_DEMO_HEADER_ENVIRONMENTS = frozenset({\"test\", \"development\"})",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R4 the guard is rewritten with os.getenv's fail-open default (D-201's form)",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "    return (settings.ENVIRONMENT or \"\").strip().lower() in _DEMO_HEADER_ENVIRONMENTS",
+    "new": "    return os.getenv(\"ENVIRONMENT\", \"dev\") != \"production\"",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R5 settings.ENVIRONMENT stops defaulting to production, so the guard fails open unset",
+    "file": "apps/api/src/api/settings.py",
+    "old": "    ENVIRONMENT: str = \"production\"",
+    "new": "    ENVIRONMENT: str = \"development\"",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R6 the API conftest stops setting the test environment, so eight files lose their login",
+    "file": "apps/api/tests/conftest.py",
+    "old": "os.environ.setdefault(\"ENVIRONMENT\", \"test\")",
+    "new": "pass  # ENVIRONMENT not set",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R7 the conftest sets it after settings has already been built",
+    "file": "apps/api/tests/conftest.py",
+    "old": "os.environ.setdefault(\"ENVIRONMENT\", \"test\")\n",
+    "new": "from api.settings import settings  # noqa: E402\nos.environ.setdefault(\"ENVIRONMENT\", \"test\")\n",
+    "test": "tests/test_api_auth_boundary.py"
+  }
+]

@@ -45,6 +45,65 @@ _PUBLIC_PREFIXES = (
 )
 
 
+# ============================================================================
+# D-200 — X-Demo-Account is an identity assertion, and it was unguarded
+# ============================================================================
+#
+# This header is accepted as an account id. Until 2026-10-19 it was accepted
+# UNCONDITIONALLY, in production: a request with no credential of any kind,
+# carrying `X-Demo-Account: <account uuid>`, was served as that account. Worse
+# than a missing authorisation check, because `set_rls()` is keyed on the same
+# `request.state.account_id` — so the database-level isolation enforced the
+# caller's chosen scope instead of resisting it.
+#
+# It exists because it is the TEST SUITE'S LOGIN. Eight files under
+# `apps/api/tests/` use it and say so in their own comments. That is its only
+# legitimate consumer: the Next.js app never sends it, and nothing in
+# `apps/worker` does either.
+#
+# SO THE ALLOWLIST IS `{"test"}` AND NOTHING ELSE. Narrower than this
+# codebase's convention for dev-only routes (`auth.py:204`, `devfiles.py:18`
+# gate on `settings.ENVIRONMENT == "production"`), deliberately:
+#
+#   * `settings.ENVIRONMENT == "production"` is an inverted test, so it fails
+#     OPEN for every value nobody anticipated — `"Production"`, `"prod"`,
+#     `"staging"`, a trailing space. An allowlist fails CLOSED on all of them.
+#   * `settings.py:11` says staging and local development both run with
+#     `ENVIRONMENT=development`. Those are deployed, reachable environments
+#     with real sessions in them. An authentication bypass does not belong
+#     there just because a seed endpoint does.
+#
+# `settings.ENVIRONMENT` defaults to `"production"` (`settings.py:12`), so an
+# unset variable disables this. `os.getenv("ENVIRONMENT", "dev")` — the form
+# used at `routes/unsubscribe.py:180`, see D-201 — defaults to dev and
+# therefore fails OPEN when the variable is unset. That is the wrong model and
+# this is deliberately not a copy of it.
+#
+# The better fix, which this is not: have the test suite mint a real HS256
+# token and delete this path, so the tests exercise what production does.
+
+_DEMO_HEADER_ENVIRONMENTS = frozenset({"test"})
+
+
+def _demo_header_allowed() -> bool:
+    """Whether `X-Demo-Account` may stand in for a credential.
+
+    Read per request rather than captured at import, so a test that changes
+    the setting is not fighting a module-level constant.
+    """
+    return (settings.ENVIRONMENT or "").strip().lower() in _DEMO_HEADER_ENVIRONMENTS
+
+
+if _demo_header_allowed():
+    # Loud on purpose. If this line ever appears in a production log, an
+    # unauthenticated request can assert any account id it likes.
+    logger.warning(
+        "X-Demo-Account header is ENABLED (ENVIRONMENT=%r). This accepts an "
+        "account id as proof of identity and must never be on outside tests.",
+        settings.ENVIRONMENT,
+    )
+
+
 def _is_public_path(path: str) -> bool:
     """Check if path is public (no auth required)."""
     if path.startswith(_PUBLIC_PREFIXES):
@@ -65,7 +124,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
     Resolves account_id via:
       1) Authorization: Bearer <JWT>
       2) Authorization: Bearer <API-KEY>
-      3) X-Demo-Account (temporary fallback)
+      3) X-Demo-Account — TEST ENVIRONMENT ONLY, see D-200 above
     Sets request.state.account_id and request.state.user.
     """
 
@@ -126,8 +185,8 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                         )
                     acct = claims["account_id"]
 
-        # ── 3) Demo header fallback ──────────────────────────────────────
-        if not acct:
+        # ── 3) Demo header fallback — TEST ENVIRONMENT ONLY (D-200) ──────
+        if not acct and _demo_header_allowed():
             demo = request.headers.get("X-Demo-Account")
             if demo:
                 acct = demo
