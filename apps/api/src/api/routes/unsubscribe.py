@@ -169,23 +169,29 @@ def unsubscribe_one_click(email: EmailStr, token: str):
     return {"message": "Email unsubscribed"}
 
 
-@router.get("/email/unsubscribe/token")
-def get_unsubscribe_token(email: str, account_id: str):
-    """
-    Generate an unsubscribe token for testing.
-    
-    WARNING: This endpoint should be disabled in production or require admin auth.
-    It's provided for development/testing purposes only.
-    """
-    if os.getenv("ENVIRONMENT", "dev") == "production":
-        raise HTTPException(status_code=404, detail="Not found")
-    
-    token = generate_unsubscribe_token(account_id, email)
-    
-    return {
-        "email": email,
-        "account_id": account_id,
-        "token": token,
-        "unsubscribe_url": f"/v1/email/unsubscribe?email={email}&token={token}"
-    }
+# ── DELETED 2026-10-20: GET /v1/email/unsubscribe/token (D-201) ─────────────
+#
+# It generated a valid unsubscribe token for ANY (email, account_id) a caller
+# named, plus the ready-made URL. With that token, POST /v1/email/unsubscribe
+# suppresses delivery for that address on that account — the exact harm the
+# comment on EMAIL_UNSUB_SECRET above describes and defends against for the
+# signing secret.
+#
+# Its guard was `os.getenv("ENVIRONMENT", "dev") == "production"`, the one
+# environment gate in this service written with a non-production default. An
+# unset variable resolved to "dev", so the route EXISTED. The other gates in
+# this codebase — routes/auth.py and routes/devfiles.py — read
+# `settings.ENVIRONMENT`, which defaults to "production" (settings.py:12) and
+# therefore fails closed. And `/v1/email/unsubscribe` is in authn.py's
+# _PUBLIC_PREFIXES, so an open guard here was open to the internet.
+#
+# DELETED rather than re-gated. It had NO caller: not a test, not a script,
+# not the web app, not the worker — a repo-wide grep for the path returns this
+# comment and the defect entry. Anything that needs a token calls
+# `generate_unsubscribe_token` directly, which is what the worker does
+# (`worker/email/send.py:75,95`) and what this module's own verify path does.
+# The safest version of a test-only door is no door.
+#
+# `tests/test_api_auth_boundary.py` asserts the route is gone and that no gate
+# in apps/api uses the fail-open form.
 

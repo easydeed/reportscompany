@@ -156,3 +156,81 @@ def test_the_guard_is_not_written_against_os_getenv():
         "the demo-header guard reads os.getenv rather than settings. Any "
         "default other than production fails open on an unset variable."
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# D-201 — the fail-open environment gate, and the route it was guarding
+# ─────────────────────────────────────────────────────────────────────────────
+
+API_SRC = REPO / "apps/api/src/api"
+
+def _fail_open_gates(path):
+    """`os.getenv("ENVIRONMENT", <not production>)` used in an `if` TEST.
+
+    PARSED, NOT GREPPED, and the first draft of this test is why. A regex over
+    the source matched three sites and all three were wrong: the `os.getenv`
+    inside `logger.critical(...)` at `unsubscribe.py:33`, which reports the
+    value rather than gating on it, and two occurrences inside COMMENTS that
+    quote the bad form in order to warn about it — including the one in
+    `authn.py` written two days ago for D-200.
+
+    Substring-is-not-a-construct, in a test written to catch a defect of that
+    family. An `if` test is the construct; comments are not in the AST, and a
+    logging argument is not a condition.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    out = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If):
+            continue
+        for sub in ast.walk(node.test):
+            if not (isinstance(sub, ast.Call)
+                    and isinstance(sub.func, ast.Attribute)
+                    and sub.func.attr == "getenv"
+                    and len(sub.args) == 2):
+                continue
+            name, default = sub.args
+            if not (isinstance(name, ast.Constant) and name.value == "ENVIRONMENT"):
+                continue
+            if isinstance(default, ast.Constant) and default.value == "production":
+                continue   # the safe default: unset reads as production
+            out.append((node.lineno, getattr(default, "value", "<computed>")))
+    return out
+
+
+def test_the_unsubscribe_token_route_is_gone():
+    """D-201. It handed out a valid unsubscribe token for any (email,
+    account_id) a caller named, on a path `_PUBLIC_PREFIXES` exempts from
+    authentication, behind the one gate in this service that failed open.
+
+    Deleted rather than re-gated: it had no caller anywhere in the repository,
+    and `generate_unsubscribe_token` is importable by anything that needs one.
+    """
+    src = (API_SRC / "routes/unsubscribe.py").read_text(encoding="utf-8")
+    assert '@router.get("/email/unsubscribe/token")' not in src, (
+        "the token-generating route is back. It issues a working unsubscribe "
+        "token for any address on any account; see D-201 before re-adding it."
+    )
+    assert "def get_unsubscribe_token" not in src
+    # The verify path and the worker both still need the function itself.
+    assert "def generate_unsubscribe_token" in src
+
+
+def test_no_environment_gate_in_the_api_fails_open():
+    """The generalisation, because the defect was the FORM and not the route.
+
+    Swept across every `.py` under `apps/api/src/api`, so the next gate written
+    this way fails here rather than in production. `routes/admin.py` uses
+    `os.getenv("ENVIRONMENT", "production")` for a health display — a safe
+    default, and allowed.
+    """
+    offenders = [
+        f"{f.relative_to(REPO)}:{lineno} default={default!r}"
+        for f in sorted(API_SRC.rglob("*.py"))
+        for lineno, default in _fail_open_gates(f)
+    ]
+    assert offenders == [], (
+        "environment gates with a non-production default — an unset variable "
+        "enables whatever they guard:\n  " + "\n  ".join(offenders) +
+        "\nUse settings.ENVIRONMENT, which defaults to production (D-201)."
+    )
