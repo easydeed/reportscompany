@@ -176,3 +176,89 @@ def test_the_harness_refuses_to_screenshot_an_unhealthy_route():
     )
     for needed in ("THE SENTINEL", "skeletons"):
         assert needed in src, f"the harness no longer implements {needed!r}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# B0.5 — the local stack, and the honesty of its coverage note
+# ─────────────────────────────────────────────────────────────────────────────
+
+STACK = REPO / "scripts/local_stack.sh"
+FIXTURE = REPO / "scripts/seed_render_fixture.py"
+
+#: Every external dependency the stack cannot stand in for. Named here so a
+#: later batch cannot discover one of them by being surprised mid-review.
+UNCOVERED = ("SimplyRETS", "PDFShift", "SiteX", "Stripe", "Resend", "Twilio",
+             "worker")
+
+
+def test_the_stack_script_says_what_it_does_not_cover():
+    """A harness that can see some content is more dangerous than one that can
+    see none, because the gap moves from obvious to assumed.
+
+    So the list of what is NOT behind the local stack is part of the script,
+    and this asserts it stays there. Scoping a content batch against a stack
+    with no PDF renderer is fine; discovering that halfway through is not.
+    """
+    src = STACK.read_text(encoding="utf-8")
+    missing = [name for name in UNCOVERED if name not in src]
+    assert missing == [], (
+        f"scripts/local_stack.sh no longer names {missing} among the things it "
+        f"cannot stand in for. If one of them became available, say so there "
+        f"and drop it from UNCOVERED; if the note was trimmed, put it back."
+    )
+    assert "WHAT IT DOES NOT COVER" in src
+
+
+def test_the_fixture_seeds_volume_rather_than_one_of_each():
+    """An empty page that renders is not a rendered page.
+
+    This project has measured page fit on an empty page twice. A Contacts list
+    with one row cannot show a filter pill row, a table rule, a status pill or
+    a detail drawer — which is most of what Design's steps 5-7 change.
+    """
+    src = FIXTURE.read_text(encoding="utf-8")
+    # Counted from the data, not from a sentence about the data.
+    reports = src.count('("completed",') + src.count('("processing",') \
+        + src.count('("failed",') + src.count('("queued",')
+    assert reports >= 12, f"only {reports} seeded reports — a list needs to scroll"
+    first_names = re.search(r"first = \[(.*?)\]", src, re.S)
+    assert first_names and first_names.group(1).count(",") >= 14, \
+        "fewer than 15 seeded contacts; the list page cannot show a long list"
+    assert "AN EMPTY PAGE THAT RENDERS IS NOT A RENDERED PAGE" in src
+
+
+def test_the_fixture_raises_the_rate_limit_it_would_otherwise_trip():
+    """The rate limiter throttles a measurement tool, and silently.
+
+    60 requests per minute per account against 25 routes of several calls each
+    returns 429s, and the pages then render skeletons that the harness
+    honestly reports as `degraded` — which reads as "this page has no data".
+    """
+    src = FIXTURE.read_text(encoding="utf-8")
+    # The STATEMENT, not the constant's name. The first version asserted
+    # `"HARNESS_ACCOUNTS" in src`, and regression R3 narrowed the UPDATE to a
+    # single account while leaving the constant defined above it — DID NOT
+    # FIRE. Sixth instance of the same family this week; see §0.6.
+    assert "api_rate_limit=100000 WHERE id = ANY(%s::uuid[])" in src, (
+        "the rate limit is no longer raised across a list of accounts"
+    )
+    assert "(list(HARNESS_ACCOUNTS),)" in src, (
+        "the UPDATE no longer receives HARNESS_ACCOUNTS, so the four personas "
+        "the manifest logs in as besides the regular one will 429"
+    )
+    assert src.count("HARNESS_ACCOUNTS = (") == 1
+
+
+def test_the_fixture_marks_onboarding_done_or_app_is_not_the_dashboard():
+    """`/app` redirects to `/app/get-started` while onboarding is incomplete.
+
+    Correct product behaviour, and it meant the harness's `/app` entry was
+    measuring the onboarding wizard. The sentinel caught it as BROKEN — final
+    path != requested path — rather than producing a plausible table for the
+    wrong page.
+    """
+    src = FIXTURE.read_text(encoding="utf-8")
+    assert "onboarding_progress" in src
+    for step in ("profile_complete", "branding_setup", "first_report",
+                 "first_schedule"):
+        assert step in src, f"onboarding step {step!r} is not seeded"

@@ -450,9 +450,22 @@ The README-documented runner splits each file on `;` and **drops any resulting c
 
 Nothing in `apps/api/src/api/routes/company.py` writes an application-level record of who read what. There is no access-log table, and the `rep_id` filter value is not persisted anywhere. Consequence: the question "was D-005 ever exploited, and against whom?" **cannot be answered from the product's own database** — it has to go to the hosting provider's HTTP request logs, filtered to `/v1/company/reports` and `/v1/company/schedules` carrying a `rep_id` parameter, across the whole window since `db/migrations/0048_title_company_hierarchy.sql` shipped. Any tenant-scoped read path that a caller can parameterise should leave a record.
 
-### D-013 — A database or Redis outage is reported to users as an auth failure
+### D-013 — A database outage hangs every request for ten seconds and then reports it as an auth failure
 **Severity:** FRAGILE · **Affects:** all authenticated users
 **Status:** `open`
+
+> **THE TEN SECONDS IS THE SYMPTOM A USER WOULD ACTUALLY REPORT, AND NOTHING HAD IT.**
+> `db.py:38` hard-codes `timeout=10` on the connection pool, and the blacklist check runs on
+> **every authenticated request**. So a database outage does not log you out — it **freezes the
+> page for ten seconds per call** and *then* logs you out. A page making three calls appears to
+> hang for half a minute before ejecting the user, with `/health` green throughout. For four
+> months this entry described a wrong message and never mentioned the wait, which is the one
+> detail that would have made it findable from a complaint.
+>
+> **And the message it did name is the one no browser user can see.** The entry has said
+> `"Token has been invalidated"` since it was filed; that is the **bearer** path.
+> `apps/web` authenticates with the `mr_token` cookie, and that branch returns
+> **`"Session has expired"`**. Both measured 2026-10-20 — see the reproduction below.
 
 `_is_token_blacklisted` fails **closed**: any exception returns `True` (`apps/api/src/api/middleware/authn.py:189-190`), so the request is rejected with `401 {"detail":"Token has been invalidated"}`. Failing closed is the correct security posture; the reporting is wrong.
 

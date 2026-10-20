@@ -124,6 +124,38 @@ code rather than the file. **Treat each of these as evidence the rule is live ra
 historical: the pattern that produced the defect is the one you are working in while you remove
 it.**
 
+**SIX IN ONE WEEK, ALL BY THE AUTHOR OF THE RULE, ALL IN TESTS WRITTEN TO CATCH THIS FAMILY.**
+2026-10-14 to 2026-10-20:
+
+| | the test | what the substring matched instead |
+|---|---|---|
+| 1 | the CI reporter's failure count | `"failed" in counts` matched `xfailed` |
+| 2 | the CI table's workflow check | `"ci_annotate_failures.py" in wf` and `"if: failure()" in wf` matched the **comments explaining the step** |
+| 3 | the tint sweep's grep target | `bg-indigo-(50\|100\|200)` with no `\b` matched `bg-indigo-500`, and reported three surviving hits that did not exist |
+| 4 | D-201's fail-open gate sweep | a regex over the source matched a `logger.critical(...)` argument and **two comments quoting the bad form in order to warn about it** — one written two days earlier |
+| 5 | the render harness's own property gate | looped over the word `"degraded"`; a regression replaced the entire health decision with `health = 'ok'` and the word survived in a docstring. **DID NOT FIRE** |
+| 6 | the local stack's rate-limit gate | asserted `"HARNESS_ACCOUNTS" in src`; a regression narrowed the `UPDATE` to one account and left the constant defined above it. **DID NOT FIRE** |
+
+Three of the six were caught only because `scripts/apply_regressions.py` reported `DID NOT FIRE`;
+one was caught by the test failing on its own documentation; the other two by re-reading the
+pattern with the boundary in mind. **Without the regression harness, half of them would have
+shipped as green.**
+
+**This is the argument for the remedy over the resolve.** Six instances in six days, by the person
+who wrote the rule, in tests whose entire purpose was this family, is not a vigilance problem that
+more care fixes — it is evidence that a substring is the *default* thing a hand writes and the
+construct has to be reached for deliberately. So the rule's operative form is mechanical, not
+attitudinal:
+
+> **Parse it.** `ast.walk` for Python, `\b`-anchored patterns at minimum for text, and for anything
+> structural — an `if` test, a decorator, a route, a JSON entry — walk the tree and compare the
+> node. A comment is not in an AST and a logging argument is not a condition, which is exactly why
+> four of the six above could not have happened against a parser.
+
+Where a parser genuinely is not available (JavaScript source read from Python, for instance), assert
+the **exact decision line** rather than any word in it, so that a mutation to the decision is a
+mutation to the assertion.
+
 - **No finding derived from a sample render counts until it is reproduced through the
   production path.** Three instances in this project — the property report aerial, the
   email placeholder links, and the inventory report's months-of-supply figure — where a
