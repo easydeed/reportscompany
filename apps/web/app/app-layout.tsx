@@ -282,7 +282,9 @@ function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }:
         {/* Quick Action — hide for admin / company admin users */}
         {!isAdmin && !isCompanyAdmin && (
           <div className="px-3 mb-2">
-            <Button size="sm" className="w-full bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground" asChild>
+            {/* Design: the rail's primary action is the 44px button, not a row
+                action. `size="sm"` is h-9 and is for table-row buttons. */}
+            <Button className="w-full bg-sidebar-primary hover:bg-sidebar-primary/90 text-sidebar-primary-foreground" asChild>
               <Link href="/app/reports/new" prefetch={false}>
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 New Report
@@ -435,17 +437,6 @@ function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }:
       </SidebarContent>
 
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname?.startsWith("/app/help")}>
-              <Link href="/app/help">
-                <HelpCircle className="w-4 h-4" />
-                <span className="text-[13px]">Help Center</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-
         {/* Affiliate sidebar: agent-focused metrics */}
         {isAffiliate && affiliateMetrics && (
           <div className="px-3 py-3">
@@ -499,6 +490,20 @@ function DashboardSidebar({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }:
             </div>
           </div>
         )}
+
+        {/* Design: Help is the LAST thing in the rail, under the usage block.
+            It was above both metric blocks, which put a support link between
+            the navigation and the numbers it has nothing to do with. */}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname?.startsWith("/app/help")}>
+              <Link href="/app/help">
+                <HelpCircle className="w-4 h-4" />
+                <span className="text-[13px]">Help Center</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )

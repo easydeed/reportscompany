@@ -122,19 +122,70 @@ const PROBE = () => {
     return out;
   };
 
+  const BOX = ['backgroundColor', 'color', 'borderRadius', 'borderColor',
+               'borderTopWidth', 'height', 'paddingTop', 'paddingLeft',
+               'fontSize', 'fontWeight', 'letterSpacing', 'textTransform',
+               'boxShadow'];
+
+  // SELECTED BY `data-slot`, NOT BY CLASS.
+  //
+  // The first version read `[data-slot="card"], .rounded-2xl, .rounded-xl` —
+  // selecting the card by the very class the restyle changes, so "the first
+  // card" was a different element before and after and the diff was measuring
+  // the selector. Every primitive here sets a `data-slot`, which is stable
+  // across a restyle because it is an identity rather than a style.
+  //
+  // And the set has to COVER THE BATCH. Reading only body/h1/button/card
+  // reported 6 of 25 routes changed for a batch that restyled seven
+  // primitives, because tables, badges, inputs, switches and tabs were never
+  // probed. An honest diff of an unmeasured thing is still zero.
+  const slots = {};
+  for (const [name, slot] of Object.entries({
+    button: 'button', card: 'card', cardTitle: 'card-title',
+    badge: 'badge', input: 'input', switch: 'switch',
+    tableHead: 'table-head', tableCell: 'table-cell', tableRow: 'table-row',
+    tabsList: 'tabs-list', tabsTrigger: 'tabs-trigger',
+    select: 'select-trigger', dialog: 'dialog-content',
+  })) {
+    slots[name] = of(`[data-slot="${slot}"]`, BOX);
+  }
+
+  // ORDER, NOT STYLE.
+  //
+  // B3 moved Help below the usage block in the rail. That is a DOM-order
+  // change with no computed-style consequence, so a style diff reports zero
+  // and a reviewer concludes nothing happened. A structural batch needs a
+  // structural probe: the sequence of the rail's landmarks, read top to
+  // bottom, so "Help moved" is a visible change in the output.
+  const rail = (() => {
+    const root = document.querySelector('[data-slot="sidebar"], aside, nav');
+    if (!root) return null;
+    const seen = [];
+    for (const el of root.querySelectorAll('a, button, [data-slot="sidebar-group-label"]')) {
+      const t = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 24);
+      if (t) seen.push(t);
+    }
+    return seen;
+  })();
+
   return {
     tokens,
+    rail,
     body: of('body', ['backgroundColor', 'color', 'fontSize', 'lineHeight', 'fontFamily']),
     h1: of('h1', ['fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'color']),
-    firstButton: of('button', ['backgroundColor', 'color', 'borderRadius', 'height', 'fontWeight']),
-    firstCard: of('[data-slot="card"], .rounded-2xl, .rounded-xl',
-                  ['backgroundColor', 'borderRadius', 'boxShadow', 'borderColor']),
+    slots,
     // Counted, not styled: a number that changes is a structural change.
     counts: {
       buttons: document.querySelectorAll('button').length,
       links: document.querySelectorAll('a').length,
       h1: document.querySelectorAll('h1').length,
       tables: document.querySelectorAll('table').length,
+      // Per-primitive presence, so a diff can say "this route has no table"
+      // rather than silently comparing two nulls.
+      slotsPresent: Object.fromEntries(
+        ['button', 'card', 'card-title', 'badge', 'input', 'switch',
+         'table-head', 'table-cell', 'table-row', 'tabs-trigger'].map((s) =>
+          [s, document.querySelectorAll(`[data-slot="${s}"]`).length])),
     },
   };
 };
