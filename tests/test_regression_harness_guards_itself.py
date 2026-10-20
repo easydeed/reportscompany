@@ -243,20 +243,40 @@ def _slow_spec(tmp_path, n=12):
 def _launch(spec, stdout=subprocess.DEVNULL, shell_cmd=None):
     if shell_cmd:
         return subprocess.Popen(shell_cmd, cwd=REPO, shell=True)
+    # stderr is KEPT, not discarded. `_wait_for_sentinel` has timed out twice
+    # in a full-suite run and never once in isolation, and both times the
+    # failure said only "never entered a mutation window" — which is a
+    # symptom, not a diagnosis. Whatever the next one is, its reason will be
+    # in the message.
     return subprocess.Popen(
         [sys.executable, str(HARNESS), str(spec)],
-        cwd=REPO, stdout=stdout, stderr=subprocess.DEVNULL)
+        cwd=REPO, stdout=stdout, stderr=subprocess.PIPE, text=True)
 
 
 def _wait_for_sentinel(proc, timeout=30.0):
+    """Wait until the harness is inside a mutation. Returns a reason on
+    failure rather than a bare False, so a flake diagnoses itself."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if SENTINEL.exists():
-            return True
+            return None
         if proc.poll() is not None:
-            return False
+            err = ""
+            try:
+                err = (proc.stderr.read() or "")[-600:] if proc.stderr else ""
+            except Exception:
+                pass
+            return (f"the harness exited with {proc.returncode} before writing a "
+                    f"sentinel. stderr:\n{err}")
         time.sleep(0.01)
-    return False
+    return f"no sentinel appeared within {timeout}s and the harness is still running"
+
+
+def _enter_mutation_window(proc):
+    reason = _wait_for_sentinel(proc)
+    if reason:
+        proc.kill()
+        raise AssertionError(reason)
 
 
 @pytest.fixture(autouse=True)
@@ -295,7 +315,7 @@ def test_sigterm_mid_mutation_still_restores_and_exits_2(tmp_path):
     every `finally`. It is turned into an exception for exactly this reason."""
     spec, targets = _slow_spec(tmp_path)
     proc = _launch(spec)
-    assert _wait_for_sentinel(proc), "never entered a mutation window"
+    _enter_mutation_window(proc)
     proc.send_signal(signal.SIGTERM)
     assert proc.wait(timeout=120) == 2, (
         "a harness killed mid-mutation has said nothing about any gate, which "
@@ -316,7 +336,7 @@ def test_sigkill_leaves_a_sentinel_and_the_next_run_refuses_to_start(tmp_path):
     """
     spec, targets = _slow_spec(tmp_path)
     proc = _launch(spec)
-    assert _wait_for_sentinel(proc), "never entered a mutation window"
+    _enter_mutation_window(proc)
     proc.kill()
     proc.wait(timeout=30)
 

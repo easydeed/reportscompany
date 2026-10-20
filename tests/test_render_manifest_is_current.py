@@ -259,6 +259,90 @@ def test_the_fixture_marks_onboarding_done_or_app_is_not_the_dashboard():
     """
     src = FIXTURE.read_text(encoding="utf-8")
     assert "onboarding_progress" in src
-    for step in ("profile_complete", "branding_setup", "first_report",
-                 "first_schedule"):
-        assert step in src, f"onboarding step {step!r} is not seeded"
+    # BOTH accounts, counted. The first version asserted each step name
+    # appeared somewhere in the file, and once the bare variant added a second
+    # identical loop the regression that deleted the CONTENT account's loop
+    # stopped firing — the strings were still there, supplied by the other
+    # block. Eighth instance of substring-is-not-a-construct this week; see
+    # §0.6. Two seeding loops is the construct.
+    loops = src.count('for step in ("profile_complete", "branding_setup", "first_report",')
+    assert loops == 2, (
+        f"{loops} onboarding-seeding loop(s), expected 2 — one for the account "
+        f"with content and one for the bare account. Whichever is missing, "
+        f"/app redirects to /app/get-started for it and that dashboard is "
+        f"never rendered."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The bare variant — the dashboard's absence rules
+# ─────────────────────────────────────────────────────────────────────────────
+
+DASHBOARD = WEB / "components/dashboard/dashboard-content.tsx"
+
+#: Design's constraint #4: "show '—' or 'Nothing scheduled', never 0 as a fake
+#: value". Each of these is the words a real account sees on day one.
+ABSENCE_COPY = ("Nothing sent yet", "Nothing scheduled", "No new leads")
+
+
+def test_the_manifest_renders_the_dashboard_as_an_account_with_nothing_on_it(manifest):
+    """Every absence rule is a day-one state on the first page an account is
+    shown, and a fixture built to have content never reaches one. The empty-page
+    measurement inverted: we had been checking only the full case."""
+    bare = [r for r in manifest["routes"]
+            if r["path"] == "/app" and r["token"] == "bare"]
+    assert len(bare) == 1, (
+        "the manifest no longer renders /app as the bare account, so the "
+        "dashboard's absence rules are unverified"
+    )
+    assert "bare" in manifest["tokens"]
+
+
+def test_the_bare_account_is_on_a_plan_with_no_finite_limit():
+    """The null sentence title only happens when `remaining` cannot be
+    computed. On a plan with a finite limit the fallback is never exercised,
+    and an unlimited plan is NOT "0 reports left" — D-195's mistake in prose."""
+    src = FIXTURE.read_text(encoding="utf-8")
+    assert 'BARE_PLAN = "team"' in src, (
+        "the bare account's plan changed; `team` was chosen because its "
+        "market_reports_limit is 99999, which the product reads as unlimited"
+    )
+    assert "BARE_ACCOUNT" in src and "bare account: a plan, onboarding done" in src
+
+
+def test_the_bare_account_gets_onboarding_too():
+    """Without it /app redirects to /app/get-started and the absence rules are
+    never reached. "New account" means new to the product, not new to
+    onboarding."""
+    src = FIXTURE.read_text(encoding="utf-8")
+    seeded = src[src.index("BARE_ACCOUNT ="):]
+    assert "onboarding_progress" in seeded
+
+
+def test_the_dashboard_says_words_rather_than_zeros_when_there_is_nothing():
+    """Matched as RENDERED TEXT — `>Nothing scheduled<` — not as a substring.
+
+    The first version checked `phrase in src`, and the regression that
+    replaced the rendered phrase with "0 scheduled" DID NOT FIRE, because the
+    comment directly above it quotes the phrase in order to explain the rule.
+    Seventh instance of substring-is-not-a-construct in a week, in a test
+    written against that family, caught by the harness again. A JSX text node
+    is the construct; a comment cannot satisfy `>…<`.
+    """
+    src = DASHBOARD.read_text(encoding="utf-8")
+    missing = [c for c in ABSENCE_COPY if f">{c}<" not in src]
+    assert missing == [], (
+        f"the dashboard no longer RENDERS {missing} (the phrase may still be "
+        f"in a comment). Design's constraint #4: show '—' or a phrase, never "
+        f"0 as a fake value."
+    )
+    # The fallback itself, not the word "Overview" somewhere in the file.
+    assert 'title={sentenceTitle ?? "Overview"}' in src, (
+        "the sentence title no longer falls back to the page name, so an "
+        "account whose state cannot be computed gets a sentence with a hole "
+        "in it (constraint #6)"
+    )
+    assert "mkt < 99999" in src, (
+        "the sentence title no longer excludes an unlimited plan, so it will "
+        "render a number for an allowance that has none"
+    )

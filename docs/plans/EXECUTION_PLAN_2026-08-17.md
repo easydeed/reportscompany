@@ -124,7 +124,7 @@ code rather than the file. **Treat each of these as evidence the rule is live ra
 historical: the pattern that produced the defect is the one you are working in while you remove
 it.**
 
-**SIX IN ONE WEEK, ALL BY THE AUTHOR OF THE RULE, ALL IN TESTS WRITTEN TO CATCH THIS FAMILY.**
+**EIGHT IN ONE WEEK, ALL BY THE AUTHOR OF THE RULE, ALL IN TESTS WRITTEN TO CATCH THIS FAMILY.**
 2026-10-14 to 2026-10-20:
 
 | | the test | what the substring matched instead |
@@ -135,22 +135,36 @@ it.**
 | 4 | D-201's fail-open gate sweep | a regex over the source matched a `logger.critical(...)` argument and **two comments quoting the bad form in order to warn about it** — one written two days earlier |
 | 5 | the render harness's own property gate | looped over the word `"degraded"`; a regression replaced the entire health decision with `health = 'ok'` and the word survived in a docstring. **DID NOT FIRE** |
 | 6 | the local stack's rate-limit gate | asserted `"HARNESS_ACCOUNTS" in src`; a regression narrowed the `UPDATE` to one account and left the constant defined above it. **DID NOT FIRE** |
+| 7 | the dashboard's absence-copy gate | asserted `"Nothing scheduled" in src`; a regression replaced the RENDERED phrase with `0 scheduled` and the phrase survived **in the comment directly above it, which quotes it to explain the rule**. **DID NOT FIRE** |
+| 8 | the fixture's onboarding gate | asserted each step name appeared somewhere in the file. Adding a SECOND seeding loop for the bare account meant deleting the first one no longer removed the strings. **DID NOT FIRE** |
 
-Three of the six were caught only because `scripts/apply_regressions.py` reported `DID NOT FIRE`;
+Five of the eight were caught only because `scripts/apply_regressions.py` reported `DID NOT FIRE`;
 one was caught by the test failing on its own documentation; the other two by re-reading the
-pattern with the boundary in mind. **Without the regression harness, half of them would have
-shipped as green.**
+pattern with the boundary in mind. **Without the regression harness, more than half of them would
+have shipped as green.**
 
-**This is the argument for the remedy over the resolve.** Six instances in six days, by the person
-who wrote the rule, in tests whose entire purpose was this family, is not a vigilance problem that
-more care fixes — it is evidence that a substring is the *default* thing a hand writes and the
+**Number 8 adds a second mechanism to watch for.** It was correct when written and became wrong
+when a SECOND source of the same string was added elsewhere in the file — the test did not drift,
+the file around it did. A substring assertion is not only wrong about comments; it is wrong about
+any future duplicate, which is why the repaired version counts occurrences rather than looking for
+one.
+
+**And note what 2, 4 and 7 have in common**: the test searched a region that the FIX had just
+written documentation into. A defect explained in place puts its own symptom string inside the
+area the test looks at — so the better the comment, the likelier the substring test passes for the
+wrong reason. That is not a coincidence to be careful about; it is a property of fixing things
+well.
+
+**This is the argument for the remedy over the resolve.** Eight instances in six days, by the
+person who wrote the rule, in tests whose entire purpose was this family, is not a vigilance
+problem that more care fixes — it is evidence that a substring is the *default* thing a hand writes and the
 construct has to be reached for deliberately. So the rule's operative form is mechanical, not
 attitudinal:
 
 > **Parse it.** `ast.walk` for Python, `\b`-anchored patterns at minimum for text, and for anything
 > structural — an `if` test, a decorator, a route, a JSON entry — walk the tree and compare the
 > node. A comment is not in an AST and a logging argument is not a condition, which is exactly why
-> four of the six above could not have happened against a parser.
+> five of the eight above could not have happened against a parser.
 
 Where a parser genuinely is not available (JavaScript source read from Python, for instance), assert
 the **exact decision line** rather than any word in it, so that a mutation to the decision is a
