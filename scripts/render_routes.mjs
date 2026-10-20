@@ -57,6 +57,7 @@
  */
 import { chromium } from 'playwright';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { createHmac } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
@@ -72,6 +73,21 @@ const CHROMIUM = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 
 const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
+/**
+ * THE SIGNATURE IS THE DIFFERENCE BETWEEN CHROME AND CONTENT.
+ *
+ * `middleware.ts` decodes without verifying (D-194), so an UNSIGNED token is
+ * enough to render the shell — which is all this harness could do before a
+ * local API existed, and why 16 of 22 routes came back `degraded`.
+ *
+ * `apps/api` DOES verify (`authn.py` -> `jwt.decode(..., algorithms=["HS256"])`),
+ * so a page's DATA needs a real signature over claims that name a real account.
+ * Set RENDER_JWT_SECRET to the API's JWT_SECRET and the same manifest renders
+ * pages instead of skeletons. Without it, this falls back to unsigned and the
+ * harness still works — in chrome-only mode, which the output labels.
+ */
+const SECRET = process.env.RENDER_JWT_SECRET || null;
+
 function mintToken(claims) {
   const payload = {
     account_id: '00000000-0000-0000-0000-000000000001',
@@ -80,7 +96,11 @@ function mintToken(claims) {
     exp: Math.floor(Date.now() / 1000) + 3600,
     ...claims,
   };
-  return `${b64u({ alg: 'HS256', typ: 'JWT' })}.${b64u(payload)}.unsigned`;
+  const head = b64u({ alg: 'HS256', typ: 'JWT' });
+  const body = b64u(payload);
+  if (!SECRET) return `${head}.${body}.unsigned`;
+  const sig = createHmac('sha256', SECRET).update(`${head}.${body}`).digest('base64url');
+  return `${head}.${body}.${sig}`;
 }
 
 /** Probes read off the document itself — never off a coordinate. */
@@ -171,11 +191,28 @@ async function visit(ctx, base, route) {
     const res = await page.goto(base + route.path, {
       waitUntil: 'domcontentloaded', timeout: 45000,
     });
+    // A server `redirect()` in a page component hands Playwright one document
+    // and then Next soft-navigates to another, so an `evaluate` fired against
+    // the first one dies with "Execution context was destroyed". Settling on
+    // the network, with a URL that has stopped moving, is what makes the three
+    // redirect stubs measurable instead of intermittently BROKEN.
+    try {
+      await page.waitForLoadState('networkidle', { timeout: 15000 });
+    } catch { /* a page that never idles is still worth probing */ }
     await page.waitForTimeout(route.settle ?? 1200);
+    for (let i = 0; i < 3; i++) {
+      const before = page.url();
+      await page.waitForTimeout(250);
+      if (page.url() === before) break;
+    }
 
     result.status = res ? res.status() : null;
     result.finalPath = new URL(page.url()).pathname;
     result.broken = await page.evaluate(LOOKS_BROKEN);
+    result.probe_counts = await page.evaluate(() => ({
+      buttons: document.querySelectorAll('button').length,
+      links: document.querySelectorAll('a').length,
+    }));
 
     // ── THE SENTINEL ────────────────────────────────────────────────────
     const redirected = result.finalPath !== route.path;
@@ -198,11 +235,18 @@ async function visit(ctx, base, route) {
       !result.broken.nextErrorOverlay;
 
     // Content arrived, or it did not. Both can sit on a real shell.
+    // A RATIO, NOT A THRESHOLD. One decorative skeleton — an avatar, a preview
+    // tile — does not mean the page failed to arrive, and the first version of
+    // this demoted four fully-rendered pages for having exactly one. But when
+    // there are more placeholders than real controls, the content is not here.
+    // Comparing against the page's own interactive count keeps that judgement
+    // off a magic number.
+    const controls = (result.probe_counts?.buttons ?? 0) + (result.probe_counts?.links ?? 0);
     const contentMissing =
       marker.found === false ||
       result.broken.spinners > 0 ||
-      result.broken.skeletons > 0 ||
-      result.broken.errorCards.length > 0;
+      result.broken.errorCards.length > 0 ||
+      result.broken.skeletons > controls;
 
     if (route.expect === 'blocked') {
       // Blocked is a PASS when the route refused: a redirect away, or the
@@ -326,11 +370,16 @@ async function main() {
   await browser.close();
 
   writeFileSync(join(ROOT, out, 'routes.json'),
-    JSON.stringify({ base, when: new Date().toISOString(), routes: results }, null, 2));
+    JSON.stringify({ base, when: new Date().toISOString(),
+                     signed: !!SECRET, routes: results }, null, 2));
 
   const broken = results.filter((r) => r.health === 'BROKEN' || r.health === 'UNEXPECTEDLY-RENDERED');
   const unexpected = results.filter((r) => r.health === 'UNEXPECTEDLY-RENDERED');
   console.log(`\n${'-'.repeat(60)}`);
+  console.log(SECRET
+    ? 'token SIGNED — the API can serve data, so `degraded` means a real gap'
+    : 'token UNSIGNED — chrome-only mode: the API refuses every call, so '
+      + 'most routes WILL be degraded and that is the harness, not the product');
   console.log(`${results.filter((r) => r.health === 'ok').length} rendered, ` +
               `${results.filter((r) => r.health === 'degraded').length} degraded (shell real, content absent), ` +
               `${results.filter((r) => r.health.startsWith('blocked')).length} blocked as expected, ` +
