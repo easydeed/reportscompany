@@ -466,6 +466,78 @@ the 500s.
 
 Combined with D-009 (Redis unreachable ⇒ 500 on every authenticated request), an infrastructure blip presented to a customer as "the product logged me out / is broken" with no corresponding signal on our side.
 
+#### REPRODUCED END TO END — 2026-10-20, and it corrects this entry twice
+
+Run as the candidate cause of a live report of "reports 401ing with a valid token". The API's own
+dependencies were installed for the first time (PyPI is reachable from this container), the app was
+constructed with `DATABASE_URL` pointing at a **closed port**, and a token was minted that
+`api.auth.verify_jwt` confirms is valid. Nothing mocked; real connection failures through the real
+path.
+
+| request | response | time |
+|---|---|---|
+| `/health` | **`200 {"ok":true,…}`** | instant |
+| `/v1/me`, valid **bearer** token | `401 {"detail":"Token has been invalidated"}` | **10.00s** |
+| `/v1/reports`, valid **bearer** token | `401 {"detail":"Token has been invalidated"}` | **10.00s** |
+| `/v1/reports/{id}/data`, valid **bearer** | `401 {"detail":"Token has been invalidated"}` | **10.00s** |
+| `/v1/reports`, valid **cookie** session | **`401 {"detail":"Session has expired"}`** | **10.00s** |
+| no credential at all (control) | `401 {"detail":"Unauthorized"}` | instant |
+
+**Two things this entry had wrong, and both matter to anyone diagnosing a live 401.**
+
+1. **The cookie path says something else.** This entry has named `"Token has been invalidated"`
+   since it was filed. `apps/web` authenticates with the `mr_token` cookie, and that branch of
+   `AuthContextMiddleware` returns **`"Session has expired"`**. So for four months the entry
+   described a symptom **no browser user could see** — the string a real session gets is the other
+   one, and it reads even more like a logout than the one we recorded.
+2. **The refusal is not fast.** `db.py:38` hard-codes `timeout=10` on the connection pool, and the
+   blacklist check runs on **every** authenticated request. Each call therefore hangs for ten
+   seconds and *then* logs the user out. A page making three calls appears to freeze for half a
+   minute before ejecting them. Nothing had recorded that, and it is the most recognisable part of
+   the symptom.
+
+#### So: how to tell this apart from the other ways to get a 401
+
+The body is the whole diagnosis, and it takes one look at a network tab:
+
+| body | meaning |
+|---|---|
+| `{"detail":"Session has expired"}` | **this entry** — cookie session, database unreachable |
+| `{"detail":"Token has been invalidated"}` | **this entry** — bearer/API-key caller, database unreachable (or a genuinely blacklisted token, which is the ambiguity) |
+| `{"detail":"Unauthorized"}` | no credential resolved at all — or, on `/v1/reports/{id}/data` and `/print/[runId]`, a missing or mismatched `INTERNAL_RENDER_TOKEN` between Vercel and the API |
+| `404` | not this; cross-tenant id, or a report whose `result_json` is not written yet |
+
+**`/health` being 200 throughout is now measured rather than reasoned**, which also means a
+"reports are 401ing" report cannot be checked against uptime — the uptime signal is green by
+construction.
+
+#### Pinned by a test that needs no database
+
+`apps/api/tests/test_auth_under_outage.py`, 6 tests, 2.2s: the three bodies asserted character by
+character, `/health` still 200, the refusal still waiting for the pool, and `timeout=10` still being
+the number this entry quotes. The only thing patched is the pool timeout, shortened so the suite
+does not spend ten seconds per request — and that shortening is itself asserted rather than silently
+removed.
+
+#### The fix, scoped and NOT taken
+
+Keep failing closed; stop lying about why. The check has three outcomes and reports two:
+**revoked**, **not revoked**, and **could not be determined** — the third currently borrows the
+first one's message. Returning `503 {"detail":"Service temporarily unavailable"}` for the third
+preserves the posture exactly and makes the cause legible to the user, to support and to a browser
+tab.
+
+Not taken here for one reason worth stating: `apps/web` almost certainly treats 401 as "clear the
+session and bounce to /login", and 503 would need to become "retry or show an outage banner"
+instead. That is a frontend behaviour change on the auth path and it wants its own pass. The
+latency (ten seconds per refused request) is a second, separable question about `timeout=10` on a
+check that runs on every request.
+
+**NOT CONFIRMED AS THE LIVE CAUSE.** This reproduces a mechanism that produces exactly the reported
+symptom. Whether it is what Jerry saw needs the response body from the failing request, which has
+not been supplied. If the body is `"Unauthorized"` the cause is one of the other rows above and this
+is not it.
+
 ### D-020 — `scripts/migrate.sh` cannot be run twice, so no future migration can be applied with it
 **Severity:** BROKEN · **Affects:** all (deployment)
 **Status:** `fixed` — `fix/p4-broken-defects`
@@ -13087,10 +13159,22 @@ the guard does not use `os.getenv` (see D-201).
 
 #### What the fix does not prove
 
-**No request was ever made against this.** The predicate is proved and the call site is proved wired
-to it; a live 401 is not. Only CI or a deployment can produce that, and `apps/api`'s suite has never
-run in this container. **If the shape is wrong, CI is what will say so** — which is the trade that
-was taken knowingly, because an open door in production authentication is the worse risk.
+~~**No request was ever made against this.**~~ **CLOSED 2026-10-20 — requests were made.** The API's
+dependencies were installed (PyPI is reachable from this container, which nobody had tried) and the
+app was constructed for real. Against the running app, with `X-Demo-Account` and no other
+credential:
+
+| `ENVIRONMENT` | guard | response |
+|---|---|---|
+| `production` | refuses | `401 {"detail":"Unauthorized"}` |
+| `development` | refuses | `401 {"detail":"Unauthorized"}` |
+| `staging` | refuses | `401 {"detail":"Unauthorized"}` |
+| `Production` | refuses | `401 {"detail":"Unauthorized"}` — the capitalisation an inverted test would have failed open on |
+| `test` | allows | `500` from the route hitting the dead database, i.e. **the header got through**, which is the positive case |
+
+And **`apps/api`'s own suite ran for the first time: 166 passed, 22 skipped**, so the eight files
+that authenticate with this header still do. The one failure is this container missing `jinja2`, a
+worker dependency, in a test that imports the worker — not auth, and not this change.
 
 **Two things remain unknown and both bound how bad this was:** whether anything in front of the API
 strips unknown headers, and what `ENVIRONMENT` is actually set to in production. The second now
