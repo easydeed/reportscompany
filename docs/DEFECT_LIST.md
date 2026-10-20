@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 70 | Real, unfixed |
+| `open` | 71 | Real, unfixed |
 | `fixed` | 128 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **205** | D-001 … D-205, contiguous, no duplicates |
+| **Total** | **206** | D-001 … D-206, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 21 · ROUGH 24. (Sums to 70, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 24. (Sums to 71, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13661,9 +13661,30 @@ One test, one commit at a time, in a worktree:
 `8ca6104b` is *fix(contrast): the gate stops hit-testing — and the switch was not a clean
 subtraction (#128)*. It is the last commit that wrote data rows into the baseline — `+63 / -88` —
 and **at that commit its own measurement reported 34 pairings the baseline it shipped did not
-describe.** Every commit since has only *removed* rows, as a shrinking ratchet should; the count
-fell 34 → 2 the same day (`3ac024e4` taught the measurer to decline text it cannot read) and 2 → 1
-when `teal` was cut. One has been left for twenty days.
+describe.** Every commit since has only *removed* rows, as a shrinking ratchet should. The count
+fell 34 → 2 at the very next commit and 2 → 1 when `teal` was cut. One has been left for twenty
+days.
+
+**What dropped 34 to 2 was `a83d9d77`, the colour tolerance — not the decliner.** The first
+telling of this entry said `3ac024e4` ("decline text the measurer cannot read") silenced them, and
+that is wrong: the bisect puts the drop one commit earlier, at *"match baseline colours with a
+tolerance — and 48 was wrong"*, and `3ac024e4` left the count at 2. The tolerance absorbed 32
+findings into baseline rows they had drifted away from, which is the job it was built for.
+
+**Checked rather than assumed.** At `d7247a51` the tolerance absorbs **20** findings — the gate
+would report 21 without it and reports 1 with it. Every one of the 20 is matched to a row produced
+by **the same brand**, at a distance of 1 to 4:
+
+    property__linen  div.cover-label  #c9a962 on #e0910a  (amber)  -> baseline #e0900a  distance 1
+    property__linen  div.cover-city   #ffffff on #72b012  (lime)   -> baseline #73b113  distance 3
+    …eighteen more, all same-brand, max distance 4
+
+Two slots do have different brands within tolerance of each other, and both are the opposite of a
+collapse: `property__harbor`'s `div.cover-city` and `div.brand` paint **distance 0** across all six
+brands, because harbor's cover is a fixed navy and white rather than a brand tint. That is one
+pairing measured six times and correctly one baseline row.
+
+So nothing is hidden by the tolerance. What *is* hidden is in the declined set — **D-206**.
 
 #### Why it differs from the 2026-09-29 capture — the entry was re-keyed, not lost
 
@@ -13747,6 +13768,95 @@ undisturbed. The three candidate fixes, none taken here:
 
 **Nothing in this investigation changed a template, the baseline, or the measurement.** The entry
 is the deliverable.
+
+---
+
+### D-206 — the contrast gate declines the harbor cover title on a hand calculation done for a colour no customer has, and four of six brands fail it
+
+**Severity:** WRONG · **Affects:** the property report cover for any account whose brand is dark —
+four of the six brands in the corpus today · **Found during:** D-205, checking whether the runs the
+measurer declines deserved it
+**Status:** `open`
+
+`test_pdf_contrast.py` excludes six runs from the gate as unmeasurable. They are one element —
+`property__harbor`, `.cover-title span`, the word **"Report"** at 56px — once per brand.
+
+#### The decline is correct in kind. Verified, not assumed
+
+`harbor_report.jinja2:52` paints those glyphs with a gradient clipped to the text:
+
+    .cover-title span{background:var(--gradient-coral); -webkit-background-clip:text;
+                      -webkit-text-fill-color:transparent;}
+
+The pixel measurer blanks glyphs with that same property, so for this element blanking changes
+nothing and the "backdrop" sample returns **the element's own gradient**. Measured: amber's
+backdrop reads `#f6a722`, which is a point on `--gradient-coral`, not the near-black
+`--gradient-dark` the title actually sits on. The numbers are meaningless and declining them is
+right. D-154 got that part correct.
+
+#### What the decline rests on, and why it no longer holds
+
+The commit that introduced it (`3ac024e4`) justified it with a hand calculation: *"4.47:1 at the
+worst pair of stops, 9.28:1 at the best."* Both reproduce to the digit —
+
+    #FF6B5B on #2D3348 = 4.47        #FFB199 on #1A1F36 = 9.28
+
+— and `#FF6B5B` is **the template's default coral**, the value used when no brand is set. But
+line 21 is
+
+    --gradient-coral: linear-gradient(135deg, {{ theme_color }} 0%,
+                                      {{ theme_color_light }} 50%, #FFB199 100%);
+
+so the gradient's **first stop is the customer's brand colour**. The calculation was done for the
+one colour no customer has.
+
+Redone per brand, worst glyph stop against the worst point of the backdrop (`--gradient-dark`'s
+lighter stop `#2D3348`, plus the 10%-opacity brand circle at `:44`), threshold **3.0** because
+56px is WCAG large text:
+
+| brand | stop 0 | stop 50% | worst pairing | |
+|---|---|---|---|---|
+| violet | `#7C3AED` | `#a97ef3` | **2.07** | **fails** |
+| coastal | `#0E7490` | `#62a4b6` | **2.16** | **fails** |
+| demo_title | `#DC2626` | `#e87171` | **2.49** | **fails** |
+| luxury_estates | `#0D9488` | `#61b9b1` | **2.99** | **fails** |
+| amber | `#F59E0B` | `#f8bf60` | 4.91 | passes |
+| lime | `#84CC16` | `#afdd67` | 5.27 | passes |
+
+**Four of six.** The gate declines to measure all six, so it reports none of them.
+
+#### The two cover surfaces fail in opposite directions
+
+D-205's failing surface is `linen`'s agent name — white on a brand-tinted footer — and the two
+brands that fail it are **amber and lime**, the light ones. This surface is brand-coloured glyphs
+on near-black, and the four that fail it are **the dark ones**. The same six brands, two covers,
+and the failing sets are disjoint and complementary. Neither surface can be fixed by choosing a
+better colour, because the colour is the customer's.
+
+#### Why a count gate could not catch it
+
+`EXPECTED_DECLINED = 1` asserts the number of distinct declined **elements**, and its failure
+message tells the next person to *"work out its real contrast by hand"* when a new one appears. It
+is a good guard against the blind spot growing silently, and it passes today. What it cannot notice
+is that the element it already covers **changed template and changed colour model** underneath it:
+`modern` was renamed to `harbor` (`2726c599`) and rewired onto Design's page architecture in
+between, and the justification was never recomputed. The count was right the whole time; the
+reasoning behind the count expired.
+
+That is the shape this board keeps filing — a check that stayed green across the change that
+invalidated what it was checking — and it is why the entry is WRONG rather than FRAGILE: the
+document is genuinely unreadable at 2.07:1 for a violet-branded customer, and nothing reports it.
+
+#### The fix is Design's, and it is the same one as D-205
+
+See `docs/COVER_CONTRAST_FOR_DESIGN_2026-10-20.md`. Both covers put the customer's brand colour in
+a contrast pair with no floor under it. Nothing is changed here — not the template, not the
+baseline, not `EXPECTED_DECLINED`.
+
+What *could* be done in the meantime without touching the document: record the per-brand hand
+calculation next to `EXPECTED_DECLINED` so the next rename cannot carry it silently, and make the
+gate's failure message name the brands rather than the element. Both are bookkeeping; neither makes
+the cover readable.
 
 ---
 
