@@ -1,0 +1,44 @@
+[
+  {
+    "name": "R1 an invented route comes back into the manifest",
+    "file": "scripts/render-routes.json",
+    "old": "      \"path\": \"/app/people\",",
+    "new": "      \"path\": \"/app/contacts\",",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R2 a route is declared that has no page",
+    "file": "scripts/render-routes.json",
+    "old": "      \"path\": \"/app/leads\",",
+    "new": "      \"path\": \"/app/dashboard\",",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R3 a blocked route is declared whose middleware gate does not exist",
+    "file": "apps/web/middleware.ts",
+    "old": "    if (pathname.startsWith(\"/app/company\") && decoded.account_type !== \"TITLE_COMPANY\") {",
+    "new": "    if (false && decoded.account_type !== \"TITLE_COMPANY\") {",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R4 the harness screenshots a broken route after all",
+    "file": "scripts/render_routes.mjs",
+    "old": "      result.screenshot = false;   // a broken route gets NO image",
+    "new": "      result.screenshot = true;   // ship an image regardless",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R5 the sentinel's degraded state is dropped, so skeletons read as rendered pages",
+    "file": "scripts/render_routes.mjs",
+    "old": "      result.health = contentMissing ? 'degraded' : 'ok';",
+    "new": "      result.health = 'ok';",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R6 the admin cloak goes, so a 404 on /app/admin stops being the documented answer",
+    "file": "apps/web/middleware.ts",
+    "old": "const CLOAK = process.env.ADMIN_CLOAK_404 === \"1\"",
+    "new": "const CLOAK = false",
+    "test": "tests/test_render_manifest_is_current.py"
+  }
+]
