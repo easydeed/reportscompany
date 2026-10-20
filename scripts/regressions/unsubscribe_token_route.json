@@ -1,0 +1,23 @@
+[
+  {
+    "name": "R1 the token-generating route comes back",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "# ── DELETED 2026-10-20: GET /v1/email/unsubscribe/token (D-201) ─────────────",
+    "new": "@router.get(\"/email/unsubscribe/token\")\ndef get_unsubscribe_token(email: str, account_id: str):\n    return {\"token\": generate_unsubscribe_token(account_id, email)}\n\n\n# ── DELETED 2026-10-20: GET /v1/email/unsubscribe/token (D-201) ─────────────",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R2 a fail-open ENVIRONMENT gate appears in an if test",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "if not EMAIL_UNSUB_SECRET:",
+    "new": "if not EMAIL_UNSUB_SECRET and os.getenv(\"ENVIRONMENT\", \"dev\") != \"production\":",
+    "test": "tests/test_api_auth_boundary.py"
+  },
+  {
+    "name": "R3 a correct gate is rewritten in the fail-open form",
+    "file": "apps/api/src/api/routes/devfiles.py",
+    "old": "    if settings.ENVIRONMENT == \"production\":",
+    "new": "    if __import__(\"os\").getenv(\"ENVIRONMENT\", \"dev\") == \"production\":",
+    "test": "tests/test_api_auth_boundary.py"
+  }
+]

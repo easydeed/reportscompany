@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 69 | Real, unfixed |
-| `fixed` | 125 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 68 | Real, unfixed |
+| `fixed` | 126 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **201** | D-001 … D-201, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 19 · ROUGH 24. (Sums to 69, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 19 · ROUGH 24. (Sums to 68, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13114,7 +13114,8 @@ does not depend on it.
 **Severity:** WRONG · **Affects:** `GET /v1/email/unsubscribe/token` — a token *generator* for any
 `(email, account_id)` pair a caller names, on a **public** path prefix · **Found during:** writing
 D-200's guard, by checking which form the rest of the API uses
-**Status:** `open`
+**Status:** `fixed` — `fix/d201-unsubscribe-token-route`. **The route is deleted, not re-gated**, and
+a parsed sweep now fails on the fail-open form anywhere under `apps/api/src/api`.
 
 Six places in `apps/api/src` read `ENVIRONMENT`. Five are right. This one is `routes/unsubscribe.py:180`:
 
@@ -13171,9 +13172,35 @@ or delete the route — it is a convenience for generating a test fixture, and `
 call `generate_unsubscribe_token` directly. **Deleting it is the better fix**, for the same reason
 minting a real token is the better fix for D-200: the safest version of a test-only door is no door.
 
-A sweep for the form is worth doing at the same time: `os.getenv("ENVIRONMENT", …)` with any default
-other than `"production"` is the shape, and `tests/test_api_auth_boundary.py` already asserts the
-authentication path does not use it.
+#### Deleted, and why that was the easy call
+
+**It had no caller.** A repo-wide grep for `unsubscribe/token` across `.py`, `.ts`, `.tsx`, `.sh`
+and `.md` returns the route's own decorator and this entry — nothing else. Not a test, not a
+script, not the web app, not the worker. Anything that needs a token calls
+`generate_unsubscribe_token` directly, which is what `worker/email/send.py:75,95` does and what this
+module's own verify path does. The function stays; the HTTP surface goes.
+
+So the choice was never "gate it or delete it" — re-gating would have kept an internet-reachable
+token generator alive for the benefit of nobody.
+
+#### The sweep, and the bug the sweep had on its first draft
+
+`tests/test_api_auth_boundary.py` now fails on **any** `os.getenv("ENVIRONMENT", <not production>)`
+used in an `if` test, anywhere under `apps/api/src/api` — the form rather than the route, so the next
+one written this way fails in CI instead of in production. `routes/admin.py`'s
+`os.getenv("ENVIRONMENT", "production")` is allowed: the default is the safe one.
+
+**The first draft was a regex over the source, and all three sites it found were wrong.** The
+`os.getenv` inside `logger.critical(...)` at `unsubscribe.py:33`, which *reports* the value rather
+than gating on it, and two occurrences inside **comments that quote the bad form in order to warn
+about it** — one of them written two days earlier for D-200. Substring-is-not-a-construct, in a test
+written to catch a defect of that family, by the author who had already been caught by it twice in
+the same week. It now walks the AST: an `if` test is the construct, comments are not in the tree,
+and a logging argument is not a condition.
+
+**REGRESSIONS** — `scripts/regressions/unsubscribe_token_route.json`, 3/3 fired: the route comes
+back; a fail-open gate appears in an `if` test in a file that imports `os`; and a correct gate
+(`routes/devfiles.py`) is rewritten into the fail-open form.
 
 ---
 

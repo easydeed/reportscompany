@@ -36,6 +36,21 @@ MIDDLEWARE = WEB / "middleware.ts"
 #: The grep target Design's answer names. Anchored — see the module docstring.
 TARGET = re.compile(r"bg-indigo-(?:50|100|200)\b|border-indigo-200\b")
 
+#: Directories that are not source. `node_modules` was the only one excluded
+#: until 2026-10-20, because the container these tests were written in had
+#: never installed dependencies or run a build — so nothing had ever produced a
+#: `.next/`. The first `next dev` in this repo made
+#: `test_only_one_live_reference_constructs_an_admin_url` fail on
+#: `.next/dev/types/routes.d.ts`, which lists every route including the dead
+#: `app/admin` tree. An assertion about source has to know what source is, and
+#: an environment that cannot build hides the places where it does not (D-193).
+NOT_SOURCE = {"node_modules", ".next", ".turbo", "dist", "build", "coverage"}
+
+
+def _is_source(path) -> bool:
+    return not (NOT_SOURCE & set(path.parts))
+
+
 #: `@/x` and relative imports, the two forms this app uses.
 IMPORT = re.compile(r"""from\s+["']([^"']+)["']""")
 
@@ -117,7 +132,7 @@ def test_every_remaining_hit_is_one_the_answer_accounted_for():
     """Zero on chrome is not zero app-wide, and the doc says which 37 remain
     and why each is out of scope. A hit outside those four is a surface nobody
     has ruled on — it should fail here rather than be discovered later."""
-    all_tsx = sorted(p for p in WEB.rglob("*.tsx") if "node_modules" not in p.parts)
+    all_tsx = sorted(p for p in WEB.rglob("*.tsx") if _is_source(p))
     hits = _hits(all_tsx)
     unaccounted = {
         path: n for path, n in hits.items()
@@ -129,7 +144,7 @@ def test_every_remaining_hit_is_one_the_answer_accounted_for():
 
 
 def test_the_answer_quotes_the_counts_the_source_still_has(doc):
-    all_tsx = sorted(p for p in WEB.rglob("*.tsx") if "node_modules" not in p.parts)
+    all_tsx = sorted(p for p in WEB.rglob("*.tsx") if _is_source(p))
     hits = _hits(all_tsx)
     derived = {
         group: sum(n for path, n in hits.items() if path.startswith(prefixes))
@@ -170,7 +185,7 @@ def test_nothing_imports_the_dead_admin_tree():
     )
     importers = []
     for f in sorted(WEB.rglob("*.ts*")):
-        if "node_modules" in f.parts or tree in f.parents:
+        if not _is_source(f) or tree in f.parents:
             continue
         for spec in IMPORT.findall(f.read_text(encoding="utf-8")):
             dep = _resolve(spec, f)
@@ -193,7 +208,7 @@ def test_only_one_live_reference_constructs_an_admin_url():
     found = sorted(
         f.relative_to(WEB).as_posix()
         for f in WEB.rglob("*.ts*")
-        if "node_modules" not in f.parts
+        if _is_source(f)
         and tree not in f.parents
         and f != MIDDLEWARE
         and pattern.search(f.read_text(encoding="utf-8"))
@@ -225,7 +240,7 @@ def test_branding_form_is_still_imported_by_nothing():
     target = WEB / "components/branding-form.tsx"
     importers = []
     for f in sorted(WEB.rglob("*.ts*")):
-        if "node_modules" in f.parts or f == target:
+        if not _is_source(f) or f == target:
             continue
         for spec in IMPORT.findall(f.read_text(encoding="utf-8")):
             if _resolve(spec, f) == target:
@@ -257,7 +272,7 @@ def test_no_usage_bar_draws_a_fraction_of_an_undefined_whole():
     could report the divergence, because there is nothing shared to diff."""
     defs = sorted(
         p for p in WEB.rglob("*.tsx")
-        if "node_modules" not in p.parts
+        if _is_source(p)
         and "function UsageBar(" in p.read_text(encoding="utf-8")
     )
     assert len(defs) == 5, (
