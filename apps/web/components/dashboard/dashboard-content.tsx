@@ -5,11 +5,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, AlertTriangle, FileText, Mail, Calendar, Clock, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardTitle } from "@/components/ui/card"
 import { DashboardOnboarding } from "@/components/onboarding"
 import { PageHeader } from "@/components/page-header"
 import { MetricCard } from "@/components/metric-card"
 import { StatusBadge } from "@/components/status-badge"
-import { useUsage, usePlanUsage, useOnboarding } from "@/hooks/use-api"
+import { useUsage, usePlanUsage, useOnboarding, useSchedules, useAllLeads,
+         useBranding, useMe } from "@/hooks/use-api"
+import { SharedPDFPreview } from "@/components/shared/pdf-preview"
+import type { PreviewReportType } from "@/components/shared/email-preview/sample-data"
 
 interface UsageData {
   summary?: {
@@ -56,6 +60,10 @@ export function DashboardContent() {
   const { data: usageData, isLoading: usageLoading } = useUsage()
   const { data: planUsageData, isLoading: planLoading } = usePlanUsage()
   const { data: onboardingData, isLoading: onboardingLoading } = useOnboarding()
+  const { data: schedulesData } = useSchedules()
+  const { data: leadsData } = useAllLeads()
+  const { data: brandingData } = useBranding()
+  const { data: meData } = useMe()
 
   const loading = usageLoading || planLoading || onboardingLoading
   const usage: UsageData | null = usageData || null
@@ -66,6 +74,11 @@ export function DashboardContent() {
   const recentReports = (usage?.recent_reports ?? []).map((r) => ({
     id: r.id,
     type: 'report' as const,
+    // The API's own kind string, kept alongside the humanised title so the
+    // embedded preview can be asked for the right layout. `title` has already
+    // had its underscores replaced and been title-cased, which no longer
+    // matches any PreviewReportType.
+    rawType: r.type,
     title: `${r.type?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}`,
     area: r.city || 'Unknown',
     status: r.status,
@@ -86,12 +99,71 @@ export function DashboardContent() {
     .sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''))
     .slice(0, 8)
 
+  // ───────────────────────────────────────────────────────────────────────
+  // B4. Design's four pieces, each derived from state that already exists.
+  //
+  // Two of their constraints shape every line below:
+  //
+  //   #4  "every number in a title or lead sentence is computed from plan
+  //        limits, usage and schedule state. No sentence should ship with a
+  //        literal number in it. Show '—' or 'Nothing scheduled', never 0 as
+  //        a fake value."
+  //   #6  "Sentence titles replace page names WHERE STATE EXISTS. If the
+  //        state can't be computed, fall back to the page name — don't ship a
+  //        sentence with blanks."
+  //
+  // So every derivation below returns `null` when it cannot be computed, and
+  // the render shows the fallback rather than a sentence with a hole in it.
+  // ───────────────────────────────────────────────────────────────────────
+
+  const mkt = planUsage?.plan?.market_reports_limit
+  const used = planUsage?.usage?.market_reports_used
+  const remaining =
+    typeof mkt === 'number' && typeof used === 'number' && mkt < 99999
+      ? Math.max(mkt - used, 0)
+      : null
+  const planName = planUsage?.plan?.plan_name ?? null
+
+  //: The sentence title. Null whenever either half is missing — a plan with
+  //: no finite limit has no "left this month" to state, and an unlimited plan
+  //: is not "0 left" (D-195's mistake, in prose).
+  const sentenceTitle =
+    remaining !== null && planName
+      ? `${remaining} report${remaining === 1 ? '' : 's'} left on ${planName}`
+      : null
+
+  const latest = recentReports[0] ?? null
+
+  const schedules: any[] = Array.isArray(schedulesData)
+    ? schedulesData
+    : (schedulesData as any)?.schedules ?? []
+  //: The soonest future send among ACTIVE schedules. A paused schedule has no
+  //: next send, and a past next_run_at is a worker that has not caught up —
+  //: neither is "next".
+  const nextSend = schedules
+    .filter((x) => x?.active && x?.next_run_at && new Date(x.next_run_at) > new Date())
+    .sort((a, b) => a.next_run_at.localeCompare(b.next_run_at))[0] ?? null
+
+  const leads: any[] = Array.isArray(leadsData)
+    ? leadsData
+    : (leadsData as any)?.leads ?? []
+  //: "Call these first" — new leads, newest first. `new` is one of exactly
+  //: three states the database permits (leads_status_check), so this is the
+  //: whole of the un-actioned set rather than a guess at one.
+  const callFirst = leads
+    .filter((l) => (l?.status ?? 'new') === 'new')
+    .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
+    .slice(0, 5)
+
+  const branding: any = brandingData ?? {}
+  const me: any = meData ?? {}
+
   return (
     <div className="space-y-5">
       {/* Header — renders instantly */}
       <PageHeader
-        title="Overview"
-        description="Your account activity and key metrics"
+        title={sentenceTitle ?? "Overview"}
+        description={sentenceTitle ? "Your account at a glance" : "Your account activity and key metrics"}
         action={
           <Button asChild size="sm">
             <Link href="/app/reports/new" prefetch={false}>
@@ -165,110 +237,142 @@ export function DashboardContent() {
         </>
       )}
 
-      {/* Metric Cards — show skeletons while loading */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {loading ? (
-          <>
-            <MetricCardSkeleton />
-            <MetricCardSkeleton />
-            <MetricCardSkeleton />
-            <MetricCardSkeleton />
-          </>
-        ) : (
-          <>
-            <MetricCard 
-              label="Reports" 
-              value={usage?.summary?.total_reports ?? 0} 
-              icon={<FileText className="w-4 h-4" />} 
-              index={0} 
-            />
-            <MetricCard 
-              label="Emails Sent" 
-              value={usage?.recent_emails?.length ?? 0} 
-              icon={<Mail className="w-4 h-4" />} 
-              index={1} 
-            />
-            <MetricCard 
-              label="Active Schedules" 
-              value={usage?.limits?.active_schedules ?? 0} 
-              icon={<Calendar className="w-4 h-4" />} 
-              index={2} 
-            />
-            <MetricCard 
-              label="Avg. Render" 
-              value={usage?.summary?.avg_ms ? `${Math.round(usage.summary.avg_ms)}ms` : '—'} 
-              icon={<Clock className="w-4 h-4" />} 
-              index={3} 
-            />
-          </>
-        )}
-      </div>
-
-      {/* Two-column layout: Recent Activity + Onboarding */}
+      {/* ── Latest report · Next send · Call these first ─────────────────
+          Design replaces the four stat tiles with these. The tiles counted
+          things ("Reports 14", "Avg. Render 312ms"); these say what to do
+          next, which is what a dashboard opened every morning is for. Every
+          number here is computed, and every absence says so in words rather
+          than rendering a zero. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Recent Activity - takes 2 cols */}
-        <div className="lg:col-span-2 bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
-          <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <h3 className="text-[13px] font-semibold text-foreground">Recent Activity</h3>
-            <Link href="/app/reports" prefetch={false} className="text-xs text-primary hover:text-primary/80 font-medium">
-              View all →
-            </Link>
-          </div>
-          
+
+        {/* Latest report — the artifact, not a count of artifacts. */}
+        {/* ui/Card, not a hand-rolled div. Three of twenty-two routes used
+            the primitive before this batch; adding three more hand-rolled
+            ones would widen exactly the gap just reported to Design. */}
+        <Card className="lg:col-span-1 gap-3">
+          <CardTitle className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            Latest report
+          </CardTitle>
           {loading ? (
-            <ActivityListSkeleton />
-          ) : recentActivity.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-6 h-6 text-primary" />
-              </div>
-              <h4 className="text-sm font-medium text-foreground mb-1">No recent activity</h4>
-              <p className="text-xs text-muted-foreground mb-4">
-                Create your first report to get started
+            <Skeleton className="h-[220px] w-full mt-3 rounded-xl" />
+          ) : latest ? (
+            <>
+              <p className="text-[15px] font-semibold text-foreground mt-1">
+                {latest.title} — {latest.area}
               </p>
-              <Button size="sm" asChild>
+              <p className="text-[13px] text-muted-foreground">
+                {formatRelativeTime(latest.timestamp)}
+              </p>
+              {/* Design constraint #2: the embedded report is a fixed
+                  816x1056 page, SCALED — never reflowed. A responsive
+                  re-layout is a different document from the PDF the client
+                  receives. */}
+              <div className="mt-3 h-[220px] overflow-hidden rounded-xl border border-border">
+                <SharedPDFPreview
+                  primaryColor={branding.primary_color ?? '#4F46E5'}
+                  accentColor={branding.accent_color ?? '#818CF8'}
+                  headerLogoUrl={branding.logo_url ?? null}
+                  displayName={branding.display_name ?? null}
+                  agentName={me.first_name ? `${me.first_name} ${me.last_name ?? ''}`.trim() : (me.email ?? '')}
+                  agentTitle={me.title ?? null}
+                  agentPhone={me.phone ?? null}
+                  agentEmail={me.email ?? ''}
+                  agentPhotoUrl={me.avatar_url ?? null}
+                  reportType={(latest.rawType ?? 'market_snapshot') as PreviewReportType}
+                  audienceLabel={null}
+                  areaName={latest.area}
+                  lookbackDays={180}
+                  scale={0.27}
+                />
+              </div>
+              <Link href="/app/reports" prefetch={false}
+                    className="text-[13px] font-semibold text-[var(--link)] hover:text-[var(--link-hover)] mt-3 inline-block">
+                All reports →
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-[15px] text-muted-foreground mt-1">Nothing sent yet</p>
+              <Button asChild className="mt-3">
                 <Link href="/app/reports/new" prefetch={false}>
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />
-                  Create Report
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Your first report
                 </Link>
               </Button>
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {recentActivity.map((item) => (
-                <div 
-                  key={`${item.type}-${item.id}`}
-                  className="px-4 py-3 hover:bg-muted/30 transition-colors flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      item.type === 'report' ? 'bg-primary/10 text-primary' : 'bg-blue-50 text-blue-600'
-                    }`}>
-                      {item.type === 'report' ? (
-                        <FileText className="w-4 h-4" />
-                      ) : (
-                        <Mail className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.title}</p>
-                      <p className="text-xs text-muted-foreground">{item.area}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <StatusBadge status={item.status} />
-                    <span className="text-xs text-muted-foreground">
-                      {formatRelativeTime(item.timestamp)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            </>
           )}
-        </div>
+        </Card>
 
-        {/* Onboarding Checklist - takes 1 col */}
-        <div className="lg:col-span-1">
+        {/* Next send + Call these first */}
+        <div className="lg:col-span-2 space-y-5">
+
+          <Card className="gap-2">
+            <CardTitle className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              Next send
+            </CardTitle>
+            {loading ? (
+              <Skeleton className="h-6 w-2/3 mt-2" />
+            ) : nextSend ? (
+              <p className="text-[15px] text-foreground mt-1">
+                <span className="font-semibold">{nextSend.name}</span>
+                {' goes out '}
+                {new Date(nextSend.next_run_at).toLocaleDateString(undefined,
+                  { month: 'long', day: 'numeric' })}
+                {Array.isArray(nextSend.recipients) && nextSend.recipients.length > 0
+                  ? ` to ${nextSend.recipients.length} recipient${nextSend.recipients.length === 1 ? '' : 's'}`
+                  : ''}
+              </p>
+            ) : (
+              /* Design #4: "Nothing scheduled", never 0 as a fake value. */
+              <p className="text-[15px] text-muted-foreground mt-1">Nothing scheduled</p>
+            )}
+            <Link href="/app/schedules" prefetch={false}
+                  className="text-[13px] font-semibold text-[var(--link)] hover:text-[var(--link-hover)] mt-2 inline-block">
+              Schedules →
+            </Link>
+          </Card>
+
+          <Card className="gap-2">
+            <CardTitle className="text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+              Call these first
+            </CardTitle>
+            {loading ? (
+              <ActivityListSkeleton />
+            ) : callFirst.length === 0 ? (
+              <p className="text-[15px] text-muted-foreground mt-1">No new leads</p>
+            ) : (
+              <ul className="mt-2 divide-y divide-[var(--border-subtle)]">
+                {callFirst.map((l) => (
+                  <li key={l.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-semibold text-foreground truncate">
+                        {l.name || l.email || 'Unnamed lead'}
+                      </p>
+                      <p className="text-[13px] text-muted-foreground truncate">
+                        {l.phone || l.email || '—'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <StatusBadge status={l.status ?? 'new'} />
+                      <span className="text-[13px] text-muted-foreground">
+                        {formatRelativeTime(l.created_at)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link href="/app/leads" prefetch={false}
+                  className="text-[13px] font-semibold text-[var(--link)] hover:text-[var(--link-hover)] mt-2 inline-block">
+              All leads →
+            </Link>
+          </Card>
+        </div>
+      </div>
+
+      {/* Onboarding keeps its column below, unchanged. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-3">
           {loading ? (
             <OnboardingSkeleton />
           ) : (

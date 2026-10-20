@@ -173,6 +173,16 @@ const PROBE = () => {
     rail,
     body: of('body', ['backgroundColor', 'color', 'fontSize', 'lineHeight', 'fontFamily']),
     h1: of('h1', ['fontSize', 'fontWeight', 'letterSpacing', 'lineHeight', 'color']),
+    // THE TEXT, NOT JUST ITS STYLE. B4 replaced four stat tiles with a
+    // sentence title and three composed panels — a content change with almost
+    // no computed-style consequence, so the style probe reported one route
+    // and one property (a link count) for a rewritten page. A batch that
+    // changes what a page SAYS needs the page's words in the diff.
+    h1text: (document.querySelector('h1')?.textContent || '').trim().slice(0, 80),
+    landmarks: [...document.querySelectorAll('h1, h2, h3, p, [data-slot="card-title"]')]
+      .map((el) => (el.textContent || '').trim().replace(/\s+/g, ' '))
+      .filter((t) => t.length > 2 && t.length < 60)
+      .slice(0, 24),
     slots,
     // Counted, not styled: a number that changes is a structural change.
     counts: {
@@ -235,10 +245,26 @@ const LOOKS_BROKEN = () => {
   };
 };
 
+/**
+ * `next dev` paints its own indicator — a dark circle, bottom left, over
+ * whatever the rail has there. It is not product UI and never ships, but it
+ * is IN EVERY SCREENSHOT, and the first before/after pair produced for review
+ * showed it occluding "Property Reports 4/5" on one side and "Help Center" on
+ * the other. A reviewer reads that as a layout defect the batch introduced.
+ *
+ * Hidden rather than configured off, so the harness works against any dev
+ * server it is pointed at without needing next.config changed.
+ */
+const HIDE_DEV_CHROME = `
+  nextjs-portal, [data-nextjs-toast], [data-nextjs-dev-tools-button],
+  #__next-build-watcher { display: none !important; }
+`;
+
 async function visit(ctx, base, route) {
   const page = await ctx.newPage();
   const result = { route: route.path, expect: route.expect };
   try {
+    await page.addStyleTag({ content: HIDE_DEV_CHROME }).catch(() => {});
     const res = await page.goto(base + route.path, {
       waitUntil: 'domcontentloaded', timeout: 45000,
     });
@@ -250,6 +276,7 @@ async function visit(ctx, base, route) {
     try {
       await page.waitForLoadState('networkidle', { timeout: 15000 });
     } catch { /* a page that never idles is still worth probing */ }
+    await page.addStyleTag({ content: HIDE_DEV_CHROME }).catch(() => {});
     await page.waitForTimeout(route.settle ?? 1200);
     for (let i = 0; i < 3; i++) {
       const before = page.url();
