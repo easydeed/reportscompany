@@ -290,7 +290,11 @@ def get_report(report_id: str, request: Request, account_id: str = Depends(requi
         cur.execute(
             """
             SELECT id::text, report_type, status,
-                   input_params->>'city' AS city,
+                   -- D-202: cities[] is set at creation; input_params
+                   -- is written only by worker/tasks.py when the job
+                   -- starts, so a queued or failed report has no city
+                   -- without this fallback.
+                   COALESCE(input_params->>'city', cities[1]) AS city,
                    html_url, json_url, csv_url, pdf_url,
                    theme_id, generated_at::text
             FROM report_generations
@@ -336,7 +340,8 @@ def list_reports(
         set_rls(cur, account_id)
         sql = f"""
           SELECT id::text, report_type, status,
-                 input_params->>'city' AS city,
+                 -- D-202, same as the single-report query above.
+                 COALESCE(input_params->>'city', cities[1]) AS city,
                  html_url, json_url, csv_url, pdf_url,
                  theme_id, generated_at::text
           FROM report_generations
