@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 68 | Real, unfixed |
+| `open` | 69 | Real, unfixed |
 | `fixed` | 126 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **201** | D-001 … D-201, contiguous, no duplicates |
+| **Total** | **202** | D-001 … D-202, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 19 · ROUGH 24. (Sums to 68, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 19 · ROUGH 24. (Sums to 69, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13298,6 +13298,75 @@ and a logging argument is not a condition.
 **REGRESSIONS** — `scripts/regressions/unsubscribe_token_route.json`, 3/3 fired: the route comes
 back; a fail-open gate appears in an `if` test in a file that imports `os`; and a correct gate
 (`routes/devfiles.py`) is rewritten into the fail-open form.
+
+---
+
+### D-202 — the area on a report is stored in one column and read from another, and three of six read sites have no fallback
+
+**Severity:** WRONG · **Affects:** the dashboard's "latest report" line and the market-reports
+list — every report that has not been through the worker shows its area as `Unknown` or blank ·
+**Found during:** B4, by looking at a dashboard with real rows behind it for the first time
+**Status:** `open`
+
+`report_generations` has a first-class `cities text[]` column, set when the report is created. It
+also has `input_params jsonb`, and **exactly one statement in the codebase writes it** —
+`apps/worker/src/worker/tasks.py:1232`:
+
+    SET status='processing', input_params=%s, source_vendor='simplyrets'
+
+So `input_params->>'city'` exists only **after the worker has picked the job up**. A queued report,
+a report that failed before processing, and a report created by any path that does not reach that
+line have `cities` and no `input_params`.
+
+Six places read the area. Three of them know this:
+
+| | |
+|---|---|
+| `routes/affiliates.py:932`, `:1024` | `COALESCE(rg.input_params->>'city', rg.cities[1], 'Unknown')` |
+| `routes/company.py:272` | `COALESCE(rg.input_params->>'city', rg.cities[1], 'unknown')` |
+
+Three do not:
+
+| | what it shows for a report the worker has not touched |
+|---|---|
+| `routes/usage.py:82` | `COALESCE(input_params->>'city', 'Unknown')` — **"Unknown"**, and this feeds the dashboard |
+| `routes/reports.py:293` | bare `input_params->>'city'` — **null** |
+| `routes/reports.py:339` | bare `input_params->>'city'` — **null** |
+
+**Measured, not reasoned.** With fourteen reports seeded carrying `cities = ARRAY['Irvine']` and no
+`input_params`, `GET /v1/usage` returns `"city": "Unknown"` for every one, and the dashboard's
+latest-report line renders **"Inventory — Unknown"**. The affiliate view of the same rows returns
+the city.
+
+#### Why it took until now to see
+
+The entry could have been written from the SQL at any point in the last two months. It was not,
+because nobody had a dashboard with rows on it: before B0.5 every authenticated page rendered a
+skeleton, and a skeleton has no area to be wrong about. **This is the first defect the local stack
+found, and it is the kind it was built for** — a correct-looking page whose content is wrong, which
+no amount of reading the component would have shown.
+
+#### Severity, argued
+
+WRONG rather than ROUGH: it is not cosmetic. The dashboard's job is to tell an agent which report
+is the latest one, and "Inventory — Unknown" does not identify a report. It is also the shape this
+board keeps filing — **one fact, two storage locations, and a read path that picked the optional
+one** — with the aggravating detail that half the call sites already carry the fix.
+
+How much is live depends on whether production reports reliably reach `tasks.py:1232`. A report
+that completes does; a queued or failed one does not, and the dashboard shows the most recent
+report **whatever its status**. So the visible case is "the newest report is still processing",
+which is exactly when an agent looks.
+
+#### The fix
+
+Give the three read sites the same `COALESCE(input_params->>'city', cities[1], …)` the other three
+have. Three lines. The better fix is to stop reading `input_params` for this at all — `cities` is
+the column the writer always sets — but that is a change to six queries rather than three and wants
+its own pass.
+
+**Not fixed here.** B4 is a presentation batch; changing what the API returns mid-batch would make
+the before/after diff describe two things at once.
 
 ---
 
