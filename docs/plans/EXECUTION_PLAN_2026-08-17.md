@@ -1766,6 +1766,52 @@ mutation to the assertion.
   moved kind from being silently excluded; pinning per member stops the kinds that remain from
   sharing one member's properties.
 
+- **A GUARD THAT COUNTS INSTANCES STAYS CORRECT WHILE THE INSTANCE IT COVERS CHANGES IDENTITY.**
+  *Added 2026-10-20, from D-206.*
+
+  `test_pdf_contrast.py` excludes from the gate any text whose glyphs are painted by a gradient
+  clipped to them, because the measurement blanks glyphs with the very property such a template
+  uses and so reads the element's own gradient as its backdrop. The exclusion is sound, it was
+  **enumerated rather than guessed**, and it is guarded:
+
+      EXPECTED_DECLINED = 1
+
+  with a failure message telling the next person to *"work out its real contrast by hand"* when a
+  second element appears. That guard is a good one. It has been green and correct for twenty days.
+
+  What authorised the exclusion was a hand calculation on the one element: *"4.47:1 at the worst
+  pair of stops, 9.28:1 at the best"* against a 3.0 threshold. Both figures still reproduce to the
+  digit. They are `#FF6B5B on #2D3348` and `#FFB199 on #1A1F36` — and **`#FF6B5B` is the
+  template's default accent, the value used only when no brand is set.** The gradient's first stop
+  is `{{ theme_color }}`, the customer's colour. Recomputed per brand, **four of the six fail**:
+  violet 2.07, coastal 2.16, demo_title 2.49, luxury_estates 2.99.
+
+  In between, the element changed **template** (`modern` → `harbor`), **page architecture** (rewired
+  onto Design's shared page) and **colour model** (a fixed coral became a brand-derived gradient).
+  The count never moved, because there was still exactly one such element. **A cardinality
+  assertion cannot express "and it is still the element the reasoning was about."**
+
+  The general form, and the reason it sits here rather than in that file: **a guard whose subject is
+  a count has no way to notice a substitution.** `EXPECTED_DECLINED = 1`, `EXPECTED_SKIPS = 3`,
+  `assert len(exemptions) == 7` — each is right about the number while the members are replaced one
+  by one underneath it. The remedy is the same as the rule above it, one level up: **pin what
+  justified the number, not only the number.** For an exclusion that rests on a measurement, record
+  the measurement and what it was computed against, so a change to either is an error rather than
+  an inheritance.
+
+  Related, and the reason this is a family rather than an incident:
+
+  | instance | the number was right about | what it was computed on |
+  |---|---|---|
+  | `numeric_leaf_names()` | every numeric the builder names | **one** input, `PropertyReportBuilder({})` |
+  | the colour tolerance's first value, 48 | the gap between two populations | **ten** single-brand renders, applied to ninety across six |
+  | `EXPECTED_DECLINED = 1` | the number of unmeasurable elements | **the default accent**, which no customer has |
+
+  All three are the derived-set rule with a different noun, and all three were green while covering
+  less than their name claimed. **A measurement that reports less reads exactly like a system with
+  less wrong with it** — which is already written four hundred lines up, and is why the check that
+  found this one was "does the justification still hold?" rather than "is the gate green?"
+
 ---
 
 ## Phase 0 — Security & Tooling

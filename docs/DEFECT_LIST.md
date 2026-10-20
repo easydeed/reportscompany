@@ -13771,11 +13771,11 @@ is the deliverable.
 
 ---
 
-### D-206 — the contrast gate declines the harbor cover title on a hand calculation done for a colour no customer has, and four of six brands fail it
+### D-206 — the contrast gate declines the harbor cover title on a hand calculation done for a colour no customer has, and up to four of six brands fail it
 
 **Severity:** WRONG · **Affects:** the property report cover for any account whose brand is dark —
-four of the six brands in the corpus today · **Found during:** D-205, checking whether the runs the
-measurer declines deserved it
+one of the six brands in the corpus on any reading, four on the conservative one ·
+**Found during:** D-205, checking whether the runs the measurer declines deserved it
 **Status:** `open`
 
 `test_pdf_contrast.py` excludes six runs from the gate as unmeasurable. They are one element —
@@ -13823,15 +13823,37 @@ lighter stop `#2D3348`, plus the 10%-opacity brand circle at `:44`), threshold *
 | amber | `#F59E0B` | `#f8bf60` | 4.91 | passes |
 | lime | `#84CC16` | `#afdd67` | 5.27 | passes |
 
-**Four of six.** The gate declines to measure all six, so it reports none of them.
+**Four of six on that reading — and the count is sensitive to the reading, which the first telling
+of this entry did not say.** The backdrop is itself a gradient (`#1A1F36` → `#2D3348`) with the 10%
+brand circle over it, and the table above takes the worst corner: the lighter stop, tint included.
+The whole sensitivity:
+
+| brand | lighter stop + tint | lighter stop, no tint | darker stop, no tint |
+|---|---|---|---|
+| violet | **2.07** | **2.20** | **2.85** |
+| coastal | **2.16** | **2.33** | 3.03 |
+| demo_title | **2.49** | **2.59** | 3.36 |
+| luxury_estates | **2.99** | 3.34 | 4.34 |
+| amber | 4.91 | 5.82 | 7.56 |
+| lime | 5.27 | 6.33 | 8.22 |
+
+So: **violet fails on every reading**; coastal and demo_title fail on all but the most favourable
+corner; **luxury_estates fails only with the tint included.** One brand fails this cover however it
+is measured, three on the ordinary reading, four on the conservative one. Whether a glyph of
+"Report" actually sits on one of the circles was not verified per brand.
+
+**None of which the gate reports**, because it declines all six. And the entry's argument does not
+turn on the count: the surface derives a contrast pair from a colour it does not control, which is
+true at 2.07 and at 2.99.
 
 #### The two cover surfaces fail in opposite directions
 
 D-205's failing surface is `linen`'s agent name — white on a brand-tinted footer — and the two
 brands that fail it are **amber and lime**, the light ones. This surface is brand-coloured glyphs
-on near-black, and the four that fail it are **the dark ones**. The same six brands, two covers,
-and the failing sets are disjoint and complementary. Neither surface can be fixed by choosing a
-better colour, because the colour is the customer's.
+on near-black, and the ones that fail it are **the dark ones** — violet on every reading, up to all
+four. The same six brands, two covers, and **the failing sets are disjoint on every reading**:
+nothing that fails one fails the other. Neither surface can be fixed by choosing a better colour,
+because the colour is the customer's.
 
 #### Why a count gate could not catch it
 

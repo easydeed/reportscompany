@@ -8,13 +8,19 @@ measurement code. This document is the ask.
 
 Two surfaces on the property report covers derive a contrast pair from `theme_color`, which is the
 account's own brand colour. Neither has a floor. Across the six brands in the corpus today,
-**six of twelve brand/surface combinations fail their WCAG threshold**, and the two failing sets
-are **disjoint**:
+**between three and six of the twelve brand/surface combinations fail their WCAG threshold** —
+the range is in the second surface and is explained where its numbers are — and the two failing
+sets are **disjoint**:
 
 | surface | mechanism | fails for | passes for |
 |---|---|---|---|
 | `linen` · `.cover-agent-name` | **white** on a footer tinted by the brand | amber, lime | the other four |
-| `harbor` · `.cover-title span` | **brand-coloured glyphs** on near-black | violet, coastal, demo_title, luxury_estates | amber, lime |
+| `harbor` · `.cover-title span` | **brand-coloured glyphs** on near-black | violet always; coastal, demo_title and luxury_estates depending on where you measure | amber, lime |
+
+Surface 1 is measured by our harness. **Surface 2 is a hand calculation, with two caveats we have
+written out in full where its table is** — the glyphs are a gradient and we take the worst stop,
+and the backdrop includes a tint we did not verify per brand. Both are judgements rather than
+measurements, and the second surface is the one where you may read it differently from us.
 
 The light brands fail the first. The dark brands fail the second. **No choice of colour fixes
 either, because the colour is the customer's** — which is why we think this is a question about
@@ -72,6 +78,46 @@ threshold is 3.0:1. Worst glyph stop against the worst point of the backdrop:
 | luxury_estates | `#0D9488` | `#61b9b1` | **2.99** | fails |
 | amber | `#F59E0B` | `#f8bf60` | 4.91 | passes |
 | lime | `#84CC16` | `#afdd67` | 5.27 | passes |
+
+### Two things about these numbers you should see rather than inherit
+
+**1. "Worst stop" is a conservative reading, and WCAG does not cover the alternative.** The glyphs
+are a gradient, so the letters are not one colour: for violet the word runs from **2.07:1** at the
+first stop to **6.73:1** at `#FFB199`. The table takes the **worst** stop, which is the reading the
+original hand calculation used and the one we would defend — but WCAG has **no rule for "some of
+the letters pass"**, so there is no standard to appeal to and the choice is a judgement. Read as
+the word taken as a whole, every number moves up.
+
+**2. The backdrop is itself a gradient with a brand tint over it, and the verdict is sensitive to
+which point of it you take.** `.cover-left` runs `#1A1F36 → #2D3348`, and `:44`/`:45` place a 400px
+and a 200px circle of `var(--coral)` at 10% and 8% opacity behind the title area. The main table
+takes the worst case: the lighter navy stop with the 10% circle composited in. **We did not verify
+per brand whether a glyph of "Report" actually sits on a circle.** Here is the whole sensitivity,
+so you can pick the reading rather than take ours:
+
+| brand | lighter stop + 10% tint | lighter stop, no tint | darker stop, no tint |
+|---|---|---|---|
+| violet | **2.07** | **2.20** | **2.85** |
+| coastal | **2.16** | **2.33** | 3.03 |
+| demo_title | **2.49** | **2.59** | 3.36 |
+| luxury_estates | **2.99** | 3.34 | 4.34 |
+| amber | 4.91 | 5.82 | 7.56 |
+| lime | 5.27 | 6.33 | 8.22 |
+
+So the count is **not** a single number and we should not have implied one:
+
+* **violet fails on every reading**, from 2.07 to 2.85;
+* **coastal and demo_title fail everywhere except the most favourable corner** — the darkest point
+  of the backdrop with no tint under the glyph, where they land at 3.03 and 3.36;
+* **luxury_estates fails only with the tint included** (2.99 → 3.34 without it);
+* amber and lime pass on every reading.
+
+**One brand fails this cover however you measure it, three fail it on the ordinary reading, and
+four fail it on the conservative one.** The decision below does not turn on which — the surface
+derives a contrast pair from a colour it does not control, and that is true at 2.07 and at 2.99.
+
+Neither caveat applies to surface 1, which is flat white on a flat composited colour and measured
+by the harness rather than by hand.
 
 **This surface is invisible to our gate**, which is how it went unnoticed. The measurement blanks
 glyphs with the same `-webkit-text-fill-color` the template uses, so for this element blanking
