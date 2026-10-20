@@ -61,12 +61,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 70 | Real, unfixed |
-| `fixed` | 126 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 128 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **203** | D-001 … D-203, contiguous, no duplicates |
+| **Total** | **205** | D-001 … D-205, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 20 · ROUGH 24. (Sums to 70, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 21 · ROUGH 24. (Sums to 70, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13306,7 +13306,7 @@ back; a fail-open gate appears in an `if` test in a file that imports `os`; and 
 **Severity:** WRONG · **Affects:** the dashboard's "latest report" line and the market-reports
 list — every report that has not been through the worker shows its area as `Unknown` or blank ·
 **Found during:** B4, by looking at a dashboard with real rows behind it for the first time
-**Status:** `open`
+**Status:** `fixed` — `fix/d202-report-area`
 
 `report_generations` has a first-class `cities text[]` column, set when the report is created. It
 also has `input_params jsonb`, and **exactly one statement in the codebase writes it** —
@@ -13368,14 +13368,54 @@ its own pass.
 **Not fixed here.** B4 is a presentation batch; changing what the API returns mid-batch would make
 the before/after diff describe two things at once.
 
+#### Fixed — `fix/d202-report-area`
+
+The three read sites now carry the fallback the other three already had, each with a `-- D-202:`
+note naming why `input_params` alone is not enough:
+
+| | |
+|---|---|
+| `routes/usage.py` | `COALESCE(input_params->>'city', cities[1], 'Unknown') as city,` |
+| `routes/reports.py` ×2 | `COALESCE(input_params->>'city', cities[1]) AS city,` |
+
+**Verified against the running API, not against the diff.** With the local stack up and the
+fourteen seeded reports in `queued`, `processing`, `completed` and `failed`, `GET /v1/usage` and
+`GET /v1/reports` return `Tustin`, `Irvine` and `Orange` for the rows that previously returned
+`"Unknown"` and `null`. The dashboard's latest-report line reads **"Inventory — Tustin"**.
+
+`tests/test_report_area_has_one_source.py` (7 tests) asserts every read of the area sits inside a
+`COALESCE(…, cities[1])`, and — the premise — that `input_params` still has **exactly one writer**,
+in the worker, after the job starts. If something begins writing it at creation time the fallback
+stops being load-bearing and this entry's reasoning wants re-reading rather than its code.
+
+The test **strips SQL `--` and Python `#` lines before it scans anything**, because the fix writes
+comments that mention `input_params`; a scan that counted those would be measuring the explanation.
+It asserts the single writer as **file plus count, never a line number**, because stripping comments
+renumbers every line after the first one removed — which is how `tasks.py:1232` above became
+`:1061` in the stripped text.
+
+`scripts/regressions/report_area.json` — **5 mutations, 5 fired**: each read site losing its
+fallback (3), a second writer of `input_params` appearing, and the fallback written as a comment
+rather than as code. The last one is the §0.6 case in the opposite direction: the mutation that
+*looks* like a fix.
+
+The better fix named above — stop reading `input_params` for the area at all — is still the better
+fix, and still wants its own pass over all six queries.
+
 ---
 
 ### D-203 — the plan name a customer sees comes from a hard-coded map, not from the plans table, and the two disagree on half their rows
 
-**Severity:** FRAGILE · **Affects:** the sidebar's plan block on every authenticated route, and
+**Severity:** WRONG · **Affects:** the sidebar's plan block on every authenticated route, and
 anything else rendering `plan_usage.plan.plan_name` · **Found during:** B4's bare-account variant,
 by putting a fixture on `team` and reading the sidebar
-**Status:** `open` — **and the resolution is [JERRY]'s, not ours.** See the last section.
+**Status:** `fixed` — `fix/d202-report-area`. Answered by [JERRY]: **the table is the authority.**
+
+> **Re-graded FRAGILE → WRONG when the reading was settled.** FRAGILE was the right grade while
+> both readings were open, because under reading 1 nothing was wrong at all. Jerry's answer makes
+> reading 2 the record, and under reading 2 a Team customer was shown another plan's name on every
+> page load — which is this board's definition of WRONG. The grade moved because the *finding*
+> changed, not because the bar did.
 
 `apps/api/src/api/services/usage.py:28`:
 
@@ -13435,6 +13475,214 @@ Once answered, the fix is one of two shapes and both are small:
 
 Either way it wants a test asserting a single source, because the present arrangement cannot tell
 you which answer it is implementing.
+
+#### Answered — [JERRY]: read the name from the `plans` row, delete the map
+
+> *"Same answer as D-093 — an account with no plan got a hardcoded 100 while the table said 3, and
+> the fix was resolve at runtime with no literal. This is that defect in the display-name column."*
+
+So the second shape, and **no column to add**: `plans.plan_name` already exists, and
+`0013_unify_plans_table.sql:63` already documents it —
+
+    COMMENT ON COLUMN plans.plan_name IS 'Human-readable plan name displayed in UI';
+
+— which is as close as this codebase comes to a written answer. The column that says in its own
+comment that it is what the UI displays was not what the UI displayed.
+
+**Nothing in the code evidenced the tier-collapsing reading**, so it was treated as drift. No
+comment on the map, no migration note, no test, and nothing in the admin panel. `solo`/`starter`
+and `team`/`pro` sharing a limit is a coincidence of the *limits*, not a record of anyone deciding
+to collapse the *names*. Jerry's rule for the case where it is genuine: **if two plans should share
+a display name, that is a value in the table** — visible, queryable, editable from the admin panel
+— not a literal in a service file.
+
+**And the drift has a traceable origin for one row.** `0012_seed_plans.sql` tries to insert
+`('affiliate', 'Affiliate', …)` with `ON CONFLICT (plan_slug) DO NOTHING`, but
+`0007_phase_29a_plans_and_account_types.sql` had already seeded `('affiliate', 'Industry Affiliate',
+…)`. The insert was a no-op, the table kept `Industry Affiliate`, and the Python map kept the name
+0012 wanted. The literal is not an arbitrary guess — it is **a migration's intent that never
+landed**, preserved in a place where no `ON CONFLICT` could stop it.
+
+#### Fixed — `fix/d202-report-area`
+
+The map is gone. `resolve_plan_for_account` already selected `p.plan_name` from the `plans` row the
+account points at and then threw it away; it now returns it:
+
+    display_name = plan_name or plan_slug
+
+**No literal fallback.** The old line ended `… or "Free"`, so an account on a slug with no `plans`
+row was told it was on Free. An unknown slug now shows the slug.
+
+**Measured live, before and after — not read off the diff.** Both columns were captured by
+checking out the pre-fix service, restarting the API against the same database, and asking it
+again; neither is a reconstruction from the map.
+
+`GET /v1/account/plan-usage`, five accounts, one per slug the fixture uses:
+
+| slug | `plans.plan_name` | `plan_name` before | `plan_name` after |
+|---|---|---|---|
+| `team` | Team | **Pro** | Team |
+| `affiliate` | Industry Affiliate | **Affiliate** | Industry Affiliate |
+| `sponsored_free` | Sponsored Free | **Trial** | Sponsored Free |
+| `starter` | Starter | Starter | Starter |
+| `free` | Free | Free | Free |
+
+And the rendered label, read out of Chromium against the running stack:
+
+| account | sidebar before | sidebar after |
+|---|---|---|
+| `team` | **PRO PLAN** | TEAM PLAN |
+| `starter` | STARTER PLAN | STARTER PLAN |
+
+The `PLAN` suffix and the capitals are `app-layout.tsx:473` — `{planUsage.plan.plan_name} Plan`
+under `uppercase`. **Two accounts, not five, because that block is gated on
+`!isAdmin && !isCompanyAdmin && !isAffiliate`**: an affiliate or title-company account renders the
+name through `AffiliateDashboardShell.tsx:278` instead, and minting a `REGULAR` token for an
+affiliate account to make the first block render would have photographed a page no affiliate user
+sees. The other three rows are proved at the API, which is where the defect was.
+
+**And one literal in the web layer, found by grepping for the other half of the rule.**
+`AffiliateDashboardShell.tsx:278` read `{planUsage.plan?.plan_name || 'Affiliate'} Plan` — the same
+guess the map made, one layer up, for an account whose plan object is absent. It now renders the
+row's name, or the slug, or **no pill at all**. Three lines below it do the same thing with plan
+*limits*, including a `|| 99999` that renders an absent limit as unlimited; that is **D-204**,
+filed and not fixed, because I have not established the fallback is reachable.
+
+`tests/test_plan_display_name_comes_from_the_table.py` (14 tests). What it asserts, and the two
+things worth knowing about how:
+
+- **The slugs and the display names are parsed out of `db/migrations`, never typed into the test.**
+  A test that hard-codes `{"team": "Team"}` to prove the code does not hard-code `{"team": "Pro"}`
+  has moved the literal, not removed it, and would drift exactly as the map did. A plan added to
+  the seeds arrives in the parametrised cases on its own.
+- **The scan is structural — it reads the AST, so comments are never looked at.** The fix writes a
+  comment block that names the deleted map and quotes `"PRO PLAN"`. A text scan would have been
+  measuring that explanation, which is §0.6's eighth instance in six days and three of those were
+  in tests written against this same family.
+
+The gates: `plans` still owns a display-name column; the service still selects `p.plan_name`;
+the `display_name` assignment contains **no string constant**; no dict literal anywhere under
+`apps/api/src/api` maps two or more plan slugs to name-shaped strings (**the shape, not the name**,
+so reintroducing it as `_TIER_LABELS` does not evade it); and the service quotes none of the
+display names the migrations write — which covers the non-dict form, `if slug == "team": "Pro"`.
+
+The dict detector requires values of **letters and spaces only**, which keeps this codebase's
+legitimate slug→Stripe-price-id maps (`price_1SO4sD…` carries digits) and slug→limit maps (ints)
+out of it. Both exemptions were checked by planting such a dict and confirming the suite stayed
+green, then planting `_TIER_LABELS = {"team": "Pro", "solo": "Starter"}` and confirming it went red.
+
+`scripts/regressions/plan_display_name.json` — **5 mutations, 5 fired**: the map returns under its
+old name; the `or "Free"` fallback returns; the map returns under a *different* name; one slug is
+special-cased without a dict (`if plan_slug == "team": display_name = "Pro"` — the ticket's exact
+symptom); and the `SELECT` loses `p.plan_name`, which is the premise the one-line fix rests on.
+
+---
+
+### D-204 — the affiliate dashboard's usage bars fall back to hard-coded plan limits, and the schedules one falls back to the unlimited sentinel
+
+**Severity:** FRAGILE · **Affects:** `/app` for an `INDUSTRY_AFFILIATE` account whose
+`plan-usage` response has no `plan` object · **Found during:** D-203's fix, by grepping the web
+layer for the other half of the same rule
+**Status:** `open`
+
+D-203's rule — *no fallback to a literal, an unknown slug shows the slug or nothing* — was applied
+to the display name in the service and to `AffiliateDashboardShell.tsx:278` in the web layer. Three
+lines immediately below that one are the same defect in the **limit** column, which is D-093's own
+column:
+
+    used={planUsage.usage?.market_reports_used || 0}
+    limit={planUsage.plan?.market_reports_limit || 5000}
+    limit={planUsage.plan?.schedules_limit || 99999}
+    limit={planUsage.plan?.property_reports_limit || 100}
+
+`5000` is the affiliate plan's seeded limit, `100` is **the same literal D-093 was filed about**,
+and `99999` is this codebase's unlimited sentinel — so an affiliate account whose plan object is
+missing is shown a schedules bar that says it has no limit at all. The generous direction, and the
+one nothing complains about.
+
+#### Why it is FRAGILE and not WRONG
+
+**I have not established that the fallback is reachable.** `/v1/account/plan-usage` always returns
+a `plan` object after D-203 — `resolve_plan_for_account` defaults an absent slug to `free` and
+reads that row — so on the live path these `||` arms are dead. What makes them fragile rather than
+harmless is that they are the *only* record of those three numbers in the frontend, they are three
+copies of data the table owns, and the component reads them with `?.` precisely because somebody
+expected the object to be absent sometimes. One of those two beliefs is wrong and the code holds
+both.
+
+Establishing which is the first step of any fix, and it is the step D-131 skipped.
+
+#### The fix, when it is taken
+
+Render no bar rather than a bar with an invented ceiling, the same way the display-name pill now
+renders nothing rather than guessing `'Affiliate'`. Not taken here: it changes what an affiliate
+dashboard shows in a case nobody has yet proved happens, which wants its own before/after rather
+than riding along on a two-line API fix.
+
+Related: D-093 (a hard-coded `100` standing in for the table), D-195 (the unlimited bar), D-203
+(the display-name column of this same defect).
+
+---
+
+### D-205 — the PDF contrast ratchet is red on `main`, on a pairing whose colour is already in its own baseline under the next selector down
+
+**Severity:** FRAGILE · **Affects:** every branch — the gate fails before anything is changed ·
+**Found during:** D-202/D-203's full-suite run, and then reproduced on `origin/main` to find out
+whose it was
+**Status:** `open`
+
+    FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
+    4.44:1  #ffffff on #a66b07  div.cover-agent-name  in property__linen
+
+**It is not this branch's.** Checked out `origin/main` in a separate worktree and ran the same
+file: same single failure, same pairing, same ratio. Twice on each side, identical both times — so
+deterministic here, not a flake.
+
+#### The colour did not change, and the baseline proves it
+
+`pdf_contrast_baseline.txt:36` already records
+
+    property__linen  div.cover-agent-title  #e8d5a3  #a46a07
+
+`#a46a07` vs the failing `#a66b07` is a distance of **3**, well inside the file's own tolerance of
+12 — the same backdrop, sampled a few pixels away. The gold brand is in the corpus and in the
+baseline; what is missing is this *selector* on it. Line 34 has `div.cover-agent-name` on
+`#58880e`, which is the **green** brand.
+
+The backdrop is not a template constant. `linen_report.jinja2:46` paints the cover
+`linear-gradient(135deg, var(--burgundy), var(--burgundy-dark))` and `:13` sets
+`--burgundy: {{ theme_color }}` — **the account's brand colour** — with the footer sitting on
+`rgba(0,0,0,0.2)` over it (`:62`). So the sampled pixel is 0.8 × the brand, and which point of the
+gradient it is depends on where the text landed. White on this gold computes to **4.40:1**; the
+threshold is 4.5 because 22px serif is not WCAG large text (22px ≈ 16.5pt, under 18pt). **The
+pairing lives 0.06 under the line.**
+
+#### What that makes it
+
+The ratchet carries a tolerance on the **colour key** (D-153, argued at length in the file and
+correctly) and none on the **ratio**. A pairing whose ratio sits inside churn distance of 4.5
+therefore flips between "an entry in the baseline" and "a brand-new finding" on a build where no
+colour changed — which is D-153's own lesson applied to the wrong axis.
+
+**Why it differs from the 2026-09-29 capture is not established.** Candidates: the text landed at
+a different point on the gradient (the churn the file documents at distances of 2, 3 and 4); a
+template change between then and now; or a font metric in this container moving the sampled pixel.
+I did not bisect, and the entry is filed on the fact rather than on the mechanism.
+
+#### Why FRAGILE and not ROUGH
+
+0.06 of contrast on an agent's name is ROUGH on its own. What is fragile is the gate: **a ratchet
+that is red on the default branch has stopped ratcheting.** Every branch cut from `main` inherits
+the failure, and the next person to add a genuinely unreadable pairing sees a suite that was
+already failing. That is how this project lost three weeks on D-113.
+
+#### What not to do
+
+**Do not regenerate the baseline.** Its header says it may only shrink, and regenerating would
+write the gold-brand entry in and close the finding by recording it — the one move the file exists
+to prevent. The fix is either the footer overlay (`rgba(0,0,0,0.2)` → a darker value raises white's
+ratio) or a ratio tolerance to match the colour tolerance. Both are decisions about a document
+Design owns, and neither belongs in an API fix.
 
 ---
 

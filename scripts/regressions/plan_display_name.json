@@ -1,0 +1,37 @@
+[
+  {
+    "name": "R1 the map comes back under its old name and is consulted again",
+    "file": "apps/api/src/api/services/usage.py",
+    "old": "    display_name = plan_name or plan_slug",
+    "new": "    _PLAN_DISPLAY_NAMES = {\n        \"free\": \"Free\",\n        \"team\": \"Pro\",\n        \"solo\": \"Starter\",\n    }\n    display_name = _PLAN_DISPLAY_NAMES.get(plan_slug, plan_name)",
+    "test": "tests/test_plan_display_name_comes_from_the_table.py"
+  },
+  {
+    "name": "R2 the literal fallback comes back, so an unknown slug claims a plan",
+    "file": "apps/api/src/api/services/usage.py",
+    "old": "    display_name = plan_name or plan_slug",
+    "new": "    display_name = plan_name or \"Free\"",
+    "test": "tests/test_plan_display_name_comes_from_the_table.py"
+  },
+  {
+    "name": "R3 the map comes back under a different name, so the shape is what is guarded",
+    "file": "apps/api/src/api/services/usage.py",
+    "old": "    display_name = plan_name or plan_slug",
+    "new": "    _TIER_LABELS = {\"team\": \"Pro\", \"solo\": \"Starter\"}\n    display_name = _TIER_LABELS.get(plan_slug) or plan_name or plan_slug",
+    "test": "tests/test_plan_display_name_comes_from_the_table.py"
+  },
+  {
+    "name": "R4 one slug is special-cased without a dict, which is the ticket's symptom",
+    "file": "apps/api/src/api/services/usage.py",
+    "old": "    display_name = plan_name or plan_slug",
+    "new": "    if plan_slug == \"team\":\n        display_name = \"Pro\"\n    else:\n        display_name = plan_name or plan_slug",
+    "test": "tests/test_plan_display_name_comes_from_the_table.py"
+  },
+  {
+    "name": "R5 the SELECT loses plan_name, so the row value the fix reads is not there",
+    "file": "apps/api/src/api/services/usage.py",
+    "old": "\n            p.plan_name,",
+    "new": "",
+    "test": "tests/test_plan_display_name_comes_from_the_table.py"
+  }
+]

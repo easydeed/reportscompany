@@ -1,0 +1,37 @@
+[
+  {
+    "name": "R1 the dashboard's read loses its fallback again",
+    "file": "apps/api/src/api/routes/usage.py",
+    "old": "            COALESCE(input_params->>'city', cities[1], 'Unknown') as city,",
+    "new": "            COALESCE(input_params->>'city', 'Unknown') as city,",
+    "test": "tests/test_report_area_has_one_source.py"
+  },
+  {
+    "name": "R2 the single-report read loses its fallback",
+    "file": "apps/api/src/api/routes/reports.py",
+    "old": "\n                   COALESCE(input_params->>'city', cities[1]) AS city,",
+    "new": "\n                   input_params->>'city' AS city,",
+    "test": "tests/test_report_area_has_one_source.py"
+  },
+  {
+    "name": "R3 the report-list read loses its fallback",
+    "file": "apps/api/src/api/routes/reports.py",
+    "old": "\n                 COALESCE(input_params->>'city', cities[1]) AS city,",
+    "new": "\n                 input_params->>'city' AS city,",
+    "test": "tests/test_report_area_has_one_source.py"
+  },
+  {
+    "name": "R4 a second writer of input_params appears, so the premise changes",
+    "file": "apps/api/src/api/routes/reports.py",
+    "old": "    with db_conn() as (conn, cur):\n        set_rls(cur, account_id)\n        sql = f\"\"\"",
+    "new": "    with db_conn() as (conn, cur):\n        set_rls(cur, account_id)\n        _ = \"UPDATE report_generations SET input_params='{}'\"\n        sql = f\"\"\"",
+    "test": "tests/test_report_area_has_one_source.py"
+  },
+  {
+    "name": "R5 the fallback is written as a comment rather than as code",
+    "file": "apps/api/src/api/routes/usage.py",
+    "old": "            COALESCE(input_params->>'city', cities[1], 'Unknown') as city,",
+    "new": "            -- COALESCE(input_params->>'city', cities[1], 'Unknown')\n            COALESCE(input_params->>'city', 'Unknown') as city,",
+    "test": "tests/test_report_area_has_one_source.py"
+  }
+]

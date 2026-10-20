@@ -274,9 +274,15 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold">Your Reports</p>
-                <span className="text-xs bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 px-2 py-0.5 rounded-full">
-                  {planUsage.plan?.plan_name || 'Affiliate'} Plan
-                </span>
+                {/* D-203: the name the `plans` row carries, or the slug, or no
+                    pill at all. `|| 'Affiliate'` told an account whose plan row
+                    was missing that it was on Affiliate — the same guess the
+                    deleted `_PLAN_DISPLAY_NAMES` map made, one layer up. */}
+                {(planUsage.plan?.plan_name || planUsage.plan?.plan_slug) && (
+                  <span className="text-xs bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 px-2 py-0.5 rounded-full">
+                    {planUsage.plan.plan_name || planUsage.plan.plan_slug} Plan
+                  </span>
+                )}
               </div>
               <div className="space-y-2">
                 <UsageBar

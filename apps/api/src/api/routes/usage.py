@@ -79,7 +79,12 @@ def get_usage(
             id::text, 
             report_type, 
             status,
-            COALESCE(input_params->>'city', 'Unknown') as city,
+            -- D-202: cities[] is set at creation; input_params is written
+            -- only by worker/tasks.py when the job starts, so a queued or
+            -- failed report has no city without this fallback. The
+            -- dashboard shows the most recent report WHATEVER its status,
+            -- which is exactly the case that was reading 'Unknown'.
+            COALESCE(input_params->>'city', cities[1], 'Unknown') as city,
             pdf_url,
             generated_at
           FROM report_generations
