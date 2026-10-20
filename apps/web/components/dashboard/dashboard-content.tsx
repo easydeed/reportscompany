@@ -254,7 +254,7 @@ export function DashboardContent() {
             Latest report
           </CardTitle>
           {loading ? (
-            <Skeleton className="h-[220px] w-full mt-3 rounded-xl" />
+            <Skeleton className="aspect-[8.5/11] w-full mt-3 rounded-xl" />
           ) : latest ? (
             <>
               <p className="text-[15px] font-semibold text-foreground mt-1">
@@ -267,7 +267,15 @@ export function DashboardContent() {
                   816x1056 page, SCALED — never reflowed. A responsive
                   re-layout is a different document from the PDF the client
                   receives. */}
-              <div className="mt-3 h-[220px] overflow-hidden rounded-xl border border-border">
+              {/* IT WAS A SCALE ARTEFACT, NOT A LAYOUT ONE.
+                  SharedPDFPreview is `maxWidth: 480` with its own 8.5/11
+                  aspect, and `scale` is a CSS transform applied ON TOP of
+                  that — so scale={0.27} rendered the page at 84.6px inside a
+                  315px box and the rest was air. Measured, not eyeballed.
+                  At its natural size it fills the column and keeps the fixed
+                  page proportion, which is constraint #2: scaled, never
+                  reflowed. */}
+              <div className="mt-3 overflow-hidden rounded-xl">
                 <SharedPDFPreview
                   primaryColor={branding.primary_color ?? '#4F46E5'}
                   accentColor={branding.accent_color ?? '#818CF8'}
@@ -282,7 +290,6 @@ export function DashboardContent() {
                   audienceLabel={null}
                   areaName={latest.area}
                   lookbackDays={180}
-                  scale={0.27}
                 />
               </div>
               <Link href="/app/reports" prefetch={false}

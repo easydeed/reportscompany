@@ -9,7 +9,7 @@
   {
     "name": "R2 the coverage note is trimmed out of the stack script",
     "file": "scripts/local_stack.sh",
-    "old": "# WHAT IT DOES NOT COVER — read this before scoping a batch against it",
+    "old": "# WHAT IT DOES NOT COVER \u2014 read this before scoping a batch against it",
     "new": "# Notes",
     "test": "tests/test_render_manifest_is_current.py"
   },
@@ -23,8 +23,8 @@
   {
     "name": "R4 onboarding is no longer seeded, so /app is the wizard rather than the dashboard",
     "file": "scripts/seed_render_fixture.py",
-    "old": "    for step in (\"profile_complete\", \"branding_setup\", \"first_report\",\n                 \"first_schedule\"):",
-    "new": "    for step in ():",
+    "old": "    # Design's step 4 and the highest-value page in the adoption plan.\n    for step in (\"profile_complete\", \"branding_setup\", \"first_report\",",
+    "new": "    # Design's step 4 and the highest-value page in the adoption plan.\n    for step in ():  # onboarding not seeded",
     "test": "tests/test_render_manifest_is_current.py"
   },
   {

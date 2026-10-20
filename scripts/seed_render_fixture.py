@@ -121,6 +121,22 @@ def _result_json(city, kind):
     }
 
 
+#: THE SECOND VARIANT: an account with NOTHING on it.
+#:
+#: Every absence rule on the dashboard — the null sentence title, "Nothing
+#: scheduled", "No new leads", "Nothing sent yet" — is a state a real account
+#: hits on DAY ONE, on the first page it is shown, and none of them was
+#: verified by a fixture built to have content. That is the empty-page
+#: measurement inverted: we had been checking only the full case.
+#:
+#: Put on `team` deliberately. Its market_reports_limit is 99999, which the
+#: product reads as unlimited, so `remaining` cannot be computed and the
+#: sentence title must fall back to the page name — Design's constraint #6.
+#: An unlimited plan is NOT "0 reports left", which is D-195's mistake in
+#: prose and the one this variant exists to catch.
+BARE_ACCOUNT = "aaaaaaaa-0000-4000-8000-000000000003"
+BARE_PLAN = "team"
+
 #: Every account the render manifest logs in as. The rate limit has to be
 #: raised on all of them, not just the one carrying the content.
 HARNESS_ACCOUNTS = (
@@ -278,6 +294,25 @@ def up(cur):
             (ACCOUNT, step, NOW - timedelta(days=20), NOW - timedelta(days=20)),
         )
 
+    # ── the bare account: a plan, onboarding done, and nothing else ────
+    #
+    # Onboarding IS seeded here, for the same reason as the content account:
+    # without it /app redirects to /app/get-started and the dashboard's
+    # absence rules are never reached. "New account" means new to the
+    # product, not new to onboarding.
+    cur.execute("UPDATE accounts SET plan_slug=%s WHERE id=%s::uuid",
+                (BARE_PLAN, BARE_ACCOUNT))
+    for step in ("profile_complete", "branding_setup", "first_report",
+                 "first_schedule"):
+        cur.execute(
+            """
+            INSERT INTO onboarding_progress (id, user_id, step_key, completed_at, created_at)
+            VALUES (gen_random_uuid(), %s::uuid, %s, %s, %s)
+            ON CONFLICT DO NOTHING
+            """,
+            (BARE_ACCOUNT, step, NOW - timedelta(days=1), NOW - timedelta(days=1)),
+        )
+
     # ── leads, in every state the pill can render ───────────────────────
     for i, state in enumerate(LEAD_STATES):
         cur.execute(
@@ -304,7 +339,8 @@ def down(cur):
                 (ACCOUNT, f"{TAG}%"))
     cur.execute("DELETE FROM leads WHERE account_id=%s::uuid AND message LIKE %s",
                 (ACCOUNT, f"{TAG}%"))
-    cur.execute("DELETE FROM onboarding_progress WHERE user_id=%s::uuid", (ACCOUNT,))
+    cur.execute("DELETE FROM onboarding_progress WHERE user_id = ANY(%s::uuid[])",
+                ([ACCOUNT, BARE_ACCOUNT],))
     cur.execute("DELETE FROM schedules WHERE account_id=%s::uuid AND name IN "
                 "('Irvine weekly snapshot','Anaheim monthly closed','Tustin — paused')",
                 (ACCOUNT,))
@@ -329,6 +365,17 @@ def status(cur):
     plan, rate = cur.fetchone()
     print(f"  plan                   {plan}")
     print(f"  api_rate_limit         {rate}")
+
+    # The bare variant, asserted to still be bare — a fixture that quietly
+    # grows content stops testing the thing it exists for.
+    print("  -- bare account --")
+    for table in ("report_generations", "schedules", "leads", "contacts"):
+        cur.execute(f"SELECT count(*) FROM {table} WHERE account_id=%s::uuid",
+                    (BARE_ACCOUNT,))
+        n = cur.fetchone()[0]
+        print(f"  {table:22} {n}{'  <-- NOT BARE' if n else ''}")
+    cur.execute("SELECT plan_slug FROM accounts WHERE id=%s::uuid", (BARE_ACCOUNT,))
+    print(f"  plan                   {cur.fetchone()[0]} (unlimited market reports)")
 
 
 def main():

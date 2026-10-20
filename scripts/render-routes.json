@@ -41,6 +41,12 @@
       "user_id": "aaaaaaaa-0000-4000-8000-000000000003",
       "account_type": "REGULAR",
       "is_sponsored": true
+    },
+    "bare": {
+      "account_id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "user_id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "account_type": "REGULAR",
+      "is_sponsored": true
     }
   },
   "routes": [
@@ -49,6 +55,13 @@
       "token": "regular",
       "expect": "renders",
       "marker": "h1"
+    },
+    {
+      "path": "/app",
+      "token": "bare",
+      "expect": "renders",
+      "marker": "h1",
+      "_why": "The dashboard's absence rules \u2014 null sentence title, Nothing scheduled, No new leads, Nothing sent yet \u2014 on an account with no content and an unlimited plan. Day one of a real account, and the one page it is shown first."
     },
     {
       "path": "/app/reports",

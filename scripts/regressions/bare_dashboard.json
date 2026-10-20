@@ -1,0 +1,37 @@
+[
+  {
+    "name": "R1 the bare /app entry leaves the manifest, so the absence rules go unrendered",
+    "file": "scripts/render-routes.json",
+    "old": "      \"token\": \"bare\",",
+    "new": "      \"token\": \"regular\",",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R2 the bare account moves to a plan with a finite limit, so the null title is never exercised",
+    "file": "scripts/seed_render_fixture.py",
+    "old": "BARE_PLAN = \"team\"",
+    "new": "BARE_PLAN = \"starter\"",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R3 the sentence title stops falling back, so an uncomputable state ships a hole",
+    "file": "apps/web/components/dashboard/dashboard-content.tsx",
+    "old": "        title={sentenceTitle ?? \"Overview\"}",
+    "new": "        title={sentenceTitle as string}",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R4 the unlimited guard goes, so an unlimited plan renders a number",
+    "file": "apps/web/components/dashboard/dashboard-content.tsx",
+    "old": "typeof mkt === 'number' && typeof used === 'number' && mkt < 99999",
+    "new": "typeof mkt === 'number' && typeof used === 'number'",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R5 an absence phrase becomes a zero",
+    "file": "apps/web/components/dashboard/dashboard-content.tsx",
+    "old": "<p className=\"text-[15px] text-muted-foreground mt-1\">Nothing scheduled</p>",
+    "new": "<p className=\"text-[15px] text-muted-foreground mt-1\">0 scheduled</p>",
+    "test": "tests/test_render_manifest_is_current.py"
+  }
+]

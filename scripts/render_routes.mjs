@@ -262,7 +262,7 @@ const HIDE_DEV_CHROME = `
 
 async function visit(ctx, base, route) {
   const page = await ctx.newPage();
-  const result = { route: route.path, expect: route.expect };
+  const result = { route: route.path, token: route.token, expect: route.expect };
   try {
     await page.addStyleTag({ content: HIDE_DEV_CHROME }).catch(() => {});
     const res = await page.goto(base + route.path, {
@@ -358,7 +358,11 @@ async function visit(ctx, base, route) {
 function compare(beforeDir, afterDir) {
   const load = (d) => JSON.parse(readFileSync(join(d, 'routes.json'), 'utf8'));
   const a = load(beforeDir), b = load(afterDir);
-  const byRoute = (x) => Object.fromEntries(x.routes.map((r) => [r.route + ' [' + (r.expect || '') + ']', r]));
+  // Keyed by route AND token: the manifest renders /app twice, once as an
+  // account with content and once as one with none, and they are different
+  // measurements of the same path.
+  const byRoute = (x) => Object.fromEntries(
+    x.routes.map((r) => [`${r.route} [${r.token || '?'}/${r.expect || ''}]`, r]));
   const A = byRoute(a), B = byRoute(b);
   const routes = [...new Set([...Object.keys(A), ...Object.keys(B)])].sort();
   let changed = 0, unusable = 0;

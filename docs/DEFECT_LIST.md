@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 69 | Real, unfixed |
+| `open` | 70 | Real, unfixed |
 | `fixed` | 126 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **202** | D-001 … D-202, contiguous, no duplicates |
+| **Total** | **203** | D-001 … D-203, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 19 · ROUGH 24. (Sums to 69, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 20 · ROUGH 24. (Sums to 70, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13367,6 +13367,74 @@ its own pass.
 
 **Not fixed here.** B4 is a presentation batch; changing what the API returns mid-batch would make
 the before/after diff describe two things at once.
+
+---
+
+### D-203 — the plan name a customer sees comes from a hard-coded map, not from the plans table, and the two disagree on half their rows
+
+**Severity:** FRAGILE · **Affects:** the sidebar's plan block on every authenticated route, and
+anything else rendering `plan_usage.plan.plan_name` · **Found during:** B4's bare-account variant,
+by putting a fixture on `team` and reading the sidebar
+**Status:** `open` — **and the resolution is [JERRY]'s, not ours.** See the last section.
+
+`apps/api/src/api/services/usage.py:28`:
+
+    _PLAN_DISPLAY_NAMES = {
+        "free": "Free",            "sponsored_free": "Trial",
+        "trial": "Trial",          "starter": "Starter",
+        "solo": "Starter",         "pro": "Pro",
+        "team": "Pro",             "affiliate": "Affiliate",
+    }
+
+The `plans` table has a `plan_name` column holding a name for every one of those slugs. The two
+agree on four rows and disagree on four:
+
+| slug | `plans.plan_name` | what the product shows |
+|---|---|---|
+| `team` | **Team** | **Pro** |
+| `solo` | **Solo Agent** | **Starter** |
+| `sponsored_free` | **Sponsored Free** | **Trial** |
+| `affiliate` | **Industry Affiliate** | **Affiliate** |
+
+**Measured.** An account whose `accounts.plan_slug` is `team` gets
+`{"plan_slug": "team", "plan_name": "Pro"}` from `/v1/account/plan-usage`, and the sidebar renders
+**"PRO PLAN"** above its usage bars. A Team customer is told, on every page load, that they are on
+Pro.
+
+#### Two readings, and this entry does not pick one
+
+1. **Deliberate tier collapsing.** `solo` and `starter` share a 25-report limit; `team` and `pro`
+   share an unlimited one. The map may be the customer-facing tier names for a set of legacy
+   slugs, in which case the behaviour is correct and the `plans.plan_name` column is the thing
+   that is wrong — a column nothing displays, sitting next to one that does.
+2. **Drift.** The map is a literal and the table is data; literals fall behind. Four rows out of
+   eight is a lot of coincidence for an intentional design, and nothing in the file says it is one.
+
+**The code gives no evidence either way.** There is no comment on the map, no migration note, and
+no test asserting the correspondence in either direction.
+
+#### Why it is filed as FRAGILE rather than WRONG
+
+Nothing is broken for a `free`, `trial`, `starter` or `pro` account, which is most of them. What is
+fragile is that **one fact has two sources and nothing records which is authoritative** — the same
+shape as D-202 one entry up, found the same afternoon. A new plan added to the table shows up in
+the sidebar as `undefined` unless somebody also edits the literal, and nothing will say so.
+
+#### What settles it — **[JERRY]**
+
+*Which name should a `team` account see: "Team" or "Pro"?* That is a customer-facing naming
+decision, not an engineering one, and §0.2 says to stop rather than guess. The same question
+covers `solo`, `sponsored_free` and `affiliate`.
+
+Once answered, the fix is one of two shapes and both are small:
+
+- **if the map is right** — delete `plans.plan_name`, or add a comment and a test saying the column
+  is storage-only and the map is the display source;
+- **if the table is right** — read `plan_name` from `plans` in `resolve_plan_for_account` and delete
+  the map.
+
+Either way it wants a test asserting a single source, because the present arrangement cannot tell
+you which answer it is implementing.
 
 ---
 
