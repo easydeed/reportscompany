@@ -61,6 +61,27 @@
 #
 # So: chrome, layout, tables, pills, type, tokens, lists, forms and navigation
 # are all verifiable. Report CONTENT, PDFs, billing flows and delivery are not.
+#
+# THE CONTAINER CAN LOSE THE PYTHON PACKAGES WHILE STILL LOOKING UP
+# -----------------------------------------------------------------
+# On 2026-10-20 a resumed session found Postgres, Redis and `next dev` all
+# still running, and `fastapi`, `psycopg` and `twilio` gone — `import fastapi`
+# raised ModuleNotFoundError, so `up` started an API that died on the first
+# line of `api.main`. `status` reported the database and web fine and the api
+# as a connection refusal, which reads like a port problem rather than a
+# missing dependency.
+#
+# AND `python3` IS NOT NECESSARILY THE INTERPRETER THAT HAS THEM. In that
+# container `/usr/local/bin/python3` comes first on PATH and carries neither;
+# `/usr/bin/python3` carries both. `$PY` honours `LOCAL_STACK_PYTHON`, so the
+# fix is one variable —
+#
+#     LOCAL_STACK_PYTHON=/usr/bin/python3 scripts/local_stack.sh up
+#
+# — but the default picks the wrong one there, and the symptom is an API that
+# starts and exits rather than an error about packages. If `api.log` ends in
+# ModuleNotFoundError, this is why: reinstall from `apps/api/pyproject.toml`
+# and `apps/worker/pyproject.toml`, with the interpreter `$PY` resolves to.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

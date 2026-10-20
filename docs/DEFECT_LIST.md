@@ -13624,65 +13624,129 @@ Related: D-093 (a hard-coded `100` standing in for the table), D-195 (the unlimi
 
 ---
 
-### D-205 — the PDF contrast ratchet is red on `main`, on a pairing whose colour is already in its own baseline under the next selector down
+### D-205 — the PDF contrast ratchet has not passed since 2026-09-30, and the surface it measures is brand-dependent
 
-**Severity:** FRAGILE · **Affects:** every branch — the gate fails before anything is changed ·
-**Found during:** D-202/D-203's full-suite run, and then reproduced on `origin/main` to find out
-whose it was
-**Status:** `open`
+**Severity:** FRAGILE · **Affects:** every branch — the gate fails before anything is changed; and, in
+the document itself, any customer whose brand colour is light · **Found during:** D-202/D-203's
+full-suite run, then bisected
+**Status:** `open` — investigated, nothing changed. See **What not to do**.
 
     FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
     4.44:1  #ffffff on #a66b07  div.cover-agent-name  in property__linen
 
-**It is not this branch's.** Checked out `origin/main` in a separate worktree and ran the same
-file: same single failure, same pairing, same ratio. Twice on each side, identical both times — so
-deterministic here, not a flake.
+#### Not this container, and not this branch
 
-#### The colour did not change, and the baseline proves it
+The same line, byte for byte, in CI on `main`: run 39482608779, `1 failed, 2992 passed`, and the
+`::error::` annotation D-191 added names this test and no other. Every `Backend Tests` run on `main`
+in the last two days is `failure`, and the workflow's own header already recorded 25 consecutive red
+runs before that.
 
-`pdf_contrast_baseline.txt:36` already records
+#### Bisected. It has never passed in its current form
 
-    property__linen  div.cover-agent-title  #e8d5a3  #a46a07
+One test, one commit at a time, in a worktree:
 
-`#a46a07` vs the failing `#a66b07` is a distance of **3**, well inside the file's own tolerance of
-12 — the same backdrop, sampled a few pixels away. The gold brand is in the corpus and in the
-baseline; what is missing is this *selector* on it. Line 34 has `div.cover-agent-name` on
-`#58880e`, which is the **green** brand.
+| commit | date | result |
+|---|---|---|
+| `8f55f0d7` | 09-30 | **1 passed** — hit-testing, baseline matched its measurement |
+| `8ca6104b` | 09-30 | **34** pairings not on the baseline ← the measurement switch |
+| `a83d9d77` | 09-30 | 2 |
+| `3ac024e4` | 09-30 | 2 |
+| `c225e4f8` | 10-05 | 1 |
+| `68a73605` | 10-06 | 1 |
+| `e546e07f` | 10-07 | 1 |
+| `0c6581b8` | 10-08 | 1 |
+| `2726c599` | 10-13 | 1 |
+| `d7247a51` | 10-20 | 1 |
 
-The backdrop is not a template constant. `linen_report.jinja2:46` paints the cover
-`linear-gradient(135deg, var(--burgundy), var(--burgundy-dark))` and `:13` sets
-`--burgundy: {{ theme_color }}` — **the account's brand colour** — with the footer sitting on
-`rgba(0,0,0,0.2)` over it (`:62`). So the sampled pixel is 0.8 × the brand, and which point of the
-gradient it is depends on where the text landed. White on this gold computes to **4.40:1**; the
-threshold is 4.5 because 22px serif is not WCAG large text (22px ≈ 16.5pt, under 18pt). **The
-pairing lives 0.06 under the line.**
+`8ca6104b` is *fix(contrast): the gate stops hit-testing — and the switch was not a clean
+subtraction (#128)*. It is the last commit that wrote data rows into the baseline — `+63 / -88` —
+and **at that commit its own measurement reported 34 pairings the baseline it shipped did not
+describe.** Every commit since has only *removed* rows, as a shrinking ratchet should; the count
+fell 34 → 2 the same day (`3ac024e4` taught the measurer to decline text it cannot read) and 2 → 1
+when `teal` was cut. One has been left for twenty days.
 
-#### What that makes it
+#### Why it differs from the 2026-09-29 capture — the entry was re-keyed, not lost
 
-The ratchet carries a tolerance on the **colour key** (D-153, argued at length in the file and
-correctly) and none on the **ratio**. A pairing whose ratio sits inside churn distance of 4.5
-therefore flips between "an entry in the baseline" and "a brand-new finding" on a build where no
-colour changed — which is D-153's own lesson applied to the wrong axis.
+The pairing **was** recorded before the switch. The 2026-09-29 baseline carried two rows for it:
 
-**Why it differs from the 2026-09-29 capture is not established.** Candidates: the text landed at
-a different point on the gradient (the churn the file documents at distances of 2, 3 and 4); a
-template change between then and now; or a font metric in this container moving the sampled pixel.
-I did not bisect, and the entry is filed on the fact rather than on the mechanism.
+    property__elegant  div.cover-agent-name  #ffffff  #6aa312     <- lime
+    property__elegant  div.cover-agent-name  #ffffff  #c47e09     <- amber
 
-#### Why FRAGILE and not ROUGH
+`#c47e09` is 0.8 × `#F59E0B`, the amber brand — the old DOM walker enumerated *every colour a
+gradient names* and composited the footer's `rgba(0,0,0,0.2)` over the gradient's **start** stop.
+The pixel sampler reads **the modal pixel of five points across the text run**, which lands
+two-thirds of the way down the same gradient: `#a66b07`, which is 0.677 × `#F59E0B`. **Distance 51.**
+No key tolerance could have carried that entry across the switch — 12 exists to absorb churn of 2
+to 4, not a change of method — and the regeneration in that commit was what should have re-keyed
+it. For 30 of the 34 it eventually did, through later commits. For this one it never did.
 
-0.06 of contrast on an agent's name is ROUGH on its own. What is fragile is the gate: **a ratchet
-that is red on the default branch has stopped ratcheting.** Every branch cut from `main` inherits
-the failure, and the next person to add a genuinely unreadable pairing sees a suite that was
-already failing. That is how this project lost three weeks on D-113.
+#### The tolerance asymmetry was MY diagnosis and it was wrong
+
+The first version of this entry said the failure was the key tolerance absorbing colour drift while
+the ratio has none, and pointed at `div.cover-agent-title #e8d5a3 #a46a07` sitting at distance 3
+from the failing backdrop. **That is not what is happening.** A baseline key is
+`(family, selector, fg, bg)`; a different selector with a different foreground is a different
+readability fact, and `#e8d5a3` at 3.08:1 and `#ffffff` at 4.44:1 are correctly two entries. The
+nearest baseline row with the same family, selector and foreground is `#58880e` — **distance 114**,
+a genuinely different brand. No tolerance, on either axis, is implicated.
+
+The asymmetry is real as a property of the file and it is still worth not fixing: a ratio tolerance
+wide enough to absorb 0.06 would have hidden this pairing, and it is a real failure.
+
+#### What it actually is: a per-brand surface described by one entry
+
+Every measured run of this selector, from a single pass over the property corpus — 2,640 runs, 12
+of them here:
+
+| theme · brand | brand colour | backdrop | ratio | in the baseline? |
+|---|---|---|---|---|
+| `linen` · lime | `#84CC16` | `#58880e` | **4.25** | **yes** |
+| `linen` · amber | `#F59E0B` | `#a66b07` | **4.44** | **no** — this is the failure |
+| `linen` · luxury_estates | `#0D9488` | `#08645c` | 7.03 | n/a |
+| `linen` · demo_title | `#DC2626` | `#951919` | 8.64 | n/a |
+| `linen` · coastal | `#0E7490` | `#084d60` | 9.37 | n/a |
+| `linen` · violet | `#7C3AED` | `#5427a0` | 9.66 | n/a |
+| `harbor` · all six | — | `#ffffff` | 16.24 | n/a — dark text on white |
+
+**Two of six brands fail, and the gate is silent about the worse one.** Lime at 4.25 is baselined,
+so it passes review; amber at 4.44 is not, so it fails the build. The gate reports the better of the
+two failures and says nothing about the one below it.
+
+The backdrop is **0.677 × the brand colour** on every one of the six, to within channel rounding —
+`linen_report.jinja2:13` sets `--burgundy: {{ theme_color }}`, `:46` paints the cover as a gradient
+from it, and `:62` lays the footer on `rgba(0,0,0,0.2)`. So **this ratio is a function of the
+customer's brand colour and the template cannot fix it for all brands.** The two that fail are the
+two light ones; brand relative luminance, for the record: violet 0.134, coastal 0.146, demo_title
+0.167, luxury_estates 0.230, **amber 0.439, lime 0.481**. Nothing in the corpus sits between 0.23
+and 0.44, so the cut-off cannot be read off these six — which is the sharpest version of the
+finding: **a seventh brand in the corpus could add a failure with nothing in the template changed,
+and the gate would call it a regression.**
+
+#### Severity
+
+0.06 of contrast on an agent's name is ROUGH on its own. FRAGILE is for the gate: **a ratchet red on
+the default branch has stopped ratcheting** — it cannot report the next regression because it is
+already failing, and D-191's fix made that red *legible* without making it green. Fourth instance on
+this board of a check that is on and inert, after the two weeks of red CI in October and D-038 /
+D-041.
 
 #### What not to do
 
-**Do not regenerate the baseline.** Its header says it may only shrink, and regenerating would
-write the gold-brand entry in and close the finding by recording it — the one move the file exists
-to prevent. The fix is either the footer overlay (`rgba(0,0,0,0.2)` → a darker value raises white's
-ratio) or a ratio tolerance to match the colour tolerance. Both are decisions about a document
-Design owns, and neither belongs in an API fix.
+**Do not regenerate the baseline.** Recording `#a66b07` would close the finding by writing it down,
+which is the one move the file exists to prevent — and it would leave lime's 4.25 equally
+undisturbed. The three candidate fixes, none taken here:
+
+1. **the footer overlay** — `rgba(0,0,0,0.2)` → a darker value raises white's ratio for every brand
+   at once, and is the only one of the three that fixes the document rather than the gate. It
+   changes what ships, so it is Design's;
+2. **a floor on the derived backdrop** — clamp the composited footer colour so white always clears
+   4.5 whatever the brand, which is the `display_ink` / `accent_ink` pattern this codebase already
+   has (D-171, D-177) applied to one more surface;
+3. **key the baseline per brand, or stop pretending one entry can describe six** — the honest
+   bookkeeping fix, and the one that makes the other two reviewable.
+
+**Nothing in this investigation changed a template, the baseline, or the measurement.** The entry
+is the deliverable.
 
 ---
 
