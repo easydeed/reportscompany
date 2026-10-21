@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 71 | Real, unfixed |
-| `fixed` | 128 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 129 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **206** | D-001 … D-206, contiguous, no duplicates |
+| **Total** | **207** | D-001 … D-207, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 24. (Sums to 71, the open total.)
 
@@ -13753,9 +13753,25 @@ D-041.
 
 #### What not to do
 
+#### ANSWERED by Design, 2026-10-21 — option 3, structural, and both surfaces are retired
+
+**Relayed, not read: Design's full answer is with [JERRY] and this entry has the ruling only.**
+What came back:
+
+* **option 3**, a scrim or a solid plate — the structural remedy;
+* **both surfaces are already retired in the redesign**, so D-205 and D-206 are legacy defects
+  with an expiry rather than things to design around;
+* and a one-line kill of option 1 worth recording verbatim in substance: **the `0.677 × brand`
+  backdrop IS option 1.** A derived colour applied to the agent's brand is what the footer already
+  does, and it is what fails. We would have taken option 1.
+
+That argument is better than the one this entry made for the same conclusion, and it is the reason
+the stopgap below is **held rather than applied** — see the two mapping problems under "What has
+to be resolved first".
+
 **Do not regenerate the baseline.** Recording `#a66b07` would close the finding by writing it down,
 which is the one move the file exists to prevent — and it would leave lime's 4.25 equally
-undisturbed. The three candidate fixes, none taken here:
+undisturbed. The three candidate fixes, of which Design has now picked the third:
 
 1. **the footer overlay** — `rgba(0,0,0,0.2)` → a darker value raises white's ratio for every brand
    at once, and is the only one of the three that fixes the document rather than the gate. It
@@ -13768,6 +13784,78 @@ undisturbed. The three candidate fixes, none taken here:
 
 **Nothing in this investigation changed a template, the baseline, or the measurement.** The entry
 is the deliverable.
+
+#### What has to be resolved first — two mapping problems, both found before applying anything
+
+**1. The theme names.** Design named the live themes `elegant`, `bold`, `modern` and called
+`harbor` removed. Ours are `atlas`, `linen`, `harbor`. Resolved from `themes.json`, which is
+canonical: **their names predate our 2026-10-13 rename and their live list is exactly our three.**
+`bold → atlas` (5), `elegant → linen` (3), `modern → harbor` (2); ids unchanged; the retired pair
+is `classic` (1) and `teal` (4), cut 2026-10-05, and **nothing has been retired since.**
+
+So **`harbor` is live**, it is id 2, and it is the theme that carries the gradient cover title —
+D-206's surface. Had "harbor = removed" been taken at face value, the stopgap would have been
+skipped on a live cover. Why Design could reach it is **D-207**, and it is ours.
+
+**2. The stopgap tokens are the `_v2` tokens, and `on_primary` is this codebase's
+`theme_color_text` — proved, not assumed.** Design specifies `on_primary` for the footer band and
+`primary_on_dark` for the glyphs. Those are the names in
+`templates/property/_v2/report.jinja2` — Design's own shared page, which `atlas` already renders
+through (`primary` ×35, `on_primary` ×9, `tint` ×7, `display_ink` ×6, `primary_on_dark` ×2). **So
+the vocabulary is not from another product; it is the vocabulary of the architecture these two
+covers have not been moved to yet.** `linen` and `harbor` are the two themes still carrying their
+own 720- and 795-line templates and the older `theme_color_*` roles, which is precisely why they
+are the two that fail.
+
+The mapping is exact. `compute_color_roles(brand)["theme_color_text"]` against a solid brand
+reproduces `golden/themes.json`'s `contrast_on_primary` **to the hundredth for all six brands**:
+
+| brand | ink | on solid brand | `golden` `contrast_on_primary` |
+|---|---|---|---|
+| demo_title | `#ffffff` | 4.83 | 4.83 |
+| luxury_estates | `#14151a` | 4.87 | 4.87 |
+| coastal | `#ffffff` | 5.36 | 5.36 |
+| amber | `#14151a` | 8.49 | 8.49 |
+| lime | `#14151a` | 9.23 | 9.23 |
+| violet | `#ffffff` | 5.70 | — |
+
+Same token, two names, and **an existing golden gate already holds it above 4.5 for any brand.**
+
+**Which settles what the instruction means: the plate is not optional.** `on_primary` is ink
+guaranteed against **`primary`**, so it is only correct where the surface *is* `primary`. Swap the
+ink and leave the band as `rgba(0,0,0,0.2)` over the gradient — which lands at `0.677 × brand` —
+and it goes the wrong way: luxury_estates from **7.03 to 2.59**, amber from 4.44 to 4.10, lime
+still failing at 4.40. The first reading of this section recorded that as "the stopgap makes it
+worse". It is not; **it is what the stopgap looks like with its structural half left out.**
+
+So, measured, the stopgap as specified works on both surfaces:
+
+| surface | change | worst of six |
+|---|---|---|
+| `linen` footer band | solid `theme_color` plate, ink `theme_color_text` | **4.83** vs 4.5 |
+| `harbor` cover title | solid `theme_color_on_dark` glyphs, gradient and circles removed | **3.90** vs 3.0 |
+
+#### Why it is still not applied — and the decision is [JERRY]'s, not Design's
+
+**Changing the band colour re-keys the baseline.** An entry is
+`(family, selector, fg, bg)`; `pdf_contrast_baseline.txt` carries **36 `property__linen` rows**, of
+which **5 are footer selectors** (`cover-agent-*`, `cover-logo`) keyed on the tinted band. A solid
+plate orphans those 5 and introduces new keys for whatever the new pairings are — and the reverse
+check fires on orphans as loudly as the forward check fires on new findings. The same is true, more
+mildly, for `harbor`: solid glyphs are *measurable*, so that surface **rejoins** the gate and
+`EXPECTED_DECLINED` drops to 0, which is a change to an asserted constant.
+
+There is a sanctioned path and it is already written in the baseline's own header — Jerry,
+2026-10-06: *"regenerate per surface as each lands… a baseline cannot describe a document that no
+longer exists… a template replacement is not casual."* Five rows, one family, every other line
+byte-identical, and the diff is the review.
+
+**But the standing instruction is that the baseline stays untouched**, and it was given against
+exactly the failure mode a regeneration risks. Those two do not conflict in principle — one is
+about hiding a finding, the other about describing a replaced surface — and which applies here is a
+call for whoever owns the policy. **So both stopgaps are held together, as one decision, and what
+they cost is now measured rather than estimated: 5 orphaned rows, an `EXPECTED_DECLINED` of 0, and
+two surfaces that clear their thresholds for every brand.**
 
 ---
 
@@ -13869,16 +13957,104 @@ That is the shape this board keeps filing — a check that stayed green across t
 invalidated what it was checking — and it is why the entry is WRONG rather than FRAGILE: the
 document is genuinely unreadable at 2.07:1 for a violet-branded customer, and nothing reports it.
 
-#### The fix is Design's, and it is the same one as D-205
+#### ANSWERED by Design, 2026-10-21 — and this surface's stopgap is the half that works
 
-See `docs/COVER_CONTRAST_FOR_DESIGN_2026-10-20.md`. Both covers put the customer's brand colour in
-a contrast pair with no floor under it. Nothing is changed here — not the template, not the
-baseline, not `EXPECTED_DECLINED`.
+**Relayed, not read — Design's full answer is with [JERRY].** Option 3, structural; both surfaces
+retired in the redesign, so this is a legacy defect with an expiry; and option 1 killed on the
+ground that the `0.677 × brand` backdrop on D-205's surface **is** option 1 and fails.
+
+For this surface the specified stopgap is `primary_on_dark` as a **solid** glyph colour with the
+gradient and the two 10%/8% circles removed. Under our property roles that is
+`theme_color_on_dark`, and it clears the threshold for every brand with margin:
+
+| brand | `theme_color_on_dark` | vs `#2D3348` | vs `#1A1F36` |
+|---|---|---|---|
+| demo_title | `#ff5151` | 3.90 | 5.06 |
+| coastal | `#0e9cc2` | 3.90 | 5.07 |
+| violet | `#a979ff` | 4.09 | 5.31 |
+| luxury_estates | `#0da89a` | 4.22 | 5.48 |
+| amber | `#F59E0B` | 5.82 | 7.56 |
+| lime | `#84CC16` | 6.33 | 8.22 |
+
+Worst case **3.90:1** against 3.0, and it is brand-independent in the sense that matters — the
+derivation has a floor built into it, which is what `theme_color_on_dark` is for. **Solid also
+removes the decline**: glyphs painted by `color` are measurable, so this surface would rejoin the
+gate and `EXPECTED_DECLINED` would go to 0.
+
+**Held anyway**, with D-205's, because the two were specified as one decision and D-205's half is
+measurably worse than doing nothing — see the mapping section on that entry. Applying this one
+alone would also leave the gate's declined count at 1 for a surface nobody had fixed, which is how
+this entry started.
+
+See `docs/COVER_CONTRAST_FOR_DESIGN_2026-10-20.md`. Nothing is changed here — not the template, not
+the baseline, not `EXPECTED_DECLINED`.
 
 What *could* be done in the meantime without touching the document: record the per-brand hand
 calculation next to `EXPECTED_DECLINED` so the next rename cannot carry it silently, and make the
 gate's failure message name the brands rather than the element. Both are bookkeeping; neither makes
-the cover readable.
+the cover readable. **Both are now built** — `scripts/sweep_cover_brand_space.py` carries the
+calculation in its record and `tests/test_cover_brand_sweep_is_current.py` fails on a declined
+surface that has none.
+
+---
+
+### D-207 — a handover document gained the new theme names in its file paths and kept the old ones everywhere else, so a reader concluded a live theme was removed
+
+**Severity:** ROUGH · **Affects:** Claude Design, who read it and told us `harbor` was removed ·
+**Found during:** resolving that claim against `themes.json` before applying a stopgap
+**Status:** `fixed` — `fix/d205-ratchet`
+
+Design's answer on the cover contrast named the live themes **`elegant`, `bold`, `modern`** and
+said **`harbor` is removed.** Ours are `atlas`, `linen`, `harbor`. One of those two statements had
+to be wrong, and the stakes were not academic: `harbor` is the theme carrying D-206's gradient
+cover, so "removed" would have meant skipping a stopgap on a live surface.
+
+`themes.json` settles it. Their names predate our 2026-10-13 rename and **their live list is
+exactly our three**:
+
+| their name | ours | id | and |
+|---|---|---|---|
+| `bold` | `atlas` | 5 | the default |
+| `elegant` | `linen` | 3 | D-205's surface |
+| `modern` | `harbor` | 2 | **D-206's surface, live** |
+
+`classic` (1) and `teal` (4) are the retired pair, cut 2026-10-05, and nothing has been retired
+since. So their mapping is not wrong — it is **eight days stale**, and they were reading our
+documents.
+
+#### Why "removed" was a reasonable inference from what we gave them
+
+`docs/CLAUDE_DESIGN_HANDOVER.md` is dated 2026-10-01 and its header still says *"the five
+property-report themes (`bold`, `classic`, `elegant`, `modern`, `teal`)"*. Its body names
+`bold`/`elegant`/`modern` throughout — the live list at line 19, the contrast table at 113–117, the
+page counts at 96–100. **But lines 68–70 were updated to the post-rename template paths**, and
+only one of the three carries its mapping:
+
+    .../templates/property/atlas/atlas_report.jinja2    <- bold's type only
+    .../templates/property/linen/linen_report.jinja2
+    .../templates/property/harbor/harbor_report.jinja2
+
+So a reader learns that `atlas` is `bold`, and meets `linen` and `harbor` as names the document
+never ties to anything. Given a live list of three that does not include them, **"these are other
+themes, and they are not live" is the reading the document invites.** `DESIGN_ADOPTION_SCOPE.md`
+(2026-10-05) is all old names with no new ones at all.
+
+This is the §0.6 family on a document rather than a test: **a file updated in one place and not the
+others gives a reader two incompatible mappings, and the newer one looks like the exception.** It
+is also the second time a theme name relayed outward has cost something — `THEME_RENAME_SCOPE.md`
+records a *"wrong version of this was relayed"* about `resolve()` itself.
+
+#### Fixed
+
+A mapping box at the top of both documents, stating the three renames, the two retirements, the
+date, and that nothing has been retired since. **The bodies are left as written**: the old names
+appear inside dated quotations and measurements, and a find-and-replace would falsify the record.
+The box says so, so the next reader knows the mixture is deliberate.
+
+Not done, and worth considering: a gate asserting that a Design-facing document naming a theme
+either uses the live name or carries the mapping box. `test_no_live_code_path_names_a_retired_theme`
+already does this for code — `docs/` is not code, and a stale name in a handover costs a round trip
+rather than a wrong render, which is why this is ROUGH.
 
 ---
 

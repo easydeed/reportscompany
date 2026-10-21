@@ -4,6 +4,54 @@
 made twice yourselves.** Nothing has been changed. No template, no contrast baseline, no
 measurement code. This document is the ask.
 
+> ## ANSWERED, 2026-10-21 — option 3, and both surfaces are retired in the redesign
+>
+> **Option 3**, structural. Both of these surfaces are already replaced in the redesign, so they
+> are legacy defects with an expiry. The one-line kill of option 1 is kept because it is better
+> than our own argument for the same conclusion: **the `0.677 × brand` backdrop IS option 1** — a
+> derived colour applied to the agent's brand is exactly what the footer already does, and it is
+> what fails. We would have taken option 1.
+>
+> ### Two things resolved on our side before applying anything, and one still open
+>
+> **Theme names (resolved).** The answer names the live themes `elegant`, `bold`, `modern` and
+> calls `harbor` removed. Those are their **former** names: `bold → atlas` (5), `elegant → linen`
+> (3), `modern → harbor` (2), renamed 2026-10-13, **ids unchanged, all three live.** The retired
+> pair is `classic` (1) and `teal` (4), cut 2026-10-05, and nothing has been retired since. So
+> **`harbor` is live and it is the theme carrying surface 2** — the gradient cover title below.
+> Why that was easy to get wrong is ours: our own handover documents kept the old names in their
+> bodies while gaining the new ones in their file paths (**D-207**, fixed — both now carry a
+> mapping box).
+>
+> **Both stopgaps (resolved, and both work).** The tokens named are the `_v2` tokens — `primary`,
+> `on_primary`, `tint`, `display_ink`, `primary_on_dark` — which is the vocabulary of the shared
+> page `atlas` already renders through, and **not** another product's. `linen` and `harbor` are
+> simply the two themes not yet moved onto it; they still carry their own 720- and 795-line
+> templates and the older `theme_color_*` names. The mapping is exact rather than approximate:
+> `theme_color_text` against a solid brand reproduces `golden/themes.json`'s `contrast_on_primary`
+> to the hundredth for all six brands (4.83, 4.87, 5.36, 8.49, 9.23), so `on_primary` and
+> `theme_color_text` are one token with two names, and an existing gate already holds it above 4.5
+> for any brand.
+>
+> | surface | the change | worst of six |
+> |---|---|---|
+> | footer band | solid `primary` plate, ink `on_primary` | **4.83** against 4.5 |
+> | cover title | solid `primary_on_dark` glyphs, gradient and the two circles removed | **3.90** against 3.0 |
+>
+> **One thing worth stating back, because we nearly got it wrong:** `on_primary` is ink guaranteed
+> against `primary`, so **the plate is not optional** — it is what makes the token correct. Swapping
+> the ink while leaving the band as `rgba(0,0,0,0.2)` over the gradient takes luxury_estates from
+> passing at 7.03 to failing at 2.59. Our first reading recorded that as "the stopgap makes things
+> worse"; it is not, it is the stopgap with its structural half left out. Solid glyphs also make the
+> title *measurable*, so that surface rejoins the contrast gate instead of being excluded from it.
+>
+> **What is still open is ours, not yours.** Changing the band colour re-keys the contrast baseline:
+> 5 of `linen`'s 36 rows are footer selectors keyed on the tinted band, so a plate orphans those 5
+> and introduces new keys. There is a sanctioned path for exactly this — regenerate the replaced
+> family only, leave every other line byte-identical, the diff is the review — and whether to take
+> it is a policy call on our side. Both stopgaps are held together until it is made, since you gave
+> them as one decision.
+
 ## The short version
 
 Two surfaces on the property report covers derive a contrast pair from `theme_color`, which is the
