@@ -6915,6 +6915,7 @@
   "harbor": {
    "hand_calculations": {
     "span": {
+     "authoritative_reading": "lighter_stop_with_tint",
      "backdrop": "--gradient-dark #1A1F36 -> #2D3348, plus brand circles at 0.10 and 0.08 opacity",
      "computed_2026_10_21": {
       "amber": {
@@ -6948,6 +6949,7 @@
        "lighter_stop_with_tint": 2.07
       }
      },
+     "element": ".cover-title span \u2014 harbor_report.jinja2:52",
      "glyphs": "linear-gradient(135deg, theme_color 0%, theme_color_light 50%, #FFB199 100%)",
      "method": "worst glyph stop against the worst backdrop point. Conservative: the glyphs are a gradient, so part of the word clears the threshold even where the first stop does not, and WCAG has no rule for 'some of the letters pass'.",
      "superseded_by": "the original excuse, '4.47:1 at the worst pair of stops, 9.28:1 at the best' (3ac024e4), which is #FF6B5B on #2D3348 and #FFB199 on #1A1F36 \u2014 the template default, not any brand.",

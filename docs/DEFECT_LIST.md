@@ -14165,11 +14165,65 @@ Declining the *measurement* must not decline the *finding*. Three parts, and the
    read this, and here is what it really is"*, which is a sentence. Today it means nothing is said
    at all.
 
-**Not applied, deliberately**, and the reason is the point of it: part 3 would turn the build red
-today, because `harbor`'s recorded verdict *is* `FAILS`. That is the correct colour for a document
-that is unreadable at 2.07:1 for a violet-branded customer — and turning a build red is a decision
-to take in the open, not something to slip in beside a stopgap that is itself held. It wants its own
-change, with the fix landing in the same breath.
+**Part 3 is now built, and `main` is RED on purpose.** [JERRY], 2026-10-21: *"Harbor at 2.07:1 for
+a violet-branded customer is a cover a real agent would send and cannot read. Red is the correct
+colour and a declined measurement that reports nothing is precisely what let D-206 sit twenty
+days."* Taken in the open rather than slipped in, which is what the previous paragraph asked for.
+
+    FAILED tests/test_cover_brand_sweep_is_current.py::
+           test_a_declined_surface_whose_calculation_fails_fails_the_build
+
+      harbor .cover-title span — harbor_report.jinja2:52, violet,         2.07:1 against 3.0
+      harbor .cover-title span — harbor_report.jinja2:52, coastal,        2.16:1 against 3.0
+      harbor .cover-title span — harbor_report.jinja2:52, demo_title,     2.49:1 against 3.0
+      harbor .cover-title span — harbor_report.jinja2:52, luxury_estates, 2.99:1 against 3.0
+
+**It names the brand, the ratio and the line** — the two conditions set for making the red
+actionable rather than ambient. *"Declined surface fails"* is another red line nobody reads;
+a brand and a ratio and a file is a finding.
+
+**And it reports on a green run too.** The figures go out as a warning, which pytest prints in its
+summary whether the run passed or failed, so all six brands reach the log every time —
+
+    declined contrast surfaces, hand-calculated (D-206):
+      harbor .cover-title span … violet 2.07:1/3.0 FAILS
+      …
+      harbor .cover-title span … lime 5.27:1/3.0 ok
+
+— and when the surface is fixed there is nothing declined, the warning stops, and that silence is
+the right one. **Reporting is the half `EXPECTED_DECLINED` lacked**; it was never wrong about the
+number.
+
+Two things the gate reads as **data, never as prose**: exactly one `computed_YYYY_MM_DD` block of
+per-brand figures, so a second calculation has to retire the first in a diff instead of sitting
+beside it; and an explicit `authoritative_reading` naming which of the three readings the verdict
+is taken on — `lighter_stop_with_tint`, the conservative one. `verdict` and `method` stay in the
+record for people and are not parsed by anything, because a gate that greps an explanation is
+measuring the explanation.
+
+#### `main` IS DELIBERATELY RED FROM 2026-10-21, AND THIS IS THE WRITTEN REASON
+
+> A red build with no written reason becomes background within a week. **That is this entry's own
+> history** — twenty days of a red ratchet nobody read, with D-191's annotation naming the failing
+> test the whole time.
+
+Two failures on `main`, both deliberate and both about this cover:
+
+| | |
+|---|---|
+| `test_no_new_unreadable_text_in_the_pdfs` | D-205 — `linen`'s agent name, `4.44:1`, red since 2026-09-30 |
+| `test_a_declined_surface_whose_calculation_fails_fails_the_build` | D-206 — `harbor`'s cover title, four brands, red from 2026-10-21 |
+
+**Pending: Design's answer on `harbor`** — whether the cover-title guidance in their package applies
+to the theme we ship under that name, which is their `modern`. See
+`docs/THEME_MAPPING_AND_FOOTER_FOR_DESIGN_2026-10-21.md`. The stopgaps stay held until it comes.
+
+**How it goes green.** By the cover being fixed. Not by widening the exclusion, not by regenerating
+the baseline, not by raising `EXPECTED_DECLINED`, and not by changing
+`authoritative_reading` to a more favourable one. If Design's answer makes the cover fixable, the
+build goes green by the fix. If their answer is that the surface is theirs and already replaced,
+the entry closes when the replacement lands — and until one of those happens, red is the honest
+colour for a document four of six brands cannot read.
 
 ---
 
