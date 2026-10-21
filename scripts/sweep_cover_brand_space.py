@@ -147,9 +147,27 @@ def live_themes():
     return dict(sorted(THEME_TEMPLATES.items()))
 
 
-#: Every `theme_*` value the property builder can hand a template.
-ROLE_NAMES = ("theme_color", "theme_color_light", "theme_color_dark",
-              "theme_color_on_dark", "theme_color_on_light", "theme_color_text")
+#: BOTH GENERATIONS OF ROLE NAME, and the first version had only one.
+#:
+#: `linen` and `harbor` take the brand as `theme_color*`, which is what the
+#: property builder has always handed a template. `atlas` renders through
+#: Design's shared `_v2/report.jinja2`, which names the same values
+#: `primary`, `on_primary`, `tint`, `display_ink`, `primary_on_dark`,
+#: `primary_ink`, `primary_dark`. Reading only the first set recorded
+#: `roles_used: []` for atlas — a theme whose cover the sweep then measured
+#: failing for one brand in the ramp, which is not what "no brand-derived
+#: roles" means.
+#:
+#: A list of names that knew one vintage of the thing it names: §0.6, and the
+#: fourth instance of that family inside this one file.
+ROLE_NAMES = (
+    # the property builder's own
+    "theme_color", "theme_color_light", "theme_color_dark",
+    "theme_color_on_dark", "theme_color_on_light", "theme_color_text",
+    # Design's shared page
+    "primary", "primary_dark", "primary_ink", "on_primary", "tint",
+    "primary_on_dark", "display_ink",
+)
 
 
 PROPERTY_ROOT = REPO / "apps/worker/src/worker/templates/property"
@@ -287,17 +305,23 @@ def main():
             declined = any(r["unmeasurable"] for r in runs)
             if len(fgs) == 1 and len(bgs) == 1 and not declined:
                 continue                      # the same pairing on every brand
+            # KEYED ON THE SELECTOR ALONE, AND THE FIRST VERSION KEYED ON
+            # (selector, foreground). Where the FOREGROUND is the brand-derived
+            # half — harbor's cover titles and contents numbers — every brand
+            # produces a different one, so every slot held exactly one brand and
+            # the output was one row per brand instead of a curve across them.
+            # A key that includes the thing being varied cannot describe the
+            # variation.
             for r in runs:
                 brand = r["doc"].rsplit("__", 1)[1]
-                slot = f"{selector}\t{r['fg_hex']}"
-                per.setdefault(slot, {})[brand] = {
-                    "bg": r["bg_hex"], "ratio": round(r["ratio"], 2),
+                per.setdefault(selector, {})[brand] = {
+                    "fg": r["fg_hex"], "bg": r["bg_hex"],
+                    "ratio": round(r["ratio"], 2),
                     "needs": r["needs"], "declined": bool(r["unmeasurable"]),
                 }
         declined_slots = sorted(s for s, b in per.items()
                                 if any(v["declined"] for v in b.values()))
-        hand = {s: (previous.get(theme, {}).get(s) or SEED_CALCULATIONS
-                    .get(theme, {}).get(s))
+        hand = {s: (previous.get(theme, {}).get(s) or SEED_CALCULATIONS.get(s))
                 for s in declined_slots}
         record["themes"][theme] = {"template": template, "roles_used": used,
                                    "templates_read": template_closure(template),
@@ -322,45 +346,50 @@ def main():
 #: Seeded here so the first regeneration does not start red. Everything after
 #: that is carried forward from the previous record, and a NEW declined surface
 #: has to be worked out by whoever adds it.
+#:
+#: KEYED BY SELECTOR, NOT BY THEME — and the first version named the theme.
+#: `tests/test_rename_scope_numbers_are_current.py` refused it: a quoted theme
+#: name in a scanned tree is a site a future rename has to visit, and its own
+#: failure message offers the better remedy rather than the constant — *"derive
+#: the name from the registry instead, which is what the other fifteen do."*
+#: The mechanism here is the selector's rather than the theme's anyway, and that
+#: is the more honest statement, since this element has already moved once.
 SEED_CALCULATIONS = {
-    "harbor": {
-        "span\t#ffffff": {
-            "why_unmeasurable": (
-                "harbor_report.jinja2:52 paints .cover-title span with "
-                "--gradient-coral clipped to the glyphs via "
-                "-webkit-text-fill-color:transparent, which is the property the "
-                "measurer uses to blank text. Blanking changes nothing, so the "
-                "sampled backdrop is the element's own gradient and the "
-                "reported foreground is not what the reader sees."
-            ),
-            "glyphs": "linear-gradient(135deg, theme_color 0%, theme_color_light 50%, #FFB199 100%)",
-            "backdrop": "--gradient-dark #1A1F36 -> #2D3348, plus brand circles at 0.10 and 0.08 opacity",
-            "threshold": 3.0,
-            "method": (
-                "worst glyph stop against the worst backdrop point. Conservative: "
-                "the glyphs are a gradient, so part of the word clears the "
-                "threshold even where the first stop does not, and WCAG has no "
-                "rule for 'some of the letters pass'."
-            ),
-            "computed_2026_10_21": {
-                "violet":         {"lighter_stop_with_tint": 2.07, "lighter_stop": 2.20, "darker_stop": 2.85},
-                "coastal":        {"lighter_stop_with_tint": 2.16, "lighter_stop": 2.33, "darker_stop": 3.03},
-                "demo_title":     {"lighter_stop_with_tint": 2.49, "lighter_stop": 2.59, "darker_stop": 3.36},
-                "luxury_estates": {"lighter_stop_with_tint": 2.99, "lighter_stop": 3.34, "darker_stop": 4.34},
-                "amber":          {"lighter_stop_with_tint": 4.91, "lighter_stop": 5.82, "darker_stop": 7.56},
-                "lime":           {"lighter_stop_with_tint": 5.27, "lighter_stop": 6.33, "darker_stop": 8.22},
-            },
-            "verdict": (
-                "FAILS. violet on every reading; coastal and demo_title on all "
-                "but the darkest backdrop point with no tint; luxury_estates only "
-                "with the tint. D-206."
-            ),
-            "superseded_by": (
-                "the original excuse, '4.47:1 at the worst pair of stops, 9.28:1 "
-                "at the best' (3ac024e4), which is #FF6B5B on #2D3348 and #FFB199 "
-                "on #1A1F36 — the template default, not any brand."
-            ),
+    "span": {
+        "why_unmeasurable": (
+            "the cover title's inner span is painted by a gradient clipped to "
+            "the glyphs via -webkit-text-fill-color:transparent, which is the "
+            "property the measurer uses to blank text. Blanking changes "
+            "nothing, so the sampled backdrop is the element's own gradient "
+            "and the reported foreground is not what the reader sees."
+        ),
+        "glyphs": "linear-gradient(135deg, theme_color 0%, theme_color_light 50%, #FFB199 100%)",
+        "backdrop": "--gradient-dark #1A1F36 -> #2D3348, plus brand circles at 0.10 and 0.08 opacity",
+        "threshold": 3.0,
+        "method": (
+            "worst glyph stop against the worst backdrop point. Conservative: "
+            "the glyphs are a gradient, so part of the word clears the "
+            "threshold even where the first stop does not, and WCAG has no "
+            "rule for 'some of the letters pass'."
+        ),
+        "computed_2026_10_21": {
+            "violet":         {"lighter_stop_with_tint": 2.07, "lighter_stop": 2.20, "darker_stop": 2.85},
+            "coastal":        {"lighter_stop_with_tint": 2.16, "lighter_stop": 2.33, "darker_stop": 3.03},
+            "demo_title":     {"lighter_stop_with_tint": 2.49, "lighter_stop": 2.59, "darker_stop": 3.36},
+            "luxury_estates": {"lighter_stop_with_tint": 2.99, "lighter_stop": 3.34, "darker_stop": 4.34},
+            "amber":          {"lighter_stop_with_tint": 4.91, "lighter_stop": 5.82, "darker_stop": 7.56},
+            "lime":           {"lighter_stop_with_tint": 5.27, "lighter_stop": 6.33, "darker_stop": 8.22},
         },
+        "verdict": (
+            "FAILS. violet on every reading; coastal and demo_title on all but "
+            "the darkest backdrop point with no tint; luxury_estates only with "
+            "the tint. D-206."
+        ),
+        "superseded_by": (
+            "the original excuse, '4.47:1 at the worst pair of stops, 9.28:1 at "
+            "the best' (3ac024e4), which is #FF6B5B on #2D3348 and #FFB199 on "
+            "#1A1F36 — the template default, not any brand."
+        ),
     },
 }
 
@@ -391,22 +420,21 @@ def _summarise(record):
     lum = {b["name"]: b["luminance"] for b in record["brands"]}
     print("\nwhere each surface crosses its threshold, by brand luminance:")
     for theme, info in sorted(record["themes"].items()):
-        for slot, brands in sorted(info["surfaces"].items()):
-            sel, fg = slot.split("\t")
+        for sel, brands in sorted(info["surfaces"].items()):
             fails = sorted((lum[b] for b, v in brands.items()
                             if not v["declined"] and v["ratio"] < v["needs"]))
             passes = sorted((lum[b] for b, v in brands.items()
                              if not v["declined"] and v["ratio"] >= v["needs"]))
             declined = [b for b, v in brands.items() if v["declined"]]
             if declined:
-                print(f"  {theme:<8} {sel:<26} {fg}  DECLINED for "
+                print(f"  {theme:<8} {sel:<34}  DECLINED for "
                       f"{len(declined)} brand(s) — measured by hand or not at all")
                 continue
             if not fails:
                 continue
             band = (f"fails from L={fails[0]:.3f} to L={fails[-1]:.3f}; "
                     f"passes {('up to L=%.3f' % max(p for p in passes if p < fails[0])) if any(p < fails[0] for p in passes) else 'nowhere below'}")
-            print(f"  {theme:<8} {sel:<26} {fg}  {len(fails)}/{len(fails)+len(passes)}  {band}")
+            print(f"  {theme:<8} {sel:<34}  {len(fails)}/{len(fails)+len(passes)}  {band}")
 
 
 if __name__ == "__main__":

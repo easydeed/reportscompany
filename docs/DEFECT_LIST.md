@@ -13782,6 +13782,62 @@ undisturbed. The three candidate fixes, of which Design has now picked the third
 3. **key the baseline per brand, or stop pretending one entry can describe six** — the honest
    bookkeeping fix, and the one that makes the other two reviewable.
 
+#### The detection fix — built, and it locates the boundary the presets could not
+
+`scripts/sweep_cover_brand_space.py` + `tests/test_cover_brand_sweep_is_current.py`. Three live
+themes × 38 brands — 32 spaced evenly in **relative luminance** with the hue rotating, plus the six
+presets — 16,720 text runs measured by the same pixel instrument the gate uses.
+
+The number this entry was filed around:
+
+| | |
+|---|---|
+| `linen` · `div.cover-agent-name` | **passes up to L=0.417, fails from L=0.439** |
+
+The six presets could only say *"somewhere between 0.230 and 0.439"*. The boundary is now pinned to
+a band 0.022 wide, and it is a **property of the surface rather than of the corpus** — which is the
+whole difference.
+
+And the surrounding picture, which the presets understated badly. Failing brands out of 38:
+
+| theme | surface | fails |
+|---|---|---|
+| `linen` | `div.cover-label` | **36/38** |
+| `linen` | `div.cover-brand-text` | 34/38 |
+| `linen` | `th` / `td` | 29 / 28 |
+| `linen` | `div.cover-agent-title` | 25/38 |
+| `linen` | `div.cover-agent-name` | 19/38 |
+| `harbor` | `div.brand` | **38/38** — every brand |
+| `harbor` | `div.cover-agent-title` | 29/38 |
+| `harbor` | `span` (the title) | **declined for all 38** |
+| `atlas` | eight `span.*` | 1/38 each, all at L=0.190 |
+
+**`atlas` is the control and it holds.** Eight surfaces fail at exactly one ramp step out of
+thirty-eight; the other two themes fail across most of the space. Atlas is the theme already
+rendering through Design's shared `_v2` page with the `on_primary` / `primary_on_dark` roles — so
+the sweep independently reproduces the ruling: the covers that are not yet on that architecture are
+the covers that fail.
+
+**Four bugs in the sweep, each the family it was built to catch, each recorded where it happened:**
+
+1. roles were read from the **entry template only**, so `atlas` recorded `roles_used: []` — its
+   roles live in the `_v2` include. Follows includes transitively now.
+2. `ROLE_NAMES` knew **one generation of token**. `atlas` names the same values `primary`,
+   `on_primary`, `tint`, `display_ink`; reading only `theme_color*` said atlas had no brand-derived
+   roles while the sweep was measuring its cover failing.
+3. the surface filter matched selectors containing `cover` or `brand`, which **excluded D-206's own
+   surface** — its selector is bare `span`. Replaced with measured brand-dependence: a surface is
+   kept when its colours actually move with the brand.
+4. the slot key was `(selector, foreground)`, and where the **foreground** is the brand-derived half
+   every brand produced a different key — one row per brand instead of a curve. **A key that
+   includes the thing being varied cannot describe the variation.**
+
+The gate asserts what a record cannot assert about itself: that it still names the themes the
+registry has, the template each one renders, and the roles those templates interpolate **now** —
+and that every declined surface carries the per-brand arithmetic excusing it. That last one is
+D-206 made structural, and it was seen to fail: blanking `harbor`'s calculation gives
+`declined surface(s) with no recorded calculation: harbor span`.
+
 **Nothing in this investigation changed a template, the baseline, or the measurement.** The entry
 is the deliverable.
 
