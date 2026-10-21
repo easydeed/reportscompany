@@ -19,7 +19,18 @@ jest.mock('@/components/checkout-status-banner', () => ({
   CheckoutStatusBanner: () => <div data-testid="checkout-banner">Checkout Banner</div>,
 }));
 
-// Mock the actual plan page component logic
+/**
+ * D-225. EVERY TEST IN THIS FILE RENDERS THE COMPONENT BELOW, which is
+ * written here and is not the plan page. `app/account/plan/page.tsx` is never
+ * imported, so these eleven tests cannot fail because of anything in it: they
+ * describe a sketch of the page's logic that was copied by hand and has been
+ * drifting ever since. The usage ratios, the 0.8 warning threshold and the
+ * sponsored badge are all re-implemented here rather than exercised.
+ *
+ * Left in place rather than deleted — the thresholds it encodes are a record
+ * of what the page is meant to do — but it is not coverage, and nothing in
+ * this file should be cited as evidence that the plan page works.
+ */
 const MockPlanPage = ({ mockData }: { mockData: any }) => {
   const [data, setData] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
@@ -105,7 +116,11 @@ describe('Plan Page', () => {
         expect(screen.getByTestId('sponsored-badge')).toBeInTheDocument();
       });
 
-      expect(screen.getByText('Trial')).toBeInTheDocument();
+      // ON THE BADGE, not anywhere on the page. `plan.plan_name` is also
+      // "Trial" in this fixture, so a bare getByText('Trial') matched two
+      // elements and threw — and would have gone on matching if the badge
+      // disappeared entirely, because the plan name alone would satisfy it.
+      expect(screen.getByTestId('sponsored-badge')).toHaveTextContent('Trial');
     });
 
     it('should SHOW Stripe upgrade buttons for sponsored accounts', async () => {

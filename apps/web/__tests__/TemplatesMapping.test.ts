@@ -1,8 +1,31 @@
 /**
  * Template Mapping Tests
- * 
+ *
  * Phase T2.3: Test that template builders correctly inject brand data
- * and generate valid HTML with proper placeholders replaced
+ * and generate valid HTML with proper placeholders replaced.
+ *
+ * THE FIXTURES WENT STALE AND THE SUITE WENT RED WITH THEM (D-224)
+ * ----------------------------------------------------------------
+ * Four of these failed for months, and in every case the BUILDER was right
+ * and the mock described an older product:
+ *
+ *   listings_sample   address / beds / baths  ->  street_address / bedrooms /
+ *                     bathrooms. `buildNewListingsHtml` says so in a comment
+ *                     ("Field mapping from PropertyDataExtractor") and reads
+ *                     the new names.
+ *   the listings      <!-- TABLE_PAGES -->  ->  <!-- TABLE_PAGES -->,
+ *   template          which is the marker the builder fills.
+ *   price_bands       price_range / active_count  ->  label / count, which is
+ *                     what compute/price_bands.py EMITS (:228-232) — so the
+ *                     old mock described a shape nothing produces.
+ *   default accent    #F26B2B  ->  #4F46E5. `DEFAULT_ACCENT_COLOR` is
+ *                     deliberately the primary: "Indigo (monochrome brand
+ *                     default)".
+ *
+ * These are hand-written fixtures and nothing ties them to the producer, so
+ * they can go stale again. `tests/test_sample_data_matches_the_builder.py` is
+ * the Python side's answer to the same problem; this file has no equivalent,
+ * and that is recorded on D-224 rather than implied by a green run.
  */
 
 import {
@@ -32,7 +55,8 @@ const mockMarketSnapshotData = {
   counts: {
     Active: 150,
     Pending: 25,
-    Closed: 75
+    Closed: 75,
+    NewListings: 1250
   },
   metrics: {
     median_list_price: 850000,
@@ -52,22 +76,26 @@ const mockListingsData = {
   metrics: { median_list_price: 850000 },
   listings_sample: [
     {
-      address: "123 Main St",
+      street_address: "123 Main St",
+      city: "San Diego",
       list_price: 899000,
-      beds: 3,
-      baths: 2.5,
+      bedrooms: 3,
+      bathrooms: 2.5,
       sqft: 2000,
       status: "Active",
-      days_on_market: 5
+      days_on_market: 5,
+      list_date: "2025-01-10"
     },
     {
-      address: "456 Oak Ave",
+      street_address: "456 Oak Ave",
+      city: "San Diego",
       list_price: 1250000,
-      beds: 4,
-      baths: 3,
+      bedrooms: 4,
+      bathrooms: 3,
       sqft: 2800,
       status: "Active",
-      days_on_market: 12
+      days_on_market: 12,
+      list_date: "2025-01-03"
     }
   ]
 };
@@ -81,24 +109,24 @@ const mockPriceBandsData = {
   report_date: "January 15, 2025",
   price_bands: [
     {
-      price_range: "$500K - $750K",
-      active_count: 45,
+      label: "$500K - $750K",
+      count: 45,
       pending_count: 8,
       closed_count: 25,
       avg_dom: 15.2,
       median_price: 625000
     },
     {
-      price_range: "$750K - $1M",
-      active_count: 60,
+      label: "$750K - $1M",
+      count: 60,
       pending_count: 12,
       closed_count: 35,
       avg_dom: 18.7,
       median_price: 875000
     },
     {
-      price_range: "$1M - $1.5M",
-      active_count: 30,
+      label: "$1M - $1.5M",
+      count: 30,
       pending_count: 5,
       closed_count: 18,
       avg_dom: 22.3,
@@ -122,6 +150,7 @@ const mockMarketSnapshotTemplate = `
   <div class="metrics">
     <div>Median Price: {{median_price}}</div>
     <div>Closed Sales: {{closed_sales}}</div>
+    <div>New Listings: {{new_listings}}</div>
   </div>
   <footer>{{brand_tagline}}</footer>
 </body>
@@ -139,7 +168,7 @@ const mockListingsTemplate = `
     <img src="{{brand_logo_url}}" alt="{{brand_name}}">
     <h1>{{market_name}} Listings</h1>
   </header>
-  <!-- LISTINGS_TABLE_ROWS -->
+  <!-- TABLE_PAGES -->
   <footer>{{brand_tagline}}</footer>
 </body>
 </html>
@@ -283,7 +312,10 @@ describe('Template Mapping - Fallback Brand', () => {
   it('should use default colors when brand not provided', () => {
     const html = buildMarketSnapshotHtml(mockMarketSnapshotTemplate, dataWithoutBrand);
     expect(html).toContain("--pct-blue: #4F46E5"); // DEFAULT_PRIMARY_COLOR
-    expect(html).toContain("--pct-accent: #F26B2B"); // DEFAULT_ACCENT_COLOR
+    // DEFAULT_ACCENT_COLOR is the primary on purpose — "Indigo (monochrome
+    // brand default)", lib/templates.ts:30. The old #F26B2B here was an
+    // earlier default, and the test outlived it.
+    expect(html).toContain("--pct-accent: #4F46E5");
   });
 });
 
@@ -296,9 +328,15 @@ describe('Template Mapping - KPI Formatting', () => {
 
   it('should format large numbers with commas', () => {
     const html = buildMarketSnapshotHtml(mockMarketSnapshotTemplate, mockMarketSnapshotData);
-    // Should show counts as numbers
-    expect(html).toContain("150"); // Active count
-    expect(html).toContain("75"); // Closed count
+    // A NUMBER THAT ACTUALLY HAS A COMMA IN IT. This asserted 150 and 75 —
+    // neither formats to anything — and the 150 could never appear at all,
+    // because the market-snapshot builder has no active-count placeholder
+    // (its keys are market_name, period_label, report_date, lookback_days,
+    // median_price, closed_sales, avg_dom, moi, new_listings, pendings, …).
+    // So a test named for comma formatting checked no formatting and one
+    // value the template cannot emit.
+    expect(html).toContain("1,250"); // {{new_listings}} <- counts.NewListings
+    expect(html).toContain("75");    // {{closed_sales}}
   });
 });
 

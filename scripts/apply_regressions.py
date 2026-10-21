@@ -326,16 +326,35 @@ def restore(path: Path, original: str) -> None:
         )
 
 
-def run_gate(test: str) -> tuple[bool, str]:
-    """Run pytest. Returns `(passed, interesting lines)`."""
-    cmd = [sys.executable, "-m", "pytest", "-q", "-p", "no:randomly",
-           "-p", "no:cacheprovider", *test.split()]
-    proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
+def run_gate(test: str, runner: str = "pytest") -> tuple[bool, str]:
+    """Run the gate. Returns `(passed, interesting lines)`.
+
+    `runner` is "pytest" unless a mutation says otherwise. "jest" exists
+    because `apps/web`'s suite became worth guarding the day it first went
+    green (D-211), and the alternative — mutating a file, running jest by
+    hand and reading the result — is the practice this file's header lists
+    three misreports from. The mutate-and-restore half is identical either
+    way; only the command differs.
+    """
+    if runner == "jest":
+        cmd = ["npx", "jest", "--ci", *test.split()]
+        cwd = ROOT / "apps/web"
+    elif runner == "pytest":
+        cmd = [sys.executable, "-m", "pytest", "-q", "-p", "no:randomly",
+               "-p", "no:cacheprovider", *test.split()]
+        cwd = ROOT
+    else:
+        raise MutationError(
+            f"unknown runner {runner!r} — the mutation would be applied and "
+            f"nothing would be run, which reads as DID NOT FIRE"
+        )
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     out = proc.stdout + proc.stderr
     tail = "\n".join(
         line for line in out.splitlines()
         if line.startswith(("FAILED", "ERROR"))
         or " passed" in line or " failed" in line or " error" in line
+        or line.strip().startswith(("Tests:", "●"))
     )
     return proc.returncode == 0, tail.strip()
 
@@ -357,7 +376,7 @@ def one(mutation: dict, index: int, keep: bool) -> bool:
         original = apply_mutation(path, mutation["old"], mutation["new"])
         _say("   mutation verified present on disk")
         clear_bytecode()
-        passed, tail = run_gate(mutation["test"])
+        passed, tail = run_gate(mutation["test"], mutation.get("runner", "pytest"))
     finally:
         if keep:
             _say("   --keep: mutation LEFT APPLIED, tree is dirty")

@@ -1,0 +1,42 @@
+[
+  {
+    "name": "R1 the switcher goes back to vanishing silently when accounts fail to load",
+    "file": "apps/web/components/account-switcher.tsx",
+    "old": "  useEffect(() => {\n    if (!error) return;\n    toast({\n      title: 'Error',\n      description: 'Failed to load account information',\n      variant: 'destructive',\n    });\n  }, [error, toast]);",
+    "new": "",
+    "test": "__tests__/AccountSwitcher.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "R2 the page stops rendering the real wizard",
+    "file": "apps/web/app/app/schedules/new/page.tsx",
+    "old": "  return <UnifiedReportWizard defaultMode=\"schedule\" />",
+    "new": "  return <div>New Schedule</div>",
+    "test": "__tests__/NewSchedulePage.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "R3 the price-band builder reverts to the shape the stale fixture described",
+    "file": "apps/web/lib/templates.ts",
+    "old": "<div class=\"band-title\">${band.label || \"—\"}</div>",
+    "new": "<div class=\"band-title\">${band.price_range || \"—\"}</div>",
+    "test": "__tests__/TemplatesMapping.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "R4 open_houses is re-enabled without the copy following",
+    "file": "apps/web/components/unified-wizard/types.ts",
+    "old": "    hasAudienceStep: false,\n    // TEMPORARILY HIDDEN — SimplyRETS open house data not reliably updated.\n    // Re-enable when verified.\n    disabled: true,",
+    "new": "    hasAudienceStep: false,",
+    "test": "__tests__/NewSchedulePage.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "R5 the default accent stops being the monochrome primary",
+    "file": "apps/web/lib/templates.ts",
+    "old": "const DEFAULT_ACCENT_COLOR = \"#4F46E5\"",
+    "new": "const DEFAULT_ACCENT_COLOR = \"#F26B2B\"",
+    "test": "__tests__/TemplatesMapping.test.ts",
+    "runner": "jest"
+  }
+]
