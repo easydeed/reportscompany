@@ -1,151 +1,137 @@
 "use client";
 
-import { motion } from "framer-motion";
+/**
+ * Hero — Design's `Landing v4`, header block.
+ *
+ * Two lines are deliberately not carried over from the deck:
+ *
+ * - "350+ Southern California cities" in the reassurance line. An unsourced
+ *   figure, and the same family G2 answered by deleting every headcount on
+ *   /login, /register and /about. Restore it with a source.
+ * - "Next: create a free account. Your {city} report will be waiting." The
+ *   city typed here is not carried into signup, so the report would not be
+ *   waiting. The box personalises the previews on this page, which is what it
+ *   does in the deck too.
+ */
+import type { CSSProperties } from "react";
 import { MapPin } from "lucide-react";
-import { DEMO_AGENT, DEMO_MARKET, currentReportPeriod } from "@/lib/demo-data";
+import {
+  Glow,
+  LANDING_THEMES,
+  ReportSheet,
+  useLandingTheme,
+} from "./landing-primitives";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
+export function Hero({
+  onCity,
+  theme,
+  onTheme,
+}: {
+  onCity: (city: string) => void;
+  theme: number;
+  onTheme: (i: number) => void;
+}) {
+  const { city } = useLandingTheme();
+  const trimmed = city.trim();
+  const ctaLabel = trimmed ? `Get my ${trimmed} report` : "Get my free report";
 
-function ReportMockup() {
   return (
-    <div className="mx-auto mt-16 max-w-xl" style={{ perspective: "1000px" }}>
-      <div
-        className="rounded-2xl border border-border bg-card shadow-2xl"
-        style={{ transform: "rotateY(-4deg) rotateX(2deg)" }}
-      >
-        <div className="rounded-t-2xl bg-gradient-to-r from-[#6366F1] to-[#818CF8] px-8 py-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white">
-              TR
-            </div>
-            <div>
-              <p className="text-base font-semibold text-white">Market Snapshot — {DEMO_MARKET.cityState}</p>
-              <p className="text-sm text-white/70">{currentReportPeriod()} Report</p>
-            </div>
+    <header
+      className="mx-auto grid w-full max-w-[1200px] items-center gap-12 px-4 pb-10 pt-12 md:px-8 md:pt-[72px]"
+      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 440px), 1fr))" }}
+    >
+      <div className="flex flex-col gap-8">
+        <h1
+          className="m-0 font-extrabold text-[#0F172A]"
+          style={{
+            fontSize: "clamp(42px, 5.4vw, 68px)",
+            lineHeight: 1,
+            letterSpacing: "-0.035em",
+            textWrap: "balance",
+          } as CSSProperties}
+        >
+          Market reports your clients actually open.
+        </h1>
+        <p
+          className="m-0 max-w-[480px] text-xl leading-normal text-[#475569]"
+          style={{ textWrap: "pretty" } as CSSProperties}
+        >
+          Live MLS data. Your brand. Sent to your sphere every month, on autopilot.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <label className="relative min-w-[220px] flex-1">
+              <span className="sr-only">Your city</span>
+              <MapPin className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#94A3B8]" />
+              <input
+                value={city}
+                onChange={(e) => onCity(e.target.value)}
+                placeholder="Your city, e.g. Irvine"
+                autoComplete="address-level2"
+                className="h-[54px] w-full rounded-[10px] border-[1.5px] border-[#D6D3CB] bg-white pl-11 pr-4 text-[17px] text-[#0F172A] outline-none focus:border-[#4F46E5]"
+              />
+            </label>
+            <a
+              href="/register"
+              className="inline-flex h-[54px] items-center justify-center whitespace-nowrap rounded-[10px] bg-[#4F46E5] px-6 text-[17px] font-semibold text-white transition-colors hover:bg-[#4338CA]"
+            >
+              {ctaLabel}
+            </a>
           </div>
+          <span className="text-sm text-[#64748B]">Free plan · No credit card</span>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 px-8 py-6">
-          {[
-            { label: "Median price", value: DEMO_MARKET.medianPrice },
-            { label: "Active listings", value: DEMO_MARKET.activeListings },
-            { label: "Days on market", value: DEMO_MARKET.daysOnMarket },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <p className="text-xl font-bold text-foreground">{stat.value}</p>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[13px] text-[#64748B]">Your colors</span>
+          {LANDING_THEMES.map(([p, a], i) => (
+            <button
+              key={p}
+              type="button"
+              aria-label={`Color theme ${i + 1}`}
+              aria-pressed={i === theme}
+              onClick={() => onTheme(i)}
+              className="h-7 w-7 cursor-pointer rounded-full border-0"
+              style={{
+                background: `linear-gradient(135deg, ${p} 50%, ${a} 50%)`,
+                boxShadow:
+                  i === theme
+                    ? `0 0 0 2px #FAFAF7, 0 0 0 4px ${p}`
+                    : "inset 0 0 0 1px rgba(0,0,0,0.1)",
+              }}
+            />
           ))}
         </div>
-
-        <div className="px-8 pb-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="w-28 text-sm text-muted-foreground">Median price</span>
-              <div className="h-2.5 flex-1 rounded-full bg-muted">
-                <div className="h-2.5 w-3/4 rounded-full bg-[#6366F1]" />
-              </div>
-              <span className="text-sm font-medium text-[#4338CA]">{DEMO_MARKET.trends.medianPrice}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="w-28 text-sm text-muted-foreground">Inventory</span>
-              <div className="h-2.5 flex-1 rounded-full bg-muted">
-                <div className="h-2.5 w-1/2 rounded-full bg-[#A5B4FC]" />
-              </div>
-              <span className="text-sm font-medium text-[#64748B]">{DEMO_MARKET.trends.inventory}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="w-28 text-sm text-muted-foreground">Days on mkt</span>
-              <div className="h-2.5 flex-1 rounded-full bg-muted">
-                <div className="h-2.5 w-2/5 rounded-full bg-[#6366F1]" />
-              </div>
-              <span className="text-sm font-medium text-[#4338CA]">{DEMO_MARKET.trends.daysOnMarket}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 rounded-b-2xl border-t border-border bg-muted/50 px-8 py-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#6366F1] text-sm font-bold text-white">
-            {DEMO_AGENT.initials}
-          </div>
-          <div>
-            <p className="text-base font-semibold text-foreground">{DEMO_AGENT.name}</p>
-            <p className="text-sm text-muted-foreground">{DEMO_AGENT.brokerage}</p>
-          </div>
-        </div>
       </div>
-    </div>
-  );
-}
 
-export function Hero() {
-  return (
-    <section className="relative -mt-[72px] overflow-hidden px-6 pb-20 pt-[calc(4rem+72px)] md:pb-28 md:pt-[calc(6rem+72px)]">
-      <div
-        className="absolute inset-0 grayscale"
-        style={{
-          backgroundImage: "url('https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      />
-      <div className="absolute inset-0 bg-white/[0.80]" />
-
-      <motion.div
-        className="relative z-10 mx-auto max-w-4xl text-center"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-      >
-        <motion.h1
-          variants={fadeUp}
-          className="text-balance text-5xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl"
-        >
-          You know you should be sending market updates. Now you actually will.
-        </motion.h1>
-        <motion.p
-          variants={fadeUp}
-          className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground"
-        >
-          TrendyReports pulls live MLS data, brands it with your logo, and
-          delivers polished reports to your sphere on autopilot. Set it up in 2
-          minutes.
-        </motion.p>
-
-        <motion.div
-          variants={fadeUp}
-          className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
-        >
-          <a
-            href="/register"
-            className="inline-flex items-center rounded-full bg-[#6366F1] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#6366F1]/25 transition-colors hover:bg-[#4F46E5]"
-          >
-            Start free
-          </a>
-          <a
-            href="#email-reports"
-            className="inline-flex items-center rounded-full border border-border bg-transparent px-8 py-3.5 text-base font-semibold text-foreground transition-colors hover:bg-muted"
-          >
-            {"See sample reports \u2193"}
-          </a>
-        </motion.div>
-
-        <motion.p variants={fadeUp} className="mt-5 text-sm text-muted-foreground/70">
-          {/* G1b: Free is a permanent plan (3 market reports/month), not a
-              14-day trial. No expiry mechanism exists in the code \u2014 `free` and
-              `sponsored_free` are plan rows with real limits and nothing ages
-              an account out of them. */}
-          {"Free plan, no time limit \u00B7 No credit card \u00B7 Your first report in under 2 minutes"}
-        </motion.p>
-
-        <motion.div variants={fadeUp}>
-          <ReportMockup />
-        </motion.div>
-      </motion.div>
-    </section>
+      {/* Two report pages, fanned. One on a phone, both from md up. */}
+      <div className="relative h-[460px] min-w-0 md:h-[620px]">
+        <Glow />
+        <ReportSheet
+          kind="closed"
+          width={408}
+          className="absolute left-[8%] top-[60px] hidden md:block"
+          style={{ transform: "rotate(-5deg)" }}
+        />
+        <ReportSheet
+          kind="market_snapshot"
+          width={340}
+          className="absolute left-1/2 top-0 md:hidden"
+          style={{
+            transform: "translateX(-50%) rotate(3deg)",
+            boxShadow: "0 40px 80px -24px rgba(15,23,42,0.4), 0 0 0 1px rgba(15,23,42,0.06)",
+          }}
+        />
+        <ReportSheet
+          kind="market_snapshot"
+          width={408}
+          className="absolute right-0 top-0 hidden md:block"
+          style={{
+            transform: "rotate(3deg)",
+            boxShadow: "0 40px 80px -24px rgba(15,23,42,0.4), 0 0 0 1px rgba(15,23,42,0.06)",
+          }}
+        />
+      </div>
+    </header>
   );
 }

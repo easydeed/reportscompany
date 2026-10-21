@@ -1,42 +1,52 @@
 "use client"
 
+/**
+ * The landing page — Design's `Landing v4.dc.html`, section for section:
+ * hero, the report carousel, autopilot, property reports, lead capture,
+ * contacts, pricing, the closing band, the sponsor band.
+ *
+ * The city box and the "Your colors" swatches are page state, shared through
+ * `LandingTheme`, because in the deck they restyle every mock on the page at
+ * once rather than only the hero.
+ */
+import { useState } from "react"
 import { SiteNav } from "@/components/site-nav"
+import { SiteFooter } from "@/components/site-footer"
+import { DEMO_MARKET } from "@/lib/demo-data"
+import { LANDING_THEMES, LandingTheme } from "@/components/marketing/landing-primitives"
 import { Hero } from "@/components/marketing/hero"
-import { HowItWorks } from "@/components/marketing/how-it-works"
-import { EmailReports } from "@/components/marketing/email-reports"
-import { PdfReports } from "@/components/marketing/pdf-reports"
-import { ReportTypes } from "@/components/marketing/report-types"
+import { ReportKinds } from "@/components/marketing/report-kinds"
+import { Autopilot } from "@/components/marketing/autopilot"
 import { PropertyReports } from "@/components/marketing/property-reports"
 import { LeadCapture } from "@/components/marketing/lead-capture"
 import { ContactManagement } from "@/components/marketing/contact-management"
-import { WhoItsFor } from "@/components/marketing/who-its-for"
 import { Pricing } from "@/components/marketing/pricing"
-import { FAQ } from "@/components/marketing/faq"
 import { FinalCta } from "@/components/marketing/final-cta"
-import { SiteFooter } from "@/components/site-footer"
+import { SponsorBand } from "@/components/marketing/sponsor-band"
 
 export function MarketingHome() {
+  const [city, setCity] = useState("")
+  const [theme, setTheme] = useState(0)
+  const [primary, accent] = LANDING_THEMES[theme]
+  const area = city.trim() || DEMO_MARKET.city
+
   return (
-    <>
-      <SiteNav />
-      <main>
-        <Hero />
-        <HowItWorks />
-        {/* Testimonials removed pre-launch — will add Trustpilot widget
-            once we have real reviews. Component file retained at
-            components/marketing/testimonials.tsx */}
-        <EmailReports />
-        <PdfReports />
-        <ReportTypes />
-        <PropertyReports />
-        <LeadCapture />
-        <ContactManagement />
-        <WhoItsFor />
-        <Pricing />
-        <FAQ />
-        <FinalCta />
-      </main>
-      <SiteFooter />
-    </>
+    <LandingTheme.Provider value={{ primary, accent, city, area }}>
+      <div className="flex min-h-screen flex-col overflow-x-clip bg-[#FAFAF7] text-[#0F172A]">
+        <SiteNav />
+        <main>
+          <Hero onCity={setCity} theme={theme} onTheme={setTheme} />
+          <ReportKinds />
+          <Autopilot />
+          <PropertyReports />
+          <LeadCapture />
+          <ContactManagement />
+          <Pricing />
+          <FinalCta onCity={setCity} />
+          <SponsorBand />
+        </main>
+        <SiteFooter />
+      </div>
+    </LandingTheme.Provider>
   )
 }
