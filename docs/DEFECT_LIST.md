@@ -13891,6 +13891,39 @@ the covers that fail.
    every brand produced a different key — one row per brand instead of a curve. **A key that
    includes the thing being varied cannot describe the variation.**
 
+#### What the first run did and did not find — checked, because a claim arrived that it did
+
+A finding reached us that the sweep's first run turned up a **new** defect outside its remit: a
+fixed colour, `#5E636B` on `#F6F5F1` at **4.33:1**, failing on every brand and invisible to the six
+presets. **The record does not support it, and the pairing is in the record**, which is what makes
+it worth writing down rather than simply denying.
+
+`#5e636b on #f6f5f1` is `atlas`'s `span.nophoto-note` and `span.step-body` at ramp step 03. It is
+measured at **5.54:1 against a 4.5 threshold — passing** — and across all 38 brands that pairing
+runs **5.35 to 6.01**, passing everywhere. There is no 4.33 in it.
+
+**And there is exactly one fixed-colour failure in the whole sweep**, found by asking which
+surfaces have the same foreground *and* the same backdrop on every brand:
+
+    harbor  div.brand  #94a3b8 on #ffffff  2.56:1 / 4.5  fails 38/38
+
+It is **already on the contrast baseline**, twice — `pdf_contrast_baseline.txt:70-71`, on `#ffffff`
+and on `#f1f5f9`. So it is recorded and unfixed rather than newly discovered, the six presets
+reported it identically, and the gate is silent about it by policy and not by oversight.
+
+**So the honest account of the first run is: no new defect.** What it produced was the boundary
+(`passes to L=0.417, fails from L=0.439`), the much wider spread on `linen`'s cover — 36 of 38
+brands on `div.cover-label` — and `atlas` as a clean control at 1 of 38. That is what the sweep was
+for, and it did it. **The attractive version of the story — that a sweep for brand-dependence
+found a brand-independent defect on its first execution — is not what happened here**, and it is
+recorded as not having happened because the next person to read this entry will find the hex pair
+in the record and could reconstruct the claim from it.
+
+The argument for sweeps does not need it. A sweep measures the space instead of the samples
+somebody thought to pick; locating a boundary the presets could only bracket is that argument,
+and `div.brand` at 2.56:1 — the worst pairing on any live property cover, baselined and failing for
+every brand — is a reminder that the quiet failures here are the recorded ones.
+
 The gate asserts what a record cannot assert about itself: that it still names the themes the
 registry has, the template each one renders, and the roles those templates interpolate **now** —
 and that every declined surface carries the per-brand arithmetic excusing it. That last one is
@@ -14110,6 +14143,33 @@ gate's failure message name the brands rather than the element. Both are bookkee
 the cover readable. **Both are now built** — `scripts/sweep_cover_brand_space.py` carries the
 calculation in its record and `tests/test_cover_brand_sweep_is_current.py` fails on a declined
 surface that has none.
+
+#### A DECLINE THAT REPORTS — the shape, specified and not applied
+
+WCAG has no model for a text surface whose contrast varies across the glyph run. A gradient clipped
+to the letters is one ratio at the first stop and another at the last, and the standard has no rule
+for *"some of the letters pass"*. So the question is **not** how to measure this surface. It is how
+to decline it in a way that reports rather than hides — because `EXPECTED_DECLINED = 1` failed by
+being **silent**, not by declining.
+
+Declining the *measurement* must not decline the *finding*. Three parts, and the first two exist:
+
+1. **the arithmetic lives with the exclusion, per brand, dated** — built; it is in the sweep record
+   and a declined surface without it fails the gate;
+2. **the exclusion is invalidated by what it depends on** — built; the gate re-reads the themes
+   from the registry and the roles from the live templates, so the rename-and-rewire that expired
+   the original calculation would now fail rather than pass;
+3. **the recorded verdict is load-bearing.** Not built. A declined surface whose hand calculation
+   says `FAILS` should fail the build — as an unmeasured finding, named as such, with its figures
+   printed every run rather than only on failure. The decline then means *"the instrument cannot
+   read this, and here is what it really is"*, which is a sentence. Today it means nothing is said
+   at all.
+
+**Not applied, deliberately**, and the reason is the point of it: part 3 would turn the build red
+today, because `harbor`'s recorded verdict *is* `FAILS`. That is the correct colour for a document
+that is unreadable at 2.07:1 for a violet-branded customer — and turning a build red is a decision
+to take in the open, not something to slip in beside a stopgap that is itself held. It wants its own
+change, with the fix landing in the same breath.
 
 ---
 
