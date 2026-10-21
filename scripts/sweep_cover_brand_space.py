@@ -356,6 +356,10 @@ def main():
 #: is the more honest statement, since this element has already moved once.
 SEED_CALCULATIONS = {
     "span": {
+        # The selector AS THE TEMPLATE WRITES IT, because `span` is what the
+        # measurer reports and "harbor span" is not something a person can go
+        # and look at. The build's red names this.
+        "element": ".cover-title span — harbor_report.jinja2:52",
         "why_unmeasurable": (
             "the cover title's inner span is painted by a gradient clipped to "
             "the glyphs via -webkit-text-fill-color:transparent, which is the "
@@ -366,6 +370,11 @@ SEED_CALCULATIONS = {
         "glyphs": "linear-gradient(135deg, theme_color 0%, theme_color_light 50%, #FFB199 100%)",
         "backdrop": "--gradient-dark #1A1F36 -> #2D3348, plus brand circles at 0.10 and 0.08 opacity",
         "threshold": 3.0,
+        # WHICH OF THE THREE READINGS THE VERDICT IS TAKEN ON, stated as data
+        # rather than left to be inferred from `method`. The gate fails the
+        # build on this reading, so a judgement about which one is authoritative
+        # has to be made in a diff instead of in prose nobody re-reads.
+        "authoritative_reading": "lighter_stop_with_tint",
         "method": (
             "worst glyph stop against the worst backdrop point. Conservative: "
             "the glyphs are a gradient, so part of the word clears the "

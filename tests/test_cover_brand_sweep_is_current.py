@@ -41,6 +41,7 @@ about this codebase?**
 import json
 import re
 import sys
+import warnings
 from pathlib import Path
 
 import pytest
@@ -182,3 +183,131 @@ def test_the_sweep_script_reads_the_registry_rather_than_a_list():
     assert not re.search(r'^\s*THEMES\s*=\s*[\[(]', body, re.M), (
         "the sweep has grown a literal theme list"
     )
+
+
+# ── D-206 · a decline that REPORTS ─────────────────────────────────────────────
+#
+# Declining the MEASUREMENT must not decline the FINDING. `EXPECTED_DECLINED = 1`
+# failed by being silent, not by declining: it was right about the number for
+# twenty days while the surface it covered was unreadable for four of six
+# brands.
+#
+# WCAG has no model for a text surface whose contrast varies across the glyph
+# run — a gradient clipped to the letters is one ratio at the first stop and
+# another at the last, and there is no rule for "some of the letters pass". So
+# the instrument cannot answer this and should not pretend to. What it can do is
+# carry the answer a person worked out, and **fail on it**.
+#
+# THIS TURNS THE BUILD RED ON PURPOSE. Jerry, 2026-10-21: *"Harbor at 2.07:1 for
+# a violet-branded customer is a cover a real agent would send and cannot read.
+# Red is the correct colour."* It goes green when the cover is fixed, not when
+# the exclusion is widened. See D-206.
+
+#: A dated block of per-brand figures. Exactly one, so a second calculation has
+#: to retire the first in a diff rather than sit beside it — which is how the
+#: original excuse outlived the template it described.
+FIGURES_KEY = re.compile(r"^computed_\d{4}_\d{2}_\d{2}$")
+
+
+def _calculations():
+    """(theme, selector, calculation) for every declined surface."""
+    out = []
+    for theme, info in sorted(_record()["themes"].items()):
+        hand = info.get("hand_calculations") or {}
+        for selector, brands in sorted(info["surfaces"].items()):
+            if any(v["declined"] for v in brands.values()):
+                out.append((theme, selector, hand.get(selector)))
+    return out
+
+
+def _figures(calc):
+    """The one dated block, its reading, and the threshold — or an explanation."""
+    dated = sorted(k for k in calc if FIGURES_KEY.match(k))
+    if len(dated) != 1:
+        return None, f"{len(dated)} dated figure block(s), expected exactly one: {dated}"
+    reading = calc.get("authoritative_reading")
+    if not reading:
+        return None, "no `authoritative_reading`, so nothing says which of the readings the verdict is taken on"
+    threshold = calc.get("threshold")
+    if not isinstance(threshold, (int, float)):
+        return None, f"threshold is {threshold!r}, not a number"
+    figures = calc[dated[0]]
+    missing = [b for b, v in figures.items() if reading not in v]
+    if missing:
+        return None, f"brand(s) {sorted(missing)} have no `{reading}` figure"
+    return (dated[0], reading, threshold, figures), None
+
+
+def test_a_declined_surfaces_figures_are_readable_as_data():
+    """The contract the next calculation has to meet.
+
+    Prose is not parsed anywhere here — `verdict` and `method` are for people.
+    The build's colour comes from the numbers and from the key that names which
+    numbers count, because a gate that greps an explanation measures the
+    explanation (§0.6, eight instances).
+    """
+    for theme, selector, calc in _calculations():
+        assert calc, f"{theme} {selector} is declined with no calculation at all"
+        parsed, why = _figures(calc)
+        assert parsed, f"{theme} {selector}: {why}"
+
+
+def test_a_declined_surface_whose_calculation_fails_fails_the_build():
+    """D-206. The finding is not excused by the instrument's inability to read it.
+
+    Reported per BRAND and per RATIO rather than per element, because
+    "declined surface fails" is another red line nobody reads, and
+    "harbor .cover-title span, violet, 2.07:1 against 3.0" is a finding.
+    """
+    failures = []
+    for theme, selector, calc in _calculations():
+        parsed, why = _figures(calc)
+        if not parsed:
+            continue                      # the test above owns that case
+        dated, reading, threshold, figures = parsed
+        for brand, readings in sorted(figures.items()):
+            ratio = readings[reading]
+            if ratio < threshold:
+                failures.append(
+                    f"{theme} {calc.get('element') or selector}, {brand}, "
+                    f"{ratio:.2f}:1 against {threshold} ({reading}, {dated})")
+    assert not failures, (
+        f"{len(failures)} unmeasured contrast failure(s) — a surface this "
+        f"instrument cannot read, whose hand calculation says it fails:\n  "
+        + "\n  ".join(failures)
+        + "\n\nTHIS RED IS DELIBERATE (Jerry, 2026-10-21). The gradient-clipped "
+          "cover title is unreadable for the darker brands and WCAG has no model "
+          "for a surface whose contrast varies across the glyph run, so the "
+          "measurement is declined and the FINDING is not. It goes green when "
+          "the cover is fixed — not by widening the exclusion, and not by "
+          "regenerating anything. See D-206 and "
+          "docs/THEME_MAPPING_AND_FOOTER_FOR_DESIGN_2026-10-21.md."
+    )
+
+
+def test_the_figures_are_reported_on_every_run_not_only_on_failure():
+    """Reporting, which is the half `EXPECTED_DECLINED` lacked.
+
+    A warning rather than a print: pytest prints a warnings summary whether the
+    run passed or failed, so the figures reach CI's log on a green build too.
+    When this surface is fixed and nothing is declined any more, there is
+    nothing to report and the warning stops — which is the right silence.
+    """
+    lines = []
+    for theme, selector, calc in _calculations():
+        parsed, _ = _figures(calc)
+        if not parsed:
+            continue
+        dated, reading, threshold, figures = parsed
+        for brand, readings in sorted(figures.items(), key=lambda kv: kv[1][reading]):
+            verdict = "FAILS" if readings[reading] < threshold else "ok"
+            lines.append(f"{theme} {calc.get('element') or selector} {brand} "
+                         f"{readings[reading]:.2f}:1/{threshold} {verdict}")
+    if lines:
+        warnings.warn(
+            "declined contrast surfaces, hand-calculated (D-206):\n  "
+            + "\n  ".join(lines), stacklevel=1)
+    # The assertion is about the reporting, not about the figures: if something
+    # is declined, this run said so.
+    assert bool(lines) == bool(_calculations()), (
+        "a declined surface produced no reported figures")
