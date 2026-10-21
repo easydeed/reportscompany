@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 81 | Real, unfixed |
-| `fixed` | 134 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 80 | Real, unfixed |
+| `fixed` | 139 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **222** | D-001 … D-222, contiguous, no duplicates |
+| **Total** | **226** | D-001 … D-226, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 6 · WRONG 23 · FRAGILE 22 · ROUGH 30. (Sums to 81, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -14697,7 +14697,7 @@ extra candidate turns Design's answer into a correction rather than an investiga
 **Severity:** BROKEN · **Affects:** every change to `apps/web` since at least 2026-06-24, including
 the whole B phase · **Found during:** scoping the marketing and wizard surfaces, which were
 described as having "no measurement at all"
-**Status:** `open`
+**Status:** `fixed` — `fix/frontend-tests-green`. **54 of 54 pass**, and the workflow is green for the first time on record. None of the 13 was a live product defect; the split is on the entry below.
 
 `.github/workflows/frontend-tests.yml` runs `tsc --noEmit` and the jest suite on every push that
 touches `apps/web/**`. It works. It has simply never been green:
@@ -14732,7 +14732,7 @@ in the process noticed.
 
 **Severity:** WRONG · **Affects:** `apps/web/__tests__/NewSchedulePage.test.tsx`; the claim that
 any wizard has test coverage · **Found during:** the same scoping
-**Status:** `open`
+**Status:** `fixed` — `fix/frontend-tests-green`. The page test renders the real page now, and the three self-asserting tests read `REPORT_TYPES` from `types.ts`.
 
 Five tests. The two that render anything fail (D-211). The three that pass are this shape:
 
@@ -15002,6 +15002,122 @@ the server happens to say an hour.
 lead path. That is why this is ROUGH: a wait time that is decorative rather than wrong, not a lost
 lead. The fix is to read `Retry-After` off the response and render the real number, or to delete
 the state and keep the sentence; the first is the one worth doing and it is not a one-liner.
+
+---
+
+### D-223 — the account switcher vanishes when its fetch fails, and says nothing
+
+**Severity:** FRAGILE · **Affects:** `components/account-switcher.tsx`, sidebar, any account holder
+with more than one account · **Found during:** triaging D-211's thirteen failures — **the one that
+was a live defect**
+**Status:** `fixed` — `fix/frontend-tests-green`
+
+```js
+const { data, isLoading } = useAccounts();
+const accounts: Account[] = (data as AccountsResponse)?.accounts ?? [];
+const currentAccount: Account | null = accounts[0] ?? null;
+...
+if (!currentAccount) {
+  return null;
+}
+```
+
+`error` was never destructured. A failed accounts fetch leaves `data` undefined, `accounts` empty
+and `currentAccount` null, and the early return then removes the switcher from the sidebar
+entirely. A person with two accounts cannot switch, is not told why, and has nothing on screen to
+retry — **absent-is-not-a-default**, the family this board has filed four times, arriving this
+time through a successful refactor.
+
+The behaviour existed before the react-query migration: `AccountSwitcher.test.tsx` asserts a
+destructive toast reading *"Failed to load account information"*, and that assertion has been
+failing ever since the migration landed, inside a suite that has never been green. **This is what
+a permanently red gate costs** — the test did its job, four months ago, and nobody was reading.
+
+Fixed by surfacing the error. A toast rather than an inline state because a toast is what the
+component used to do and what the test records; whether a persistent inline message would be
+better is Design's call, not a decision to make inside a test-repair branch.
+
+Seen to fail: `scripts/regressions/account_switcher_error.json` R1 removes the effect and the gate
+fails.
+
+---
+
+### D-224 — four jest fixtures describing a product from an earlier era
+
+**Severity:** ROUGH · **Affects:** `apps/web/__tests__/TemplatesMapping.test.ts`, guarding
+`lib/templates.ts`, which `/print/{runId}` renders · **Found during:** the same triage
+**Status:** `fixed` — `fix/frontend-tests-green`
+
+Four failures, and in every one the **builder was right**:
+
+| the mock said | the product says | checked against |
+|---|---|---|
+| `address` / `beds` / `baths` | `street_address` / `bedrooms` / `bathrooms` | the builder's own comment, "Field mapping from PropertyDataExtractor" |
+| `<!-- LISTINGS_TABLE_ROWS -->` | `<!-- TABLE_PAGES -->` | the only marker `buildNewListingsHtml` replaces |
+| `price_range` / `active_count` | `label` / `count` | **`compute/price_bands.py:228-232`, the producer** |
+| default accent `#F26B2B` | `#4F46E5` | `DEFAULT_ACCENT_COLOR`, commented "Indigo (monochrome brand default)" |
+
+The price-bands one is the one worth keeping: the mock described a shape **nothing in the system
+emits**, so the test was failing against a product that had never existed in that form. Two of the
+three price-band fields still resolved — the median rendered at `$625,000` while the title showed
+`—` and the count `0` — which is a partial read, and partial reads are how the consumer CMA path
+lost nine fields.
+
+A fifth test, "should format large numbers with commas", asserted `150` and `75`: neither has a
+comma, and the `150` is an Active count the market-snapshot builder has **no placeholder for** —
+its keys are `market_name`, `period_label`, `report_date`, `lookback_days`, `median_price`,
+`closed_sales`, `avg_dom`, `moi`, `new_listings`, `pendings` and the rest. It checks `1,250`
+through `{{new_listings}}` now, which is a number that actually formats.
+
+**These are hand-written fixtures and nothing ties them to the producer.**
+`tests/test_sample_data_matches_the_builder.py` is the Python side's answer to exactly this
+question; the jest fixtures have no equivalent and can go stale again. Recorded here rather than
+implied by a green run.
+
+---
+
+### D-225 — the plan-page suite tests a copy of the plan page written inside the test file
+
+**Severity:** ROUGH · **Affects:** `apps/web/__tests__/PlanPage.test.tsx`, eleven tests ·
+**Found during:** the same triage
+**Status:** `open`
+
+`MockPlanPage` is defined in the test file and renders a hand-written sketch of the page: the
+usage ratio, the 0.8 warning threshold, the sponsored badge and the Stripe wrapper, all
+re-implemented. `app/account/plan/page.tsx` **is never imported**. Ten of the eleven tests pass
+and none of them can fail because of anything in the product.
+
+The one that failed did so for its own reason — `getByText('Trial')` matched both `plan-name` and
+`sponsored-badge`, because the fixture's `plan_name` is also "Trial". Fixed by asserting on the
+badge's own content, which is also stricter: the old form would have been satisfied by the plan
+name alone if the badge disappeared.
+
+Left open rather than deleted. The thresholds it encodes are a record of what the page is meant to
+do, and rewriting eleven tests against the real page — which fetches plan, usage and account — is
+its own piece of work. **Nothing in that file is evidence the plan page works**, and that sentence
+is now in its header. D-212 is the same shape, one file over, and was repairable because the
+component it should have been testing was a single import away.
+
+---
+
+### D-226 — the shared jest setup clears the call log and leaves the queue
+
+**Severity:** ROUGH · **Affects:** `apps/web/jest.setup.ts`, every suite using the global fetch
+mock · **Found during:** three AccountSwitcher failures that each passed alone
+**Status:** `fixed` — `fix/frontend-tests-green`
+
+`afterEach(() => jest.clearAllMocks())` empties the **call log** and leaves `mockResolvedValueOnce`
+**queues** in place. A value a test queues and does not consume is handed to the next test's first
+fetch, so a test can be answered with the previous test's data.
+
+The signature is the one that wastes an afternoon: **each test passes in isolation and fails in
+the file.** Three of AccountSwitcher's six did exactly that, and chasing them as component bugs
+would have found nothing, because the component was fine.
+
+The global fetch mock is now reset outright in `afterEach`, guarded with `jest.isMockFunction` so
+a suite that installs a real fetch is not affected. Worth stating what this does not cover: any
+other `jest.fn()` with a queued `*Once` value has the same exposure, and only `global.fetch` is
+reset.
 
 ---
 
