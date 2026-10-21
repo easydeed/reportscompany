@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 70 | Real, unfixed |
-| `fixed` | 128 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 71 | Real, unfixed |
+| `fixed` | 129 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **205** | D-001 … D-205, contiguous, no duplicates |
+| **Total** | **207** | D-001 … D-207, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 21 · ROUGH 24. (Sums to 70, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 24. (Sums to 71, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -8128,6 +8128,65 @@ lines and zero dead**, which is exactly the figure
 because it is better evidence for this entry's lesson than the original finding was: the scope of a
 reachability check is part of its claim, and the second time is as easy to get wrong as the first.
 
+#### FOURTH MISREADING — 2026-10-21, and this time it came in from outside
+
+A finding reached us during D-205/D-206 that **`_base/property_base.jinja2` is extended by all five
+current themes**, that it is therefore the live file, and that it is where the cover stopgaps have
+to be applied. **It is wrong on every clause, and checking it is why no stopgap was applied to the
+wrong file.**
+
+| the claim | what is there |
+|---|---|
+| `_base/property_base.jinja2` | **no such file**, anywhere in the repository |
+| "all five current themes" | there are **three** live themes; `classic` and `teal` were cut 2026-10-05 |
+| "extended by the themes" | `_base/base.jinja2` **is** extended — by `atlas/atlas.jinja2`, `linen/linen.jinja2`, `harbor/harbor.jinja2`, **none of which the registry renders.** It renders `<theme>/<theme>_report.jinja2` |
+| "it is the live file" | nothing in Python or Jinja names `_base/` on the property side, and `test_one_comp_set.py` forbids a live template from reaching it, directly or transitively. **68 passed.** |
+
+**And the measurements already in hand settle it without any argument about reachability.** The
+contrast runs on `.cover-agent-name` were measured at **22px** on `linen` and **18px** on `harbor`:
+
+    linen/linen_report.jinja2:66    font-size:22px   <- what was measured
+    harbor/harbor_report.jinja2:63  font-size:18px   <- what was measured
+    _base/base.jinja2:322           font-size:15px   <- no measured run had this size
+
+Three files declare that selector and the dead one declares a size nothing measured. The pixel
+measurer was reading the files the registry names, which is what it is for.
+
+#### The two mechanisms, because this is the fourth time and the entry owes an explanation
+
+1. **THE DEAD TREE DECLARES THE LIVE DEFECTS' SELECTORS.** `property/_base/base.jinja2:322` and
+   `property/_base/_macros.jinja2:69` both carry `.cover-agent-name` — the selector in D-205's failure
+   message. Anyone who greps for a failing selector lands in the dead tree **first**, because it is
+   alphabetically and structurally where a base template should be. The copies have drifted (15px
+   against 22px), so the tree does not merely look live; it looks like the *source* of a
+   near-identical rule.
+
+2. **THERE ARE TWO `_base/base.jinja2`, AND ONE OF THEM IS LIVE.** `market/_base/base.jinja2` is
+   the base of every market report; `property/_base/base.jinja2` renders nowhere. The gate's own
+   docstring has to say so in parentheses. A claim about "`_base/base.jinja2`" is **true or false
+   depending on a directory it does not name**, and the previous misreading in this entry was the
+   same two files in the other direction.
+
+**What follows for the entry.** The classification stands: `property/_base/` is dead, and the
+stopgaps for D-205 and D-206 belong in `linen/linen_report.jinja2` and `harbor/harbor_report.jinja2`
+— the self-contained 720- and 795-line templates. The derivation and the gate both held this time;
+what failed is that a reader outside them reproduced the entry's original mistake.
+
+**And the remedy for mechanism 2 already exists — it caught this very note.** The paragraph above
+originally said `_base/base.jinja2:322`, unqualified, and
+`test_every_claim_about_a_dead_base_says_which_one[docs/DEFECT_LIST.md]` failed on it:
+
+    docs/DEFECT_LIST.md calls `_base/` dead without saying which one:
+        :8157  1. **THE DEAD TREE DECLARES THE LIVE DEFECTS' SELECTORS.** …
+    templates/market/_base/base.jinja2 is extended by market/market.jinja2 and
+    is the base of every market report.
+
+So a gate for exactly this already reads the documentation, and the fifth misreading of this entry
+was made and caught **inside the note recording the fourth**. It is now `property/_base/` in both
+places. The gap worth closing is narrower than it looked: the gate covers this board and the design
+corrections, and what it cannot reach is a document that leaves our repository — which is how the
+claim arrived.
+
 ---
 
 ### D-132 — six months of comps has no floor, and the ladder cannot widen time
@@ -13624,65 +13683,553 @@ Related: D-093 (a hard-coded `100` standing in for the table), D-195 (the unlimi
 
 ---
 
-### D-205 — the PDF contrast ratchet is red on `main`, on a pairing whose colour is already in its own baseline under the next selector down
+### D-205 — the PDF contrast ratchet has not passed since 2026-09-30, and the surface it measures is brand-dependent
 
-**Severity:** FRAGILE · **Affects:** every branch — the gate fails before anything is changed ·
-**Found during:** D-202/D-203's full-suite run, and then reproduced on `origin/main` to find out
-whose it was
-**Status:** `open`
+**Severity:** FRAGILE · **Affects:** every branch — the gate fails before anything is changed; and, in
+the document itself, any customer whose brand colour is light · **Found during:** D-202/D-203's
+full-suite run, then bisected
+**Status:** `open` — investigated, nothing changed. See **What not to do**.
 
     FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
     4.44:1  #ffffff on #a66b07  div.cover-agent-name  in property__linen
 
-**It is not this branch's.** Checked out `origin/main` in a separate worktree and ran the same
-file: same single failure, same pairing, same ratio. Twice on each side, identical both times — so
-deterministic here, not a flake.
+#### Not this container, and not this branch
 
-#### The colour did not change, and the baseline proves it
+The same line, byte for byte, in CI on `main`: run 39482608779, `1 failed, 2992 passed`, and the
+`::error::` annotation D-191 added names this test and no other. Every `Backend Tests` run on `main`
+in the last two days is `failure`, and the workflow's own header already recorded 25 consecutive red
+runs before that.
 
-`pdf_contrast_baseline.txt:36` already records
+#### Bisected. It has never passed in its current form
 
-    property__linen  div.cover-agent-title  #e8d5a3  #a46a07
+One test, one commit at a time, in a worktree:
 
-`#a46a07` vs the failing `#a66b07` is a distance of **3**, well inside the file's own tolerance of
-12 — the same backdrop, sampled a few pixels away. The gold brand is in the corpus and in the
-baseline; what is missing is this *selector* on it. Line 34 has `div.cover-agent-name` on
-`#58880e`, which is the **green** brand.
+| commit | date | result |
+|---|---|---|
+| `8f55f0d7` | 09-30 | **1 passed** — hit-testing, baseline matched its measurement |
+| `8ca6104b` | 09-30 | **34** pairings not on the baseline ← the measurement switch |
+| `a83d9d77` | 09-30 | 2 |
+| `3ac024e4` | 09-30 | 2 |
+| `c225e4f8` | 10-05 | 1 |
+| `68a73605` | 10-06 | 1 |
+| `e546e07f` | 10-07 | 1 |
+| `0c6581b8` | 10-08 | 1 |
+| `2726c599` | 10-13 | 1 |
+| `d7247a51` | 10-20 | 1 |
 
-The backdrop is not a template constant. `linen_report.jinja2:46` paints the cover
-`linear-gradient(135deg, var(--burgundy), var(--burgundy-dark))` and `:13` sets
-`--burgundy: {{ theme_color }}` — **the account's brand colour** — with the footer sitting on
-`rgba(0,0,0,0.2)` over it (`:62`). So the sampled pixel is 0.8 × the brand, and which point of the
-gradient it is depends on where the text landed. White on this gold computes to **4.40:1**; the
-threshold is 4.5 because 22px serif is not WCAG large text (22px ≈ 16.5pt, under 18pt). **The
-pairing lives 0.06 under the line.**
+`8ca6104b` is *fix(contrast): the gate stops hit-testing — and the switch was not a clean
+subtraction (#128)*. It is the last commit that wrote data rows into the baseline — `+63 / -88` —
+and **at that commit its own measurement reported 34 pairings the baseline it shipped did not
+describe.** Every commit since has only *removed* rows, as a shrinking ratchet should. The count
+fell 34 → 2 at the very next commit and 2 → 1 when `teal` was cut. One has been left for twenty
+days.
 
-#### What that makes it
+**What dropped 34 to 2 was `a83d9d77`, the colour tolerance — not the decliner.** The first
+telling of this entry said `3ac024e4` ("decline text the measurer cannot read") silenced them, and
+that is wrong: the bisect puts the drop one commit earlier, at *"match baseline colours with a
+tolerance — and 48 was wrong"*, and `3ac024e4` left the count at 2. The tolerance absorbed 32
+findings into baseline rows they had drifted away from, which is the job it was built for.
 
-The ratchet carries a tolerance on the **colour key** (D-153, argued at length in the file and
-correctly) and none on the **ratio**. A pairing whose ratio sits inside churn distance of 4.5
-therefore flips between "an entry in the baseline" and "a brand-new finding" on a build where no
-colour changed — which is D-153's own lesson applied to the wrong axis.
+**Checked rather than assumed.** At `d7247a51` the tolerance absorbs **20** findings — the gate
+would report 21 without it and reports 1 with it. Every one of the 20 is matched to a row produced
+by **the same brand**, at a distance of 1 to 4:
 
-**Why it differs from the 2026-09-29 capture is not established.** Candidates: the text landed at
-a different point on the gradient (the churn the file documents at distances of 2, 3 and 4); a
-template change between then and now; or a font metric in this container moving the sampled pixel.
-I did not bisect, and the entry is filed on the fact rather than on the mechanism.
+    property__linen  div.cover-label  #c9a962 on #e0910a  (amber)  -> baseline #e0900a  distance 1
+    property__linen  div.cover-city   #ffffff on #72b012  (lime)   -> baseline #73b113  distance 3
+    …eighteen more, all same-brand, max distance 4
 
-#### Why FRAGILE and not ROUGH
+Two slots do have different brands within tolerance of each other, and both are the opposite of a
+collapse: `property__harbor`'s `div.cover-city` and `div.brand` paint **distance 0** across all six
+brands, because harbor's cover is a fixed navy and white rather than a brand tint. That is one
+pairing measured six times and correctly one baseline row.
 
-0.06 of contrast on an agent's name is ROUGH on its own. What is fragile is the gate: **a ratchet
-that is red on the default branch has stopped ratcheting.** Every branch cut from `main` inherits
-the failure, and the next person to add a genuinely unreadable pairing sees a suite that was
-already failing. That is how this project lost three weeks on D-113.
+So nothing is hidden by the tolerance. What *is* hidden is in the declined set — **D-206**.
+
+#### Why it differs from the 2026-09-29 capture — the entry was re-keyed, not lost
+
+The pairing **was** recorded before the switch. The 2026-09-29 baseline carried two rows for it:
+
+    property__elegant  div.cover-agent-name  #ffffff  #6aa312     <- lime
+    property__elegant  div.cover-agent-name  #ffffff  #c47e09     <- amber
+
+`#c47e09` is 0.8 × `#F59E0B`, the amber brand — the old DOM walker enumerated *every colour a
+gradient names* and composited the footer's `rgba(0,0,0,0.2)` over the gradient's **start** stop.
+The pixel sampler reads **the modal pixel of five points across the text run**, which lands
+two-thirds of the way down the same gradient: `#a66b07`, which is 0.677 × `#F59E0B`. **Distance 51.**
+No key tolerance could have carried that entry across the switch — 12 exists to absorb churn of 2
+to 4, not a change of method — and the regeneration in that commit was what should have re-keyed
+it. For 30 of the 34 it eventually did, through later commits. For this one it never did.
+
+#### The tolerance asymmetry was MY diagnosis and it was wrong
+
+The first version of this entry said the failure was the key tolerance absorbing colour drift while
+the ratio has none, and pointed at `div.cover-agent-title #e8d5a3 #a46a07` sitting at distance 3
+from the failing backdrop. **That is not what is happening.** A baseline key is
+`(family, selector, fg, bg)`; a different selector with a different foreground is a different
+readability fact, and `#e8d5a3` at 3.08:1 and `#ffffff` at 4.44:1 are correctly two entries. The
+nearest baseline row with the same family, selector and foreground is `#58880e` — **distance 114**,
+a genuinely different brand. No tolerance, on either axis, is implicated.
+
+The asymmetry is real as a property of the file and it is still worth not fixing: a ratio tolerance
+wide enough to absorb 0.06 would have hidden this pairing, and it is a real failure.
+
+#### What it actually is: a per-brand surface described by one entry
+
+Every measured run of this selector, from a single pass over the property corpus — 2,640 runs, 12
+of them here:
+
+| theme · brand | brand colour | backdrop | ratio | in the baseline? |
+|---|---|---|---|---|
+| `linen` · lime | `#84CC16` | `#58880e` | **4.25** | **yes** |
+| `linen` · amber | `#F59E0B` | `#a66b07` | **4.44** | **no** — this is the failure |
+| `linen` · luxury_estates | `#0D9488` | `#08645c` | 7.03 | n/a |
+| `linen` · demo_title | `#DC2626` | `#951919` | 8.64 | n/a |
+| `linen` · coastal | `#0E7490` | `#084d60` | 9.37 | n/a |
+| `linen` · violet | `#7C3AED` | `#5427a0` | 9.66 | n/a |
+| `harbor` · all six | — | `#ffffff` | 16.24 | n/a — dark text on white |
+
+**Two of six brands fail, and the gate is silent about the worse one.** Lime at 4.25 is baselined,
+so it passes review; amber at 4.44 is not, so it fails the build. The gate reports the better of the
+two failures and says nothing about the one below it.
+
+The backdrop is **0.677 × the brand colour** on every one of the six, to within channel rounding —
+`linen_report.jinja2:13` sets `--burgundy: {{ theme_color }}`, `:46` paints the cover as a gradient
+from it, and `:62` lays the footer on `rgba(0,0,0,0.2)`. So **this ratio is a function of the
+customer's brand colour and the template cannot fix it for all brands.** The two that fail are the
+two light ones; brand relative luminance, for the record: violet 0.134, coastal 0.146, demo_title
+0.167, luxury_estates 0.230, **amber 0.439, lime 0.481**. Nothing in the corpus sits between 0.23
+and 0.44, so the cut-off cannot be read off these six — which is the sharpest version of the
+finding: **a seventh brand in the corpus could add a failure with nothing in the template changed,
+and the gate would call it a regression.**
+
+#### Severity
+
+0.06 of contrast on an agent's name is ROUGH on its own. FRAGILE is for the gate: **a ratchet red on
+the default branch has stopped ratcheting** — it cannot report the next regression because it is
+already failing, and D-191's fix made that red *legible* without making it green. Fourth instance on
+this board of a check that is on and inert, after the two weeks of red CI in October and D-038 /
+D-041.
 
 #### What not to do
 
-**Do not regenerate the baseline.** Its header says it may only shrink, and regenerating would
-write the gold-brand entry in and close the finding by recording it — the one move the file exists
-to prevent. The fix is either the footer overlay (`rgba(0,0,0,0.2)` → a darker value raises white's
-ratio) or a ratio tolerance to match the colour tolerance. Both are decisions about a document
-Design owns, and neither belongs in an API fix.
+#### ANSWERED by Design, 2026-10-21 — option 3, structural, and both surfaces are retired
+
+**Relayed, not read: Design's full answer is with [JERRY] and this entry has the ruling only.**
+What came back:
+
+* **option 3**, a scrim or a solid plate — the structural remedy;
+* **both surfaces are already retired in the redesign**, so D-205 and D-206 are legacy defects
+  with an expiry rather than things to design around;
+* and a one-line kill of option 1 worth recording verbatim in substance: **the `0.677 × brand`
+  backdrop IS option 1.** A derived colour applied to the agent's brand is what the footer already
+  does, and it is what fails. We would have taken option 1.
+
+That argument is better than the one this entry made for the same conclusion, and it is the reason
+the stopgap below is **held rather than applied** — see the two mapping problems under "What has
+to be resolved first".
+
+**Do not regenerate the baseline.** Recording `#a66b07` would close the finding by writing it down,
+which is the one move the file exists to prevent — and it would leave lime's 4.25 equally
+undisturbed. The three candidate fixes, of which Design has now picked the third:
+
+1. **the footer overlay** — `rgba(0,0,0,0.2)` → a darker value raises white's ratio for every brand
+   at once, and is the only one of the three that fixes the document rather than the gate. It
+   changes what ships, so it is Design's;
+2. **a floor on the derived backdrop** — clamp the composited footer colour so white always clears
+   4.5 whatever the brand, which is the `display_ink` / `accent_ink` pattern this codebase already
+   has (D-171, D-177) applied to one more surface;
+3. **key the baseline per brand, or stop pretending one entry can describe six** — the honest
+   bookkeeping fix, and the one that makes the other two reviewable.
+
+#### The detection fix — built, and it locates the boundary the presets could not
+
+`scripts/sweep_cover_brand_space.py` + `tests/test_cover_brand_sweep_is_current.py`. Three live
+themes × 38 brands — 32 spaced evenly in **relative luminance** with the hue rotating, plus the six
+presets — 16,720 text runs measured by the same pixel instrument the gate uses.
+
+The number this entry was filed around:
+
+| | |
+|---|---|
+| `linen` · `div.cover-agent-name` | **passes up to L=0.417, fails from L=0.439** |
+
+The six presets could only say *"somewhere between 0.230 and 0.439"*. The boundary is now pinned to
+a band 0.022 wide, and it is a **property of the surface rather than of the corpus** — which is the
+whole difference.
+
+And the surrounding picture, which the presets understated badly. Failing brands out of 38:
+
+| theme | surface | fails |
+|---|---|---|
+| `linen` | `div.cover-label` | **36/38** |
+| `linen` | `div.cover-brand-text` | 34/38 |
+| `linen` | `th` / `td` | 29 / 28 |
+| `linen` | `div.cover-agent-title` | 25/38 |
+| `linen` | `div.cover-agent-name` | 19/38 |
+| `harbor` | `div.brand` | **38/38** — every brand |
+| `harbor` | `div.cover-agent-title` | 29/38 |
+| `harbor` | `span` (the title) | **declined for all 38** |
+| `atlas` | eight `span.*` | 1/38 each, all at L=0.190 |
+
+**`atlas` is the control and it holds.** Eight surfaces fail at exactly one ramp step out of
+thirty-eight; the other two themes fail across most of the space. Atlas is the theme already
+rendering through Design's shared `_v2` page with the `on_primary` / `primary_on_dark` roles — so
+the sweep independently reproduces the ruling: the covers that are not yet on that architecture are
+the covers that fail.
+
+**Four bugs in the sweep, each the family it was built to catch, each recorded where it happened:**
+
+1. roles were read from the **entry template only**, so `atlas` recorded `roles_used: []` — its
+   roles live in the `_v2` include. Follows includes transitively now.
+2. `ROLE_NAMES` knew **one generation of token**. `atlas` names the same values `primary`,
+   `on_primary`, `tint`, `display_ink`; reading only `theme_color*` said atlas had no brand-derived
+   roles while the sweep was measuring its cover failing.
+3. the surface filter matched selectors containing `cover` or `brand`, which **excluded D-206's own
+   surface** — its selector is bare `span`. Replaced with measured brand-dependence: a surface is
+   kept when its colours actually move with the brand.
+4. the slot key was `(selector, foreground)`, and where the **foreground** is the brand-derived half
+   every brand produced a different key — one row per brand instead of a curve. **A key that
+   includes the thing being varied cannot describe the variation.**
+
+#### What the first run did and did not find — checked, because a claim arrived that it did
+
+A finding reached us that the sweep's first run turned up a **new** defect outside its remit: a
+fixed colour, `#5E636B` on `#F6F5F1` at **4.33:1**, failing on every brand and invisible to the six
+presets. **The record does not support it, and the pairing is in the record**, which is what makes
+it worth writing down rather than simply denying.
+
+`#5e636b on #f6f5f1` is `atlas`'s `span.nophoto-note` and `span.step-body` at ramp step 03. It is
+measured at **5.54:1 against a 4.5 threshold — passing** — and across all 38 brands that pairing
+runs **5.35 to 6.01**, passing everywhere. There is no 4.33 in it.
+
+**And there is exactly one fixed-colour failure in the whole sweep**, found by asking which
+surfaces have the same foreground *and* the same backdrop on every brand:
+
+    harbor  div.brand  #94a3b8 on #ffffff  2.56:1 / 4.5  fails 38/38
+
+It is **already on the contrast baseline**, twice — `pdf_contrast_baseline.txt:70-71`, on `#ffffff`
+and on `#f1f5f9`. So it is recorded and unfixed rather than newly discovered, the six presets
+reported it identically, and the gate is silent about it by policy and not by oversight.
+
+**So the honest account of the first run is: no new defect.** What it produced was the boundary
+(`passes to L=0.417, fails from L=0.439`), the much wider spread on `linen`'s cover — 36 of 38
+brands on `div.cover-label` — and `atlas` as a clean control at 1 of 38. That is what the sweep was
+for, and it did it. **The attractive version of the story — that a sweep for brand-dependence
+found a brand-independent defect on its first execution — is not what happened here**, and it is
+recorded as not having happened because the next person to read this entry will find the hex pair
+in the record and could reconstruct the claim from it.
+
+The argument for sweeps does not need it. A sweep measures the space instead of the samples
+somebody thought to pick; locating a boundary the presets could only bracket is that argument,
+and `div.brand` at 2.56:1 — the worst pairing on any live property cover, baselined and failing for
+every brand — is a reminder that the quiet failures here are the recorded ones.
+
+The gate asserts what a record cannot assert about itself: that it still names the themes the
+registry has, the template each one renders, and the roles those templates interpolate **now** —
+and that every declined surface carries the per-brand arithmetic excusing it. That last one is
+D-206 made structural, and it was seen to fail: blanking `harbor`'s calculation gives
+`declined surface(s) with no recorded calculation: harbor span`.
+
+**Nothing in this investigation changed a template, the baseline, or the measurement.** The entry
+is the deliverable.
+
+#### What has to be resolved first — two mapping problems, both found before applying anything
+
+**1. The theme names.** Design named the live themes `elegant`, `bold`, `modern` and called
+`harbor` removed. Ours are `atlas`, `linen`, `harbor`. Resolved from `themes.json`, which is
+canonical: **their names predate our 2026-10-13 rename and their live list is exactly our three.**
+`bold → atlas` (5), `elegant → linen` (3), `modern → harbor` (2); ids unchanged; the retired pair
+is `classic` (1) and `teal` (4), cut 2026-10-05, and **nothing has been retired since.**
+
+So **`harbor` is live**, it is id 2, and it is the theme that carries the gradient cover title —
+D-206's surface. Had "harbor = removed" been taken at face value, the stopgap would have been
+skipped on a live cover. Why Design could reach it is **D-207**, and it is ours.
+
+**2. The stopgap tokens are the `_v2` tokens, and `on_primary` is this codebase's
+`theme_color_text` — proved, not assumed.** Design specifies `on_primary` for the footer band and
+`primary_on_dark` for the glyphs. Those are the names in
+`templates/property/_v2/report.jinja2` — Design's own shared page, which `atlas` already renders
+through (`primary` ×35, `on_primary` ×9, `tint` ×7, `display_ink` ×6, `primary_on_dark` ×2). **So
+the vocabulary is not from another product; it is the vocabulary of the architecture these two
+covers have not been moved to yet.** `linen` and `harbor` are the two themes still carrying their
+own 720- and 795-line templates and the older `theme_color_*` roles, which is precisely why they
+are the two that fail.
+
+The mapping is exact. `compute_color_roles(brand)["theme_color_text"]` against a solid brand
+reproduces `golden/themes.json`'s `contrast_on_primary` **to the hundredth for all six brands**:
+
+| brand | ink | on solid brand | `golden` `contrast_on_primary` |
+|---|---|---|---|
+| demo_title | `#ffffff` | 4.83 | 4.83 |
+| luxury_estates | `#14151a` | 4.87 | 4.87 |
+| coastal | `#ffffff` | 5.36 | 5.36 |
+| amber | `#14151a` | 8.49 | 8.49 |
+| lime | `#14151a` | 9.23 | 9.23 |
+| violet | `#ffffff` | 5.70 | — |
+
+Same token, two names, and **an existing golden gate already holds it above 4.5 for any brand.**
+
+**Which settles what the instruction means: the plate is not optional.** `on_primary` is ink
+guaranteed against **`primary`**, so it is only correct where the surface *is* `primary`. Swap the
+ink and leave the band as `rgba(0,0,0,0.2)` over the gradient — which lands at `0.677 × brand` —
+and it goes the wrong way: luxury_estates from **7.03 to 2.59**, amber from 4.44 to 4.10, lime
+still failing at 4.40. The first reading of this section recorded that as "the stopgap makes it
+worse". It is not; **it is what the stopgap looks like with its structural half left out.**
+
+So, measured, the stopgap as specified works on both surfaces:
+
+| surface | change | worst of six |
+|---|---|---|
+| `linen` footer band | solid `theme_color` plate, ink `theme_color_text` | **4.83** vs 4.5 |
+| `harbor` cover title | solid `theme_color_on_dark` glyphs, gradient and circles removed | **3.90** vs 3.0 |
+
+#### Why it is still not applied — and the decision is [JERRY]'s, not Design's
+
+**Changing the band colour re-keys the baseline.** An entry is
+`(family, selector, fg, bg)`; `pdf_contrast_baseline.txt` carries **36 `property__linen` rows**, of
+which **5 are footer selectors** (`cover-agent-*`, `cover-logo`) keyed on the tinted band. A solid
+plate orphans those 5 and introduces new keys for whatever the new pairings are — and the reverse
+check fires on orphans as loudly as the forward check fires on new findings. The same is true, more
+mildly, for `harbor`: solid glyphs are *measurable*, so that surface **rejoins** the gate and
+`EXPECTED_DECLINED` drops to 0, which is a change to an asserted constant.
+
+There is a sanctioned path and it is already written in the baseline's own header — Jerry,
+2026-10-06: *"regenerate per surface as each lands… a baseline cannot describe a document that no
+longer exists… a template replacement is not casual."* Five rows, one family, every other line
+byte-identical, and the diff is the review.
+
+**But the standing instruction is that the baseline stays untouched**, and it was given against
+exactly the failure mode a regeneration risks. Those two do not conflict in principle — one is
+about hiding a finding, the other about describing a replaced surface — and which applies here is a
+call for whoever owns the policy. **So both stopgaps are held together, as one decision, and what
+they cost is now measured rather than estimated: 5 orphaned rows, an `EXPECTED_DECLINED` of 0, and
+two surfaces that clear their thresholds for every brand.**
+
+---
+
+### D-206 — the contrast gate declines the harbor cover title on a hand calculation done for a colour no customer has, and up to four of six brands fail it
+
+**Severity:** WRONG · **Affects:** the property report cover for any account whose brand is dark —
+one of the six brands in the corpus on any reading, four on the conservative one ·
+**Found during:** D-205, checking whether the runs the measurer declines deserved it
+**Status:** `open`
+
+`test_pdf_contrast.py` excludes six runs from the gate as unmeasurable. They are one element —
+`property__harbor`, `.cover-title span`, the word **"Report"** at 56px — once per brand.
+
+#### The decline is correct in kind. Verified, not assumed
+
+`harbor_report.jinja2:52` paints those glyphs with a gradient clipped to the text:
+
+    .cover-title span{background:var(--gradient-coral); -webkit-background-clip:text;
+                      -webkit-text-fill-color:transparent;}
+
+The pixel measurer blanks glyphs with that same property, so for this element blanking changes
+nothing and the "backdrop" sample returns **the element's own gradient**. Measured: amber's
+backdrop reads `#f6a722`, which is a point on `--gradient-coral`, not the near-black
+`--gradient-dark` the title actually sits on. The numbers are meaningless and declining them is
+right. D-154 got that part correct.
+
+#### What the decline rests on, and why it no longer holds
+
+The commit that introduced it (`3ac024e4`) justified it with a hand calculation: *"4.47:1 at the
+worst pair of stops, 9.28:1 at the best."* Both reproduce to the digit —
+
+    #FF6B5B on #2D3348 = 4.47        #FFB199 on #1A1F36 = 9.28
+
+— and `#FF6B5B` is **the template's default coral**, the value used when no brand is set. But
+line 21 is
+
+    --gradient-coral: linear-gradient(135deg, {{ theme_color }} 0%,
+                                      {{ theme_color_light }} 50%, #FFB199 100%);
+
+so the gradient's **first stop is the customer's brand colour**. The calculation was done for the
+one colour no customer has.
+
+Redone per brand, worst glyph stop against the worst point of the backdrop (`--gradient-dark`'s
+lighter stop `#2D3348`, plus the 10%-opacity brand circle at `:44`), threshold **3.0** because
+56px is WCAG large text:
+
+| brand | stop 0 | stop 50% | worst pairing | |
+|---|---|---|---|---|
+| violet | `#7C3AED` | `#a97ef3` | **2.07** | **fails** |
+| coastal | `#0E7490` | `#62a4b6` | **2.16** | **fails** |
+| demo_title | `#DC2626` | `#e87171` | **2.49** | **fails** |
+| luxury_estates | `#0D9488` | `#61b9b1` | **2.99** | **fails** |
+| amber | `#F59E0B` | `#f8bf60` | 4.91 | passes |
+| lime | `#84CC16` | `#afdd67` | 5.27 | passes |
+
+**Four of six on that reading — and the count is sensitive to the reading, which the first telling
+of this entry did not say.** The backdrop is itself a gradient (`#1A1F36` → `#2D3348`) with the 10%
+brand circle over it, and the table above takes the worst corner: the lighter stop, tint included.
+The whole sensitivity:
+
+| brand | lighter stop + tint | lighter stop, no tint | darker stop, no tint |
+|---|---|---|---|
+| violet | **2.07** | **2.20** | **2.85** |
+| coastal | **2.16** | **2.33** | 3.03 |
+| demo_title | **2.49** | **2.59** | 3.36 |
+| luxury_estates | **2.99** | 3.34 | 4.34 |
+| amber | 4.91 | 5.82 | 7.56 |
+| lime | 5.27 | 6.33 | 8.22 |
+
+So: **violet fails on every reading**; coastal and demo_title fail on all but the most favourable
+corner; **luxury_estates fails only with the tint included.** One brand fails this cover however it
+is measured, three on the ordinary reading, four on the conservative one. Whether a glyph of
+"Report" actually sits on one of the circles was not verified per brand.
+
+**None of which the gate reports**, because it declines all six. And the entry's argument does not
+turn on the count: the surface derives a contrast pair from a colour it does not control, which is
+true at 2.07 and at 2.99.
+
+#### The two cover surfaces fail in opposite directions
+
+D-205's failing surface is `linen`'s agent name — white on a brand-tinted footer — and the two
+brands that fail it are **amber and lime**, the light ones. This surface is brand-coloured glyphs
+on near-black, and the ones that fail it are **the dark ones** — violet on every reading, up to all
+four. The same six brands, two covers, and **the failing sets are disjoint on every reading**:
+nothing that fails one fails the other. Neither surface can be fixed by choosing a better colour,
+because the colour is the customer's.
+
+#### Why a count gate could not catch it
+
+`EXPECTED_DECLINED = 1` asserts the number of distinct declined **elements**, and its failure
+message tells the next person to *"work out its real contrast by hand"* when a new one appears. It
+is a good guard against the blind spot growing silently, and it passes today. What it cannot notice
+is that the element it already covers **changed template and changed colour model** underneath it:
+`modern` was renamed to `harbor` (`2726c599`) and rewired onto Design's page architecture in
+between, and the justification was never recomputed. The count was right the whole time; the
+reasoning behind the count expired.
+
+That is the shape this board keeps filing — a check that stayed green across the change that
+invalidated what it was checking — and it is why the entry is WRONG rather than FRAGILE: the
+document is genuinely unreadable at 2.07:1 for a violet-branded customer, and nothing reports it.
+
+#### ANSWERED by Design, 2026-10-21 — and this surface's stopgap is the half that works
+
+**Relayed, not read — Design's full answer is with [JERRY].** Option 3, structural; both surfaces
+retired in the redesign, so this is a legacy defect with an expiry; and option 1 killed on the
+ground that the `0.677 × brand` backdrop on D-205's surface **is** option 1 and fails.
+
+For this surface the specified stopgap is `primary_on_dark` as a **solid** glyph colour with the
+gradient and the two 10%/8% circles removed. Under our property roles that is
+`theme_color_on_dark`, and it clears the threshold for every brand with margin:
+
+| brand | `theme_color_on_dark` | vs `#2D3348` | vs `#1A1F36` |
+|---|---|---|---|
+| demo_title | `#ff5151` | 3.90 | 5.06 |
+| coastal | `#0e9cc2` | 3.90 | 5.07 |
+| violet | `#a979ff` | 4.09 | 5.31 |
+| luxury_estates | `#0da89a` | 4.22 | 5.48 |
+| amber | `#F59E0B` | 5.82 | 7.56 |
+| lime | `#84CC16` | 6.33 | 8.22 |
+
+Worst case **3.90:1** against 3.0, and it is brand-independent in the sense that matters — the
+derivation has a floor built into it, which is what `theme_color_on_dark` is for. **Solid also
+removes the decline**: glyphs painted by `color` are measurable, so this surface would rejoin the
+gate and `EXPECTED_DECLINED` would go to 0.
+
+**Held anyway**, with D-205's, because the two were specified as one decision and D-205's half is
+measurably worse than doing nothing — see the mapping section on that entry. Applying this one
+alone would also leave the gate's declined count at 1 for a surface nobody had fixed, which is how
+this entry started.
+
+See `docs/COVER_CONTRAST_FOR_DESIGN_2026-10-20.md`. Nothing is changed here — not the template, not
+the baseline, not `EXPECTED_DECLINED`.
+
+What *could* be done in the meantime without touching the document: record the per-brand hand
+calculation next to `EXPECTED_DECLINED` so the next rename cannot carry it silently, and make the
+gate's failure message name the brands rather than the element. Both are bookkeeping; neither makes
+the cover readable. **Both are now built** — `scripts/sweep_cover_brand_space.py` carries the
+calculation in its record and `tests/test_cover_brand_sweep_is_current.py` fails on a declined
+surface that has none.
+
+#### A DECLINE THAT REPORTS — the shape, specified and not applied
+
+WCAG has no model for a text surface whose contrast varies across the glyph run. A gradient clipped
+to the letters is one ratio at the first stop and another at the last, and the standard has no rule
+for *"some of the letters pass"*. So the question is **not** how to measure this surface. It is how
+to decline it in a way that reports rather than hides — because `EXPECTED_DECLINED = 1` failed by
+being **silent**, not by declining.
+
+Declining the *measurement* must not decline the *finding*. Three parts, and the first two exist:
+
+1. **the arithmetic lives with the exclusion, per brand, dated** — built; it is in the sweep record
+   and a declined surface without it fails the gate;
+2. **the exclusion is invalidated by what it depends on** — built; the gate re-reads the themes
+   from the registry and the roles from the live templates, so the rename-and-rewire that expired
+   the original calculation would now fail rather than pass;
+3. **the recorded verdict is load-bearing.** Not built. A declined surface whose hand calculation
+   says `FAILS` should fail the build — as an unmeasured finding, named as such, with its figures
+   printed every run rather than only on failure. The decline then means *"the instrument cannot
+   read this, and here is what it really is"*, which is a sentence. Today it means nothing is said
+   at all.
+
+**Not applied, deliberately**, and the reason is the point of it: part 3 would turn the build red
+today, because `harbor`'s recorded verdict *is* `FAILS`. That is the correct colour for a document
+that is unreadable at 2.07:1 for a violet-branded customer — and turning a build red is a decision
+to take in the open, not something to slip in beside a stopgap that is itself held. It wants its own
+change, with the fix landing in the same breath.
+
+---
+
+### D-207 — a handover document gained the new theme names in its file paths and kept the old ones everywhere else, so a reader concluded a live theme was removed
+
+**Severity:** ROUGH · **Affects:** Claude Design, who read it and told us `harbor` was removed ·
+**Found during:** resolving that claim against `themes.json` before applying a stopgap
+**Status:** `fixed` — `fix/d205-ratchet`
+
+Design's answer on the cover contrast named the live themes **`elegant`, `bold`, `modern`** and
+said **`harbor` is removed.** Ours are `atlas`, `linen`, `harbor`. One of those two statements had
+to be wrong, and the stakes were not academic: `harbor` is the theme carrying D-206's gradient
+cover, so "removed" would have meant skipping a stopgap on a live surface.
+
+`themes.json` settles it. Their names predate our 2026-10-13 rename and **their live list is
+exactly our three**:
+
+| their name | ours | id | and |
+|---|---|---|---|
+| `bold` | `atlas` | 5 | the default |
+| `elegant` | `linen` | 3 | D-205's surface |
+| `modern` | `harbor` | 2 | **D-206's surface, live** |
+
+`classic` (1) and `teal` (4) are the retired pair, cut 2026-10-05, and nothing has been retired
+since. So their mapping is not wrong — it is **eight days stale**, and they were reading our
+documents.
+
+#### Why "removed" was a reasonable inference from what we gave them
+
+`docs/CLAUDE_DESIGN_HANDOVER.md` is dated 2026-10-01 and its header still says *"the five
+property-report themes (`bold`, `classic`, `elegant`, `modern`, `teal`)"*. Its body names
+`bold`/`elegant`/`modern` throughout — the live list at line 19, the contrast table at 113–117, the
+page counts at 96–100. **But lines 68–70 were updated to the post-rename template paths**, and
+only one of the three carries its mapping:
+
+    .../templates/property/atlas/atlas_report.jinja2    <- bold's type only
+    .../templates/property/linen/linen_report.jinja2
+    .../templates/property/harbor/harbor_report.jinja2
+
+So a reader learns that `atlas` is `bold`, and meets `linen` and `harbor` as names the document
+never ties to anything. Given a live list of three that does not include them, **"these are other
+themes, and they are not live" is the reading the document invites.** `DESIGN_ADOPTION_SCOPE.md`
+(2026-10-05) is all old names with no new ones at all.
+
+This is the §0.6 family on a document rather than a test: **a file updated in one place and not the
+others gives a reader two incompatible mappings, and the newer one looks like the exception.** It
+is also the second time a theme name relayed outward has cost something — `THEME_RENAME_SCOPE.md`
+records a *"wrong version of this was relayed"* about `resolve()` itself.
+
+#### Fixed
+
+A mapping box at the top of both documents, stating the three renames, the two retirements, the
+date, and that nothing has been retired since. **The bodies are left as written**: the old names
+appear inside dated quotations and measurements, and a find-and-replace would falsify the record.
+The box says so, so the next reader knows the mixture is deliberate.
+
+Not done, and worth considering: a gate asserting that a Design-facing document naming a theme
+either uses the live name or carries the mapping box. `test_no_live_code_path_names_a_retired_theme`
+already does this for code — `docs/` is not code, and a stale name in a handover costs a round trip
+rather than a wrong render, which is why this is ROUGH.
 
 ---
 
