@@ -221,6 +221,7 @@ export default function LeadCaptureForm({
           value={formData.name}
           onChange={handleChange}
           required
+          autoComplete="name"
           placeholder="Your name"
           className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all"
           style={{ 
@@ -245,7 +246,8 @@ export default function LeadCaptureForm({
           value={formData.email}
           onChange={handleChange}
           required
-          placeholder="your@email.com"
+          autoComplete="email"
+          placeholder="you@example.com"
           className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all"
           style={{ 
             "--tw-ring-color": accentColor,
@@ -268,6 +270,7 @@ export default function LeadCaptureForm({
           name="phone"
           value={formData.phone}
           onChange={handleChange}
+          autoComplete="tel"
           placeholder="(555) 123-4567"
           className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all"
           style={{ 

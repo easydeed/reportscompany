@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 79 | Real, unfixed |
-| `fixed` | 132 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 81 | Real, unfixed |
+| `fixed` | 134 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **218** | D-001 … D-218, contiguous, no duplicates |
+| **Total** | **222** | D-001 … D-222, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 6 · WRONG 22 · FRAGILE 22 · ROUGH 29. (Sums to 79, the open total.)
+**Open by severity:** BROKEN 6 · WRONG 23 · FRAGILE 22 · ROUGH 30. (Sums to 81, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -14893,6 +14893,115 @@ What makes it worth an entry rather than a shrug: one of the three already takes
 the live fixture (`title: DEMO_AGENT.location`), so the file is half-adopted into the M1 fixture
 and would come back looking maintained. A redesign that restores a testimonials section will find
 this component first.
+
+---
+
+### D-219 — placeholder emails on domains that are not reserved, one of them a real title company
+
+**Severity:** ROUGH · **Affects:** eleven inputs across nine files, `/login` and `/register`
+among them · **Found during:** checking a report that `demo@trendyreports.io` appears in a
+placeholder — it does not, and this is what the check found instead
+**Status:** `fixed` — `fix/consumer-form-autofill-and-placeholder-domains`
+
+RFC 2606 §3 reserves `example.com`, `.org` and `.net` for exactly this, and eleven placeholders
+were not using them: `you@company.com` (`/login`, `/register`, `/forgot-password`),
+`admin@company.com`, `rep@company.com`, `your@email.com`, `sarah@acmerealty.com`,
+`info@acmetitle.com`, and **`admin@pacificcoasttitle.com`** on the admin "new company" form.
+
+The last one is the reason this is an entry rather than a tidy-up. **Pacific Coast Title is a real
+firm**, and an invented address at a real company is M1-T4's finding — "Sarah Johnson of Compass
+Real Estate" — in a different file. `email.com` and `company.com` are likewise registered domains
+somebody receives mail at; `example.com` cannot be, which is the whole point of it existing.
+
+All eleven moved to the reserved family. Gated by
+`tests/test_public_forms_are_fillable.py::test_every_placeholder_email_uses_a_reserved_domain`,
+which derives the list from the source rather than carrying one.
+
+---
+
+### D-220 — the forms a stranger fills cannot be autofilled
+
+**Severity:** ROUGH · **Affects:** `/p/{code}` lead capture (name, email, phone), `/cma/{code}`
+contact step (name, phone, email), `/welcome` (both passwords) · **Found during:** the same check
+**Status:** `fixed` — same branch
+
+Seven inputs on three public forms carried no `autoComplete`. The auth pages had it already —
+`/login`, `/register`, `/forgot-password`, `/reset-password` — so this was the consumer half and
+the invited-user half, which is the half where it matters most: a homeowner on a phone typing
+their name, number and email into a lead form, and a new user setting a password their manager
+should store.
+
+The `autoComplete="off"` instances were left alone and are correct: they sit on address inputs
+backed by a Google Places combobox, where browser autofill fights the suggestion list.
+
+#### The first version of this count was wrong, and the reason generalises
+
+`grep -c autoComplete` counts **lines containing a match**, not matches, and a JSX attribute list
+spans many lines — so a file with two inputs, one covered, reads as covered. The replacement, a
+`<input[^>]*>` regex, was worse in a way that looks better: `onChange={e => setPhone(...)}`
+contains a `>`, so the match ends inside the attribute list and **every input with an arrow
+handler appears to have no attributes at all**. That pass reported 25 uncovered inputs where
+there are 24, and two of the ones it named had been fixed minutes earlier.
+
+The gate parses instead: it walks forward from the tag name tracking quote state and brace depth
+and stops at the first `>` that really ends the tag. §0.6's rule about a selector named after one
+instance, one level down — **the question was "does this element carry the attribute" and the
+cheap tools answer a different question that resembles it.** Regression R5 mutates the scanner
+itself (`depth == 0` removed) and the gate fails, so the parser's correctness is guarded rather
+than assumed.
+
+---
+
+### D-221 — `/blog`'s newsletter form discards every submission, under an unsourced headcount
+
+**Severity:** WRONG · **Affects:** `/blog`, public, since the page shipped · **Found during:**
+looking for a reported contact form, which does not exist
+**Status:** `open` — **gated.** Wiring it needs a subscriber store that does not exist; removing
+a visible marketing element is a product call. Build neither until Jerry answers. **[JERRY]**
+
+`app/blog/page.tsx:197` is a `<form>` with an email input and a Subscribe button, in a **server
+component** — the file contains zero occurrences of `onSubmit`, `action=` or `"use client"`.
+Submitting it does a native GET to `/blog?` and the address is gone. No request is made, so
+nothing is dropped on the floor by an endpoint: there is no endpoint.
+
+Above it: *"Join 5,000+ real estate professionals who get our weekly newsletter."* Unsourced, and
+the same family G2 answered by deleting "2,000+ agents" from `/login` and "4.9/5 from 500+" from
+`/register`. `/blog` was missed by that sweep because it was unlinked from the nav at the time.
+
+Two things to decide together, because they fail as a pair: a signup that works but has no
+newsletter behind it is no better than one that silently discards, and a headcount for a list
+that does not exist cannot be sourced.
+
+This is also why the D-220 gate carries one exception. Giving this input an autocomplete attribute
+would make it *easier* to fill a box that throws the answer away.
+`test_each_exception_is_still_needed` fails when the exception stops being necessary, so it cannot
+outlive this entry.
+
+---
+
+### D-222 — the lead form's retry window is stored, never read, and not the server's
+
+**Severity:** ROUGH · **Affects:** `apps/web/app/p/[code]/lead-capture-form.tsx` on a 429 ·
+**Found during:** checking whether any consumer lead handler sets state the UI never renders
+**Status:** `open`
+
+```js
+setErrorMessage("You've submitted too many requests. Please try again in an hour.");
+setStatus("rate_limited");
+setRetryAfter(60);  // 60 minutes
+```
+
+`retryAfter` is written here and **read nowhere** — it is one of exactly three set-but-never-read
+state variables in `apps/web` (the others are `pdfUrl` in `MobileReportViewer` and `loading` in
+the admin settings page). And the 60 is a literal: the response's `Retry-After` is never looked
+at, so the visible "in an hour" agrees with the code and neither agrees with the server unless
+the server happens to say an hour.
+
+**The error itself is shown** — `errorMessage` renders at `:187`, and the sibling consumer path
+(`/cma/{code}`) renders its own `error` at both steps — so no submission fails silently on either
+lead path. That is why this is ROUGH: a wait time that is decorative rather than wrong, not a lost
+lead. The fix is to read `Retry-After` off the response and render the real number, or to delete
+the state and keep the sentence; the first is the one worth doing and it is not a one-liner.
 
 ---
 

@@ -494,7 +494,7 @@ export default function CompanyBrandingPage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Email</Label>
-                <Input value={branding.agent_email} onChange={(e) => update({ agent_email: e.target.value })} placeholder="admin@company.com" className="h-10" />
+                <Input value={branding.agent_email} onChange={(e) => update({ agent_email: e.target.value })} placeholder="admin@example.com" className="h-10" />
               </div>
             </div>
             <div className="mt-3 space-y-1.5">
@@ -618,7 +618,7 @@ export default function CompanyBrandingPage() {
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder="your@email.com"
+                  placeholder="you@example.com"
                   className="flex-1 h-9 text-xs"
                 />
                 <Button onClick={handleSendTestEmail} disabled={isSending} className={cn("h-9 w-9 p-0", sendSuccess && "bg-emerald-600 hover:bg-emerald-700")}>

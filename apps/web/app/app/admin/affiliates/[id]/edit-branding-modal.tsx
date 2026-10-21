@@ -221,7 +221,7 @@ export function EditBrandingModal({ affiliateId, branding, onSaved }: EditBrandi
                 id="contact_line2"
                 value={form.contact_line2}
                 onChange={(e) => setField("contact_line2", e.target.value)}
-                placeholder="info@acmetitle.com"
+                placeholder="info@example.com"
               />
             </div>
           </div>
