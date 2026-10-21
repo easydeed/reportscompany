@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 70 | Real, unfixed |
+| `open` | 71 | Real, unfixed |
 | `fixed` | 132 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **209** | D-001 … D-209, contiguous, no duplicates |
+| **Total** | **210** | D-001 … D-210, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 21 · ROUGH 24. (Sums to 70, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 21 · ROUGH 25. (Sums to 71, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -14491,6 +14491,16 @@ tone the template declares clears every lighter one. Everything on an unknown pa
 takes `--burgundy-on-cream-dark`, and that covers `#faf7f2`, `#fef4f4` and `#ffffff` by
 monotonicity rather than by enumeration.
 
+**AND THE PREMISE IS GATED NOW.** The argument stands on `ink_on` returning a *darkened* ink, and
+nothing asserted that — so if it ever returned a lighter one, every site relying on "clear the
+darkest ground" would lose its guarantee **silently**, because the lighter grounds are deliberately
+unmeasured. `tests/test_ink_derivation_premises.py` asserts the direction over all 38 brands and
+every ground, asserts the consequence separately against the real paper family rather than leaving
+it to follow, asserts the counterpart for `ink_on_dark`, and asserts that `--gold-light` is still
+**outside** the family — so "clear the darkest and the rest follow" cannot quietly widen into "one
+ink serves every ground". Seen to fail: making `ink_on` return white names the brand, both
+luminances and the consequence.
+
 **THE PATTERN, NAMED, BECAUSE THE FIX ONLY HOLDS WHILE NOBODY GOES BACK TO ENUMERATING.** Three
 instances in two days, all of them picking the ground from the **name of the token** rather than
 from the measurement:
@@ -14551,6 +14561,55 @@ dark, named for the ground and not for the colour. Thirty-odd call sites across 
 self-contained themes. **Not taken with the contrast fix** because it is a rename across two files
 with no failing surface to measure against, which is a different kind of change from the one that
 found it.
+
+---
+
+### D-210 — the ink palette has two candidates and a 0.024-wide band of brand luminance where neither clears AA
+
+**Severity:** ROUGH · **Affects:** text on a brand fill, for any brand whose relative luminance
+falls between 0.184 and 0.209 — one of 38 swept brands, and none of the six presets ·
+**Found during:** root-causing why nine surfaces across two architectures all failed at the same
+single point
+**Status:** `open` — **the derivation is shared with Design's `_v2` page, so the fix is a
+conversation rather than an edit.** See `docs/COVER_TYPE_AND_ATLAS_FOR_DESIGN_2026-10-21.md`.
+
+Nine surfaces fail at **exactly one** of the 38 swept brands and nowhere else: eight `span.*` on
+`atlas` and, since `on_primary` landed on it, `harbor`'s `.analysis-table tfoot`. Two different
+roles, two different architectures, the same luminance — `L=0.190` — at 4.38 to 4.49 against 4.5.
+
+**It is the candidate set, not the search.** `_text_on_accent` picks the better of exactly two
+inks:
+
+    _best_of(("#ffffff", "#14151a"))
+
+and on `#298b14`, the ramp brand at `L=0.190`, both are short:
+
+| candidate | on `#298b14` |
+|---|---|
+| `#ffffff` | **4.38** |
+| `#14151a` | 4.16 |
+| `#000000` | **4.80** |
+
+The search is correct — it picks white, the better of its two — and **a third candidate it does
+not have would clear.** Measured across the whole luminance axis, the band where neither of the two
+clears is **0.184 to 0.209, 0.024 wide, worst 4.29**. Adding pure black as a candidate **empties
+it**: every brand luminance is then served.
+
+#### The comment that authorised the trade is comparing the wrong pair
+
+`_text_on_accent` explains its near-black as *"#14151a rather than #1a1a1a: it is what
+`worker.themes` uses for the same role, and having one near-black in the product is worth the 0.4%
+of contrast."* That is true of `#14151a` against `#1a1a1a`. The comparison that matters for this
+gap is against **`#000000`**, and at the worst point it is **15%**, not 0.4% — 4.16 against 4.80.
+The trade was made against a difference an order of magnitude smaller than the one it costs here.
+
+#### Why ROUGH
+
+No preset brand is in the band, so nothing a customer has today is affected — it is one synthetic
+ramp step. What it is, is a **hole in the derivation rather than in a template**, which is why it
+showed up nine times in two unrelated places at once and why patching the nine would have been
+patching the symptom. Sizing it was the cheap part: knowing it is 0.024 wide and closed by one
+extra candidate turns Design's answer into a correction rather than an investigation.
 
 ---
 

@@ -91,8 +91,29 @@ coming up short at the same point looks less like eight surfaces and more like *
 where a derived role lands just under**, which is a single thing to fix in the derivation rather
 than nine places to patch.
 
-It looks like a gap in the derivation at one luminance rather than anything about the page. We have
-not changed `_v2`.
+**Root-caused, so this is a correction rather than an investigation: it is the candidate set.**
+
+The ink is chosen as the better of exactly two — `#ffffff` and `#14151a` — and on the brand at that
+luminance (`#298b14`) both are short:
+
+| candidate | contrast on `#298b14` |
+|---|---|
+| `#ffffff` | **4.38** ← what the derivation picks, correctly, as the better of its two |
+| `#14151a` | 4.16 |
+| `#000000` | **4.80** ← clears |
+
+The search is right; the palette has a hole. Across the whole luminance axis the band where neither
+candidate clears is **0.184 to 0.209 — 0.024 wide, worst 4.29**. **Adding pure black as a third
+candidate empties it**: every brand luminance is then served.
+
+One note on the reasoning that fixed the palette at two: the comment in our `_text_on_accent` says
+`#14151a` rather than `#1a1a1a` is *"worth the 0.4% of contrast"*. That is true of that pair. The
+comparison that matters here is against `#000000`, and at the worst point it is **15%** — 4.16
+against 4.80.
+
+No preset brand is in the band, so nothing a customer has today is affected. **We have not changed
+`_v2` or the shared derivation** — it is yours, it serves both architectures, and a third candidate
+is a palette decision.
 
 ---
 
