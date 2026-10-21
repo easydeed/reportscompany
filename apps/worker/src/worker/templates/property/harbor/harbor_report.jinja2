@@ -169,7 +169,14 @@
     .analysis-table th:last-child{border-radius:0 16px 0 0;}
     .analysis-table tbody tr{border-bottom:1px solid var(--ghost);}
     .analysis-table td{padding:14px;}
-    .analysis-table tfoot{background:var(--coral); color:var(--pure); font-weight:600;}
+    /* `on_primary`, not white. The role table: "on_primary | all text on
+       `primary` fills". White on the raw brand fails for 29 of 38 swept brands —
+       every light one — and `--coral-text` is `theme_color_text`, which is
+       Design's `on_primary` under this template's naming. 1 of 38 remains, at
+       one ramp step (4.38:1 at L≈0.19), which is the same short-at-one-luminance
+       residue as `atlas`'s eight surfaces and is in the note to Design rather
+       than papered over here. */
+    .analysis-table tfoot{background:var(--coral); color:var(--coral-text); font-weight:600;}
     .analysis-table tfoot td{padding:16px 14px;}
 
     /* COMPARABLES */

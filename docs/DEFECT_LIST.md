@@ -14464,6 +14464,19 @@ Per-ground inks, each declared next to the neutral it is derived from: `--burgun
 `--burgundy-on-cream-dark`, `--burgundy-on-gold`, `--coral-on-ghost`, `--coral-on-panel`. **All of
 them clear 4.5 for all 38 brands.** Contrast baseline **38 rows → 29**.
 
+**And one more, on the same day: `harbor`'s `.analysis-table tfoot`.** White on the raw brand fill,
+**29 of 38 brands failing** — every light one. The role table already answers it: *"`on_primary` |
+all text on `primary` fills"*. Applied, it goes to **1 of 38**, and the baseline drops **29 → 26**,
+which takes **`harbor` to zero baselined contrast failures** — the second theme after `atlas` to get
+there.
+
+It was held back for a day on the reasoning that it was the same "text on a brand fill" question
+going to Design whole. That was the wrong trade: a table every reader looks at, a measured
+improvement from 29/38 to 1/38, using Design's own token exactly as their role table specifies, and
+the ask that was being kept tidy is about **where the brand sits on the cover gradient** — which a
+table cell is not. If their answer later implies something different for brand fills generally, it
+is one more change.
+
 #### Two things learned on the way, both the same mistake
 
 **1. The footer number is not always on cream.** Pointing `.page-footer .num` at
@@ -14477,6 +14490,25 @@ dark ink's contrast only rises as the ground lightens, so an ink that clears the
 tone the template declares clears every lighter one. Everything on an unknown paper ground now
 takes `--burgundy-on-cream-dark`, and that covers `#faf7f2`, `#fef4f4` and `#ffffff` by
 monotonicity rather than by enumeration.
+
+**THE PATTERN, NAMED, BECAUSE THE FIX ONLY HOLDS WHILE NOBODY GOES BACK TO ENUMERATING.** Three
+instances in two days, all of them picking the ground from the **name of the token** rather than
+from the measurement:
+
+| | the ink | derived for | actually on |
+|---|---|---|---|
+| the brand plate | `on_primary` | `primary` | `0.677 × brand` |
+| `--silver` | one grey, redefined | the footer, on white | *also* `.cover-city`, on the dark panel |
+| the footer number | `--burgundy-on-cream` | `#FAF7F2` | `#FEF4F4` — **4.48:1**, short by 0.02 |
+
+Each was measured and each was correct for the ground it named. The third missed by **two
+hundredths**, which is the tell: the method was exhausting a list of grounds somebody could think
+of, and the list was never complete. §0.6 carries the general form —
+*clear the worst case and the rest follow* — and the warning that **adding a per-ground ink for the
+next paper tone is correct, costs nothing, and quietly re-establishes the enumeration this
+replaced.** The two grounds that genuinely need their own derivation are the ones outside the
+family: `--gold-light`, darker than any paper tone, and `#2b3045`, which is dark and needs the
+other direction.
 
 **2. The grounds had to be single-sourced before the lint would accept them.** Passing the hex
 straight to `ink_on('#FAF7F2')` put a second copy of each ground on a **brand-role line**, and the

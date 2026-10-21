@@ -63,9 +63,11 @@ composition decision rather than a token swap. **We have not touched it.** Three
 3. **a plate behind the title block**, as on the harbor cover — the gradient stays and the type
    sits on a declared ground.
 
-The same question covers **`harbor`'s `td`**: white on the raw brand, 29 of 38 failing.
-`on_primary` leaves **1 of 38** there (4.38 at one ramp step), so it is nearly but not quite a
-rule-following answer.
+**`harbor`'s brand-filled table row is now done and is not part of this question.** It was white
+on the raw brand, 29 of 38 failing; `on_primary` — your token, as your role table specifies — takes
+it to **1 of 38**, and that one is at `L=0.190`, the same ramp step as the eight `atlas` surfaces
+below. So it belongs to §2 rather than here. With it, **`harbor` has no baselined contrast failure
+on any of the six presets** — the second theme to reach that after `atlas`.
 
 ---
 
@@ -81,6 +83,13 @@ All eight fail at brand relative luminance **0.190** and pass at 0.167 and below
 above. One ramp step out of thirty-eight, and `atlas` is otherwise the cleanest of the three
 themes — which is what we would expect from the theme that is already on your architecture with
 your roles.
+
+**And it is not only `atlas`.** `harbor`'s brand-filled table row, fixed today to `on_primary`,
+fails at **the same single luminance** — 4.38:1 at `L=0.190` — having cleared every other brand in
+the sweep. Two different roles (`display_ink`/`on_primary` on your page, `on_primary` on ours)
+coming up short at the same point looks less like eight surfaces and more like **one luminance
+where a derived role lands just under**, which is a single thing to fix in the derivation rather
+than nine places to patch.
 
 It looks like a gap in the derivation at one luminance rather than anything about the page. We have
 not changed `_v2`.
