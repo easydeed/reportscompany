@@ -206,6 +206,25 @@ def _template_closure(template_rel, seen=None):
     return seen
 
 
+#: Jinja comments and CSS comments, stripped before any role name is looked for.
+_COMMENTS = re.compile(r"\{#.*?#\}|/\*.*?\*/", re.S)
+
+
+def _without_comments(body):
+    """Comments out, because a role NAMED IN A COMMENT is not a role taken.
+
+    This is the fifth instance of the same family in this one file, and the
+    first four were mine too. The fix for D-205 and D-206 writes `/* ... */`
+    notes into both templates explaining `primary_on_dark`; the matcher below
+    is deliberately word-level rather than `{{ }}`-level, so those notes made
+    `roles_used` report `primary_on_dark` for two templates that interpolate
+    `theme_color_on_dark`. The record then claimed a role the template does not
+    take — a weakening rather than a break, and exactly what the gate reading
+    this is supposed to notice.
+    """
+    return _COMMENTS.sub(" ", body)
+
+
 def roles_used(template_rel):
     """Which brand-derived roles this theme's templates name, read off the files.
 
@@ -221,7 +240,7 @@ def roles_used(template_rel):
     for rel in sorted(_template_closure(template_rel)):
         if rel.endswith("[NOT FOUND]"):
             continue
-        body = (PROPERTY_ROOT / rel).read_text(encoding="utf-8")
+        body = _without_comments((PROPERTY_ROOT / rel).read_text(encoding="utf-8"))
         found |= {r for r in ROLE_NAMES if re.search(r"\b" + r + r"\b", body)}
     return sorted(found)
 

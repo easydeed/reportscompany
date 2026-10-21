@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 71 | Real, unfixed |
-| `fixed` | 129 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 69 | Real, unfixed |
+| `fixed` | 131 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **207** | D-001 … D-207, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 24. (Sums to 71, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 20 · ROUGH 24. (Sums to 69, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13688,7 +13688,7 @@ Related: D-093 (a hard-coded `100` standing in for the table), D-195 (the unlimi
 **Severity:** FRAGILE · **Affects:** every branch — the gate fails before anything is changed; and, in
 the document itself, any customer whose brand colour is light · **Found during:** D-202/D-203's
 full-suite run, then bisected
-**Status:** `open` — investigated, nothing changed. See **What not to do**.
+**Status:** `fixed` — `fix/d205-d206-design-ruling`, 2026-10-21, to Design's ruling.
 
     FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
     4.44:1  #ffffff on #a66b07  div.cover-agent-name  in property__linen
@@ -14012,7 +14012,7 @@ two surfaces that clear their thresholds for every brand.**
 **Severity:** WRONG · **Affects:** the property report cover for any account whose brand is dark —
 one of the six brands in the corpus on any reading, four on the conservative one ·
 **Found during:** D-205, checking whether the runs the measurer declines deserved it
-**Status:** `open`
+**Status:** `fixed` — `fix/d205-d206-design-ruling`, 2026-10-21, to Design's ruling.
 
 `test_pdf_contrast.py` excludes six runs from the gate as unmeasurable. They are one element —
 `property__harbor`, `.cover-title span`, the word **"Report"** at 56px — once per brand.
@@ -14201,18 +14201,82 @@ is taken on — `lighter_stop_with_tint`, the conservative one. `verdict` and `m
 record for people and are not parsed by anything, because a gate that greps an explanation is
 measuring the explanation.
 
+#### FIXED — 2026-10-21, to Design's ruling, and the build went green by the covers being correct
+
+Design answered both surfaces. The fix is two templates and **no new value**: every colour it
+introduces is a token the system already had.
+
+| surface | was | is |
+|---|---|---|
+| `harbor` `.cover-title span` | `--gradient-coral` clipped to the glyphs | **solid `theme_color_on_dark`** (`primary_on_dark`) |
+| `harbor` `.cover-left` | `linear-gradient(#1A1F36, #2D3348)` + two brand circles at 10%/8% | **flat `--ink: #0f172a`**, circles dropped |
+| `linen` `.cover-footer` | `rgba(0,0,0,0.2)` over a brand gradient — `0.677 × brand` | **flat `--ink: #0f172a`** + a 3px `--burgundy` rule on the top edge |
+| `linen` `.cover-agent-title`, `.cover-logo` | `--gold-light`, `--gold` | **`theme_color_on_dark`** |
+| `linen` `.cover-agent-contact` | `opacity:0.9` on white | **`rgba(255,255,255,0.72)`** |
+
+`linen` did not have `theme_color_on_dark` before: it had no surface with a fixed dark ground to put
+brand text on. Its fallback is **white**, not the `#1a1a1a` the neighbouring roles use — `#1a1a1a`
+on `--ink` is **1.03:1**, so the obvious copy-paste default would have been invisible on exactly the
+surface the role exists for.
+
+**Measured after, across every ink on every brand — not the one that prompted each fix.** Design's
+ground `#0f172a`: `theme_color_on_dark` clears **4.5 for all six** (5.57 worst, 9.04 best); white is
+17.85; the secondary at 72% is 9.60. The 3px rule carries no text, so it is not a pairing.
+
+**Both reds cleared, and by the covers rather than by the gates:**
+
+| | |
+|---|---|
+| `test_no_new_unreadable_text_in_the_pdfs` | **passes** — the forward check finds nothing new |
+| `test_a_declined_surface_whose_calculation_fails_fails_the_build` | **passes** — nothing is declined any more |
+| contrast baseline | **55 rows → 43.** Twelve retired, none added |
+| `EXPECTED_DECLINED` | **1 → 0.** Solid type is measurable, so the surface rejoined the gate |
+| brand sweep, all three themes | **0 declined** |
+| full suite | **3030 passed, 68 skipped, 21 xfailed, 0 failed** |
+
+The twelve retired rows are exactly the two covers' fixed surfaces: `linen`'s `cover-agent-name`,
+two `cover-agent-title`, two `cover-logo` and two `span`; `harbor`'s `cover-city` and four
+`cover-label`. The regeneration is the one the file's own rule permits — *"Regenerate after FIXING
+something (never to clear a new failure)"* — and the diff is the review.
+
+#### WHAT IS NOT FIXED, AND IT IS MOST OF `linen`'s COVER
+
+Design ruled on the **footer band**. The elements on the brand gradient **above** it were not in
+scope and are unchanged. From the 38-brand sweep, after the fix:
+
+| theme | surface | brands failing, of 38 |
+|---|---|---|
+| `linen` | `div.cover-label` | **36** |
+| `linen` | `div.cover-brand-text` | 34 |
+| `linen` | `th` / `td` | 29 / 28 |
+| `linen` | `h1.cover-title` | 21 |
+| `linen` | `div.cover-street` | 19 |
+| `harbor` | `div.brand` | **38** — `#94a3b8` on `#ffffff`, brand-independent |
+
+All baselined, all recorded, none of them newly discovered. Under Design's rule 3 the cover
+gradient itself is legal — it is `primary` to `primary_dark`, both permitted brand fills — so what
+fails is the gold and white **type on it**, which is the same defect one surface over and a bigger
+scope than this ruling. **The build being green does not mean the covers are readable.** It means
+the two surfaces that were ruled on are, and that nothing is being hidden about the rest.
+
+#### HOW IT WENT RED, AND HOW IT WENT GREEN — the record, kept
+
 #### `main` IS DELIBERATELY RED FROM 2026-10-21, AND THIS IS THE WRITTEN REASON
 
 > A red build with no written reason becomes background within a week. **That is this entry's own
 > history** — twenty days of a red ratchet nobody read, with D-191's annotation naming the failing
 > test the whole time.
 
+**Both cleared on the same day by the fix above.** Kept because a red build's reason is worth
+keeping after it goes green: the next person to see a deliberate red needs to know one was taken,
+read, and closed by correcting the thing rather than the check.
+
 Two failures on `main`, both deliberate and both about this cover:
 
 | | |
 |---|---|
-| `test_no_new_unreadable_text_in_the_pdfs` | D-205 — `linen`'s agent name, `4.44:1`, red since 2026-09-30 |
-| `test_a_declined_surface_whose_calculation_fails_fails_the_build` | D-206 — `harbor`'s cover title, four brands, red from 2026-10-21 |
+| `test_no_new_unreadable_text_in_the_pdfs` | D-205 — `linen`'s agent name, `4.44:1`, red 2026-09-30 → **green 2026-10-21** |
+| `test_a_declined_surface_whose_calculation_fails_fails_the_build` | D-206 — `harbor`'s cover title, four brands, red 2026-10-21 → **green the same day** |
 
 **Pending: Design's answer on `harbor`** — whether the cover-title guidance in their package applies
 to the theme we ship under that name, which is their `modern`. See

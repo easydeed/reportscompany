@@ -6913,51 +6913,7 @@
    ]
   },
   "harbor": {
-   "hand_calculations": {
-    "span": {
-     "authoritative_reading": "lighter_stop_with_tint",
-     "backdrop": "--gradient-dark #1A1F36 -> #2D3348, plus brand circles at 0.10 and 0.08 opacity",
-     "computed_2026_10_21": {
-      "amber": {
-       "darker_stop": 7.56,
-       "lighter_stop": 5.82,
-       "lighter_stop_with_tint": 4.91
-      },
-      "coastal": {
-       "darker_stop": 3.03,
-       "lighter_stop": 2.33,
-       "lighter_stop_with_tint": 2.16
-      },
-      "demo_title": {
-       "darker_stop": 3.36,
-       "lighter_stop": 2.59,
-       "lighter_stop_with_tint": 2.49
-      },
-      "lime": {
-       "darker_stop": 8.22,
-       "lighter_stop": 6.33,
-       "lighter_stop_with_tint": 5.27
-      },
-      "luxury_estates": {
-       "darker_stop": 4.34,
-       "lighter_stop": 3.34,
-       "lighter_stop_with_tint": 2.99
-      },
-      "violet": {
-       "darker_stop": 2.85,
-       "lighter_stop": 2.2,
-       "lighter_stop_with_tint": 2.07
-      }
-     },
-     "element": ".cover-title span \u2014 harbor_report.jinja2:52",
-     "glyphs": "linear-gradient(135deg, theme_color 0%, theme_color_light 50%, #FFB199 100%)",
-     "method": "worst glyph stop against the worst backdrop point. Conservative: the glyphs are a gradient, so part of the word clears the threshold even where the first stop does not, and WCAG has no rule for 'some of the letters pass'.",
-     "superseded_by": "the original excuse, '4.47:1 at the worst pair of stops, 9.28:1 at the best' (3ac024e4), which is #FF6B5B on #2D3348 and #FFB199 on #1A1F36 \u2014 the template default, not any brand.",
-     "threshold": 3.0,
-     "verdict": "FAILS. violet on every reading; coastal and demo_title on all but the darkest backdrop point with no tint; luxury_estates only with the tint. D-206.",
-     "why_unmeasurable": "harbor_report.jinja2:52 paints .cover-title span with --gradient-coral clipped to the glyphs via -webkit-text-fill-color:transparent, which is the property the measurer uses to blank text. Blanking changes nothing, so the sampled backdrop is the element's own gradient and the reported foreground is not what the reader sees."
-    }
-   },
+   "hand_calculations": {},
    "roles_used": [
     "theme_color",
     "theme_color_dark",
@@ -8041,270 +7997,270 @@
     },
     "div.cover-label": {
      "amber": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#f59e0b",
       "needs": 4.5,
-      "ratio": 6.86
+      "ratio": 8.31
      },
      "coastal": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#0e94b8",
       "needs": 4.5,
-      "ratio": 4.17
+      "ratio": 5.06
      },
      "demo_title": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#ff3d3d",
       "needs": 4.5,
-      "ratio": 4.2
+      "ratio": 5.09
      },
      "lime": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#84cc16",
       "needs": 4.5,
-      "ratio": 7.46
+      "ratio": 9.04
      },
      "luxury_estates": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#0d9e91",
       "needs": 4.5,
-      "ratio": 4.43
+      "ratio": 5.37
      },
      "ramp00": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#ff3a3a",
       "needs": 4.5,
-      "ratio": 4.15
+      "ratio": 5.03
      },
      "ramp01": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#ec5f1c",
       "needs": 4.5,
-      "ratio": 4.36
+      "ratio": 5.29
      },
      "ramp02": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#c57d18",
       "needs": 4.5,
-      "ratio": 4.43
+      "ratio": 5.37
      },
      "ramp03": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#968a13",
       "needs": 4.5,
-      "ratio": 4.17
+      "ratio": 5.05
      },
      "ramp04": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#7a9614",
       "needs": 4.5,
-      "ratio": 4.35
+      "ratio": 5.27
      },
      "ramp05": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#559c15",
       "needs": 4.5,
-      "ratio": 4.32
+      "ratio": 5.23
      },
      "ramp06": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#2f9f16",
       "needs": 4.5,
-      "ratio": 4.27
+      "ratio": 5.18
      },
      "ramp07": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#169f27",
       "needs": 4.5,
-      "ratio": 4.22
+      "ratio": 5.12
      },
      "ramp08": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#169d50",
       "needs": 4.5,
-      "ratio": 4.19
+      "ratio": 5.08
      },
      "ramp09": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#17a27d",
       "needs": 4.5,
-      "ratio": 4.56
+      "ratio": 5.53
      },
      "ramp10": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#18a6ab",
       "needs": 4.5,
-      "ratio": 4.97
+      "ratio": 6.02
      },
      "ramp11": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#30a6e1",
       "needs": 4.5,
-      "ratio": 5.38
+      "ratio": 6.52
      },
      "ramp12": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#79a2ec",
       "needs": 4.5,
-      "ratio": 5.75
+      "ratio": 6.96
      },
      "ramp13": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#9ca1f1",
       "needs": 4.5,
-      "ratio": 6.16
+      "ratio": 7.47
      },
      "ramp14": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#b5a1f2",
       "needs": 4.5,
-      "ratio": 6.55
+      "ratio": 7.94
      },
      "ramp15": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#cda0f1",
       "needs": 4.5,
-      "ratio": 6.94
+      "ratio": 8.41
      },
      "ramp16": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#e59ef1",
       "needs": 4.5,
-      "ratio": 7.36
+      "ratio": 8.92
      },
      "ramp17": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#f2a2e5",
       "needs": 4.5,
-      "ratio": 7.77
+      "ratio": 9.42
      },
      "ramp18": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#f3acd2",
       "needs": 4.5,
-      "ratio": 8.17
+      "ratio": 9.9
      },
      "ramp19": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#f4b4c3",
       "needs": 4.5,
-      "ratio": 8.53
+      "ratio": 10.34
      },
      "ramp20": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#f5bcb8",
       "needs": 4.5,
-      "ratio": 8.96
+      "ratio": 10.85
      },
      "ramp21": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#f3c5a9",
       "needs": 4.5,
-      "ratio": 9.38
+      "ratio": 11.37
      },
      "ramp22": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#efce8c",
       "needs": 4.5,
-      "ratio": 9.73
+      "ratio": 11.8
      },
      "ramp23": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#e0dc28",
       "needs": 4.5,
-      "ratio": 10.13
+      "ratio": 12.27
      },
      "ramp24": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#c2e860",
       "needs": 4.5,
-      "ratio": 10.53
+      "ratio": 12.76
      },
      "ramp25": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#b4ee8b",
       "needs": 4.5,
-      "ratio": 10.9
+      "ratio": 13.21
      },
      "ramp26": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#b0f2a7",
       "needs": 4.5,
-      "ratio": 11.3
+      "ratio": 13.69
      },
      "ramp27": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#b5f4c1",
       "needs": 4.5,
-      "ratio": 11.7
+      "ratio": 14.18
      },
      "ramp28": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#bdf6d9",
       "needs": 4.5,
-      "ratio": 12.17
+      "ratio": 14.75
      },
      "ramp29": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#c5f7ed",
       "needs": 4.5,
-      "ratio": 12.56
+      "ratio": 15.22
      },
      "ramp30": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#d7f6f9",
       "needs": 4.5,
-      "ratio": 12.93
+      "ratio": 15.68
      },
      "ramp31": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#ebf5fc",
       "needs": 4.5,
-      "ratio": 13.33
+      "ratio": 16.15
      },
      "violet": {
-      "bg": "#22273d",
+      "bg": "#0f172a",
       "declined": false,
       "fg": "#a36fff",
       "needs": 4.5,
-      "ratio": 4.4
+      "ratio": 5.33
      }
     },
     "div.num": {
@@ -9649,270 +9605,270 @@
     },
     "span": {
      "amber": {
-      "bg": "#f6a722",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f59e0b",
       "needs": 3.0,
-      "ratio": 2.01
+      "ratio": 8.31
      },
      "coastal": {
-      "bg": "#25819b",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#0e94b8",
       "needs": 3.0,
-      "ratio": 4.48
+      "ratio": 5.06
      },
      "demo_title": {
-      "bg": "#e03b3b",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#ff3d3d",
       "needs": 3.0,
-      "ratio": 4.32
+      "ratio": 5.09
      },
      "lime": {
-      "bg": "#90d12c",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#84cc16",
       "needs": 3.0,
-      "ratio": 1.85
+      "ratio": 9.04
      },
      "luxury_estates": {
-      "bg": "#249e93",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#0d9e91",
       "needs": 3.0,
-      "ratio": 3.29
+      "ratio": 5.37
      },
      "ramp00": {
-      "bg": "#612222",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#ff3a3a",
       "needs": 3.0,
-      "ratio": 11.93
+      "ratio": 5.03
      },
      "ramp01": {
-      "bg": "#783f26",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#ec5f1c",
       "needs": 3.0,
-      "ratio": 8.28
+      "ratio": 5.29
      },
      "ramp02": {
-      "bg": "#795926",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#c57d18",
       "needs": 3.0,
-      "ratio": 6.42
+      "ratio": 5.37
      },
      "ramp03": {
-      "bg": "#736d25",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#968a13",
       "needs": 3.0,
-      "ratio": 5.33
+      "ratio": 5.05
      },
      "ramp04": {
-      "bg": "#6a7c27",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#7a9614",
       "needs": 3.0,
-      "ratio": 4.64
+      "ratio": 5.27
      },
      "ramp05": {
-      "bg": "#588b29",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#559c15",
       "needs": 3.0,
-      "ratio": 4.09
+      "ratio": 5.23
      },
      "ramp06": {
-      "bg": "#3d962b",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#2f9f16",
       "needs": 3.0,
-      "ratio": 3.75
+      "ratio": 5.18
      },
      "ramp07": {
-      "bg": "#2b9f3a",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#169f27",
       "needs": 3.0,
-      "ratio": 3.43
+      "ratio": 5.12
      },
      "ramp08": {
-      "bg": "#2ca761",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#169d50",
       "needs": 3.0,
-      "ratio": 3.08
+      "ratio": 5.08
      },
      "ramp09": {
-      "bg": "#2dab8a",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#17a27d",
       "needs": 3.0,
-      "ratio": 2.88
+      "ratio": 5.53
      },
      "ramp10": {
-      "bg": "#2eafb3",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#18a6ab",
       "needs": 3.0,
-      "ratio": 2.66
+      "ratio": 6.02
      },
      "ramp11": {
-      "bg": "#44afe4",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#30a6e1",
       "needs": 3.0,
-      "ratio": 2.47
+      "ratio": 6.52
      },
      "ramp12": {
-      "bg": "#86abee",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#79a2ec",
       "needs": 3.0,
-      "ratio": 2.31
+      "ratio": 6.96
      },
      "ramp13": {
-      "bg": "#a6aaf2",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#9ca1f1",
       "needs": 3.0,
-      "ratio": 2.18
+      "ratio": 7.47
      },
      "ramp14": {
-      "bg": "#bcaaf3",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b5a1f2",
       "needs": 3.0,
-      "ratio": 2.06
+      "ratio": 7.94
      },
      "ramp15": {
-      "bg": "#d2a9f2",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#cda0f1",
       "needs": 3.0,
-      "ratio": 1.96
+      "ratio": 8.41
      },
      "ramp16": {
-      "bg": "#e8a7f2",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#e59ef1",
       "needs": 3.0,
-      "ratio": 1.87
+      "ratio": 8.92
      },
      "ramp17": {
-      "bg": "#f3abe8",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f2a2e5",
       "needs": 3.0,
-      "ratio": 1.78
+      "ratio": 9.42
      },
      "ramp18": {
-      "bg": "#f4b4d6",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f3acd2",
       "needs": 3.0,
-      "ratio": 1.7
+      "ratio": 9.9
      },
      "ramp19": {
-      "bg": "#f5bbc9",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f4b4c3",
       "needs": 3.0,
-      "ratio": 1.64
+      "ratio": 10.34
      },
      "ramp20": {
-      "bg": "#f6c3bf",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f5bcb8",
       "needs": 3.0,
-      "ratio": 1.56
+      "ratio": 10.85
      },
      "ramp21": {
-      "bg": "#f4cbb1",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f3c5a9",
       "needs": 3.0,
-      "ratio": 1.5
+      "ratio": 11.37
      },
      "ramp22": {
-      "bg": "#f1d397",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#efce8c",
       "needs": 3.0,
-      "ratio": 1.45
+      "ratio": 11.8
      },
      "ramp23": {
-      "bg": "#e3e03d",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#e0dc28",
       "needs": 3.0,
-      "ratio": 1.4
+      "ratio": 12.27
      },
      "ramp24": {
-      "bg": "#c8ea6f",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#c2e860",
       "needs": 3.0,
-      "ratio": 1.36
+      "ratio": 12.76
      },
      "ramp25": {
-      "bg": "#bbf096",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b4ee8b",
       "needs": 3.0,
-      "ratio": 1.31
+      "ratio": 13.21
      },
      "ramp26": {
-      "bg": "#b8f3af",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b0f2a7",
       "needs": 3.0,
-      "ratio": 1.27
+      "ratio": 13.69
      },
      "ramp27": {
-      "bg": "#bcf5c7",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b5f4c1",
       "needs": 3.0,
-      "ratio": 1.23
+      "ratio": 14.18
      },
      "ramp28": {
-      "bg": "#c4f7dd",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#bdf6d9",
       "needs": 3.0,
-      "ratio": 1.19
+      "ratio": 14.75
      },
      "ramp29": {
-      "bg": "#cbf8ef",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#c5f7ed",
       "needs": 3.0,
-      "ratio": 1.15
+      "ratio": 15.22
      },
      "ramp30": {
-      "bg": "#dbf7fa",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#d7f6f9",
       "needs": 3.0,
-      "ratio": 1.12
+      "ratio": 15.68
      },
      "ramp31": {
-      "bg": "#edf6fd",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#ebf5fc",
       "needs": 3.0,
-      "ratio": 1.09
+      "ratio": 16.15
      },
      "violet": {
-      "bg": "#894def",
-      "declined": true,
-      "fg": "#ffffff",
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#a36fff",
       "needs": 3.0,
-      "ratio": 4.8
+      "ratio": 5.33
      }
     },
     "span.pill": {
@@ -10462,6 +10418,7 @@
    "roles_used": [
     "theme_color",
     "theme_color_dark",
+    "theme_color_on_dark",
     "theme_color_on_light",
     "theme_color_text"
    ],
@@ -11270,540 +11227,272 @@
       "ratio": 5.33
      }
     },
-    "div.cover-agent-name": {
-     "amber": {
-      "bg": "#a66b07",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 4.44
-     },
-     "coastal": {
-      "bg": "#084d60",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 9.37
-     },
-     "demo_title": {
-      "bg": "#951919",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 8.64
-     },
-     "lime": {
-      "bg": "#58880e",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 4.25
-     },
-     "luxury_estates": {
-      "bg": "#08645c",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 7.03
-     },
-     "ramp00": {
-      "bg": "#360707",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 17.64
-     },
-     "ramp01": {
-      "bg": "#461c09",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 14.68
-     },
-     "ramp02": {
-      "bg": "#472f09",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 12.51
-     },
-     "ramp03": {
-      "bg": "#423d08",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 11.04
-     },
-     "ramp04": {
-      "bg": "#3c4a0b",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 9.65
-     },
-     "ramp05": {
-      "bg": "#2e540c",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 8.79
-     },
-     "ramp06": {
-      "bg": "#1b5c0d",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 8.13
-     },
-     "ramp07": {
-      "bg": "#0d6318",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 7.46
-     },
-     "ramp08": {
-      "bg": "#0e6835",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 6.88
-     },
-     "ramp09": {
-      "bg": "#0f6c53",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 6.38
-     },
-     "ramp10": {
-      "bg": "#107074",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 5.85
-     },
-     "ramp11": {
-      "bg": "#207098",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 5.48
-     },
-     "ramp12": {
-      "bg": "#516da0",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 5.19
-     },
-     "ramp13": {
-      "bg": "#6a6ca3",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 4.9
-     },
-     "ramp14": {
-      "bg": "#7a6ca4",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 4.66
-     },
-     "ramp15": {
-      "bg": "#8b6ca3",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 4.4
-     },
-     "ramp16": {
-      "bg": "#9b6ba3",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 4.18
-     },
-     "ramp17": {
-      "bg": "#a46d9b",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 4.01
-     },
-     "ramp18": {
-      "bg": "#a4748e",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 3.84
-     },
-     "ramp19": {
-      "bg": "#a57a84",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 3.67
-     },
-     "ramp20": {
-      "bg": "#a6807c",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 3.5
-     },
-     "ramp21": {
-      "bg": "#a48572",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 3.4
-     },
-     "ramp22": {
-      "bg": "#a28c5f",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 3.25
-     },
-     "ramp23": {
-      "bg": "#98951b",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 3.16
-     },
-     "ramp24": {
-      "bg": "#849d41",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 3.05
-     },
-     "ramp25": {
-      "bg": "#7aa15e",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 2.96
-     },
-     "ramp26": {
-      "bg": "#77a471",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 2.86
-     },
-     "ramp27": {
-      "bg": "#7aa583",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 2.79
-     },
-     "ramp28": {
-      "bg": "#80a793",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 2.67
-     },
-     "ramp29": {
-      "bg": "#85a8a0",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 2.59
-     },
-     "ramp30": {
-      "bg": "#92a7a8",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 2.53
-     },
-     "ramp31": {
-      "bg": "#a0a6ab",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 2.46
-     },
-     "violet": {
-      "bg": "#5427a0",
-      "declined": false,
-      "fg": "#ffffff",
-      "needs": 4.5,
-      "ratio": 9.66
-     }
-    },
     "div.cover-agent-title": {
      "amber": {
-      "bg": "#a56b08",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#f59e0b",
       "needs": 4.5,
-      "ratio": 3.08
+      "ratio": 8.31
      },
      "coastal": {
-      "bg": "#084c5f",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#0e94b8",
       "needs": 4.5,
-      "ratio": 6.55
+      "ratio": 5.06
      },
      "demo_title": {
-      "bg": "#941919",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#ff2929",
       "needs": 4.5,
-      "ratio": 6.0
+      "ratio": 4.76
      },
      "lime": {
-      "bg": "#598a0f",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#84cc16",
       "needs": 4.5,
-      "ratio": 2.86
+      "ratio": 9.04
      },
      "luxury_estates": {
-      "bg": "#08635b",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#0d9488",
       "needs": 4.5,
-      "ratio": 4.91
+      "ratio": 4.77
      },
      "ramp00": {
-      "bg": "#350707",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 12.22
-     },
-     "ramp01": {
-      "bg": "#451c09",
-      "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 10.17
-     },
-     "ramp02": {
-      "bg": "#48300a",
-      "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 8.5
-     },
-     "ramp03": {
-      "bg": "#443f09",
-      "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 7.38
-     },
-     "ramp04": {
-      "bg": "#3b480a",
-      "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 6.84
-     },
-     "ramp05": {
-      "bg": "#2f550c",
-      "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 5.97
-     },
-     "ramp06": {
-      "bg": "#1a5c0c",
-      "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 5.61
-     },
-     "ramp07": {
-      "bg": "#0e6418",
-      "declined": false,
-      "fg": "#e8d5a3",
-      "needs": 4.5,
-      "ratio": 5.07
-     },
-     "ramp08": {
-      "bg": "#0f6a36",
-      "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#ff1c1c",
       "needs": 4.5,
       "ratio": 4.62
      },
-     "ramp09": {
-      "bg": "#106d54",
+     "ramp01": {
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#e25b1b",
       "needs": 4.5,
-      "ratio": 4.34
+      "ratio": 4.88
+     },
+     "ramp02": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#bb7717",
+      "needs": 4.5,
+      "ratio": 4.9
+     },
+     "ramp03": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#968a13",
+      "needs": 4.5,
+      "ratio": 5.05
+     },
+     "ramp04": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#728c13",
+      "needs": 4.5,
+      "ratio": 4.66
+     },
+     "ramp05": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#509214",
+      "needs": 4.5,
+      "ratio": 4.64
+     },
+     "ramp06": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#2f9f16",
+      "needs": 4.5,
+      "ratio": 5.18
+     },
+     "ramp07": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#169f27",
+      "needs": 4.5,
+      "ratio": 5.12
+     },
+     "ramp08": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#169d50",
+      "needs": 4.5,
+      "ratio": 5.08
+     },
+     "ramp09": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#17a27d",
+      "needs": 4.5,
+      "ratio": 5.53
      },
      "ramp10": {
-      "bg": "#106f72",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#18a6ab",
       "needs": 4.5,
-      "ratio": 4.09
+      "ratio": 6.02
      },
      "ramp11": {
-      "bg": "#206f96",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#30a6e1",
       "needs": 4.5,
-      "ratio": 3.83
+      "ratio": 6.52
      },
      "ramp12": {
-      "bg": "#4f6a9c",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#79a2ec",
       "needs": 4.5,
-      "ratio": 3.74
+      "ratio": 6.96
      },
      "ramp13": {
-      "bg": "#686ba0",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#9ca1f1",
       "needs": 4.5,
-      "ratio": 3.45
+      "ratio": 7.47
      },
      "ramp14": {
-      "bg": "#786ba1",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#b5a1f2",
       "needs": 4.5,
-      "ratio": 3.28
+      "ratio": 7.94
      },
      "ramp15": {
-      "bg": "#886ba0",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#cda0f1",
       "needs": 4.5,
-      "ratio": 3.11
+      "ratio": 8.41
      },
      "ramp16": {
-      "bg": "#9869a0",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#e59ef1",
       "needs": 4.5,
-      "ratio": 2.98
+      "ratio": 8.92
      },
      "ramp17": {
-      "bg": "#a16c98",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#f2a2e5",
       "needs": 4.5,
-      "ratio": 2.83
+      "ratio": 9.42
      },
      "ramp18": {
-      "bg": "#a2738c",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#f3acd2",
       "needs": 4.5,
-      "ratio": 2.7
+      "ratio": 9.9
      },
      "ramp19": {
-      "bg": "#a37882",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#f4b4c3",
       "needs": 4.5,
-      "ratio": 2.6
+      "ratio": 10.34
      },
      "ramp20": {
-      "bg": "#a57f7c",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#f5bcb8",
       "needs": 4.5,
-      "ratio": 2.44
+      "ratio": 10.85
      },
      "ramp21": {
-      "bg": "#a0816f",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#f3c5a9",
       "needs": 4.5,
-      "ratio": 2.47
+      "ratio": 11.37
      },
      "ramp22": {
-      "bg": "#a0895d",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#efce8c",
       "needs": 4.5,
-      "ratio": 2.32
+      "ratio": 11.8
      },
      "ramp23": {
-      "bg": "#98941b",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#e0dc28",
       "needs": 4.5,
-      "ratio": 2.2
+      "ratio": 12.27
      },
      "ramp24": {
-      "bg": "#819b40",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#c2e860",
       "needs": 4.5,
-      "ratio": 2.16
+      "ratio": 12.76
      },
      "ramp25": {
-      "bg": "#789f5c",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#b4ee8b",
       "needs": 4.5,
-      "ratio": 2.09
+      "ratio": 13.21
      },
      "ramp26": {
-      "bg": "#75a170",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#b0f2a7",
       "needs": 4.5,
-      "ratio": 2.04
+      "ratio": 13.69
      },
      "ramp27": {
-      "bg": "#78a380",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#b5f4c1",
       "needs": 4.5,
-      "ratio": 1.97
+      "ratio": 14.18
      },
      "ramp28": {
-      "bg": "#7ea490",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#bdf6d9",
       "needs": 4.5,
-      "ratio": 1.9
+      "ratio": 14.75
      },
      "ramp29": {
-      "bg": "#85a7a0",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#c5f7ed",
       "needs": 4.5,
-      "ratio": 1.8
+      "ratio": 15.22
      },
      "ramp30": {
-      "bg": "#90a4a6",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#d7f6f9",
       "needs": 4.5,
-      "ratio": 1.8
+      "ratio": 15.68
      },
      "ramp31": {
-      "bg": "#9fa5aa",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#ebf5fc",
       "needs": 4.5,
-      "ratio": 1.72
+      "ratio": 16.15
      },
      "violet": {
-      "bg": "#5427a0",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#e8d5a3",
+      "fg": "#9d65ff",
       "needs": 4.5,
-      "ratio": 6.66
+      "ratio": 4.88
      }
     },
     "div.cover-brand-text": {
@@ -12076,25 +11765,25 @@
     },
     "div.cover-city": {
      "amber": {
-      "bg": "#d48809",
+      "bg": "#d38809",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 2.87
+      "ratio": 2.88
      },
      "coastal": {
-      "bg": "#0c647c",
+      "bg": "#0b647c",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
       "ratio": 6.71
      },
      "demo_title": {
-      "bg": "#bc2020",
+      "bg": "#be2020",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 6.24
+      "ratio": 6.15
      },
      "lime": {
       "bg": "#72b012",
@@ -12104,7 +11793,7 @@
       "ratio": 2.65
      },
      "luxury_estates": {
-      "bg": "#0b8075",
+      "bg": "#0a8075",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
@@ -12132,25 +11821,25 @@
       "ratio": 9.87
      },
      "ramp03": {
-      "bg": "#56500c",
+      "bg": "#56500b",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
       "ratio": 8.24
      },
      "ramp04": {
-      "bg": "#4d5f0e",
+      "bg": "#4d5f0d",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
       "ratio": 7.1
      },
      "ramp05": {
-      "bg": "#3c6d0f",
+      "bg": "#3c6c0f",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 6.2
+      "ratio": 6.28
      },
      "ramp06": {
       "bg": "#237811",
@@ -12174,11 +11863,11 @@
       "ratio": 4.59
      },
      "ramp09": {
-      "bg": "#138c6c",
+      "bg": "#138c6b",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 4.2
+      "ratio": 4.21
      },
      "ramp10": {
       "bg": "#148f94",
@@ -12244,18 +11933,18 @@
       "ratio": 2.41
      },
      "ramp19": {
-      "bg": "#d39ca8",
+      "bg": "#d19aa7",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 2.31
+      "ratio": 2.36
      },
      "ramp20": {
-      "bg": "#d1a19d",
+      "bg": "#d3a29f",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 2.26
+      "ratio": 2.22
      },
      "ramp21": {
       "bg": "#d2aa92",
@@ -12265,11 +11954,11 @@
       "ratio": 2.12
      },
      "ramp22": {
-      "bg": "#ccb078",
+      "bg": "#cfb279",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 2.09
+      "ratio": 2.04
      },
      "ramp23": {
       "bg": "#c2be22",
@@ -12286,18 +11975,18 @@
       "ratio": 1.89
      },
      "ramp25": {
-      "bg": "#9acb77",
+      "bg": "#9cce78",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 1.88
+      "ratio": 1.82
      },
      "ramp26": {
-      "bg": "#98d190",
+      "bg": "#96cf8f",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 1.77
+      "ratio": 1.81
      },
      "ramp27": {
       "bg": "#9cd3a6",
@@ -12307,32 +11996,32 @@
       "ratio": 1.71
      },
      "ramp28": {
-      "bg": "#a1d2b9",
+      "bg": "#a3d4bb",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 1.69
+      "ratio": 1.65
      },
      "ramp29": {
-      "bg": "#a8d3ca",
+      "bg": "#aad5cd",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 1.64
+      "ratio": 1.6
      },
      "ramp30": {
-      "bg": "#bad5d7",
+      "bg": "#bad4d7",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 1.55
+      "ratio": 1.56
      },
      "ramp31": {
-      "bg": "#cbd4da",
+      "bg": "#cbd3da",
       "declined": false,
       "fg": "#ffffff",
       "needs": 4.5,
-      "ratio": 1.5
+      "ratio": 1.51
      },
      "violet": {
       "bg": "#6b32cd",
@@ -12358,11 +12047,11 @@
       "ratio": 2.74
      },
      "demo_title": {
-      "bg": "#ca2323",
+      "bg": "#c92323",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
-      "ratio": 2.47
+      "ratio": 2.49
      },
      "lime": {
       "bg": "#79bb14",
@@ -12414,14 +12103,14 @@
       "ratio": 2.89
      },
      "ramp05": {
-      "bg": "#407311",
+      "bg": "#407310",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 2.54
      },
      "ramp06": {
-      "bg": "#257f13",
+      "bg": "#257f12",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
@@ -12470,88 +12159,88 @@
       "ratio": 1.35
      },
      "ramp13": {
-      "bg": "#8f93dd",
+      "bg": "#8f93dc",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
-      "ratio": 1.26
+      "ratio": 1.27
      },
      "ramp14": {
-      "bg": "#a693de",
+      "bg": "#a593dd",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.19
      },
      "ramp15": {
-      "bg": "#bc93dd",
+      "bg": "#bb93dc",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.12
      },
      "ramp16": {
-      "bg": "#d291dd",
+      "bg": "#d191dc",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.06
      },
      "ramp17": {
-      "bg": "#de94d2",
+      "bg": "#dd94d1",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.01
      },
      "ramp18": {
-      "bg": "#df9ec0",
+      "bg": "#de9ec0",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.05
      },
      "ramp19": {
-      "bg": "#e0a5b3",
+      "bg": "#dfa5b2",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.09
      },
      "ramp20": {
-      "bg": "#e0aca9",
+      "bg": "#e0aca8",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.14
      },
      "ramp21": {
-      "bg": "#dfb49b",
+      "bg": "#deb49b",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
       "ratio": 1.19
      },
      "ramp22": {
-      "bg": "#dbbd80",
+      "bg": "#dbbc80",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
-      "ratio": 1.24
+      "ratio": 1.23
      },
      "ramp23": {
-      "bg": "#cdca25",
+      "bg": "#cdc925",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
-      "ratio": 1.29
+      "ratio": 1.28
      },
      "ramp24": {
-      "bg": "#b2d558",
+      "bg": "#b1d458",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
-      "ratio": 1.34
+      "ratio": 1.33
      },
      "ramp25": {
       "bg": "#a5da7f",
@@ -12561,21 +12250,21 @@
       "ratio": 1.39
      },
      "ramp26": {
-      "bg": "#a1de99",
+      "bg": "#a1dd99",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
-      "ratio": 1.44
+      "ratio": 1.43
      },
      "ramp27": {
-      "bg": "#a6e0b1",
+      "bg": "#a5dfb0",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
-      "ratio": 1.49
+      "ratio": 1.48
      },
      "ramp28": {
-      "bg": "#ade1c7",
+      "bg": "#ade1c6",
       "declined": false,
       "fg": "#c9a962",
       "needs": 4.5,
@@ -12612,286 +12301,286 @@
     },
     "div.cover-logo": {
      "amber": {
-      "bg": "#986107",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#c9a962",
+      "fg": "#f59e0b",
       "needs": 3.0,
-      "ratio": 2.31
+      "ratio": 8.31
      },
      "coastal": {
-      "bg": "#084758",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#c9a962",
+      "fg": "#0e94b8",
       "needs": 3.0,
-      "ratio": 4.55
+      "ratio": 5.06
      },
      "demo_title": {
-      "bg": "#881717",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#c9a962",
+      "fg": "#ff2929",
       "needs": 3.0,
-      "ratio": 4.28
+      "ratio": 4.76
      },
      "lime": {
-      "bg": "#527f0d",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#c9a962",
+      "fg": "#84cc16",
       "needs": 3.0,
-      "ratio": 2.12
+      "ratio": 9.04
      },
      "luxury_estates": {
-      "bg": "#085c54",
+      "bg": "#0f172a",
       "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 3.5
-     },
-     "ramp00": {
-      "bg": "#310707",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 8.02
-     },
-     "ramp01": {
-      "bg": "#411a09",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 6.78
-     },
-     "ramp02": {
-      "bg": "#422c09",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 5.85
-     },
-     "ramp03": {
-      "bg": "#3d3808",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 5.28
-     },
-     "ramp04": {
-      "bg": "#374309",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 4.74
-     },
-     "ramp05": {
-      "bg": "#2a4d0a",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 4.31
-     },
-     "ramp06": {
-      "bg": "#18550c",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 3.98
-     },
-     "ramp07": {
-      "bg": "#0c5b16",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 3.7
-     },
-     "ramp08": {
-      "bg": "#0d6031",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 3.41
-     },
-     "ramp09": {
-      "bg": "#0e644c",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 3.17
-     },
-     "ramp10": {
-      "bg": "#0e6669",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.99
-     },
-     "ramp11": {
-      "bg": "#1d668a",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.81
-     },
-     "ramp12": {
-      "bg": "#4a6491",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.65
-     },
-     "ramp13": {
-      "bg": "#606394",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.52
-     },
-     "ramp14": {
-      "bg": "#6f6394",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.4
-     },
-     "ramp15": {
-      "bg": "#7e6394",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.28
-     },
-     "ramp16": {
-      "bg": "#8c6094",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.21
-     },
-     "ramp17": {
-      "bg": "#94648c",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.09
-     },
-     "ramp18": {
-      "bg": "#956a81",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 2.0
-     },
-     "ramp19": {
-      "bg": "#966f78",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.93
-     },
-     "ramp20": {
-      "bg": "#977471",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.85
-     },
-     "ramp21": {
-      "bg": "#957868",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.81
-     },
-     "ramp22": {
-      "bg": "#937f56",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.73
-     },
-     "ramp23": {
-      "bg": "#8a8818",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.66
-     },
-     "ramp24": {
-      "bg": "#778f3b",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.62
-     },
-     "ramp25": {
-      "bg": "#6f9255",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.58
-     },
-     "ramp26": {
-      "bg": "#6c9467",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.54
-     },
-     "ramp27": {
-      "bg": "#6f9676",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.48
-     },
-     "ramp28": {
-      "bg": "#749885",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.42
-     },
-     "ramp29": {
-      "bg": "#789891",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.39
-     },
-     "ramp30": {
-      "bg": "#849899",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.35
-     },
-     "ramp31": {
-      "bg": "#90979c",
-      "declined": false,
-      "fg": "#c9a962",
-      "needs": 3.0,
-      "ratio": 1.32
-     },
-     "violet": {
-      "bg": "#4c2391",
-      "declined": false,
-      "fg": "#c9a962",
+      "fg": "#0d9488",
       "needs": 3.0,
       "ratio": 4.77
+     },
+     "ramp00": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#ff1c1c",
+      "needs": 3.0,
+      "ratio": 4.62
+     },
+     "ramp01": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#e25b1b",
+      "needs": 3.0,
+      "ratio": 4.88
+     },
+     "ramp02": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#bb7717",
+      "needs": 3.0,
+      "ratio": 4.9
+     },
+     "ramp03": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#968a13",
+      "needs": 3.0,
+      "ratio": 5.05
+     },
+     "ramp04": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#728c13",
+      "needs": 3.0,
+      "ratio": 4.66
+     },
+     "ramp05": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#509214",
+      "needs": 3.0,
+      "ratio": 4.64
+     },
+     "ramp06": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#2f9f16",
+      "needs": 3.0,
+      "ratio": 5.18
+     },
+     "ramp07": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#169f27",
+      "needs": 3.0,
+      "ratio": 5.12
+     },
+     "ramp08": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#169d50",
+      "needs": 3.0,
+      "ratio": 5.08
+     },
+     "ramp09": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#17a27d",
+      "needs": 3.0,
+      "ratio": 5.53
+     },
+     "ramp10": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#18a6ab",
+      "needs": 3.0,
+      "ratio": 6.02
+     },
+     "ramp11": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#30a6e1",
+      "needs": 3.0,
+      "ratio": 6.52
+     },
+     "ramp12": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#79a2ec",
+      "needs": 3.0,
+      "ratio": 6.96
+     },
+     "ramp13": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#9ca1f1",
+      "needs": 3.0,
+      "ratio": 7.47
+     },
+     "ramp14": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b5a1f2",
+      "needs": 3.0,
+      "ratio": 7.94
+     },
+     "ramp15": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#cda0f1",
+      "needs": 3.0,
+      "ratio": 8.41
+     },
+     "ramp16": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#e59ef1",
+      "needs": 3.0,
+      "ratio": 8.92
+     },
+     "ramp17": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f2a2e5",
+      "needs": 3.0,
+      "ratio": 9.42
+     },
+     "ramp18": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f3acd2",
+      "needs": 3.0,
+      "ratio": 9.9
+     },
+     "ramp19": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f4b4c3",
+      "needs": 3.0,
+      "ratio": 10.34
+     },
+     "ramp20": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f5bcb8",
+      "needs": 3.0,
+      "ratio": 10.85
+     },
+     "ramp21": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#f3c5a9",
+      "needs": 3.0,
+      "ratio": 11.37
+     },
+     "ramp22": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#efce8c",
+      "needs": 3.0,
+      "ratio": 11.8
+     },
+     "ramp23": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#e0dc28",
+      "needs": 3.0,
+      "ratio": 12.27
+     },
+     "ramp24": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#c2e860",
+      "needs": 3.0,
+      "ratio": 12.76
+     },
+     "ramp25": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b4ee8b",
+      "needs": 3.0,
+      "ratio": 13.21
+     },
+     "ramp26": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b0f2a7",
+      "needs": 3.0,
+      "ratio": 13.69
+     },
+     "ramp27": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#b5f4c1",
+      "needs": 3.0,
+      "ratio": 14.18
+     },
+     "ramp28": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#bdf6d9",
+      "needs": 3.0,
+      "ratio": 14.75
+     },
+     "ramp29": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#c5f7ed",
+      "needs": 3.0,
+      "ratio": 15.22
+     },
+     "ramp30": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#d7f6f9",
+      "needs": 3.0,
+      "ratio": 15.68
+     },
+     "ramp31": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#ebf5fc",
+      "needs": 3.0,
+      "ratio": 16.15
+     },
+     "violet": {
+      "bg": "#0f172a",
+      "declined": false,
+      "fg": "#9d65ff",
+      "needs": 3.0,
+      "ratio": 4.88
      }
     },
     "div.cover-street": {
      "amber": {
-      "bg": "#d68a09",
+      "bg": "#d78b0a",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.8
+      "ratio": 2.77
      },
      "coastal": {
-      "bg": "#0c667e",
+      "bg": "#0c667f",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 6.53
+      "ratio": 6.52
      },
      "demo_title": {
       "bg": "#c12121",
@@ -12908,7 +12597,7 @@
       "ratio": 2.56
      },
      "luxury_estates": {
-      "bg": "#0b8277",
+      "bg": "#0b8278",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
@@ -12922,81 +12611,81 @@
       "ratio": 16.2
      },
      "ramp01": {
-      "bg": "#5b250d",
+      "bg": "#5d260d",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 12.24
+      "ratio": 12.01
      },
      "ramp02": {
-      "bg": "#5c3d0d",
+      "bg": "#5e3f0d",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 9.87
+      "ratio": 9.58
      },
      "ramp03": {
-      "bg": "#58510c",
+      "bg": "#58520c",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 8.09
+      "ratio": 7.99
      },
      "ramp04": {
-      "bg": "#4f600e",
+      "bg": "#4f610e",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 6.97
+      "ratio": 6.89
      },
      "ramp05": {
-      "bg": "#3d6e0f",
+      "bg": "#3e6f10",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 6.11
+      "ratio": 6.02
      },
      "ramp06": {
-      "bg": "#237a11",
+      "bg": "#247a12",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 5.44
+      "ratio": 5.43
      },
      "ramp07": {
-      "bg": "#128220",
+      "bg": "#128320",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 4.95
+      "ratio": 4.89
      },
      "ramp08": {
-      "bg": "#138946",
+      "bg": "#138a47",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 4.47
+      "ratio": 4.42
      },
      "ramp09": {
-      "bg": "#148e6d",
+      "bg": "#148e6e",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
       "ratio": 4.1
      },
      "ramp10": {
-      "bg": "#159196",
+      "bg": "#159296",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 3.8
+      "ratio": 3.76
      },
      "ramp11": {
-      "bg": "#2a91c5",
+      "bg": "#2b92c5",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 3.53
+      "ratio": 3.49
      },
      "ramp12": {
       "bg": "#6a8ecf",
@@ -13006,35 +12695,35 @@
       "ratio": 3.29
      },
      "ramp13": {
-      "bg": "#898dd3",
+      "bg": "#8589cd",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 3.08
+      "ratio": 3.25
      },
      "ramp14": {
-      "bg": "#9e8dd4",
+      "bg": "#9a89ce",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.91
+      "ratio": 3.07
      },
      "ramp15": {
-      "bg": "#b38cd3",
+      "bg": "#b48dd3",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.76
+      "ratio": 2.73
      },
      "ramp16": {
-      "bg": "#c88ad3",
+      "bg": "#c98bd3",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.61
+      "ratio": 2.59
      },
      "ramp17": {
-      "bg": "#d48ec8",
+      "bg": "#d48ec9",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
@@ -13055,95 +12744,95 @@
       "ratio": 2.25
      },
      "ramp20": {
-      "bg": "#d6a5a1",
+      "bg": "#d7a5a2",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.15
+      "ratio": 2.14
      },
      "ramp21": {
-      "bg": "#d5ac94",
+      "bg": "#d5ad94",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.07
+      "ratio": 2.05
      },
      "ramp22": {
-      "bg": "#d1b47b",
+      "bg": "#d2b57b",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.0
+      "ratio": 1.97
      },
      "ramp23": {
-      "bg": "#c4c123",
+      "bg": "#c5c123",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.91
+      "ratio": 1.9
      },
      "ramp24": {
-      "bg": "#aacb54",
+      "bg": "#aacc55",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.85
+      "ratio": 1.83
      },
      "ramp25": {
-      "bg": "#9ed07a",
+      "bg": "#9ed17a",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.79
+      "ratio": 1.77
      },
      "ramp26": {
-      "bg": "#9ad492",
+      "bg": "#9ad493",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
       "ratio": 1.72
      },
      "ramp27": {
-      "bg": "#9ed6a9",
+      "bg": "#9ad0a4",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.66
+      "ratio": 1.76
      },
      "ramp28": {
-      "bg": "#a5d7be",
+      "bg": "#a6d8be",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.61
+      "ratio": 1.59
      },
      "ramp29": {
-      "bg": "#acd8cf",
+      "bg": "#add9d0",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.56
+      "ratio": 1.54
      },
      "ramp30": {
-      "bg": "#bcd7da",
+      "bg": "#bdd8da",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.51
+      "ratio": 1.5
      },
      "ramp31": {
-      "bg": "#ced6dd",
+      "bg": "#ced7dd",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.47
+      "ratio": 1.46
      },
      "violet": {
-      "bg": "#6d33cf",
+      "bg": "#6d33d0",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 6.94
+      "ratio": 6.92
      }
     },
     "div.num": {
@@ -14516,11 +14205,11 @@
       "ratio": 2.43
      },
      "luxury_estates": {
-      "bg": "#0c867b",
+      "bg": "#0c857b",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 4.46
+      "ratio": 4.51
      },
      "ramp00": {
       "bg": "#480a0a",
@@ -14544,11 +14233,11 @@
       "ratio": 9.39
      },
      "ramp03": {
-      "bg": "#59530c",
+      "bg": "#5a540d",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 7.87
+      "ratio": 7.75
      },
      "ramp04": {
       "bg": "#50620e",
@@ -14565,11 +14254,11 @@
       "ratio": 5.86
      },
      "ramp06": {
-      "bg": "#247c12",
+      "bg": "#247b12",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 5.29
+      "ratio": 5.36
      },
      "ramp07": {
       "bg": "#138621",
@@ -14593,18 +14282,18 @@
       "ratio": 3.91
      },
      "ramp10": {
-      "bg": "#16969a",
+      "bg": "#16959a",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 3.58
+      "ratio": 3.62
      },
      "ramp11": {
-      "bg": "#2b96cb",
+      "bg": "#2b95cb",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 3.32
+      "ratio": 3.35
      },
      "ramp12": {
       "bg": "#6d92d5",
@@ -14663,11 +14352,11 @@
       "ratio": 2.13
      },
      "ramp20": {
-      "bg": "#ddaaa6",
+      "bg": "#dda9a6",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 2.02
+      "ratio": 2.04
      },
      "ramp21": {
       "bg": "#dbb198",
@@ -14705,11 +14394,11 @@
       "ratio": 1.69
      },
      "ramp26": {
-      "bg": "#9eda97",
+      "bg": "#9eda96",
       "declined": false,
       "fg": "#ffffff",
       "needs": 3.0,
-      "ratio": 1.62
+      "ratio": 1.63
      },
      "ramp27": {
       "bg": "#a3dcae",

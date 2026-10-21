@@ -62,7 +62,7 @@ to 3 and asks Design which five to give up.
 |---|---|
 | market baseline, 2026-10-07 | 6 |
 | market baseline now | **0** |
-| property baseline | 55 (elegant 36, modern 19, bold 0) |
+| property baseline | 43 (linen 29, harbor 14, atlas 0) — was 55; D-205/D-206 retired 12 on 2026-10-21 |
 
 **Zero baselined contrast failures on the market surface**, across 5,058 measured text runs, six brand
 colours and eight report types. Held by
