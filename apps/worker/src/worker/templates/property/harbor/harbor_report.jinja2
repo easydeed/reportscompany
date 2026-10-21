@@ -8,9 +8,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    {# One literal per ground — see linen for why. #}
+    {% set brand = theme_color | default('#FF6B5B', true) %}
+    {% set g_ghost = '#F1F5F9' %}
+    {% set g_panel = '#2b3045' %}
     :root {
       /* Primary accent color - can be overridden by theme_color */
-      --coral:{{ theme_color | default('#FF6B5B', true) }};
+      --coral:{{ brand }};
       --coral-light:{{ theme_color_light | default('#ff9e94', true) }};
       --coral-dark:{{ theme_color_dark | default('#bf5044', true) }};
       --coral-on-dark:{{ theme_color_on_dark | default('#FF6B5B', true) }};
@@ -27,7 +31,14 @@
          from fine to 2.24:1. ONE TOKEN, TWO GROUNDS, ONE MEASUREMENT — which is
          the same error as the brand plate, two days running. */
       --muted:#5E636B;
-      --ghost:#F1F5F9; --pure:#FFFFFF;
+      --ghost:{{ g_ghost }}; --pure:#FFFFFF;
+      /* D-177, one surface over — see linen for the measurement. `--coral-on-light`
+         is derived against white; 14 of 38 brands fail it on `--ghost`. */
+      --coral-on-ghost:{{ brand | ink_on(g_ghost) }};
+      /* The mid-dark panel behind `h3`. `--coral-on-dark` is derived against
+         `#18235c` and this is `#2b3045`, lighter, so 15 of 38 brands fail there;
+         derived against the actual ground, none do. */
+      --coral-on-panel:{{ brand | ink_on_dark(g_panel) }};
       --gradient-coral:linear-gradient(135deg, {{ theme_color | default('#FF6B5B', true) }} 0%, {{ theme_color_light | default('#FF8A7D', true) }} 50%, #FFB199 100%);
       /* D-206 / Design 2026-10-21: the ground under the cover title is FLAT and
          FIXED, never derived. `--ink` is the value Design named; `--gradient-dark`
@@ -49,7 +60,7 @@
     .page:last-child{page-break-after:auto; margin-bottom:0;}
     .page.cover{padding-top:0;}
     .font-display{font-family:'Space Grotesk',sans-serif;}
-    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:var(--ghost); border-radius:100px; font-size:12px; font-weight:600; color:var(--coral-on-light); text-transform:uppercase; letter-spacing:0.1em;}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:var(--ghost); border-radius:100px; font-size:12px; font-weight:600; color:var(--coral-on-ghost); text-transform:uppercase; letter-spacing:0.1em;}
     .pill-dark{background:var(--midnight); color:var(--pure);}
 
     /* COVER */
@@ -107,7 +118,7 @@
     .contents-right{flex:1; background:var(--ghost); border-radius:24px; padding:40px; display:flex; flex-direction:column; justify-content:center;}
     .contents-item{display:flex; align-items:center; padding:20px 0; border-bottom:1px solid rgba(26,31,54,0.08);}
     .contents-item:last-child{border-bottom:none;}
-    .contents-num{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:var(--coral-on-light); width:40px;}
+    .contents-num{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:700; color:var(--coral-on-ghost); width:40px;}
     .contents-text{flex:1; font-size:15px; font-weight:500; color:var(--midnight);}
     .contents-page{font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:700; color:var(--slate); background:var(--pure); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center;}
 
@@ -121,7 +132,7 @@
     .aerial-map-pin::after{content:''; width:16px; height:16px; background:var(--pure); border-radius:50%;}
     .aerial-cards{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
     .aerial-card{background:rgba(255,255,255,0.08); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:20px;}
-    .aerial-card h3{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--coral-on-dark); margin-bottom:8px;}
+    .aerial-card h3{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--coral-on-panel); margin-bottom:8px;}
     .aerial-card p{font-size:13px; line-height:1.6; color:rgba(255,255,255,0.8);}
 
     /* PROPERTY */
@@ -187,7 +198,8 @@
     .range-slider{background:var(--ghost); border-radius:20px; padding:30px;}
     .range-slider-header{display:flex; justify-content:space-between; margin-bottom:20px;}
     .range-slider-price{font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:var(--midnight);}
-    .range-slider-price.low{color:var(--coral);}
+    /* The raw brand on `--ghost` fails for 25 of 38; derived against it. */
+    .range-slider-price.low{color:var(--coral-on-ghost);}
     .range-slider-track{height:12px; background:linear-gradient(90deg,var(--coral) 0%,var(--coral-light) 50%,var(--ghost) 100%); border-radius:6px; position:relative; margin-bottom:24px;}
     .range-slider-dot{width:24px; height:24px; background:var(--pure); border:4px solid var(--coral); border-radius:50%; position:absolute; top:50%; transform:translate(-50%,-50%); box-shadow:0 4px 12px rgba(255,107,91,0.3);}
     .range-note{font-size:13px; line-height:1.7; color:var(--slate); text-align:center;}

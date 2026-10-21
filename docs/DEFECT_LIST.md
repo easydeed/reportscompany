@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 69 | Real, unfixed |
-| `fixed` | 131 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 70 | Real, unfixed |
+| `fixed` | 132 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **207** | D-001 … D-207, contiguous, no duplicates |
+| **Total** | **209** | D-001 … D-209, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 20 · ROUGH 24. (Sums to 69, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 21 · ROUGH 24. (Sums to 70, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -14417,6 +14417,108 @@ Not done, and worth considering: a gate asserting that a Design-facing document 
 either uses the live name or carries the mapping box. `test_no_live_code_path_names_a_retired_theme`
 already does this for code — `docs/` is not code, and a stale name in a handover costs a round trip
 rather than a wrong render, which is why this is ROUGH.
+
+---
+
+### D-208 — `theme_color_on_light` is derived against white and the role table uses it on four grounds
+
+**Severity:** WRONG · **Affects:** brand-coloured text on every tinted panel of both self-contained
+property themes — up to 34 of 38 brands on one ground · **Found during:** scoping what remained
+after D-205's cover fix
+**Status:** `fixed` — `fix/ink-on-tint`, 2026-10-21
+
+**This is D-177 on the surface its fix did not reach.** That entry's own sentence: *"accent_ink was
+guaranteed on white and used on a tint."* It was fixed on the market templates on 2026-10-07 and
+the two self-contained property themes were never visited.
+
+`theme_color_on_light` darkens the brand until it clears AA **against `#ffffff`**. The property
+colour-role table says `primary_ink` covers *"all brand-coloured text on white/**tint**"* — four
+grounds, one derivation. Measured over 38 brands:
+
+| ground | worst | brands failing |
+|---|---|---|
+| `#ffffff` white | 4.60 | **0 of 38** |
+| `#faf7f2` linen cream | 4.30 | 6 |
+| `#f1f5f9` harbor ghost | 4.20 | 14 |
+| `#f0ebe3` linen cream-dark | — | **30** |
+| `#e8d5a3` linen gold-light | 3.17 | **34** |
+
+And one more in the other direction: `theme_color_on_dark` is derived against `#18235c`, while
+`harbor`'s `.aerial-card h3` sits on `#2b3045`, which is lighter — **15 of 38 fail there**.
+
+#### Fixed with the function D-177 left behind
+
+`ink_on(colour, background)` has been in `property_builder.py` since D-112, and
+`market_builder.py` has used it as `accent_on_tint` since D-177. It was never exposed to the
+property templates. It is now a **Jinja filter**, with `_ensure_readable_on_dark` as its
+counterpart:
+
+    color: {{ brand | ink_on(g_cream) }};
+    color: {{ brand | ink_on_dark(g_panel) }};
+
+**A filter rather than more roles, because the ground is declared in the template and nowhere
+else.** `theme_color_on_cream` in the builder would put one template's neutral into the builder's
+vocabulary, and the next ground would need another.
+
+Per-ground inks, each declared next to the neutral it is derived from: `--burgundy-on-cream`,
+`--burgundy-on-cream-dark`, `--burgundy-on-gold`, `--coral-on-ghost`, `--coral-on-panel`. **All of
+them clear 4.5 for all 38 brands.** Contrast baseline **38 rows → 29**.
+
+#### Two things learned on the way, both the same mistake
+
+**1. The footer number is not always on cream.** Pointing `.page-footer .num` at
+`--burgundy-on-cream` measured **4.48:1** on one page's `#fef4f4` — missing by 0.02, because the
+footer repeats on pages whose background is a faint brand tint. **Picking the ground from the
+token's name instead of from the measurement**, which is the plate and `--silver` for the third
+time in two days.
+
+The fix is an argument rather than another measurement: `ink_on` returns a **darkened** ink, and a
+dark ink's contrast only rises as the ground lightens, so an ink that clears the **darkest** paper
+tone the template declares clears every lighter one. Everything on an unknown paper ground now
+takes `--burgundy-on-cream-dark`, and that covers `#faf7f2`, `#fef4f4` and `#ffffff` by
+monotonicity rather than by enumeration.
+
+**2. The grounds had to be single-sourced before the lint would accept them.** Passing the hex
+straight to `ink_on('#FAF7F2')` put a second copy of each ground on a **brand-role line**, and the
+colour lint flagged **eighteen new literals** — correctly: a ground is not a brand value, and the
+answer is one source rather than eighteen annotations. Each ground is now a `{% set %}` used twice,
+once to declare the neutral and once to derive the ink, and the brand's `default(...)` fallback
+appears once per template instead of once per role. Lint: **0 new, 0 stale**.
+
+---
+
+### D-209 — the property colour-role table names one muted value and `harbor` declares four greys
+
+**Severity:** FRAGILE · **Affects:** nothing today; it is the condition that produced two
+collisions already · **Found during:** fixing `div.brand`, when redefining one grey broke another
+surface
+**Status:** `open`
+
+`harbor_report.jinja2` declares **four** neutral greys — `--midnight #1A1F36`, `--slate #4A5568`,
+`--silver #94A3B8`, `--muted #5E636B` — against a role table that names **one** muted value
+(`#5E636B`, *"the lightest text colour on the surface"*).
+
+**That is not a tidiness complaint. It has already cost two surfaces.** `--silver` served text on
+white (the page footer, **2.56:1**, failing) *and* text on the dark cover panel (`.cover-city`,
+where a light grey is correct). Redefining it to the role table's value fixed the footer and took
+`.cover-city` from fine to **2.24:1** — one token, two grounds, one measurement. The resolution was
+to add `--muted` as a fourth grey, which fixes the instance and **widens the condition**.
+
+#### Why it is FRAGILE and not ROUGH
+
+Nothing is failing now; the sweep is clean on every grey. What is fragile is that four greys with
+overlapping purposes and no stated ground mean **the next person to adjust one cannot tell which
+surfaces they are adjusting** — which is exactly how this one went wrong, with the measurement in
+hand.
+
+#### What closing it looks like
+
+Audit every `--silver` and `--slate` use for the ground behind it, split them by ground rather than
+by shade, and reduce to the role table's vocabulary — one muted value for light grounds and one for
+dark, named for the ground and not for the colour. Thirty-odd call sites across the two
+self-contained themes. **Not taken with the contrast fix** because it is a rename across two files
+with no failing surface to measure against, which is a different kind of change from the one that
+found it.
 
 ---
 

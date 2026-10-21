@@ -888,6 +888,28 @@ class PropertyReportBuilder:
         self.env.filters['format_number'] = _fmt_number
         self.env.filters['format_measure'] = _fmt_measure
         self.env.filters['truncate'] = _truncate_fn
+
+        # D-177, ONE SURFACE OVER. `theme_color_on_light` is derived against
+        # `#ffffff` and the property colour-role table uses it for "brand-coloured
+        # text on white/tint" — four grounds, one derivation. Measured over 38
+        # brands it clears 4.5 on white for all of them and fails on every tint:
+        # 6 of 38 on linen's cream, 14 on harbor's ghost, 34 on gold-light.
+        #
+        # That is D-177's own sentence ("accent_ink was guaranteed on white and
+        # used on a tint") on the surface its fix did not reach. The remedy is
+        # the function it left behind.
+        #
+        # EXPOSED AS A FILTER RATHER THAN AS MORE ROLES, because the ground is
+        # declared in the template and nowhere else. `theme_color_on_cream` in
+        # this file would put one template's neutral into the builder's
+        # vocabulary, and the next ground would need another.
+        #
+        #     color: {{ theme_color | ink_on('#FAF7F2') }};
+        self.env.filters['ink_on'] = ink_on
+        # And the counterpart for a DARK ground. `theme_color_on_dark` is derived
+        # against `#18235c`; harbor's `h3` sits on `#2b3045`, which is lighter, so
+        # 15 of 38 brands fail there. Same defect, same remedy, other direction.
+        self.env.filters['ink_on_dark'] = _ensure_readable_on_dark
         
     @staticmethod
     def _format_currency(value: Any) -> str:
