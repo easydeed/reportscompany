@@ -19,6 +19,10 @@
       --midnight:#1A1F36; --slate:#4A5568; --silver:#94A3B8;
       --ghost:#F1F5F9; --pure:#FFFFFF;
       --gradient-coral:linear-gradient(135deg, {{ theme_color | default('#FF6B5B', true) }} 0%, {{ theme_color_light | default('#FF8A7D', true) }} 50%, #FFB199 100%);
+      /* D-206 / Design 2026-10-21: the ground under the cover title is FLAT and
+         FIXED, never derived. `--ink` is the value Design named; `--gradient-dark`
+         is kept because nothing else should start using it. */
+      --ink:#0f172a;
       --gradient-dark:linear-gradient(135deg, #1A1F36 0%, #2D3348 100%);
       --page-w:8.5in; --page-h:11in; --pad:0.55in;
       --radius:20px; --shadow:0 20px 60px rgba(26,31,54,0.15);
@@ -40,16 +44,30 @@
 
     /* COVER */
     .cover{background:var(--pure); display:grid; grid-template-columns:1fr 1fr; overflow:hidden;}
-    .cover-left{background:var(--gradient-dark); padding:0.6in; display:flex; flex-direction:column; position:relative; overflow:hidden;}
-    .cover-left::before{content:''; position:absolute; width:400px; height:400px; background:var(--coral); border-radius:50%; bottom:-200px; left:-100px; opacity:0.1;}
-    .cover-left::after{content:''; position:absolute; width:200px; height:200px; background:var(--coral); border-radius:50%; top:100px; right:-100px; opacity:0.08;}
+    /* D-206. The panel carrying the title is flat `--ink`, not a gradient, and the
+       two 10%-opacity brand circles that used to sit behind the glyphs are gone.
+       Design, 2026-10-21: "move them so no glyph overlaps one, or drop them. Don't
+       measure around them." Dropping is taken rather than moving, because moving a
+       400px circle inside an overflow-hidden panel is a composition change and
+       dropping is not. Design permitted the gradient to stay elsewhere on the
+       cover; flattening the whole panel is taken instead of building a flat plate
+       under the title, because a plate needs padding and a radius that nobody
+       specified. */
+    .cover-left{background:var(--ink); padding:0.6in; display:flex; flex-direction:column; position:relative; overflow:hidden;}
     .cover-brand{display:flex; align-items:center; gap:12px; margin-bottom:auto;}
     .cover-brand-dot{width:12px; height:12px; background:var(--coral); border-radius:50%;}
     .cover-brand-text{font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600; color:var(--pure); letter-spacing:0.05em;}
     .cover-title-area{margin:auto 0; position:relative; z-index:2;}
     .cover-label{font-size:12px; font-weight:600; color:var(--coral-on-dark); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:16px;}
     .cover-title{font-family:'Space Grotesk',sans-serif; font-size:56px; font-weight:700; color:var(--pure); line-height:1.05; margin-bottom:24px;}
-    .cover-title span{display:block; background:var(--gradient-coral); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;}
+    /* D-206. SOLID, not a gradient clipped to the glyphs. Design, 2026-10-21:
+       "No gradient clipped to type, anywhere, in any theme — a gradient under or
+       inside text has no single contrast value and so is not a text surface."
+       `--coral-on-dark` is `primary_on_dark`: the brand brightened only as far as
+       it needs to be to clear 4.5 on `--ink`. It is also MEASURABLE, which the
+       clipped gradient was not — so this surface rejoins the contrast gate
+       instead of being declined by it. */
+    .cover-title span{display:block; color:var(--coral-on-dark);}
     .cover-address-box{background:rgba(255,255,255,0.1); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15); border-radius:16px; padding:20px;}
     .cover-street{font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:600; color:var(--pure); margin-bottom:6px;}
     .cover-city{font-size:14px; color:var(--silver);}

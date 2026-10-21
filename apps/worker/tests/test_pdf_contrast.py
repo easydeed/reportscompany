@@ -531,7 +531,16 @@ def test_the_reverse_check_still_reports_a_genuinely_fixed_entry():
 #: A COUNT, BECAUSE A BLIND SPOT NOBODY CAN SEE THE SIZE OF IS THE THING THIS
 #: REPO KEEPS FILING. One known element is a footnote on the 215. Several
 #: would be an asterisk on it, and the difference must not arrive silently.
-EXPECTED_DECLINED = 1
+#:
+#: ZERO SINCE 2026-10-21, AND THAT IS THE FIX RATHER THAN A WIDENING. D-206: the
+#: one element here was `harbor`'s cover title, painted by a gradient clipped to
+#: the glyphs. Design ruled that no gradient may carry text in any theme, the
+#: title is now a solid `primary_on_dark`, and solid type is MEASURABLE — so the
+#: surface rejoined this gate instead of being excused from it.
+#:
+#: The count stays asserted. A new declined element means a template has added
+#: gradient text against that rule, and it should arrive as a failure here.
+EXPECTED_DECLINED = 0
 
 
 def test_the_measurer_declines_what_it_cannot_read(measured):
@@ -562,9 +571,19 @@ def test_the_measurer_declines_what_it_cannot_read(measured):
 def test_a_declined_run_is_not_counted_as_a_failure(measured):
     """The point of declining. A number that means nothing is worse than an
     absence, and worse still when it sits on a ratchet as a line nobody can
-    ever clear."""
+    ever clear.
+
+    NOTHING IS DECLINED SINCE 2026-10-21, so this skips rather than passing
+    vacuously — a green assertion over an empty set is the shape this repo keeps
+    filing. `EXPECTED_DECLINED == 0` above is the live guard: if gradient text
+    comes back, that fails first and this test has something to check again.
+    """
     declined = [r for r in measured if r["unmeasurable"]]
-    assert declined, "nothing was declined; this test proves nothing today"
+    if not declined:
+        pytest.skip(
+            "nothing is declined (D-206 closed the one element). "
+            "EXPECTED_DECLINED == 0 is what holds the line now; this test "
+            "re-activates if a template adds gradient text.")
     fails = {key(r) for r in measured
              if r["ratio"] < r["needs"] and not r["unmeasurable"]}
     for r in declined:

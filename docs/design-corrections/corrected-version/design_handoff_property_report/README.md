@@ -56,11 +56,30 @@ From `derive_theme(brand_hex)`:
 | `primary_ink` | all brand-coloured text on white/tint: section labels (10.5px uppercase), "Prepared for", market median price, missing-photo tile text, initials on white circle, phone pill text |
 | `on_primary` | all text on `primary` fills. Rule lines on primary: `rgba(255,255,255,0.3)` if on_primary is white, else `rgba(20,21,26,0.25)` |
 | `tint` | "In short" panel, confidence pill, next-steps cards, photo-plate background before image loads, missing-photo tile |
-| `primary_on_dark` | the range band and the label on the `#0f172a` panel — and nowhere else |
+| `primary_on_dark` | brand text on the fixed dark `#0f172a`: the range band and its label, `harbor`'s cover title, and the footer-band elements that used to be gold — and nowhere else |
 
 Fixed neutrals: ink `#14161A` (18.1:1 on white), body `#2A2D33` (13.8), muted `#5E636B` (6.05 — the lightest text colour on the surface; also the dash, at weight 400), rules `#ECECE8` / `#E4E4E0` / `#D9DADF`, bar track `#F1F1EE`, strip `#F6F6F3`, inactive cells `#EDEDEA`, dark panel `#0f172a` (the only dark surface). No status pills on this surface: comp status is text in the "when" line.
 
 No text over photography anywhere (§3.2). Plates on photos are solid white with `#14161A` text.
+
+**Three rules, Design 2026-10-21, from D-205 and D-206.** They generalise past the two surfaces
+that produced them, which is why they sit here rather than on those entries:
+
+1. **`primary_on_dark` is brand text on the fixed dark, and nowhere else.** The table row above is
+   the whole of its scope.
+2. **No gradient may carry text — as a fill or as a clip.** *"A gradient under or inside text has
+   no single contrast value and so is not a text surface."* Gradients are decoration, away from
+   type. This is what `harbor`'s cover title violated: `background-clip:text` on
+   `--gradient-coral`, which the pixel measurer could not read and which therefore sat excused for
+   twenty days while four of six brands could not read it. Asserted by
+   `EXPECTED_DECLINED == 0` in `test_pdf_contrast.py` — a template that adds gradient text comes
+   back as a declined element and fails.
+3. **The brand-derived fills are `primary`, `tint` and `primary_dark`. Any new "x × brand" value is
+   a defect, not a token.** Which **retroactively classifies the cover footer band as a defect
+   rather than a design choice**: `rgba(0,0,0,0.2)` over a gradient from `theme_color` is
+   `0.677 × brand`, a fourth brand-derived fill that nothing declared, and every ink on it
+   inherited the brand's luminance. Design on why a brand-tinted scrim was not the answer either:
+   *"it's option 1 again — a floor on a derived fill — and it still varies with the brand."*
 
 ## Pages
 

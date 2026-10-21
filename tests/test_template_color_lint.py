@@ -238,13 +238,27 @@ def test_the_baseline_is_not_empty():
     of shrink that is NOT progress on the rule — the violations went away
     with the files, not because anyone fixed a colour — so it is recorded
     separately rather than read as 28 fixes.
+
+    70 -> 65 on 2026-10-21, and it is the SAME non-progress as the line above.
+    The five entries named `atlas/atlas_report.jinja2`, whose literals went with
+    the 1,290 lines that file lost when atlas moved onto `_v2/report.jinja2`
+    (#146, 2026-10-06). **They had been stale for fifteen days**: the lint reports
+    retirements only alongside a `--write-baseline`, and nothing had run one, so
+    `--check-baseline` stayed green while five of its 70 rows described a file
+    that no longer contained them. Retired here because D-205's cover fix forced
+    a regeneration and `--write-baseline` cannot retire one file's rows and not
+    another's.
+
+    D-205's own fix added nothing: linen's white `--burgundy-on-dark` fallback is
+    annotated in the template rather than baselined, because white as the fallback
+    for text on dark is not a brand value.
     """
     n = sum(lint.read_baseline().values())
     assert n > 0, "nothing baselined — has the rule stopped matching?"
-    assert n == 70, (
-        f"the baseline holds {n} entries, not the 70 left after the theme cut "
-        f"on 2026-10-05. Fewer is progress: update this number. More is a new "
-        f"violation that was baselined instead of fixed."
+    assert n == 65, (
+        f"the baseline holds {n} entries, not the 65 left after the atlas rows "
+        f"were retired on 2026-10-21. Fewer is progress: update this number. "
+        f"More is a new violation that was baselined instead of fixed."
     )
 
 

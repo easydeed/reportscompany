@@ -189,14 +189,14 @@ files in `RETIRED_NAME_ALLOWED`, each with its reason, and fails on any *other* 
 
 | artefact | theme-keyed rows | a rename needs |
 |---|---|---|
-| `apps/worker/tests/pdf_contrast_baseline.txt` | 55 entries: linen 36, harbor 19, **atlas 0**, **market 0** *(was 81; D-177 closed 20 accent-on-tint failures with no template change, and wiring `new_listings` and `price_bands` onto Design's page closed the remaining 6 badge rows by removing the tinted-chip construct)* | **a `sed` on the family column** — the key is `property__<theme>` |
+| `apps/worker/tests/pdf_contrast_baseline.txt` | 43 entries: linen 29, harbor 14, **atlas 0**, **market 0** *(was 55; D-205 and D-206 retired 12 — the cover footer band and the gradient-clipped title, both fixed on 2026-10-21)* *(was 81; D-177 closed 20 accent-on-tint failures with no template change, and wiring `new_listings` and `price_bands` onto Design's page closed the remaining 6 badge rows by removing the tinted-chip construct)* | **a `sed` on the family column** — the key is `property__<theme>` |
 | `apps/worker/tests/golden/color_roles.json` | 3 `property_themes` keys | regenerate (`regen_color_roles_golden.py`) |
-| `scripts/template_color_baseline.txt` | 34 lines naming a `property/<theme>/` path | **a `sed` on the path** |
+| `scripts/template_color_baseline.txt` | 29 lines naming a `property/<theme>/` path *(was 34; the five `atlas/` rows were retired on 2026-10-21 — they had been stale since atlas moved onto `_v2/` on 2026-10-06 and nothing had run `--write-baseline` to notice)* | **a `sed` on the path** |
 
 **Every remaining row is on the property surface.** The market surface reached zero baselined
 contrast failures on 2026-10-08, so a theme rename now touches nothing market-keyed at all.
 
-This is the one place a rename is mechanical-but-fiddly: **89 baseline rows** key on the theme name,
+This is the one place a rename is mechanical-but-fiddly: **72 baseline rows** key on the theme name,
 and both files are ratchets whose whole point is that they may only shrink. A rename is a pure
 substitution in both — the measured colours and selectors are unchanged — but it must be done as a
 substitution, **not** by regenerating, or the diff stops being evidence of anything.
@@ -231,9 +231,17 @@ ratchet.
 
 **Measured on the first rewire: bold went from 37 baseline rows to ZERO.** The redesigned document
 has no baselined contrast failure on any of the six brands — the first property theme in this
-project with none — so the rewire *shrank* the ratchet by a third. **89** theme-keyed rows now,
-against 152 before bold moved; the three live themes carry 55 between them, all of them elegant's
+project with none — so the rewire *shrank* the ratchet by a third. **72** theme-keyed rows now,
+against 152 before bold moved; the three live themes carry 43 between them, all of them elegant's
 and modern's.
+
+**72, from 89, on 2026-10-21.** Twelve contrast rows retired by D-205 and D-206 — the cover footer
+band and the gradient-clipped cover title, both fixed to Design's ruling — and five colour-lint
+rows that had been stale since atlas moved onto `_v2/` on 2026-10-06, retired when the cover fix
+forced a regeneration. Seventeen rows in all, and they are not the same kind of
+shrink: **the twelve contrast rows are a real fix** — two surfaces corrected in the templates —
+while **the five colour-lint rows went away with literals that had already gone**, which is the
+same not-progress the theme cut recorded and is separated here for the same reason.
 
 **And 20 of them went without a rewire.** D-177 darkened `accent_ink` against the brand's tint as
 well as white — one function, no template change — and the contrast baseline fell from 81 rows to
