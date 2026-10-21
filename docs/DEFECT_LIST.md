@@ -12756,10 +12756,36 @@ machine is busier and the window it waits on is the obvious suspect — but that
 nobody has instrumented it. **What it is not** is a regression from any of the work it has failed
 alongside; the third sighting's branch could not have touched it.
 
-**Not claimed fixed, and not quarantined.** A flaky test that guards a harness which once left a
-mutated tree is worth more red than a `skip`, and the day it fails for a real reason the sentinel
-it checks will be on disk to prove it. What it needs is the wait replaced by a condition rather
-than a duration — which is a change to the test, on a day someone is in that file.
+**Not quarantined, and now fixed at the cause rather than skipped.** A flaky test that guards a
+harness which once left a mutated tree is worth more red than a `skip`.
+
+**The wait was a duration wearing a condition's clothes.** `_wait_for_sentinel` polled every 10ms
+— a condition — but gave up after **30 seconds even while the harness was still running**, which
+is the test deciding how long the machine is allowed to take. All three failures reported exactly
+that: no sentinel, harness alive. Under a full suite the harness's own gate shells out to
+`pytest --collect-only` over this very file, on a box already running the suite that is running
+the test.
+
+So the terminating condition is **the process**: wait while it is alive and the sentinel is
+absent. The ceiling is 300 seconds and exists only so a hung run cannot hang CI — if it is ever
+hit the message says *"AND THE HARNESS IS STILL RUNNING… a live harness five minutes into its
+first mutation is a real finding about the harness, not about the machine being busy"*, which is a
+different finding from the one it replaced.
+
+**And the entry is guarded too**, which is the second half. Every test in that file drives the
+harness against **one shared path in the real repo**, so a previous test's subprocess that has not
+finished unlinking is indistinguishable, from inside the next test, from a harness refusing to
+start — and the failure would read as the wrong test's. The autouse fixture now polls for the
+sentinel's absence before yielding and names the suspect if it is still there.
+
+Both halves seen to fail: the ceiling branch and the exited-first branch each name what happened
+rather than only that it did not happen, and planting a sentinel makes the entry guard fire with
+the sentence above.
+
+**The hypothesis is still a hypothesis.** Three sightings under load, none isolated, nothing in the
+harness touched by the branches they failed on — that supports *timing*, and the 30-second ceiling
+is the only timing this test controlled. If it flakes again after this, the hypothesis was wrong,
+and the new message will say which of the two branches it took.
 
 **The startup check reports and refuses; it does not restore on its own.** A tool that silently
 writes files when it starts is a worse problem than the one being fixed, and `--keep` leaves a
@@ -14522,6 +14548,14 @@ every ground, asserts the consequence separately rather than leaving it to follo
 counterpart for `ink_on_dark`, and asserts that `--gold-light` is still **outside** the family — so
 "clear the darkest and the rest follow" cannot quietly widen into "one ink serves every ground".
 Seen to fail: making `ink_on` return white names the brand, both luminances and the consequence.
+
+**The grounds it checks are derived from the sweep, not listed** — with one gap, written down
+rather than remembered: **the sweep record is a committed artefact, not a live measurement.**
+`test_cover_brand_sweep_is_current.py` holds it to the live themes, their templates and the roles
+those templates interpolate, so a template change invalidates it loudly. What it does **not**
+catch is a *page* that introduces a new tint without touching any role — that ground stays
+invisible until somebody re-runs the sweep. The common case is covered and the uncommon one is
+not, which is the honest shape of it.
 
 **The grounds it checks are derived from the sweep, not listed.** The first version of that file
 listed three hexes, which was *the same enumeration the rule it guards replaced* — and `#FEF4F4`

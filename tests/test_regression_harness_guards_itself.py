@@ -253,10 +253,34 @@ def _launch(spec, stdout=subprocess.DEVNULL, shell_cmd=None):
         cwd=REPO, stdout=stdout, stderr=subprocess.PIPE, text=True)
 
 
-def _wait_for_sentinel(proc, timeout=30.0):
+#: Not a deadline the harness is expected to meet — a ceiling that exists only
+#: so a genuinely hung run cannot hang the suite. See `_wait_for_sentinel`.
+SENTINEL_CEILING = 300.0
+
+
+def _wait_for_sentinel(proc, timeout=SENTINEL_CEILING):
     """Wait until the harness is inside a mutation. Returns a reason on
-    failure rather than a bare False, so a flake diagnoses itself."""
-    deadline = time.monotonic() + timeout
+    failure rather than a bare False, so a flake diagnoses itself.
+
+    THE WAIT IS A CONDITION, NOT A DURATION — and the 30-second version of this
+    was a duration wearing a condition's clothes.
+
+    `test_sigterm_mid_mutation_still_restores_and_exits_2` failed three times,
+    every one of them inside a full-suite run and never once on a repeat, with
+    the same symptom: no sentinel within 30s while **the harness was still
+    running**. Nothing was wrong with the harness; the test had decided how long
+    the machine was allowed to take. Under a full suite it takes longer — the
+    harness's own gate shells out to `pytest --collect-only` over this file, on
+    a box already running the suite that is running this test.
+
+    So the terminating condition is **the process**: wait while it is alive and
+    the sentinel is absent. The ceiling is three hundred seconds and is there to
+    stop a hung run hanging CI, not to express an expectation — if it is ever
+    hit, the message says the harness was still alive, which is a different
+    finding from the one this replaced.
+    """
+    started = time.monotonic()
+    deadline = started + timeout
     while time.monotonic() < deadline:
         if SENTINEL.exists():
             return None
@@ -267,9 +291,13 @@ def _wait_for_sentinel(proc, timeout=30.0):
             except Exception:
                 pass
             return (f"the harness exited with {proc.returncode} before writing a "
-                    f"sentinel. stderr:\n{err}")
+                    f"sentinel, {time.monotonic() - started:.1f}s in. "
+                    f"stderr:\n{err}")
         time.sleep(0.01)
-    return f"no sentinel appeared within {timeout}s and the harness is still running"
+    return (f"no sentinel appeared within {timeout}s AND THE HARNESS IS STILL "
+            f"RUNNING. That is no longer the flake this ceiling replaced — a "
+            f"live harness five minutes into its first mutation is a real "
+            f"finding about the harness, not about the machine being busy.")
 
 
 def _enter_mutation_window(proc):
@@ -281,11 +309,27 @@ def _enter_mutation_window(proc):
 
 @pytest.fixture(autouse=True)
 def _no_stale_sentinel():
-    """Never let one of these tests leave the real repo's sentinel behind.
+    """Never let one of these tests leave the real repo's sentinel behind, and
+    never let one of them START against another's.
 
     If it survived, every later run of the harness would refuse to start —
     which is the correct behaviour and a terrible thing to inherit from a test.
+
+    The *entry* check is the second half of making the wait a condition. These
+    tests all drive the harness against **one shared path in the real repo**,
+    and a previous test's subprocess that has not finished unlinking is
+    indistinguishable, from inside the next test, from a harness that refuses to
+    start. Polled rather than assumed, and the failure names the suspect.
     """
+    entry = time.monotonic() + 30.0
+    while SENTINEL.exists() and time.monotonic() < entry:
+        time.sleep(0.01)
+    assert not SENTINEL.exists(), (
+        f"{SENTINEL.name} was still on disk when this test started. It belongs "
+        f"to an earlier test in this file whose subprocess had not finished "
+        f"cleaning up — the harness would have refused to start, and the "
+        f"failure would have read as this test's."
+    )
     yield
     SENTINEL.unlink(missing_ok=True)
 
