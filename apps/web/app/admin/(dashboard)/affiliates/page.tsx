@@ -175,7 +175,7 @@ export default function AffiliatesPage() {
                   type="email"
                   value={newAffiliate.admin_email}
                   onChange={(e) => setNewAffiliate({ ...newAffiliate, admin_email: e.target.value })}
-                  placeholder="admin@company.com"
+                  placeholder="admin@example.com"
                   className="bg-white border-slate-300 text-slate-900"
                 />
               </div>

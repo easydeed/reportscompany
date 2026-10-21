@@ -462,6 +462,7 @@ export function CmaFunnel({
               placeholder="Your name (optional)"
               value={name}
               onChange={e => setName(e.target.value)}
+              autoComplete="name"
               className="h-11"
             />
 
@@ -472,15 +473,17 @@ export function CmaFunnel({
                 placeholder="(555) 555-5555"
                 value={phone}
                 onChange={e => setPhone(formatPhone(e.target.value))}
+                autoComplete="tel"
                 className="text-lg text-center h-12"
                 autoFocus
               />
             ) : (
               <Input
                 type="email"
-                placeholder="your@email.com"
+                placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                autoComplete="email"
                 className="text-base h-12"
                 autoFocus
               />
