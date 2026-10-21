@@ -14239,6 +14239,75 @@ two `cover-agent-title`, two `cover-logo` and two `span`; `harbor`'s `cover-city
 `cover-label`. The regeneration is the one the file's own rule permits — *"Regenerate after FIXING
 something (never to clear a new failure)"* — and the diff is the review.
 
+#### THE REST, SCOPED — 2026-10-21, and two more surfaces fixed without a third ask
+
+Asked to scope what remains before going back to Design again, and to apply anything whose remedy
+was already ruled. Every failing surface in the 38-brand sweep, sorted by what kind of defect it
+is rather than by which cover it is on:
+
+**A · A fixed ink on a fixed light ground — already written down one document over. APPLIED.**
+
+`harbor`'s `div.brand`, `#94a3b8` on `#ffffff`, **2.56:1, failing for all 38 brands** and nothing to
+do with the brand. The property colour-role table already specifies the muted neutral: `#5E636B`,
+*"the lightest text colour on the surface"*, **6.05:1**. No ruling needed — the value existed.
+
+**And the first attempt at it broke something else, which is the same error two days running.**
+Redefining `--silver` from `#94A3B8` to `#5E636B` fixed the footer and took `.cover-city` — the
+same token on the **dark** cover panel — from fine to **2.24:1**. One token, two grounds, one
+measurement. It is now a second token, `--muted`, applied only where the ground is light.
+
+**B · The raw brand as text on white — the role table says `primary_ink`. APPLIED.**
+
+`harbor`'s `div.cover-agent-title` used `--coral` (the raw brand) on `#ffffff`: **29 of 38 brands
+fail**. `theme_color_on_light` is derived against white and clears 4.5 for all 38, worst **4.60**.
+
+Those two retired **five** more baseline rows: `div.brand` ×2 and `div.cover-agent-title` ×3.
+Contrast baseline **43 → 38**.
+
+**C · The same role on a TINT — not ruled, and it is D-177 recurring on the property themes.**
+
+The role table says `primary_ink` covers *"brand-coloured text on white/tint"*. Measured over 38
+brands, it does not:
+
+| ground | worst | brands failing |
+|---|---|---|
+| `#ffffff` white | 4.60 | **0 of 38** |
+| `#faf7f2` linen cream | 4.30 | 6 |
+| `#f1f5f9` harbor ghost | 4.20 | 14 |
+| `#e8d5a3` linen gold-light | 3.17 | **34** |
+
+`theme_color_on_light` is derived **against white** and used on four grounds. That is D-177 exactly
+— *"accent_ink was guaranteed on white and used on a tint"* — fixed on the market surface and never
+on these. Its remedy exists in this codebase: `ink_on(colour, background)` in `property_builder.py`,
+which `market_builder.py` already uses as `accent_on_tint`. Plumbing an on-tint role through
+`compute_color_roles` and both templates is a build rather than a token swap, so it is scoped here
+and not taken. Surfaces: `harbor` `div.contents-num`, `span.pill`, `div.range-slider-price.low`;
+`linen` `div.contents-label`, `div.num`, `div.property-label`, `div.property-section-title`, `span`.
+
+**D · Text on the cover gradient — the two-stop fill problem, and `on_primary` does not close it.**
+
+The role table says `on_primary` for *"all text on `primary` fills"*. `linen`'s cover is a gradient
+from `primary` to `primary_dark`, and `on_primary` is derived against `primary` alone:
+
+| brand | on `primary` | on `primary_dark` |
+|---|---|---|
+| luxury_estates | 4.87 | **3.02** |
+| the other five | 4.83 – 9.23 | 4.87 – 8.59 |
+
+**Five of six, and `luxury_estates` fails on the darker stop** — because its `on_primary` is dark
+ink chosen for the lighter end. Today's inks are far worse (white fails 3 of 6, `--gold-light` and
+`--gold` fail 6 of 6 at 1.36 and 1.05), so the token is a large improvement and still not a fix.
+A flat `primary` fill would make it correct for all six by the existing rules — which is the same
+move as the footer — but `linen`'s cover gradient is the theme's signature and flattening it is a
+composition decision, not a token swap. **Ask.**
+
+**E · `atlas`, eight surfaces at 1 of 38 — a gap in Design's own derivation.**
+
+`span.masthead-brand`, `span.cover-city`, `span.conf-grade` and five others fail at exactly one ramp
+step, **L=0.190**, and nowhere else. `atlas` renders through Design's shared `_v2` page with their
+own roles, so this is their derivation missing one luminance rather than a template defect.
+Reported, not fixed.
+
 #### WHAT IS NOT FIXED, AND IT IS MOST OF `linen`'s COVER
 
 Design ruled on the **footer band**. The elements on the brand gradient **above** it were not in

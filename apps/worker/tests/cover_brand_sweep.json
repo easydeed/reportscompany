@@ -6927,268 +6927,268 @@
      "amber": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "coastal": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "demo_title": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "lime": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "luxury_estates": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp00": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp01": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp02": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp03": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp04": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp05": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp06": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp07": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp08": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp09": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp10": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp11": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp12": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp13": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp14": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp15": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp16": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp17": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp18": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp19": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp20": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp21": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp22": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp23": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp24": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp25": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp26": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp27": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp28": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp29": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp30": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "ramp31": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      },
      "violet": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#94a3b8",
+      "fg": "#5e636b",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 6.05
      }
     },
     "div.contents-label": {
@@ -7731,9 +7731,9 @@
      "amber": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#f59e0b",
+      "fg": "#9c6404",
       "needs": 4.5,
-      "ratio": 2.15
+      "ratio": 4.95
      },
      "coastal": {
       "bg": "#ffffff",
@@ -7745,23 +7745,23 @@
      "demo_title": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#dc2626",
+      "fg": "#ce2323",
       "needs": 4.5,
-      "ratio": 4.83
+      "ratio": 5.4
      },
      "lime": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#84cc16",
+      "fg": "#4e790b",
       "needs": 4.5,
-      "ratio": 1.98
+      "ratio": 5.17
      },
      "luxury_estates": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#0d9488",
+      "fg": "#0a7a6f",
       "needs": 4.5,
-      "ratio": 3.74
+      "ratio": 5.22
      },
      "ramp00": {
       "bg": "#ffffff",
@@ -7808,184 +7808,184 @@
      "ramp06": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#298b14",
+      "fg": "#268212",
       "needs": 4.5,
-      "ratio": 4.38
+      "ratio": 4.9
      },
      "ramp07": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#159525",
+      "fg": "#11831f",
       "needs": 4.5,
-      "ratio": 3.92
+      "ratio": 4.89
      },
      "ramp08": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#169d50",
+      "fg": "#108141",
       "needs": 4.5,
-      "ratio": 3.52
+      "ratio": 4.95
      },
      "ramp09": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#17a27d",
+      "fg": "#0f7d5f",
       "needs": 4.5,
-      "ratio": 3.23
+      "ratio": 5.1
      },
      "ramp10": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#18a6ab",
+      "fg": "#0f787c",
       "needs": 4.5,
-      "ratio": 2.97
+      "ratio": 5.25
      },
      "ramp11": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#30a6e1",
+      "fg": "#2178a3",
       "needs": 4.5,
-      "ratio": 2.74
+      "ratio": 4.91
      },
      "ramp12": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#79a2ec",
+      "fg": "#516da0",
       "needs": 4.5,
-      "ratio": 2.56
+      "ratio": 5.19
      },
      "ramp13": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#9ca1f1",
+      "fg": "#696da4",
       "needs": 4.5,
-      "ratio": 2.39
+      "ratio": 4.86
      },
      "ramp14": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#b5a1f2",
+      "fg": "#73669a",
       "needs": 4.5,
-      "ratio": 2.25
+      "ratio": 5.13
      },
      "ramp15": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#cda0f1",
+      "fg": "#82669a",
       "needs": 4.5,
-      "ratio": 2.12
+      "ratio": 4.87
      },
      "ramp16": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#e59ef1",
+      "fg": "#895d90",
       "needs": 4.5,
-      "ratio": 2.0
+      "ratio": 5.21
      },
      "ramp17": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#f2a2e5",
+      "fg": "#905f89",
       "needs": 4.5,
-      "ratio": 1.9
+      "ratio": 5.02
      },
      "ramp18": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#f3acd2",
+      "fg": "#91667d",
       "needs": 4.5,
-      "ratio": 1.8
+      "ratio": 4.77
      },
      "ramp19": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#f4b4c3",
+      "fg": "#89646d",
       "needs": 4.5,
-      "ratio": 1.73
+      "ratio": 5.11
      },
      "ramp20": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#f5bcb8",
+      "fg": "#896866",
       "needs": 4.5,
-      "ratio": 1.64
+      "ratio": 4.96
      },
      "ramp21": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#f3c5a9",
+      "fg": "#886d5d",
       "needs": 4.5,
-      "ratio": 1.57
+      "ratio": 4.78
      },
      "ramp22": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#efce8c",
+      "fg": "#7d6c48",
       "needs": 4.5,
-      "ratio": 1.51
+      "ratio": 5.11
      },
      "ramp23": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#e0dc28",
+      "fg": "#757311",
       "needs": 4.5,
-      "ratio": 1.45
+      "ratio": 4.98
      },
      "ramp24": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#c2e860",
+      "fg": "#66792f",
       "needs": 4.5,
-      "ratio": 1.4
+      "ratio": 4.84
      },
      "ramp25": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#b4ee8b",
+      "fg": "#5d7c47",
       "needs": 4.5,
-      "ratio": 1.35
+      "ratio": 4.73
      },
      "ramp26": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#b0f2a7",
+      "fg": "#5b7e56",
       "needs": 4.5,
-      "ratio": 1.3
+      "ratio": 4.6
      },
      "ramp27": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#b5f4c1",
+      "fg": "#58785e",
       "needs": 4.5,
-      "ratio": 1.26
+      "ratio": 4.93
      },
      "ramp28": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#bdf6d9",
+      "fg": "#5c7869",
       "needs": 4.5,
-      "ratio": 1.21
+      "ratio": 4.83
      },
      "ramp29": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#c5f7ed",
+      "fg": "#5f7974",
       "needs": 4.5,
-      "ratio": 1.17
+      "ratio": 4.69
      },
      "ramp30": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#d7f6f9",
+      "fg": "#69787a",
       "needs": 4.5,
-      "ratio": 1.14
+      "ratio": 4.6
      },
      "ramp31": {
       "bg": "#ffffff",
       "declined": false,
-      "fg": "#ebf5fc",
+      "fg": "#6c7074",
       "needs": 4.5,
-      "ratio": 1.11
+      "ratio": 4.99
      },
      "violet": {
       "bg": "#ffffff",

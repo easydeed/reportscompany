@@ -292,8 +292,17 @@ def run(roots: Iterable[str]) -> List[Finding]:
     return findings
 
 
-def read_baseline(path: pathlib.Path = BASELINE_PATH) -> Counter:
-    """{key: tolerated count}. Comments and blanks ignored."""
+def read_baseline(path: pathlib.Path = None) -> Counter:
+    """{key: tolerated count}. Comments and blanks ignored.
+
+    `path=None` resolves `BASELINE_PATH` AT CALL TIME, and the default used to
+    be `BASELINE_PATH` itself — which Python binds when the function is
+    defined. So substituting the module attribute did nothing: the caller got
+    the real baseline and a green result, which is the quiet-wrong-answer shape
+    rather than an error. Found by a test that substituted it and passed for
+    the wrong reason.
+    """
+    path = BASELINE_PATH if path is None else path
     out: Counter = Counter()
     if not path.exists():
         return out
@@ -305,7 +314,8 @@ def read_baseline(path: pathlib.Path = BASELINE_PATH) -> Counter:
     return out
 
 
-def write_baseline(findings: List[Finding], path: pathlib.Path = BASELINE_PATH) -> None:
+def write_baseline(findings: List[Finding], path: pathlib.Path = None) -> None:
+    path = BASELINE_PATH if path is None else path
     header = [
         "# Brand hex literals in templates that predate the lint rule.",
         "# Format: path<TAB>rule<TAB>colour, one line per occurrence, sorted.",
@@ -331,6 +341,36 @@ def check_baseline(findings: List[Finding], baseline: Counter) -> Counter:
     return new
 
 
+def stale_baseline(findings: List[Finding], baseline: Counter) -> Counter:
+    """Baseline rows the templates no longer produce. THE OTHER DIRECTION.
+
+    `check_baseline` validates the rows the baseline HAS. It cannot see a row
+    whose source stopped containing it, because nothing asks the question in
+    that direction — and a ratchet that only counts upward is half a ratchet.
+
+    WHAT THAT COST, MEASURED: five rows naming `atlas/atlas_report.jinja2` sat
+    in this file for **fifteen days** after the literals went with the 1,290
+    lines atlas lost moving onto `_v2/report.jinja2` (#146, 2026-10-06).
+    `--check-baseline` stayed green the whole time while five of its seventy
+    rows described a file that no longer contained them. They surfaced only
+    because D-205's cover fix forced a `--write-baseline`, which prints a
+    retirement count — a number nobody was looking at, on a run nobody had a
+    reason to make.
+
+    Same predicate as `check_baseline`, written once and called twice rather
+    than expressed twice: a forward check with a count and a reverse check with
+    something subtly different is how the two drift, which is the mistake
+    `test_pdf_contrast.py`'s own reverse check records in its docstring.
+    """
+    current = Counter(f.key for f in findings)
+    stale: Counter = Counter()
+    for key, n in baseline.items():
+        excess = n - current.get(key, 0)
+        if excess > 0:
+            stale[key] = excess
+    return stale
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[1])
     ap.add_argument("paths", nargs="*", default=None)
@@ -352,17 +392,37 @@ def main(argv=None) -> int:
     if args.check_baseline:
         baseline = read_baseline()
         new = check_baseline(findings, baseline)
-        retired = sum(baseline.values()) - (len(findings) - sum(new.values()))
+        # THE REVERSE DIRECTION NEEDS THE WHOLE SCAN, and the first version of
+        # this did not say so: `--check-baseline <one file>` is a legitimate use
+        # (the CLI test for the forward direction relies on it), and against the
+        # real baseline a partial scan makes EVERY row it did not cover look
+        # retired. A reverse check that fires on every narrow run is the
+        # "a narrower measurement reads as a finding" error, inverted.
+        #
+        # So the question is only asked when the scan covers the roots the
+        # baseline was written from — which is what CI runs — and a partial run
+        # says it did not ask rather than implying it asked and found nothing.
+        full_scan = not args.paths
+        stale = stale_baseline(findings, baseline) if full_scan else Counter()
         for key, n in sorted(new.items()):
-            print(f"NEW  {key}" + (f"  (x{n})" if n > 1 else ""))
+            print(f"NEW    {key}" + (f"  (x{n})" if n > 1 else ""))
+        for key, n in sorted(stale.items()):
+            print(f"STALE  {key}" + (f"  (x{n})" if n > 1 else ""))
         print(f"{len(findings)} findings, {sum(baseline.values())} baselined, "
-              f"{sum(new.values())} new, {retired} retired")
+              f"{sum(new.values())} new, "
+              + (f"{sum(stale.values())} stale" if full_scan
+                 else "stale NOT CHECKED (partial scan)"))
         if new:
             print("\nA template gained a brand hex literal. Use the derived token "
                   "(worker.themes.derive_theme) or, if it genuinely is not a brand "
                   "value, annotate it: lint-allow-hex: <reason>.")
-            return 1
-        return 0
+        if stale:
+            print("\nThe baseline tolerates rows the templates no longer produce. "
+                  "If a colour was FIXED, record it: `--write-baseline`, and say in "
+                  "the commit which literal went and why. This direction is checked "
+                  "because five atlas rows sat here stale for fifteen days while "
+                  "this command reported green.")
+        return 1 if (new or stale) else 0
 
     if not args.summary:
         for f in findings:
