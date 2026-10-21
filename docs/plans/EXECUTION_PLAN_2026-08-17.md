@@ -1812,6 +1812,44 @@ mutation to the assertion.
   less wrong with it** — which is already written four hundred lines up, and is why the check that
   found this one was "does the justification still hold?" rather than "is the gate green?"
 
+- **CLEAR THE WORST CASE AND THE REST FOLLOW — an argument beats a wider enumeration.**
+  *Added 2026-10-21, after three instances in two days.*
+
+  A derived value is only correct against the thing it was derived against. The property themes put
+  brand-coloured text on five different grounds, and every attempt to fix it picked the ground from
+  **the name of the token** rather than from the measurement:
+
+  | | the ink | the ground it was derived for | the ground it was actually on |
+  |---|---|---|---|
+  | the brand plate | `on_primary` | `primary` | `rgba(0,0,0,0.2)` over a gradient — `0.677 × brand` |
+  | `--silver` | one grey, redefined | the page footer, on white | *also* `.cover-city`, on the dark panel |
+  | the footer number | `--burgundy-on-cream` | `#FAF7F2` | `#FEF4F4` on some pages — **4.48:1**, short by 0.02 |
+
+  Each fix was measured, each was correct for the ground it named, and each missed a ground nobody
+  had enumerated. The third one missed by **two hundredths**, which is the tell: the method was
+  exhausting the list of grounds somebody could think of, and the list was never complete.
+
+  **The remedy is not a longer list.** `ink_on` returns a *darkened* ink, and for a dark ink
+  contrast rises monotonically as the ground lightens — so an ink that clears the **darkest** paper
+  tone a template declares clears every lighter one, including the ones nobody enumerated and the
+  ones a future page introduces. One derivation against `--cream-dark` replaced an enumeration of
+  `#FAF7F2`, `#FEF4F4` and `#FFFFFF`, and it cannot be incomplete.
+
+  The general form: **when a guarantee has to hold across a family of cases, find the extreme case
+  and an argument that the rest follow from it.** A list of cases is a claim about the list; an
+  argument about the extreme is a claim about the family.
+
+  **And it only holds while nobody reverts to listing.** The monotonicity is in the comment at the
+  declaration and the reason is on D-208, because the next person to add a paper tone will be
+  tempted to give it its own ink — which is correct, costs nothing, and quietly re-establishes the
+  enumeration this replaced. The two grounds that genuinely need their own derivation are the ones
+  **outside** the family: `--gold-light`, darker than any paper tone, and `#2b3045`, which is dark
+  and needs the other direction entirely.
+
+  Related: the derived-set rule four hundred lines up is this one's sibling — *a derived set is only
+  as complete as the input it was derived from*. That rule says derive from more than one input;
+  this one says that when the inputs form an ordered family, the worst one is enough.
+
 ---
 
 ## Phase 0 — Security & Tooling
