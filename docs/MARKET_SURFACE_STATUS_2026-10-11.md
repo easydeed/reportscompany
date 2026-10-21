@@ -62,7 +62,7 @@ to 3 and asks Design which five to give up.
 |---|---|
 | market baseline, 2026-10-07 | 6 |
 | market baseline now | **0** |
-| property baseline | 38 (linen 29, harbor 9, atlas 0) — was 55; D-205/D-206 retired 12 and the follow-up another 5, all on 2026-10-21 |
+| property baseline | 29 (linen 26, harbor 3, atlas 0) — was 55 on 2026-10-21 morning; D-205/D-206 retired 12, the muted/primary_ink swaps 5, and the `ink_on` per-ground inks 9 |
 
 **Zero baselined contrast failures on the market surface**, across 5,058 measured text runs, six brand
 colours and eight report types. Held by
