@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
-| `open` | 71 | Real, unfixed |
+| `open` | 79 | Real, unfixed |
 | `fixed` | 132 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **210** | D-001 … D-210, contiguous, no duplicates |
+| **Total** | **218** | D-001 … D-218, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 20 · FRAGILE 21 · ROUGH 25. (Sums to 71, the open total.)
+**Open by severity:** BROKEN 6 · WRONG 22 · FRAGILE 22 · ROUGH 29. (Sums to 79, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -14689,6 +14689,210 @@ ramp step. What it is, is a **hole in the derivation rather than in a template**
 showed up nine times in two unrelated places at once and why patching the nine would have been
 patching the symptom. Sizing it was the cheap part: knowing it is 0.024 wide and closed by one
 extra candidate turns Design's answer into a correction rather than an investigation.
+
+---
+
+### D-211 — Frontend Tests has never passed, and every `apps/web` change for four months merged with its gate red
+
+**Severity:** BROKEN · **Affects:** every change to `apps/web` since at least 2026-06-24, including
+the whole B phase · **Found during:** scoping the marketing and wizard surfaces, which were
+described as having "no measurement at all"
+**Status:** `open`
+
+`.github/workflows/frontend-tests.yml` runs `tsc --noEmit` and the jest suite on every push that
+touches `apps/web/**`. It works. It has simply never been green:
+
+    gh run list --workflow=frontend-tests.yml --limit 100          ->  100 of 100 failure
+    gh run list --workflow=frontend-tests.yml --status success     ->  (empty)
+
+The oldest of those hundred runs is **2026-06-24**. The most recent on `main`
+(39491654740, `Merge pull request #188`) ends `Test Suites: 4 failed, 3 passed, 7 total` /
+`Tests: 13 failed, 41 passed, 54 total`, and `npx jest` in `apps/web` reproduces that figure
+exactly today — the same 13 in the same 4 suites. The typecheck step passes; the suite is where it
+dies.
+
+**This is worse than the absence it was mistaken for.** An unmeasured surface produces no findings.
+A permanently red gate produces thirteen, every run, which is how a team learns to scroll past the
+job — and it means no web change in four months was gated on anything.
+
+| Suite | Failing | Cause |
+|---|---|---|
+| `AccountSwitcher` | 6 | `No QueryClient set` — the component uses react-query, the test renders it with no provider |
+| `NewSchedulePage` | 2 | same, plus D-212 |
+| `TemplatesMapping` | 4 | genuine drift — `buildNewListingsHtml` no longer contains `123 Main St`, nor the price-band data, default colors or comma formatting the test expects |
+| `PlanPage` | 1 | sponsored-badge assertion |
+
+Three causes, none deep. What makes it BROKEN is not the difficulty — it is that the only gate
+standing between a web change and production has been reporting failure continuously and nothing
+in the process noticed.
+
+---
+
+### D-212 — the only test naming a wizard asserts a literal against itself, and mocks a component the page stopped using
+
+**Severity:** WRONG · **Affects:** `apps/web/__tests__/NewSchedulePage.test.tsx`; the claim that
+any wizard has test coverage · **Found during:** the same scoping
+**Status:** `open`
+
+Five tests. The two that render anything fail (D-211). The three that pass are this shape:
+
+```js
+const expectedReportTypes = ['market_snapshot', /* … */, 'featured_listings'];
+expectedReportTypes.forEach(type => { expect(expectedReportTypes).toContain(type); });
+```
+
+The array is asserted against itself; `types.ts` is never imported and the product is never
+involved. The other two are of the form `expect(expectedLabels['x']).toBe('New Listings (Photo
+Gallery)')` — a literal compared with the literal beside it.
+
+And the two that do render mock `next/dynamic` in order to substitute a fake `ScheduleWizard`.
+`app/app/schedules/new/page.tsx` imports `UnifiedReportWizard` **statically** and has done since
+the wizard merge, so the mock substitutes nothing and `getByTestId('schedule-wizard')` looks for
+an element that no longer exists.
+
+Same family as D-087 and the self-referential assertions this board keeps filing: a test whose
+subject was replaced and which goes on reporting on the replacement's behalf.
+
+---
+
+### D-213 — the property wizard turns a plan-limit refusal into a generic error, at the end of a four-step flow
+
+**Severity:** WRONG · **Affects:** `/app/property/new` for any account at its
+`property_reports_per_month` limit — on `free` that is the second report of the month ·
+**Found during:** enumerating what the two live wizards carry
+**Status:** `open`
+
+`apps/web/components/property-wizard/step-generate.tsx:162`:
+
+```js
+if (!createRes.ok) {
+  const errData = await createRes.json().catch(() => ({}));
+  throw new Error(errData.detail || "Failed to create report");
+}
+```
+
+Every non-OK response takes that branch, a 403 included. The reader looks up an address, picks
+comparables, picks a theme and pages, presses Generate, and gets a red card.
+
+The **unified** wizard, for the same refusal, has a dedicated `limit_reached` state that reads
+`used` and `limit` off the body and says "You've used N of M this month… Upgrade your plan to
+continue, or wait until your limit resets next month." It also has `verification_required`
+(D-019), a distinct state added precisely because "Try Again" is the one action that cannot help.
+The property wizard has neither.
+
+So the same two refusals are handled two ways by two wizards in the same product, and the one
+with the better handling is the one whose limit is larger. Design's `Wizards v3` deck shows the
+remaining count **on the step** — "Uses 1 of your 1 remaining property reports this month" — which
+is the right fix and needs usage plumbed into the wizard before the work rather than after it.
+
+---
+
+### D-214 — the property wizard seeds a retired theme id in two places, and only the success branch corrects it
+
+**Severity:** FRAGILE · **Affects:** `/app/property/new` on every first paint, and persistently
+whenever `GET /v1/account` fails · **Found during:** the same enumeration
+**Status:** `open`
+
+`property-wizard.tsx:61` is `useState(4)` and `:68` is `useRef({ themeId: 4, … })`. **Theme 4 is
+`teal`, retired 2026-10-05.** The fix at `:80` — `let themeId: number = DEFAULT_THEME_ID` with a
+`THEME_ID_TO_NAME` membership check, and a comment explaining that the old `1..5` range accepted
+the two retired ids — lives inside the *successful* branch of the account fetch. `if (!res.ok)
+return;` and the `catch` both leave the 4 exactly where it was.
+
+With `selectedThemeId === 4`, `THEMES` (ids 2, 3, 5) matches nothing, so **no theme card renders as
+selected** (`step-theme.tsx:147`, `isSelected = selectedThemeId === theme.id`) and
+`handleReset()` restores that state from the ref. What is *submitted* is safe — the
+`selectedTheme` memo at `:106` falls back to `DEFAULT_THEME_ID`, so the API receives 5 — which is
+why this is FRAGILE rather than WRONG: the reader picks nothing, sees nothing selected, and gets
+atlas without being told.
+
+**This is D-174 in the other language.** D-174 was two Pydantic request models in
+`routes/property.py` declaring `default=4` — the same retired id, harmless for the same reason
+(`theme_registry.resolve` sends every retired value to the default), invisible for the same
+reason. The gate written for it,
+`tests/test_theme_registry_is_single_sourced.py::test_no_request_model_defaults_a_theme_field_to_a_retired_id`,
+deliberately **parses** rather than matching spellings — and parses `source_files(".py")`. The
+`.tsx` half of the product was never in its reach, so a gate built for exactly this defect passes
+while exactly this defect sits two files away. `test_no_live_code_path_names_a_retired_theme`
+matches retired theme **names**, which is the other near-miss: this is an id.
+
+---
+
+### D-215 — `COMPACT_PAGES` and `FULL_PAGES` are byte-identical, and a per-theme flag chooses between them
+
+**Severity:** ROUGH · **Affects:** `apps/web/components/property-wizard/types.ts` and
+`property-wizard.tsx:271` · **Found during:** the same enumeration
+**Status:** `open`
+
+```js
+const newPages = theme.compact ? COMPACT_PAGES : FULL_PAGES;
+```
+
+Both constants are nine pages — `cover`, `overview`, `contents`, `aerial`, `property`, `analysis`,
+`market_trends`, `comparables`, `range` — with the same names and the same `required` flags.
+Compared with whitespace normalised they are identical. `compact` is `true` on atlas and `false`
+on harbor and linen, so the branch is live, evaluates differently per theme, and produces the same
+list either way.
+
+Either the compact variant was never written or it was written and then equalised; nothing in the
+file says which. Design's deck says "Pages {{ pageCount }} of 6", which is a third number again.
+
+---
+
+### D-216 — `/docs` overflows horizontally at phone width
+
+**Severity:** ROUGH · **Affects:** `/docs` at 390px; the first thing found by the first
+measurement of the public pages · **Found during:** probing the eleven public routes at two
+viewports
+**Status:** `open`
+
+At a 390px viewport the document scrolls 70px sideways. Eight elements sit past the edge, and the
+innermost is the `curl` example:
+
+```
+div.bg-slate-900.rounded-lg.p-4.font-mono.text-sm  ->  width 444, right edge 460
+```
+
+No `overflow-x-auto`, no wrapping, so the block sets its parent card's width and takes the heading
+and paragraph above it along. M5 audited `/app` at 1024 / 1142 / 1280 and the public pages at
+nothing; this is what the first look costs.
+
+---
+
+### D-217 — 2,882 lines of wizard components with no importer
+
+**Severity:** ROUGH · **Affects:** `apps/web/components/` · **Found during:** establishing which
+wizards are live
+**Status:** `open`
+
+| File | Lines | Reached by |
+|---|---|---|
+| `components/Wizard.tsx` | 769 | nothing |
+| `components/schedules/schedule-wizard.tsx` | 693 | `schedules/index.ts` only, and nothing imports that barrel |
+| `components/onboarding/setup-wizard.tsx` | 704 | `onboarding/index.ts` only; the two live imports of that barrel take `DashboardOnboarding` |
+| `components/lead-pages/ConsumerLandingWizard.tsx` | 716 | nothing |
+
+The barrel exports are the part worth noting: `export { SetupWizard } from "./setup-wizard"` makes
+dead code look reachable to a reader and to a grep, which is how 693 lines of schedule wizard went
+on looking like the schedule wizard after `/app/schedules/new` moved to `UnifiedReportWizard`.
+
+---
+
+### D-218 — the fabricated testimonials survive as dead code, one import from being live
+
+**Severity:** ROUGH · **Affects:** `apps/web/components/marketing/testimonials.tsx` ·
+**Found during:** checking whether Design's landing inherits the M-phase's findings
+**Status:** `open`
+
+Three invented people — `Jessica M.`, `David C.`, `Sarah T.` — with invented quotes and five stars
+each. `11459e7c` removed the render and left the file, with a comment at `marketing-home.tsx:23`
+saying Trustpilot will replace it. **A prospect does not see them**, which is why this is ROUGH
+and not WRONG.
+
+What makes it worth an entry rather than a shrug: one of the three already takes its byline from
+the live fixture (`title: DEMO_AGENT.location`), so the file is half-adopted into the M1 fixture
+and would come back looking maintained. A redesign that restores a testimonials section will find
+this component first.
 
 ---
 
