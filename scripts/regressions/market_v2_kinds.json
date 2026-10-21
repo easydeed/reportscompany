@@ -161,10 +161,10 @@
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
-    "name": "a market contrast row is baselined back in, so the surface stops being at zero (re-anchored 2026-10-21: the linen cover-agent-name row it used to anchor on was RETIRED by D-205's fix, which made this mutation unrunnable \u2014 a regression nobody can re-run only surfaces on the next person's run)",
+    "name": "a market contrast row is baselined back in, so the surface stops being at zero (anchored on the FILE HEADER since 2026-10-21: this mutation was anchored on a baseline data row twice and both rows were retired by a fix within a day of each other \u2014 linen's cover-agent-name, then harbor's div.brand. A row that can be fixed away is not an anchor; the header is prose and survives a regeneration)",
     "file": "apps/worker/tests/pdf_contrast_baseline.txt",
-    "old": "property__harbor\tdiv.brand\t#94a3b8\t#ffffff",
-    "new": "market__price_bands\tspan.status-badge.active\t#5E636B\t#E6EEF5\nproperty__harbor\tdiv.brand\t#94a3b8\t#ffffff",
+    "old": "# Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.",
+    "new": "# Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.\nmarket__price_bands\tspan.status-badge.active\t#5E636B\t#E6EEF5",
     "test": "apps/worker/tests/test_pdf_contrast.py::test_the_market_surface_has_no_baselined_failure_left tests/test_market_token_mapping.py::test_the_market_baseline_is_spent"
   },
   {

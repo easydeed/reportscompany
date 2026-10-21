@@ -57,7 +57,7 @@ port them, do not take their copy as current.** (D-131.)
 > `_v2/report.jinja2`, shared. elegant (720) and modern (795) are still self-contained and move
 > next. The 1,549 in the table is those two plus bold's 34.
 
-**There is still more dead property-template code than live.** 5,570 lines against 2,347 —
+**There is still more dead property-template code than live.** 5,570 lines against 2,363 —
 *(2,284 until 2026-10-07, when `display_ink` closed the one open [JERRY] decision in
 `_v2/report.jinja2` and the note recording why replaced the note recording that it was
 open; `tests/test_handover_numbers_are_current.py` refused the change until this line
