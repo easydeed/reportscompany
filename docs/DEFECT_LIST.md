@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 0 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 139 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 140 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **226** | D-001 … D-226, contiguous, no duplicates |
+| **Total** | **227** | D-001 … D-227, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15080,7 +15080,7 @@ implied by a green run.
 
 **Severity:** ROUGH · **Affects:** `apps/web/__tests__/PlanPage.test.tsx`, eleven tests ·
 **Found during:** the same triage
-**Status:** `open`
+**Status:** `fixed` — `fix/plan-page-tests-the-plan-page`. The mock is deleted and the suite renders `app/account/plan/page.tsx` with the real `StripeBillingActions`: 11 tests against a stand-in became 16 against the page. **But see D-227** — the route it tests is not linked from anywhere.
 
 `MockPlanPage` is defined in the test file and renders a hand-written sketch of the page: the
 usage ratio, the 0.8 warning threshold, the sponsored badge and the Stripe wrapper, all
@@ -15118,6 +15118,35 @@ The global fetch mock is now reset outright in `afterEach`, guarded with `jest.i
 a suite that installs a real fetch is not affected. Worth stating what this does not cover: any
 other `jest.fn()` with a queued `*Once` value has the same exposure, and only `global.fetch` is
 reset.
+
+---
+
+### D-227 — `/account/plan` is an unlinked second copy of the billing page
+
+**Severity:** ROUGH · **Affects:** `apps/web/app/account/plan/page.tsx`,
+`components/v0-styling/PlanPageShell.tsx` · **Found during:** rewriting D-225's suite to test the
+page instead of a mock of it
+**Status:** `open` — **deleting it or linking it is a product call.** **[JERRY]**
+
+Nothing in the product links `/account/plan`. Every Billing entry in the sidebar
+(`app-layout.tsx:154, 188, 211`) points at `/app/settings/billing`, which carries its own, fuller
+per-plan upgrade and downgrade flow. The route is outside the `/app` tree, so it also has neither
+the app chrome nor the `QueryProvider` that `app/app/layout.tsx:58` mounts, and it is not in
+`scripts/render-routes.json`.
+
+Its billing actions cover **five of the eight plan slugs**: `StripeBillingActions` returns an
+upgrade pair for `free`, `sponsored_free` and `trial`, a Manage Billing button for `pro` and
+`team`, and **null for everything else** — including `starter`, which is the Growth tier the
+pricing page sells, and `solo`. On `/app/settings/billing` those accounts are served; here they
+see a plan card with no control under it.
+
+**This is the part that makes D-225 worse than it looked.** That suite was a hand-written mock of
+a page no one can reach from inside the product, and ten of its eleven tests passed. Two layers of
+stand-in between the test and anything a customer sees.
+
+The rewritten suite is still worth more than the mock — it asserts three rules nothing else
+asserts (the override, the two-condition badge, the server-side decision) — but if the route goes
+as a duplicate, the file goes with it rather than being ported.
 
 ---
 
