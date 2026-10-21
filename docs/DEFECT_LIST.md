@@ -12738,6 +12738,29 @@ All four, in `fix/d196-harness-restore`:
 and it is exactly wrong here: it makes the death immediate and silent, which is the failure rather
 than the fix.
 
+#### THE SIGTERM TEST IS FLAKY — THIRD SIGHTING, 2026-10-21, AND STILL NOT ROOT-CAUSED
+
+`test_sigterm_mid_mutation_still_restores_and_exits_2` has now failed **three times, every one of
+them inside a full-suite run**, and never once on a repeat. Recorded here rather than left as a
+shrug, because three sightings with the same signature is data:
+
+| | |
+|---|---|
+| failures | 3, all in `pytest` over the whole tree |
+| isolated repeats after each | 15 consecutive passes on the third sighting; the file twice, 13 passed |
+| the branch it failed on | touched `docs/DEFECT_LIST.md` and one new test file — **nothing in the harness** |
+
+So it is **timing, not logic**: the test spawns a real run, waits for the mutation to reach disk,
+sends `SIGTERM`, and asserts the restore happened and the exit code is 2. Under a full suite the
+machine is busier and the window it waits on is the obvious suspect — but that is a hypothesis and
+nobody has instrumented it. **What it is not** is a regression from any of the work it has failed
+alongside; the third sighting's branch could not have touched it.
+
+**Not claimed fixed, and not quarantined.** A flaky test that guards a harness which once left a
+mutated tree is worth more red than a `skip`, and the day it fails for a real reason the sentinel
+it checks will be on disk to prove it. What it needs is the wait replaced by a condition rather
+than a duration — which is a change to the test, on a day someone is in that file.
+
 **The startup check reports and refuses; it does not restore on its own.** A tool that silently
 writes files when it starts is a worse problem than the one being fixed, and `--keep` leaves a
 mutation applied on purpose. The refusal is what protects the measurements: *"Nothing was run.
@@ -14495,11 +14518,23 @@ monotonicity rather than by enumeration.
 nothing asserted that — so if it ever returned a lighter one, every site relying on "clear the
 darkest ground" would lose its guarantee **silently**, because the lighter grounds are deliberately
 unmeasured. `tests/test_ink_derivation_premises.py` asserts the direction over all 38 brands and
-every ground, asserts the consequence separately against the real paper family rather than leaving
-it to follow, asserts the counterpart for `ink_on_dark`, and asserts that `--gold-light` is still
-**outside** the family — so "clear the darkest and the rest follow" cannot quietly widen into "one
-ink serves every ground". Seen to fail: making `ink_on` return white names the brand, both
-luminances and the consequence.
+every ground, asserts the consequence separately rather than leaving it to follow, asserts the
+counterpart for `ink_on_dark`, and asserts that `--gold-light` is still **outside** the family — so
+"clear the darkest and the rest follow" cannot quietly widen into "one ink serves every ground".
+Seen to fail: making `ink_on` return white names the brand, both luminances and the consequence.
+
+**The grounds it checks are derived from the sweep, not listed.** The first version of that file
+listed three hexes, which was *the same enumeration the rule it guards replaced* — and `#FEF4F4`
+was in the list for the worst possible reason: somebody had already missed it once, at 4.48:1. It
+now reads every background the sweep actually measured on the live themes, keeps the ones lighter
+than `--cream-dark`, and pairs each with the brand that produced it. **That finds 82 distinct light
+grounds across the 38 brands where the list had 3** — most of them faint brand tints, which are not
+constants at all and which no list of hexes could have named.
+
+**WHAT GREEN THERE MEANS, AND WHAT IT DOES NOT.** It means the monotonicity holds. It says nothing
+about whether the ink is any *good*: an `ink_on` returning `#000000` for every brand would pass
+every assertion in that file and would be bad design, because it throws the brand away. **The
+derivation's quality is gated nowhere**, and a green run must not be read as the stronger claim.
 
 **THE PATTERN, NAMED, BECAUSE THE FIX ONLY HOLDS WHILE NOBODY GOES BACK TO ENUMERATING.** Three
 instances in two days, all of them picking the ground from the **name of the token** rather than
@@ -14602,6 +14637,16 @@ it**: every brand luminance is then served.
 of contrast."* That is true of `#14151a` against `#1a1a1a`. The comparison that matters for this
 gap is against **`#000000`**, and at the worst point it is **15%**, not 0.4% — 4.16 against 4.80.
 The trade was made against a difference an order of magnitude smaller than the one it costs here.
+
+#### The band was measured on greys, and that substitution is exact here
+
+Contrast depends only on relative luminance, so a grey standing in for a brand of the same
+luminance is sound for a threshold question — but it would not be sound for a derivation that
+reads hue. `_text_on_accent` does not: it picks the better of two **fixed** candidates by contrast
+alone. Checked rather than argued — `#298b14` (saturated, L=0.1899) and `#797979` (grey, L=0.1912)
+get the same choice and the same ratio to three places. **The substitution would only matter for a
+derivation that reads hue, and if one ever did, that would be its own defect rather than a flaw in
+this measurement.**
 
 #### Why ROUGH
 
