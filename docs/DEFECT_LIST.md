@@ -14032,6 +14032,48 @@ So, measured, the stopgap as specified works on both surfaces:
 | `linen` footer band | solid `theme_color` plate, ink `theme_color_text` | **4.83** vs 4.5 |
 | `harbor` cover title | solid `theme_color_on_dark` glyphs, gradient and circles removed | **3.90** vs 3.0 |
 
+#### MEASURED ACROSS THE WHOLE FOOTER, 2026-10-21 — and the plate I endorsed is the worst option
+
+**My previous measurement of the stopgap was one element, reported as the surface.** `4.83:1 worst
+of six` is `.cover-agent-name` and nothing else. `.cover-footer` carries **four** text elements, and
+two of them are light golds that share the band:
+
+    .cover-agent-name / -contact   #ffffff    22px / 12px
+    .cover-agent-title             #E8D5A3    12px   (--gold-light)
+    .cover-logo                    #C9A962           (--gold)
+
+Eighteen pairings — three inks × six brands. All four variants, measured:
+
+| | band | pairings below 4.5 | worst |
+|---|---|---|---|
+| **A** — today | `rgba(0,0,0,0.2)` over the gradient → `0.677 × brand` | **10 of 18** | 1.84 |
+| **B** — the instruction as written: `on_primary` ink, band unchanged | `0.677 × brand` | **11 of 18** | 1.84 |
+| **C** — the plate I endorsed: solid brand band, `on_primary` ink | `brand` | **12 of 18** | **1.05** |
+| **D** — a dark scrim: the band stops deriving from the brand | `#14151a` … `#3a3f4b` | **0 of 18** | **4.69** |
+
+**B is strictly worse than doing nothing.** `luxury_estates`' agent name goes from **7.03 to 2.59**
+— `on_primary` is dark ink for a mid-luminance brand, and the band is not the brand, it is
+two-thirds of it. One brand regresses badly and none improves.
+
+**C is worse still, and the error is mine.** A solid brand plate is *lighter* than today's band, so
+it helps white and destroys the two golds that sit beside it: `amber`'s logo reads **1.05:1** and
+`lime`'s **1.14:1** — effectively invisible. Fixing the agent name by brightening the band was
+always going to do that, and measuring one element could not see it.
+
+**D is the answer, and it is brand-independent by construction.** Every scrim between `#14151a` and
+`#3a3f4b` clears 4.5 on all three inks for all six brands — and for a brand nobody has picked yet,
+because the band no longer derives from `theme_color` at all:
+
+| scrim | agent name | agent title | logo |
+|---|---|---|---|
+| `#14151a` | 18.23 | 12.57 | 8.10 |
+| `#2D3348` | 12.51 | 8.62 | 5.56 |
+| `#3a3f4b` | 10.54 | 7.27 | 4.69 |
+
+This is the other half of Design's option 3 — *"a scrim or a solid plate"* — and it is the scrim,
+not the plate. **The ask to Design is now a proposal with numbers rather than a question about
+which token they meant.**
+
 #### Why it is still not applied — and the decision is [JERRY]'s, not Design's
 
 **Changing the band colour re-keys the baseline.** An entry is
@@ -14046,6 +14088,19 @@ There is a sanctioned path and it is already written in the baseline's own heade
 2026-10-06: *"regenerate per surface as each lands… a baseline cannot describe a document that no
 longer exists… a template replacement is not casual."* Five rows, one family, every other line
 byte-identical, and the diff is the review.
+
+**And linen is `elegant`, not `teal`.** A direction to apply this stopgap arrived on the ground
+that *"linen is their teal renamed"*. It is not: git's rename detection makes
+`elegant/elegant_report.jinja2` → `linen/linen_report.jinja2` at **97%** content similarity, and
+`teal` (id 4) was **retired** on 2026-10-05 alongside `classic`, templates deleted. The conclusion
+survives the correction — `linen` *is* in Design's live list, as `elegant` — but the premise does
+not, and a stopgap applied on the belief that a surface belongs to a retired theme is the D-131
+shape again.
+
+**It does not touch `harbor`.** `linen/linen_report.jinja2` is self-contained: 720 lines, no
+`extends`, no `include`. The only inheritance edge in the property tree reaching `_base/` comes
+from the three `<theme>.jinja2` files, which the registry does not render. So the footer change is
+one file — which was the other condition on applying it.
 
 **But the standing instruction is that the baseline stays untouched**, and it was given against
 exactly the failure mode a regeneration risks. Those two do not conflict in principle — one is

@@ -104,6 +104,49 @@ We would rather ask than apply a stopgap to a file your redesign is about to rep
 
 ---
 
+## 3. The footer, measured across all four of its text elements — and the answer is a scrim
+
+We came back to this after measuring the whole band rather than one line of it. **`.cover-footer`
+carries four text elements, and two are light golds sharing the band with the white:**
+
+    .cover-agent-name / -contact   #ffffff    22px / 12px
+    .cover-agent-title             #E8D5A3    12px   (--gold-light)
+    .cover-logo                    #C9A962           (--gold)
+
+Eighteen pairings — three inks × six brands. Every option we had on the table:
+
+| | the band | pairings below 4.5 | worst |
+|---|---|---|---|
+| **today** | `rgba(0,0,0,0.2)` over the gradient → `0.677 × brand` | 10 of 18 | 1.84 |
+| **`on_primary` ink, band unchanged** | `0.677 × brand` | 11 of 18 | 1.84 |
+| **solid `primary` plate + `on_primary`** | `brand` | 12 of 18 | **1.05** |
+| **a fixed dark scrim** | `#14151a` … `#3a3f4b` | **0 of 18** | **4.69** |
+
+**Two corrections to what we sent you yesterday.** `on_primary` against the band as it stands takes
+`luxury_estates`' agent name from 7.03 to **2.59** — the band is not `primary`, it is two-thirds of
+it, so the token's guarantee does not reach. And the **solid plate we said would work is the worst
+of the three**: it is *lighter* than today's band, so it rescues the white and ruins the golds —
+`amber`'s logo at **1.05:1**, `lime`'s at **1.14:1**. Our 4.83 figure was `.cover-agent-name` alone.
+
+**A fixed dark scrim clears every ink on every brand** — and on a brand nobody has picked yet,
+because the band stops deriving from `theme_color`:
+
+| scrim | agent name | agent title | logo |
+|---|---|---|---|
+| `#14151a` | 18.23 | 12.57 | 8.10 |
+| `#2D3348` | 12.51 | 8.62 | 5.56 |
+| `#3a3f4b` | 10.54 | 7.27 | 4.69 |
+
+So this is the scrim half of your option 3 rather than the plate half, and the question is narrower
+than before: **which scrim value, and does the brand keep any presence in that band** — a hairline,
+a rule, the photo frame — or does it leave the footer entirely and live only in the cover above it?
+
+That is a composition decision and it is yours. **What we are no longer asking is which token you
+meant**: any ink on a band derived from the brand inherits the brand's luminance, and that is the
+whole defect.
+
+---
+
 ## What we are holding, and why
 
 Both stopgaps, together, because you gave them as one decision:
@@ -117,8 +160,8 @@ Both clear. The reason for the hold is ours and not yours: changing the band col
 contrast baseline (5 of `linen`'s 36 rows are footer selectors keyed on the tinted band), and
 whether to regenerate that family is a policy call on our side.
 
-One correction to something we sent you yesterday: we reported that `on_primary` *made the footer
-worse*. That was us swapping the ink while leaving the band as `rgba(0,0,0,0.2)` over the gradient.
-`on_primary` is ink guaranteed against `primary`, so **the plate is not optional** — it is what
-makes the token correct. `theme_color_text` against a solid brand reproduces your
-`contrast_on_primary` figures to the hundredth for all six brands, so the two names are one token.
+Two corrections to things we sent you yesterday, both from measuring the whole band instead of one
+line of it — see §3. `on_primary` against the band as it stands **does** make the footer worse, and
+the plate we then said was the fix is worse again. The token mapping stands (`theme_color_text`
+reproduces your `contrast_on_primary` to the hundredth for all six brands); what was wrong was the
+surface we were applying it to.
