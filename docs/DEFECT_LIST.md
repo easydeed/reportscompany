@@ -8128,6 +8128,65 @@ lines and zero dead**, which is exactly the figure
 because it is better evidence for this entry's lesson than the original finding was: the scope of a
 reachability check is part of its claim, and the second time is as easy to get wrong as the first.
 
+#### FOURTH MISREADING — 2026-10-21, and this time it came in from outside
+
+A finding reached us during D-205/D-206 that **`_base/property_base.jinja2` is extended by all five
+current themes**, that it is therefore the live file, and that it is where the cover stopgaps have
+to be applied. **It is wrong on every clause, and checking it is why no stopgap was applied to the
+wrong file.**
+
+| the claim | what is there |
+|---|---|
+| `_base/property_base.jinja2` | **no such file**, anywhere in the repository |
+| "all five current themes" | there are **three** live themes; `classic` and `teal` were cut 2026-10-05 |
+| "extended by the themes" | `_base/base.jinja2` **is** extended — by `atlas/atlas.jinja2`, `linen/linen.jinja2`, `harbor/harbor.jinja2`, **none of which the registry renders.** It renders `<theme>/<theme>_report.jinja2` |
+| "it is the live file" | nothing in Python or Jinja names `_base/` on the property side, and `test_one_comp_set.py` forbids a live template from reaching it, directly or transitively. **68 passed.** |
+
+**And the measurements already in hand settle it without any argument about reachability.** The
+contrast runs on `.cover-agent-name` were measured at **22px** on `linen` and **18px** on `harbor`:
+
+    linen/linen_report.jinja2:66    font-size:22px   <- what was measured
+    harbor/harbor_report.jinja2:63  font-size:18px   <- what was measured
+    _base/base.jinja2:322           font-size:15px   <- no measured run had this size
+
+Three files declare that selector and the dead one declares a size nothing measured. The pixel
+measurer was reading the files the registry names, which is what it is for.
+
+#### The two mechanisms, because this is the fourth time and the entry owes an explanation
+
+1. **THE DEAD TREE DECLARES THE LIVE DEFECTS' SELECTORS.** `property/_base/base.jinja2:322` and
+   `property/_base/_macros.jinja2:69` both carry `.cover-agent-name` — the selector in D-205's failure
+   message. Anyone who greps for a failing selector lands in the dead tree **first**, because it is
+   alphabetically and structurally where a base template should be. The copies have drifted (15px
+   against 22px), so the tree does not merely look live; it looks like the *source* of a
+   near-identical rule.
+
+2. **THERE ARE TWO `_base/base.jinja2`, AND ONE OF THEM IS LIVE.** `market/_base/base.jinja2` is
+   the base of every market report; `property/_base/base.jinja2` renders nowhere. The gate's own
+   docstring has to say so in parentheses. A claim about "`_base/base.jinja2`" is **true or false
+   depending on a directory it does not name**, and the previous misreading in this entry was the
+   same two files in the other direction.
+
+**What follows for the entry.** The classification stands: `property/_base/` is dead, and the
+stopgaps for D-205 and D-206 belong in `linen/linen_report.jinja2` and `harbor/harbor_report.jinja2`
+— the self-contained 720- and 795-line templates. The derivation and the gate both held this time;
+what failed is that a reader outside them reproduced the entry's original mistake.
+
+**And the remedy for mechanism 2 already exists — it caught this very note.** The paragraph above
+originally said `_base/base.jinja2:322`, unqualified, and
+`test_every_claim_about_a_dead_base_says_which_one[docs/DEFECT_LIST.md]` failed on it:
+
+    docs/DEFECT_LIST.md calls `_base/` dead without saying which one:
+        :8157  1. **THE DEAD TREE DECLARES THE LIVE DEFECTS' SELECTORS.** …
+    templates/market/_base/base.jinja2 is extended by market/market.jinja2 and
+    is the base of every market report.
+
+So a gate for exactly this already reads the documentation, and the fifth misreading of this entry
+was made and caught **inside the note recording the fourth**. It is now `property/_base/` in both
+places. The gap worth closing is narrower than it looked: the gate covers this board and the design
+corrections, and what it cannot reach is a document that leaves our repository — which is how the
+claim arrived.
+
 ---
 
 ### D-132 — six months of comps has no floor, and the ladder cannot widen time

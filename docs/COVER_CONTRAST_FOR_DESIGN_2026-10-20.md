@@ -45,6 +45,12 @@ measurement code. This document is the ask.
 > worse"; it is not, it is the stopgap with its structural half left out. Solid glyphs also make the
 > title *measurable*, so that surface rejoins the contrast gate instead of being excluded from it.
 >
+> **Two things went back to you on 2026-10-21 before anything is applied** —
+> `docs/THEME_MAPPING_AND_FOOTER_FOR_DESIGN_2026-10-21.md`: the name mapping confirmed from git's
+> rename detection rather than from either list (95%, 97%, 98% content similarity), and the footer,
+> which is in a file we ship today. *"Legacy and retired"* is true of your package and may be false
+> of our build, which are different facts and imply different fixes.
+>
 > **What is still open is ours, not yours.** Changing the band colour re-keys the contrast baseline:
 > 5 of `linen`'s 36 rows are footer selectors keyed on the tinted band, so a plate orphans those 5
 > and introduces new keys. There is a sanctioned path for exactly this — regenerate the replaced
