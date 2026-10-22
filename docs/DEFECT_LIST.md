@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 36 | Observed, not yet triaged |
+| `recorded` | 41 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
 | `fixed` | 142 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **265** | D-001 … D-265, contiguous, no duplicates |
+| **Total** | **270** | D-001 … D-270, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15412,6 +15412,41 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-265 — the New Listings page says "this week" beside its price range on a 30-day window
 
 **Severity:** ROUGH · filed during the report-preview batch: on the sample render of `new_listings` and `new_listings_gallery` ("$950K – $2.2M this week").
+**Status:** `recorded`
+
+---
+
+### D-266 — login ignores `?next=`: the admin pages redirect to `/login?next=/admin` and sign-in always lands on `/app`
+
+**Severity:** ROUGH · filed during the login/register adoption: the old page declared `useSearchParams()` and never read it; Design's drops it. Behaviour unchanged either way.
+**Status:** `recorded`
+
+---
+
+### D-267 — `/forgot-password`, `/reset-password` and `/verify-email` are still on the old dark split frame
+
+**Severity:** ROUGH · filed during the login/register adoption: Design's IMPLEMENTATION.md says they "should move onto it too (same move, not included)".
+**Status:** `recorded`
+
+---
+
+### D-268 — the landing city does not reach signup: Design's README says "Start free" carries `?city=` into signup, and `/register` reads no query parameter
+
+**Severity:** ROUGH · filed during the login/register adoption: true of the old page and of Design's.
+**Status:** `recorded`
+
+---
+
+### D-269 — login writes `mr_token` from JavaScript with `max-age=3600`, so a session cookie lasts an hour whatever the user wanted
+
+**Severity:** FRAGILE · filed during the login/register adoption: `app/login/page.tsx`, unchanged by the adoption; Design removed "Keep me signed in" because nothing read it. Not checked against the API's own cookie.
+**Status:** `recorded`
+
+---
+
+### D-270 — login's own error copy is unreachable: the API's `detail` ("Invalid credentials") always wins over "That email and password don't match."
+
+**Severity:** ROUGH · filed during the login/register adoption: seen on the error render.
 **Status:** `recorded`
 
 ---
