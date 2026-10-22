@@ -10,13 +10,14 @@
  * property card, the lead page and the closing band at once, as they do in
  * the deck.
  *
- * Report previews are `SharedPDFPreview` — the same component the report
- * wizard renders — rather than images. The deck imports its own "Report Page"
- * file at those points; the product's equivalent is the real preview, which
- * recolours with the swatches the way the deck's does.
+ * Report previews are `ReportThumb` — the worker's own render of each kind's
+ * first page, the one the wizard and the dashboard show — rather than images,
+ * so they recolour with the swatches the way the deck's do. (This said "the
+ * real preview" when it was `SharedPDFPreview`, a React redraw of the report
+ * that had kept the page seven kinds left in October.)
  */
-import { createContext, useContext, type CSSProperties, type ReactNode } from "react";
-import { SharedPDFPreview } from "@/components/shared/pdf-preview";
+import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { ReportThumb } from "@/components/shared/report-thumb";
 import type { PreviewReportType } from "@/components/shared/email-preview/sample-data";
 import { DEMO_AGENT, DEMO_MARKET } from "@/lib/demo-data";
 
@@ -202,9 +203,9 @@ export function AgentDisc({ size = 40 }: { size?: number }) {
 }
 
 /**
- * A report's first page at a given width. `SharedPDFPreview` lays out at
- * 480px wide on an 8.5×11 page, so it is drawn at that size and scaled — a
- * transform does not change layout, so the outer box carries the real size.
+ * A report's first page at a given width, in the landing theme's colours and
+ * city. The city waits for typing to pause: every change is a new render on
+ * the API, and the hero holds three pages and the carousel seven.
  */
 export function ReportSheet({
   kind,
@@ -218,7 +219,11 @@ export function ReportSheet({
   style?: CSSProperties;
 }) {
   const { primary, accent, area } = useLandingTheme();
-  const scale = width / 480;
+  const [city, setCity] = useState(area);
+  useEffect(() => {
+    const t = setTimeout(() => setCity(area), 500);
+    return () => clearTimeout(t);
+  }, [area]);
   return (
     <div
       className={`overflow-hidden rounded-md bg-white ${className}`}
@@ -229,23 +234,15 @@ export function ReportSheet({
         ...style,
       }}
     >
-      <div style={{ width: 480, transform: `scale(${scale})`, transformOrigin: "0 0" }}>
-        <SharedPDFPreview
-          primaryColor={primary}
-          accentColor={accent}
-          headerLogoUrl={null}
-          displayName={DEMO_AGENT.brokerage}
-          agentName={DEMO_AGENT.name}
-          agentTitle={DEMO_AGENT.title}
-          agentPhone={null}
-          agentEmail="agent@example.com"
-          agentPhotoUrl={null}
-          reportType={kind}
-          audienceLabel={null}
-          areaName={area}
-          lookbackDays={30}
-        />
-      </div>
+      <ReportThumb
+        reportType={kind}
+        width={width}
+        shadow="none"
+        primaryColor={primary}
+        accentColor={accent}
+        areaName={city}
+        lookbackDays={30}
+      />
     </div>
   );
 }

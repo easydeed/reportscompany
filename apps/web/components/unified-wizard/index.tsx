@@ -7,7 +7,7 @@ import { Loader2, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, Arrow
 import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview, PREVIEW_DEFAULT_PRIMARY, PREVIEW_DEFAULT_ACCENT } from "@/components/shared/email-preview"
-import { SharedPDFPreview } from "@/components/shared/pdf-preview"
+import { ReportThumb } from "@/components/shared/report-thumb"
 import { VerificationRequired } from "@/components/shared/verification-required"
 import { readVerificationRefusal, type VerificationRefusal } from "@/lib/verification"
 import { StepStory } from "./step-story"
@@ -810,19 +810,15 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                 lookbackDays={state.lookbackDays || 30}
               />
             ) : (
-              <SharedPDFPreview
+              <ReportThumb
+                width={480}
+                shadow="none"
                 primaryColor={branding.primaryColor}
                 accentColor={branding.accentColor}
-                headerLogoUrl={branding.headerLogoUrl}
-                displayName={branding.displayName}
-                agentName={profile.name}
-                agentTitle={profile.title}
-                agentPhone={profile.phone}
-                agentEmail={profile.email}
-                agentPhotoUrl={profile.photoUrl}
                 reportType={previewReportType}
-                audienceLabel={audienceLabel}
-                areaName={areaName}
+                // The page writes the area into its heading and its prose, so
+                // it gets the city or the ZIPs themselves, not "Your Area".
+                areaName={state.city || state.zipCodes.join(", ")}
                 lookbackDays={state.lookbackDays || 30}
               />
             )}

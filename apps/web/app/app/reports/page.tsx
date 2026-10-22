@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { StatusBadge } from "@/components/status-badge"
 import { RuleList, ListHeader, ListRow, Cell, Text, IconButton, FilterPills, ListEmpty } from "@/components/ui/list"
 import { ReportThumb } from "@/components/shared/report-thumb"
-import { useReports, usePlanUsage, useBranding, useMe } from "@/hooks/use-api"
+import { useReports, usePlanUsage, useBranding } from "@/hooks/use-api"
 import type { PreviewReportType } from "@/components/shared/email-preview/sample-data"
 
 type Report = { id: string; report_type: string; city?: string; status: "completed" | "processing" | "pending" | "failed"; html_url?: string; pdf_url?: string; generated_at: string; schedule_name?: string | null }
@@ -21,7 +21,6 @@ export default function ReportsPage() {
   const { data, isLoading, error } = useReports()
   const { data: planUsage } = usePlanUsage()
   const { data: branding } = useBranding() as { data: any }
-  const { data: me } = useMe() as { data: any }
   const [filter, setFilter] = useState<Filter>("all")
 
   const all: Report[] = data?.reports || []
@@ -34,11 +33,7 @@ export default function ReportsPage() {
   const left = typeof limit === "number" && typeof used === "number" && limit < 999 ? Math.max(limit - used, 0) : null
   const sub = isLoading ? undefined : [`${thisMonth} this month`, left !== null && plan ? `${left} left on ${plan}` : null].filter(Boolean).join(" · ")
 
-  const preview = {
-    primaryColor: branding?.primary_color ?? "#4F46E5", accentColor: branding?.accent_color ?? "#D97706", headerLogoUrl: branding?.logo_url ?? null, displayName: branding?.display_name ?? null,
-    agentName: me?.first_name ? `${me.first_name} ${me.last_name ?? ""}`.trim() : me?.email ?? "", agentTitle: me?.title ?? null, agentPhone: me?.phone ?? null, agentEmail: me?.email ?? "", agentPhotoUrl: me?.avatar_url ?? null,
-    audienceLabel: null, lookbackDays: 30,
-  }
+  const preview = { primaryColor: branding?.primary_color, accentColor: branding?.accent_color, lookbackDays: 30 }
 
   return (
     <div className="flex flex-col gap-8">
