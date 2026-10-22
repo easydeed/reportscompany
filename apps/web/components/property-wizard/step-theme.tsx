@@ -21,6 +21,7 @@ import {
 import Image from "next/image";
 import type { Theme, ReportPage, PropertyData, Comparable } from "./types";
 import { THEMES, ACCENT_PRESETS } from "./types";
+import { StepHeader } from "@/components/unified-wizard/wizard-ui";
 
 // ---------------------------------------------------------------------------
 // Client-side color-role helpers (mirror the backend compute_color_roles)
@@ -125,24 +126,17 @@ export function StepTheme({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="flex flex-col gap-7">
       {/* Theme Gallery */}
       <div>
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#EEF2FF]">
-            <Palette className="h-5 w-5 text-[#6366F1]" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Choose Your Theme
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Each theme creates a distinct personality for your report.
-            </p>
-          </div>
+        <div className="mb-[22px]">
+          <StepHeader
+            title="How should it feel?"
+            sub="Three themes and one accent color. The sketch on the right follows."
+          />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-3 gap-2.5">
           {THEMES.map((theme) => {
             const isSelected = selectedThemeId === theme.id;
             return (
@@ -154,8 +148,8 @@ export function StepTheme({
                 onClick={() => handleThemeChange(theme.id)}
                 className={`relative rounded-xl border-2 overflow-hidden transition-all duration-200 text-left ${
                   isSelected
-                    ? "border-[#6366F1] ring-2 ring-[#6366F1]/20 scale-[1.02]"
-                    : "border-border hover:border-[#C7D2FE]"
+                    ? "border-[#0F172A] ring-2 ring-[#0F172A]/10 scale-[1.02]"
+                    : "border-border hover:border-[#0F172A]"
                 }`}
               >
                 {/* Theme preview */}
@@ -205,7 +199,7 @@ export function StepTheme({
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
-                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#6366F1] flex items-center justify-center shadow-lg"
+                      className="absolute top-2 right-2 w-6 h-6 rounded-full bg-[#0F172A] flex items-center justify-center shadow-lg"
                     >
                       <Check className="h-3.5 w-3.5 text-white" />
                     </motion.div>
@@ -231,8 +225,8 @@ export function StepTheme({
       </div>
 
       {/* Accent Color Picker */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-1">
+      <div className="border-t-[1.5px] border-[#0F172A] pt-4">
+        <h3 className="mb-1 text-xs font-bold uppercase tracking-[0.1em] text-[#64748B]">
           Accent Color
         </h3>
         <p className="text-xs text-muted-foreground mb-3">
@@ -252,7 +246,7 @@ export function StepTheme({
                   type="button"
                   className={`w-8 h-8 rounded-full transition-all duration-150 ${
                     accentColor === color
-                      ? "ring-2 ring-offset-2 ring-[#6366F1] scale-110"
+                      ? "ring-2 ring-offset-2 ring-[#0F172A] scale-110"
                       : "hover:scale-110"
                   }`}
                   style={{ backgroundColor: color }}
@@ -276,7 +270,7 @@ export function StepTheme({
                 type="button"
                 className={`w-7 h-7 rounded-full transition-all duration-150 ${
                   accentColor === color
-                    ? "ring-2 ring-offset-2 ring-[#6366F1]"
+                    ? "ring-2 ring-offset-2 ring-[#0F172A]"
                     : "hover:scale-110"
                 }`}
                 style={{ backgroundColor: color }}
@@ -364,9 +358,9 @@ export function StepTheme({
           </div>
 
           {/* Auto-adjustment note */}
-          <div className="flex items-start gap-2 mt-3 bg-[#EEF2FF] rounded-lg p-2.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-[#6366F1] mt-0.5 shrink-0" />
-            <p className="text-[10px] text-[#4338CA] leading-relaxed">
+          <div className="flex items-start gap-2 mt-3 bg-[#F6F5F1] rounded-lg p-2.5">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#0F172A] mt-0.5 shrink-0" />
+            <p className="text-[11px] text-[#475569] leading-relaxed">
               <span className="font-semibold">Smart Color System:</span> We
               automatically adjust your accent color for readability on every
               report section — dark headers, light backgrounds, and stat boxes.
@@ -377,11 +371,11 @@ export function StepTheme({
       </div>
 
       {/* Report Pages */}
-      <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="border-t-[1.5px] border-[#0F172A] pt-4">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              Report Pages
+            <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-[#64748B]">
+              Pages
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               {pages.length} pages available {"·"} {selectedPageIds.length}{" "}
@@ -399,7 +393,7 @@ export function StepTheme({
         </div>
 
         <TooltipProvider>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
             {pages.map((page) => {
               const isSelected = selectedPageIds.includes(page.id);
               const previewSrc = `/previews/pages/${selectedThemeId}/${page.id}.jpg`;
@@ -411,7 +405,7 @@ export function StepTheme({
                       onClick={() => togglePage(page.id)}
                       className={`relative aspect-[8.5/11] rounded-lg border-2 overflow-hidden transition-all duration-200 ${
                         isSelected
-                          ? "border-[#6366F1] ring-1 ring-[#6366F1]/20 shadow-sm"
+                          ? "border-[#0F172A] ring-1 ring-[#0F172A]/10 shadow-sm"
                           : "border-border opacity-50 hover:opacity-100 hover:border-stone-300"
                       }`}
                     >
@@ -437,7 +431,7 @@ export function StepTheme({
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#6366F1] flex items-center justify-center shadow"
+                          className="absolute top-1 right-1 w-4 h-4 rounded-full bg-[#0F172A] flex items-center justify-center shadow"
                         >
                           <Check className="h-2.5 w-2.5 text-white" />
                         </motion.div>

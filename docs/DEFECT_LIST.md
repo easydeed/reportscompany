@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 12 | Observed, not yet triaged |
+| `recorded` | 19 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 141 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 142 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **240** | D-001 … D-240, contiguous, no duplicates |
+| **Total** | **248** | D-001 … D-248, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15237,6 +15237,62 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-240 — "five of the eight report types skip the audience step" is wrong; it is four of eight, three of the seven offered
 
 **Severity:** ROUGH · filed during the report-wizard restyle; the wrong count is in `docs/SCOPE_MARKETING_AND_WIZARDS_2026-10-21.md` and a comment in `NewSchedulePage.test.tsx`.
+**Status:** `recorded`
+
+---
+
+### D-241 — signing up does not sign you in; a new account lands on /login with nothing said
+
+**Severity:** WRONG · filed during the property-wizard walk: `POST /v1/auth/register` sets its cookie on its own response and returns `{"ok": true, "email_verified": false}` with no `access_token`, and `app/api/proxy/v1/auth/register/route.ts` only sets `mr_token` from `data.access_token`, so `router.push("/app")` is bounced to `/login`.
+**Status:** `recorded`
+
+---
+
+### D-242 — the property wizard sends the string "N/A" as the owner's name when the record has none
+
+**Severity:** ROUGH · filed during the property-wizard walk: `mapSiteX` defaults `owner_name` to `"N/A"` and `step-generate.tsx` sends it top-level and inside `sitex_data`. Design's "Owner names never print" was left out of the restyle for the same reason — removing owner identity from the report is not merged.
+**Status:** `recorded`
+
+---
+
+### D-243 — a fresh account's first property report goes out with a white accent, #ffffff
+
+**Severity:** WRONG · filed during the property-wizard walk: `loadAccountDefaults` lets the account's `secondary_color` override the theme's default accent, and a new account's is `#ffffff`; the request body carried `"accent_color": "#ffffff"` on both walks.
+**Status:** `recorded`
+
+---
+
+### D-244 — the property wizard's comparables default to active listings, not closed sales
+
+**Severity:** ROUGH · filed during the property-wizard walk: `compsStatus` starts at `"Active"` and resets to it.
+**Status:** `recorded`
+
+---
+
+### D-245 — the theme preview images predate the 2026-10-13 cover changes and carry a sample brokerage, "Luxury Estates Realty"
+
+**Severity:** ROUGH · filed during the property-wizard walk: `public/previews/*.jpg`, last changed 2026-09-30, shown on the Look step's theme cards.
+**Status:** `recorded`
+
+---
+
+### D-246 — the property wizard's preview is a hand-drawn cover sketch, not the template
+
+**Severity:** ROUGH · filed during the property-wizard restyle: Design draws the real cover on the right; the product has no React render of it, so the sketch is kept and labelled as one.
+**Status:** `recorded`
+
+---
+
+### D-247 — the property wizard's header "Generate Report" button showed the spinner and sent nothing
+
+**Severity:** WRONG · filed during the property-wizard restyle: it called `setGenerationPhase("generating")` without `startGeneration`, so the request was never made and the spinner never ended.
+**Status:** `fixed` — `feat/property-wizard-adopt-design`. Design's header has no such button; the one that calls the API is the step's own.
+
+---
+
+### D-248 — Design's "Who's reading it?" and "Public page + QR code" are product decisions, not built
+
+**Severity:** ROUGH · filed during the property-wizard restyle: seller/buyer maps to `report_type`, which `PropertyReportCreate` accepts and the wizard never sends; the public-page switch has no counterpart.
 **Status:** `recorded`
 
 ---

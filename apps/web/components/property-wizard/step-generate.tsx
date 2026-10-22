@@ -2,18 +2,8 @@
 
 import { useRef, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import {
-  Check,
-  Download,
-  ExternalLink,
-  Loader2,
-  MapPin,
-  RotateCcw,
-  Sparkles,
-  X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { ArrowRight, Check, Download, ExternalLink, RotateCcw, X } from "lucide-react";
+import { StepHeader } from "@/components/unified-wizard/wizard-ui";
 import type { PropertyData, Theme, Comparable, PropertyReportResponse } from "./types";
 
 interface StepGenerateProps {
@@ -242,153 +232,70 @@ export function StepGenerate({
     onSetStage,
   ]);
 
-  // Idle / Review
+  // Idle / Review — Design's Wizards v3: one heading, the choices as rows that
+  // jump back to their step, then the one action. Design's "Who's reading
+  // it?" (seller / buyer) and "Public page + QR code" switch are not here:
+  // both are product decisions, not styling.
   if (generationPhase === "idle") {
+    const rows: { label: string; value: string; sub: string; step: number }[] = [
+      {
+        label: "Home",
+        value: property.full_address,
+        sub: `${property.bedrooms} bed · ${property.bathrooms} bath · ${property.sqft.toLocaleString()} sqft · Built ${property.year_built}`,
+        step: 0,
+      },
+      {
+        label: "Comparables",
+        value: `${selectedComps.length} comparable sales`,
+        sub: `Avg $${avgPrice.toLocaleString()} · $${Math.round(minPrice / 1000)}K–$${Math.round(maxPrice / 1000)}K`,
+        step: 1,
+      },
+      {
+        label: "Look",
+        value: `${selectedTheme.name} · ${selectedPageIds.length} pages`,
+        sub: `Accent ${accentColor.toUpperCase()}`,
+        step: 2,
+      },
+    ];
     return (
-      <div className="space-y-6 max-w-2xl">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#EEF2FF]">
-            <Sparkles className="h-5 w-5 text-[#6366F1]" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Review & Generate
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Everything looks good? Let&apos;s create your report.
-            </p>
-          </div>
+      <div className="flex flex-col gap-6">
+        <StepHeader title="Ready to build it?" sub="Check what goes in. Change anything by tapping it." />
+
+        <div className="flex flex-col border-t-[1.5px] border-[#0F172A]">
+          {rows.map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              onClick={() => goToStep(r.step)}
+              className="grid items-start gap-3.5 border-b border-[#ECEAE3] py-3.5 text-left"
+              style={{ gridTemplateColumns: "112px minmax(0,1fr) auto" }}
+            >
+              <span className="pt-0.5 text-xs font-bold uppercase tracking-[0.1em] text-[#64748B]">{r.label}</span>
+              <span className="flex min-w-0 flex-col">
+                <span className="flex items-center gap-2 text-[15px] font-semibold text-[#0F172A]">
+                  {r.step === 2 && (
+                    <span className="h-3 w-3 shrink-0 rounded-full border border-[#E4E2DA]" style={{ backgroundColor: accentColor }} />
+                  )}
+                  <span className="truncate">{r.value}</span>
+                </span>
+                <span className="text-[13px] text-[#64748B]">{r.sub}</span>
+              </span>
+              <span className="pt-0.5 text-[13px] font-semibold text-[#4F46E5]">Edit</span>
+            </button>
+          ))}
         </div>
 
-        {/* Summary Card */}
-        <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
-          {/* Property */}
-          <div className="p-5 flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-[#6366F1] mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Property
-                </p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {property.full_address}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {property.bedrooms} bed {"·"} {property.bathrooms} bath {"·"}{" "}
-                  {property.sqft.toLocaleString()} sqft {"·"} Built{" "}
-                  {property.year_built}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[#6366F1] shrink-0"
-              onClick={() => goToStep(0)}
-            >
-              Edit
-            </Button>
-          </div>
-
-          {/* Comparables */}
-          <div className="p-5 flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <svg
-                className="h-4 w-4 text-[#6366F1] mt-0.5 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Comparables
-                </p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {selectedComps.length} comparable sales selected
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Avg price: ${avgPrice.toLocaleString()} {"·"} Range: $
-                  {Math.round(minPrice / 1000)}K–$
-                  {Math.round(maxPrice / 1000)}K
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[#6366F1] shrink-0"
-              onClick={() => goToStep(1)}
-            >
-              Edit
-            </Button>
-          </div>
-
-          {/* Theme */}
-          <div className="p-5 flex items-start justify-between">
-            <div className="flex items-start gap-3">
-              <svg
-                className="h-4 w-4 text-[#6366F1] mt-0.5 shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-                />
-              </svg>
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  Theme & Pages
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-sm text-muted-foreground">
-                    {selectedTheme.name}
-                  </span>
-                  <div
-                    className="w-3 h-3 rounded-full border border-border"
-                    style={{ backgroundColor: accentColor }}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {"·"} {selectedPageIds.length} pages
-                  </span>
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[#6366F1] shrink-0"
-              onClick={() => goToStep(2)}
-            >
-              Edit
-            </Button>
-          </div>
-        </div>
-
-        {/* Generate CTA */}
-        <div className="rounded-2xl border border-border bg-card p-6 text-center">
-          <p className="text-sm text-muted-foreground mb-4">
-            This will create a branded PDF report with QR code and shareable
-            link.
-          </p>
-          <Button
-            className="bg-[#6366F1] text-white text-base font-semibold py-6 w-full rounded-xl hover:bg-[#4F46E5] shadow-lg shadow-[#6366F1]/25"
-            onClick={startGeneration}
-          >
-            <Sparkles className="h-5 w-5 mr-2" />
-            Generate Report
-          </Button>
-        </div>
+        <p className="m-0 text-[13px] text-[#64748B]">
+          This will create a branded PDF report with QR code and shareable link.
+        </p>
+        <button
+          type="button"
+          onClick={startGeneration}
+          className="inline-flex h-12 items-center justify-center gap-2 self-end rounded-[10px] bg-[#0F172A] px-[22px] text-[15px] font-semibold text-white"
+        >
+          Generate Report
+          <ArrowRight className="h-4 w-4" />
+        </button>
       </div>
     );
   }
@@ -396,91 +303,40 @@ export function StepGenerate({
   // Generating
   if (generationPhase === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center py-12 max-w-lg mx-auto">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="mb-6"
-        >
-          <Loader2 className="h-12 w-12 text-[#6366F1] animate-spin" />
-        </motion.div>
-
-        <h2 className="text-xl font-bold text-foreground mb-6">
-          Creating Your Property Report
-        </h2>
-
-        <div className="w-full mb-6">
-          <Progress value={generationProgress} className="h-2" />
-          <p className="text-right text-xs text-muted-foreground mt-1">
-            {generationProgress}%
-          </p>
+      <div className="flex flex-col gap-7">
+        <StepHeader title="Building the report…" sub="Usually takes 30–60 seconds." />
+        <div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-[#ECEAE3]">
+            <div className="h-full bg-[#0F172A] transition-all" style={{ width: `${generationProgress}%` }} />
+          </div>
+          <p className="mt-1 text-right text-xs text-[#64748B]">{generationProgress}%</p>
         </div>
-
-        <div className="w-full space-y-3">
+        <ol className="m-0 flex list-none flex-col border-t-[1.5px] border-[#0F172A] p-0">
           {dynamicStages.map((stage, i) => {
-            const status =
-              i < currentStage
-                ? "done"
-                : i === currentStage
-                ? "active"
-                : "waiting";
+            const status = i < currentStage ? "done" : i === currentStage ? "active" : "waiting";
             return (
-              <motion.div
+              <li
                 key={stage.label}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex items-center justify-between"
+                className={`flex items-center gap-3.5 border-b border-[#ECEAE3] py-3.5 text-[15px] ${
+                  status === "waiting" ? "font-medium text-[#94A3B8]" : status === "active" ? "font-semibold text-[#0F172A]" : "font-medium text-[#0F172A]"
+                }`}
               >
-                <div className="flex items-center gap-3">
-                  {status === "done" && (
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
-                      <Check className="h-3 w-3 text-emerald-600" />
-                    </div>
-                  )}
-                  {status === "active" && (
-                    <div className="w-5 h-5 flex items-center justify-center">
-                      <Loader2 className="h-4 w-4 text-[#6366F1] animate-spin" />
-                    </div>
-                  )}
-                  {status === "waiting" && (
-                    <div className="w-5 h-5 rounded-full border-2 border-border" />
-                  )}
-                  <span
-                    className={`text-sm ${
-                      status === "done"
-                        ? "text-foreground"
-                        : status === "active"
-                        ? "text-foreground font-medium"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    {stage.label}
-                  </span>
-                </div>
                 <span
-                  className={`text-xs ${
+                  className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full ${
                     status === "done"
-                      ? "text-emerald-600"
+                      ? "bg-[#047857]"
                       : status === "active"
-                      ? "text-[#6366F1]"
-                      : "text-muted-foreground"
+                      ? "animate-[spin_1.4s_linear_infinite] border-2 border-dashed border-[#0F172A]"
+                      : "border-[1.5px] border-[#CBD5E1]"
                   }`}
                 >
-                  {status === "done"
-                    ? "Done"
-                    : status === "active"
-                    ? "In progress..."
-                    : "Waiting"}
+                  {status === "done" && <Check className="h-3 w-3 text-white" />}
                 </span>
-              </motion.div>
+                {stage.label}
+              </li>
             );
           })}
-        </div>
-
-        <p className="text-xs text-muted-foreground mt-6">
-          Usually takes 30-60 seconds
-        </p>
+        </ol>
       </div>
     );
   }
@@ -488,128 +344,104 @@ export function StepGenerate({
   // Success
   if (generationPhase === "success") {
     return (
-      <div className="flex flex-col items-center justify-center py-12 max-w-lg mx-auto">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{
-            type: "spring",
-            stiffness: 260,
-            damping: 20,
-          }}
-          className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4"
-        >
-          <Check className="h-8 w-8 text-emerald-600" />
-        </motion.div>
-
-        <motion.h2
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-xl font-bold text-foreground"
-        >
-          Report Generated Successfully!
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="text-sm text-muted-foreground mt-1"
-        >
-          {property.street_address}, {property.city}
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mt-8 w-full rounded-2xl border border-border bg-card p-6"
-        >
-          <div className="flex flex-col gap-3 w-full">
-            <Button
-              className="w-full bg-[#6366F1] text-white hover:bg-[#4F46E5] gap-2"
-              onClick={() => {
-                if (reportResult?.pdf_url) {
-                  window.open(reportResult.pdf_url, "_blank");
-                }
-              }}
-            >
-              <Download className="h-4 w-4" />
-              Download PDF
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full gap-2 bg-transparent"
-              onClick={() => {
-                window.location.href = "/app/property";
-              }}
-            >
-              <ExternalLink className="h-4 w-4" />
-              View All Reports
-            </Button>
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="mt-6"
-        >
-          <Button
-            variant="ghost"
-            className="text-muted-foreground gap-2"
-            onClick={onReset}
+      <div className="flex flex-col gap-7">
+        <div className="flex flex-col gap-3">
+          <motion.span
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20 }}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-[#D1FAE5]"
           >
-            <RotateCcw className="h-4 w-4" />
-            Create Another Report
-          </Button>
-        </motion.div>
+            <Check className="h-[22px] w-[22px] text-[#047857]" />
+          </motion.span>
+          <h2 className="m-0 text-[30px] font-extrabold leading-[1.08] tracking-[-0.03em] text-[#0F172A]">
+            Your report is ready.
+          </h2>
+          <p className="m-0 text-base text-[#475569]">
+            {property.street_address}, {property.city}
+          </p>
+        </div>
+        <div className="flex flex-col border-t-[1.5px] border-[#0F172A]">
+          <button
+            type="button"
+            onClick={() => {
+              if (reportResult?.pdf_url) {
+                window.open(reportResult.pdf_url, "_blank");
+              }
+            }}
+            className="grid items-center gap-3.5 border-b border-[#ECEAE3] py-3.5 text-left text-[#0F172A] hover:text-[#4F46E5]"
+            style={{ gridTemplateColumns: "auto minmax(0,1fr) auto" }}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#ECEAE3] bg-[#FAFAF7]">
+              <Download className="h-4 w-4" />
+            </span>
+            <span className="flex flex-col">
+              <span className="text-[15px] font-semibold">Download PDF</span>
+              <span className="text-[13px] text-[#64748B]">Opens in a new tab</span>
+            </span>
+            <ArrowRight className="h-4 w-4 text-[#94A3B8]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = "/app/property";
+            }}
+            className="grid items-center gap-3.5 border-b border-[#ECEAE3] py-3.5 text-left text-[#0F172A] hover:text-[#4F46E5]"
+            style={{ gridTemplateColumns: "auto minmax(0,1fr) auto" }}
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#ECEAE3] bg-[#FAFAF7]">
+              <ExternalLink className="h-4 w-4" />
+            </span>
+            <span className="flex flex-col">
+              <span className="text-[15px] font-semibold">View all reports</span>
+              <span className="text-[13px] text-[#64748B]">Your property reports</span>
+            </span>
+            <ArrowRight className="h-4 w-4 text-[#94A3B8]" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="inline-flex h-[46px] items-center gap-2 self-start rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold text-[#0F172A]"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Create another report
+        </button>
       </div>
     );
   }
 
   // Error
   return (
-    <div className="flex flex-col items-center justify-center py-12 max-w-lg mx-auto">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4"
-      >
-        <X className="h-8 w-8 text-red-600" />
-      </motion.div>
-
-      <h2 className="text-xl font-bold text-foreground">
-        Report Generation Failed
-      </h2>
-      <p className="text-sm text-muted-foreground mt-1">
-        {errorMessage || "Something went wrong. Please try again."}
-      </p>
-
-      <div className="flex gap-3 mt-6">
-        <Button
-          className="bg-[#6366F1] text-white hover:bg-[#4F46E5] gap-2"
-          onClick={() => {
-            generatingRef.current = false;
-            startGeneration();
-          }}
-        >
-          <RotateCcw className="h-4 w-4" />
-          Retry
-        </Button>
-        <Button
-          variant="outline"
+    <div className="flex flex-col gap-6">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FEE2E2]">
+        <X className="h-[22px] w-[22px] text-[#B91C1C]" />
+      </span>
+      <StepHeader title="Report generation failed" sub={errorMessage || "Something went wrong. Please try again."} />
+      <div className="flex gap-2.5">
+        <button
+          type="button"
           onClick={() => {
             onSetPhase("idle");
             onSetProgress(0);
             onSetStage(0);
             generatingRef.current = false;
           }}
+          className="h-[46px] rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold text-[#0F172A]"
         >
-          Back to Review
-        </Button>
+          Back to review
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            generatingRef.current = false;
+            startGeneration();
+          }}
+          className="inline-flex h-[46px] items-center gap-2 rounded-[9px] bg-[#0F172A] px-5 text-sm font-semibold text-white"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Retry
+        </button>
       </div>
     </div>
   );
