@@ -1,99 +1,99 @@
 /**
- * Site-wide footer. Same rationale as site-nav.tsx.
+ * Site-wide footer. Same rationale as site-nav.tsx — one footer sitewide (M2).
  *
- * Anchors are root-relative so they work off the landing page. All three
- * (#how-it-works, #pricing, #faq) were verified to have matching section IDs
- * on the landing page — see how-it-works.tsx:385, pricing.tsx:59, faq.tsx:51.
+ * Design's `Landing v4` footer, with four entries left out:
  *
- * Every remaining entry resolves to a real page or a real section. There are
- * no mailto links left in the navigation columns (M4-T1, M4-T2):
+ * - "Open Houses" under Reports. The product has that report disabled.
+ * - "Status" beside Privacy and Terms. /status was deleted in 725802a7 for
+ *   fabricated uptime figures; there is no such route.
+ * - "Support" under Company, which the deck made a mailto. The address is
+ *   shown in full in the brand column instead, so the reader can see where it
+ *   goes and nothing in a list of page links opens a mail client (M4-T1).
+ * - "and partner MLSs" in the data line. Unverified; CRMLS is what the help
+ *   content states.
  *
- * - "For Title Companies" was `mailto:sales@trendyreports.io`, sitting in a
- *   list of page links, and `/for-title-companies` does not exist. A nav entry
- *   that silently opens a blank email client is a dead end that looks like a
- *   destination; a missing link is better. The page is M6, gated on G4 —
- *   restore this entry when the route exists.
- * - Support is now one labelled contact line showing the actual address,
- *   instead of a nav-styled "Contact Us" that hid a mailto. The reader can see
- *   where it goes, copy it, or use it in whatever client they actually use.
+ * "Sponsors" anchors to the sponsor band rather than mailing sales directly,
+ * for the same M4-T1 reason. All anchors are root-relative.
  */
+const columns: { title: string; links: [string, string][] }[] = [
+  {
+    title: "Product",
+    links: [
+      ["Market reports", "/#reports"],
+      ["Property reports", "/#property-reports"],
+      ["Home-value page", "/#lead-capture"],
+      ["Contacts", "/#contacts"],
+      ["Pricing", "/#pricing"],
+    ],
+  },
+  {
+    title: "Reports",
+    links: [
+      ["Market Snapshot", "/#reports"],
+      ["New Listings", "/#reports"],
+      ["Closed Sales", "/#reports"],
+      ["Price Bands", "/#reports"],
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      ["Log in", "/login"],
+      ["Start free", "/register"],
+      ["Sponsors", "/#sponsors"],
+    ],
+  },
+];
+
 export function SiteFooter() {
   return (
-    <footer className="bg-[#0F172A] px-6 py-24 text-[#94A3B8]">
-      <div className="mx-auto max-w-7xl">
-        <div className="grid gap-12 md:grid-cols-4">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <img src="/white.png" alt="TrendyReports" className="h-7 w-auto" />
-            <p className="mt-3 text-sm leading-relaxed">
-              Turn MLS data into beautiful market reports.
+    <footer className="mt-auto border-t border-[#ECEAE3] bg-[#FAFAF7]">
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-14 px-4 pb-10 pt-[72px] md:px-8">
+        <div
+          className="grid gap-10"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
+        >
+          <div className="col-span-full flex max-w-[320px] flex-col gap-4 md:col-span-1">
+            <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto self-start" />
+            <p className="m-0 text-[15px] leading-[1.55] text-[#64748B]">
+              Automated market reports for Southern California agents. Live MLS data, your brand,
+              sent every month.
             </p>
+            <a
+              href="mailto:support@trendyreports.io"
+              className="text-[15px] font-semibold text-[#4F46E5] hover:text-[#3730A3]"
+            >
+              support@trendyreports.io
+            </a>
           </div>
-
-          {/* Product */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white">
-              Product
-            </p>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <a href="/#how-it-works" className="text-sm transition-colors hover:text-white">
-                  For Agents
+          {columns.map((col) => (
+            <div key={col.title} className="flex flex-col gap-3">
+              <span className="text-xs font-bold uppercase tracking-[0.12em] text-[#0F172A]">
+                {col.title}
+              </span>
+              {col.links.map(([label, href]) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="text-[15px] text-[#475569] hover:text-[#0F172A]"
+                >
+                  {label}
                 </a>
-              </li>
-              <li>
-                <a href="/#pricing" className="text-sm transition-colors hover:text-white">
-                  Pricing
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white">
-              Support
-            </p>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <a href="/#faq" className="text-sm transition-colors hover:text-white">
-                  FAQ
-                </a>
-              </li>
-            </ul>
-            <p className="mt-4 text-sm">
-              Email us at{" "}
-              <a
-                href="mailto:support@trendyreports.io"
-                className="text-white underline underline-offset-2 transition-colors hover:text-[#818CF8]"
-              >
-                support@trendyreports.io
-              </a>
-            </p>
-          </div>
-
-          {/* Legal */}
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-white">
-              Legal
-            </p>
-            <ul className="mt-4 space-y-3">
-              <li>
-                <a href="/privacy" className="text-sm transition-colors hover:text-white">
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a href="/terms" className="text-sm transition-colors hover:text-white">
-                  Terms of Service
-                </a>
-              </li>
-            </ul>
-          </div>
+              ))}
+            </div>
+          ))}
         </div>
 
-        <div className="mt-16 border-t border-white/10 pt-10 text-center text-sm">
-          {"\u00A9 2026 TrendyReports. All rights reserved."}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[#ECEAE3] pt-6 text-sm text-[#64748B]">
+          <span>{"© 2026 TrendyReports · Data from CRMLS"}</span>
+          <div className="flex flex-wrap gap-6">
+            <a href="/privacy" className="text-[#64748B] hover:text-[#0F172A]">
+              Privacy
+            </a>
+            <a href="/terms" className="text-[#64748B] hover:text-[#0F172A]">
+              Terms
+            </a>
+          </div>
         </div>
       </div>
     </footer>

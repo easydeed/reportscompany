@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 0 | Observed, not yet triaged |
+| `recorded` | 7 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 140 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 141 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **227** | D-001 … D-227, contiguous, no duplicates |
+| **Total** | **235** | D-001 … D-235, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15147,6 +15147,62 @@ stand-in between the test and anything a customer sees.
 The rewritten suite is still worth more than the mock — it asserts three rules nothing else
 asserts (the override, the two-condition badge, the server-side decision) — but if the route goes
 as a duplicate, the file goes with it rather than being ported.
+
+---
+
+### D-228 — the landing page shows two Irvine medians: $925,000 in the report previews, $1.2M in the autopilot card
+
+**Severity:** ROUGH · filed during the landing adoption, which introduced it: the previews are the wizard's `SharedPDFPreview`, whose figures come from `components/shared/email-preview/sample-data.ts`, not `lib/demo-data.ts`.
+**Status:** `fixed` — `feat/landing-adopt-design`. The autopilot card reads the Market Snapshot preview's figures, and the Closed Sales sample's median, trend and days on market were aligned to the snapshot's — those two previews also disagreed about the same 42 sales.
+
+---
+
+### D-229 — `components/shared/email-preview/sample-data.ts` is a second demo-data source beside `lib/demo-data.ts`
+
+**Severity:** ROUGH · filed during the landing adoption; the cause of D-228.
+**Status:** `recorded`
+
+---
+
+### D-230 — the landing page's city box is not carried into signup
+
+**Severity:** ROUGH · filed during the landing adoption; Design's "Your {city} report will be waiting" line was left out because of it.
+**Status:** `recorded`
+
+---
+
+### D-231 — Design's landing pricing copy sells cadence and city limits the product does not have
+
+**Severity:** ROUGH · filed during the landing adoption ("1 city, monthly" / "Up to 3 cities, weekly"); nothing gates cadence by plan, so the verified figures were kept in Design's layout.
+**Status:** `recorded`
+
+---
+
+### D-232 — "350+ Southern California cities" in Design's landing hero has no source
+
+**Severity:** ROUGH · filed during the landing adoption; left out. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-233 — "Data from CRMLS and partner MLSs" in Design's landing footer is unverified
+
+**Severity:** ROUGH · filed during the landing adoption; "and partner MLSs" left out. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-234 — "Your logo goes next to theirs" in the sponsor band is a capability claim nobody has checked
+
+**Severity:** ROUGH · filed during the landing adoption; kept as Design wrote it.
+**Status:** `recorded`
+
+---
+
+### D-235 — the render harness's chrome-only runs flip `/app/people` between degraded and ok, and move `/app/affiliate`'s button count, with no change to either
+
+**Severity:** ROUGH · filed during the landing adoption's before/after comparison.
+**Status:** `recorded`
 
 ---
 
