@@ -16,22 +16,22 @@
   {
     "name": "R3 the sentence title stops falling back, so an uncomputable state ships a hole",
     "file": "apps/web/components/dashboard/dashboard-content.tsx",
-    "old": "        title={sentenceTitle ?? \"Overview\"}",
-    "new": "        title={sentenceTitle as string}",
+    "old": "    title = firstName ? `${greeting()}, ${firstName}.` : \"Overview\"",
+    "new": "    title = firstName ? `${greeting()}, ${firstName}.` : (undefined as unknown as string)",
     "test": "tests/test_render_manifest_is_current.py"
   },
   {
     "name": "R4 the unlimited guard goes, so an unlimited plan renders a number",
     "file": "apps/web/components/dashboard/dashboard-content.tsx",
-    "old": "typeof mkt === 'number' && typeof used === 'number' && mkt < 99999",
-    "new": "typeof mkt === 'number' && typeof used === 'number'",
+    "old": "typeof used === \"number\" && limit < 999 ?",
+    "new": "typeof used === \"number\" ?",
     "test": "tests/test_render_manifest_is_current.py"
   },
   {
     "name": "R5 an absence phrase becomes a zero",
     "file": "apps/web/components/dashboard/dashboard-content.tsx",
-    "old": "<p className=\"text-[15px] text-muted-foreground mt-1\">Nothing scheduled</p>",
-    "new": "<p className=\"text-[15px] text-muted-foreground mt-1\">0 scheduled</p>",
+    "old": ": \"Nothing scheduled\"}</span>",
+    "new": ": \"0 scheduled\"}</span>",
     "test": "tests/test_render_manifest_is_current.py"
   }
 ]

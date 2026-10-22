@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import Link from "next/link"
 import { Switch } from "@/components/ui/switch"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Eye, Edit, Trash2, Calendar } from "lucide-react"
+import { Ellipsis, Eye, Pencil, Trash2 } from "lucide-react"
+import { RuleList, ListHeader, ListRow, Cell, Text, IconButton, ListEmpty } from "@/components/ui/list"
 import { type Schedule, reportTypeLabels, dowToWeekday, formatTime12h } from "./types"
 
 export interface ScheduleTableProps {
@@ -16,152 +16,56 @@ export interface ScheduleTableProps {
   onDelete?: (id: string) => void
 }
 
+const COLS = "minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1.2fr) auto 34px"
+const ORD = (n: number) => `${n}${["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) ? 0 : n % 10 < 4 ? n % 10 : 0]}`
+
 export function ScheduleTable({ schedules, onToggleActive, onView, onEdit, onDelete }: ScheduleTableProps) {
   const [toggling, setToggling] = useState<string | null>(null)
+  const toggle = async (s: Schedule) => { setToggling(s.id); await onToggleActive?.(s.id, !s.active); setToggling(null) }
 
-  const handleToggle = async (id: string, currentActive: boolean) => {
-    setToggling(id)
-    await onToggleActive?.(id, !currentActive)
-    setToggling(null)
-  }
-
-  const formatArea = (schedule: Schedule) => {
-    if (schedule.city) {
-      return schedule.city
-    }
-    return `ZIPs (${schedule.zip_codes?.length || 0})`
-  }
-
-  const formatCadence = (schedule: Schedule) => {
-    if (schedule.cadence === "weekly" && schedule.weekly_dow !== null && schedule.weekly_dow !== undefined) {
-      const weekday = dowToWeekday(schedule.weekly_dow)
-      const day = weekday.charAt(0).toUpperCase() + weekday.slice(1)
-      return `Weekly on ${day}`
-    }
-    if (schedule.cadence === "monthly" && schedule.monthly_dom) {
-      return `Monthly on day ${schedule.monthly_dom}`
-    }
+  const area = (s: Schedule) => s.city || `${s.zip_codes?.length ?? 0} ZIPs`
+  const cadence = (s: Schedule) => {
+    const t = formatTime12h(s.send_hour, s.send_minute)
+    if (s.cadence === "weekly" && s.weekly_dow != null) { const d = dowToWeekday(s.weekly_dow); return `Weekly · ${d[0].toUpperCase()}${d.slice(1, 3)}, ${t}` }
+    if (s.cadence === "monthly" && s.monthly_dom) return `Monthly · ${ORD(s.monthly_dom)}, ${t}`
     return "—"
   }
-
-  const formatNextRun = (dateString: string | null | undefined) => {
-    if (!dateString) return "Not scheduled"
-    
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = date.getTime() - now.getTime()
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-    if (diffDays === 0) return "Today"
-    if (diffDays === 1) return "Tomorrow"
-    if (diffDays < 7) return `In ${diffDays} days`
-    return date.toLocaleDateString()
-  }
-
-  if (schedules.length === 0) {
-    return (
-      <div className="border border-border rounded-xl p-12 text-center">
-        <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="font-display font-semibold text-lg mb-2">No schedules yet</h3>
-        <p className="text-muted-foreground text-sm">Create your first automated schedule to get started</p>
-      </div>
-    )
+  const nextRun = (s: Schedule) => {
+    if (!s.active) return "Paused"
+    if (!s.next_run_at) return "—"
+    const d = new Date(s.next_run_at), days = Math.floor((d.getTime() - Date.now()) / 86400000)
+    if (days === 0) return "Today"
+    if (days === 1) return "Tomorrow"
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" })
   }
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-muted/50 border-b border-border">
-            <tr>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Name
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Report Type
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Area
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Cadence
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Next Run
-              </th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Active
-              </th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {schedules.map((schedule) => (
-              <tr key={schedule.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => onView?.(schedule.id)}
-                    className="font-medium hover:text-primary transition-colors text-left"
-                  >
-                    {schedule.name}
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant="secondary" className="font-normal">
-                    {reportTypeLabels[schedule.report_type]}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{formatArea(schedule)}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{formatCadence(schedule)}</td>
-                <td className="px-4 py-3 text-sm">
-                  <span className="text-foreground font-medium">{formatNextRun(schedule.next_run_at)}</span>
-                  <span className="text-muted-foreground ml-1">
-                    at {formatTime12h(schedule.send_hour, schedule.send_minute)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <Switch
-                    checked={schedule.active}
-                    onCheckedChange={() => handleToggle(schedule.id, schedule.active)}
-                    disabled={toggling === schedule.id}
-                    aria-label={`Toggle ${schedule.name} ${schedule.active ? "off" : "on"}`}
-                  />
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="w-4 h-4" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onView?.(schedule.id)} className="gap-2">
-                        <Eye className="w-4 h-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onEdit?.(schedule.id)} className="gap-2">
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onDelete?.(schedule.id)}
-                        className="gap-2 text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="flex flex-col gap-8">
+      <RuleList>
+        <ListHeader columns={COLS} cells={["Schedule", "Area", "Cadence", "Next send", "On", ""]} />
+        {schedules.length === 0 ? (
+          <ListEmpty>Nothing scheduled. <Link href="/app/schedules/new" prefetch={false} className="font-semibold">Set one up →</Link></ListEmpty>
+        ) : schedules.map((s) => (
+          <ListRow key={s.id} columns={COLS} className="py-[14px]" style={{ opacity: s.active ? 1 : 0.7 }}>
+            <Cell title={<button onClick={() => onView?.(s.id)} className="text-left hover:text-[var(--link)]">{s.name}</button>} sub={`${reportTypeLabels[s.report_type]} · ${s.recipients?.length ?? 0} contacts`} />
+            <Text>{area(s)}</Text>
+            <Text>{cadence(s)}</Text>
+            <Text strong={s.active} muted={!s.active}>{nextRun(s)}</Text>
+            <Switch checked={s.active} disabled={toggling === s.id} onCheckedChange={() => toggle(s)} aria-label={`Turn ${s.name} ${s.active ? "off" : "on"}`} />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><span><IconButton label="More"><Ellipsis /></IconButton></span></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onView?.(s.id)} className="gap-2"><Eye className="size-4" />View</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEdit?.(s.id)} className="gap-2"><Pencil className="size-4" />Edit</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onDelete?.(s.id)} className="gap-2 text-[var(--destructive)] focus:text-[var(--destructive)]"><Trash2 className="size-4" />Delete</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ListRow>
+        ))}
+      </RuleList>
+      {/* Design's footnote also said "Weekly cadence needs Growth." Nothing gates
+          weekly delivery by plan, so that sentence is not shipped. */}
+      <p className="max-w-[560px] text-[14px] text-muted-foreground [text-wrap:pretty]">Each send uses one report from your monthly allowance.</p>
     </div>
   )
 }
-

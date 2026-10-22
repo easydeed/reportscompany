@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 19 | Observed, not yet triaged |
+| `recorded` | 25 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
 | `fixed` | 142 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **248** | D-001 … D-248, contiguous, no duplicates |
+| **Total** | **254** | D-001 … D-254, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15293,6 +15293,48 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-248 — Design's "Who's reading it?" and "Public page + QR code" are product decisions, not built
 
 **Severity:** ROUGH · filed during the property-wizard restyle: seller/buyer maps to `report_type`, which `PropertyReportCreate` accepts and the wizard never sends; the public-page switch has no counterpart.
+**Status:** `recorded`
+
+---
+
+### D-249 — Design's App v3 rail hides Branding from sponsored agents; the old shell gave them their own
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: `getNavGroups` spreads Branding only when `!isSponsored`, against the old tier's "full tools + own branding + billing". Every other route survives the rewrite. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-250 — the reports list's "Sent to contacts" / "Downloaded only" filter is really "from a schedule" / "not"
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: both pills key on `schedule_name`, so a send-now report emailed to contacts is listed under "Downloaded only".
+**Status:** `recorded`
+
+---
+
+### D-251 — the schedules page still wraps Design's new table in the old stat tiles and boxed card
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: IMPLEMENTATION.md describes the page change; no file for `app/app/schedules/page.tsx` was provided.
+**Status:** `recorded`
+
+---
+
+### D-252 — the schedules list shows "—" for cadence on every row
+
+**Severity:** ROUGH · filed during the App v3 drop-ins; the same before and after.
+**Status:** `recorded`
+
+---
+
+### D-253 — report types the list does not know render as raw lowercase slugs ("dom", "price changes")
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: the new reports page falls back to `report_type.replace(/_/g, " ")`; the old list title-cased them. Seen on seeded rows.
+**Status:** `recorded`
+
+---
+
+### D-254 — the dashboard no longer mounts the onboarding checklist or the limit alerts
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: Design's dashboard puts the limit in the lead sentence and drops `DashboardOnboarding`; IMPLEMENTATION.md leaves open whether sponsored accounts still need it. **[JERRY]**
 **Status:** `recorded`
 
 ---

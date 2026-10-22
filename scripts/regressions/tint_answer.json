@@ -1,9 +1,9 @@
 [
   {
-    "name": "R1 a tinted account-type tag back on the topbar",
+    "name": "R1 a tinted account-type tag back in the rail's account row",
     "file": "apps/web/app/app-layout.tsx",
-    "old": "<span className=\"rounded-full bg-accent text-accent-foreground text-[11px] font-semibold px-2.5 py-0.5 uppercase tracking-wide\">",
-    "new": "<span className=\"rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-2.5 py-0.5 uppercase tracking-wide\">",
+    "old": "<span className=\"text-[12px] text-muted-foreground\">{roleLabel}</span>",
+    "new": "<span className=\"rounded-full bg-indigo-50 text-indigo-600 text-[12px] px-2\">{roleLabel}</span>",
     "test": "tests/test_tint_answer_is_current.py"
   },
   {
