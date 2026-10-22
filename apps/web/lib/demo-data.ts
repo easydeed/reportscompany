@@ -41,9 +41,6 @@ export const DEMO_MARKET = {
   activeListings: "847",
   activeListingsLabel: "847 listings",
   daysOnMarket: "24",
-  /** Closed in the last 30 days, and median close as a share of list. */
-  closedSales: "118",
-  pctOfAsk: "99%",
   trends: {
     medianPrice: "+3.2%",
     inventory: "-8.1%",

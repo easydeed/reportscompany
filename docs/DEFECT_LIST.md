@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 8 | Observed, not yet triaged |
+| `recorded` | 7 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 140 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 141 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **235** | D-001 … D-235, contiguous, no duplicates |
@@ -15153,7 +15153,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-228 — the landing page shows two Irvine medians: $925,000 in the report previews, $1.2M in the autopilot card
 
 **Severity:** ROUGH · filed during the landing adoption, which introduced it: the previews are the wizard's `SharedPDFPreview`, whose figures come from `components/shared/email-preview/sample-data.ts`, not `lib/demo-data.ts`.
-**Status:** `recorded`
+**Status:** `fixed` — `feat/landing-adopt-design`. The autopilot card reads the Market Snapshot preview's figures, and the Closed Sales sample's median, trend and days on market were aligned to the snapshot's — those two previews also disagreed about the same 42 sales.
 
 ---
 

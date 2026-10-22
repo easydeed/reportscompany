@@ -3,18 +3,20 @@
 /**
  * "Autopilot" — Design's `Landing v4`, the phone with the monthly email.
  *
- * Every person, figure and date comes from `lib/demo-data.ts`. The deck's mock
- * used its own agent and its own Irvine median ($1.46M against the fixture's
- * $1.2M), and its send dates were literal months.
+ * The market figures are the Market Snapshot preview's own — the same numbers
+ * the report previews on this page draw — so the email and the report it
+ * attaches agree about the city. Read from `lib/demo-data.ts` they did not:
+ * the previews said a $925,000 median and 42 sales while this card said $1.2M
+ * and 118 (D-228). People and dates still come from `lib/demo-data.ts`.
  */
 import { Phone } from "lucide-react";
 import {
   DEMO_AGENT,
-  DEMO_MARKET,
   DEMO_SPHERE,
   currentMonthName,
   monthlySendDates,
 } from "@/lib/demo-data";
+import { PREVIEW_CONTENT } from "@/components/shared/email-preview/sample-data";
 import {
   AgentDisc,
   DotField,
@@ -28,6 +30,9 @@ export function Autopilot() {
   const { primary, area } = useLandingTheme();
   const { last, next } = monthlySendDates();
   const firstName = DEMO_AGENT.name.split(" ")[0];
+  const snap = PREVIEW_CONTENT.market_snapshot;
+  const stat = (label: string) => snap.stats.find((s) => s.label === label)?.value ?? "—";
+  const trend = snap.heroSub?.match(/\d+(\.\d+)?%/)?.[0];
 
   return (
     <SplitSection white>
@@ -55,17 +60,17 @@ export function Autopilot() {
                 {area} · Last 30 days
               </div>
               <div className="text-[40px] font-bold leading-none tracking-[-0.035em]">
-                {DEMO_MARKET.medianPrice}
+                {snap.heroValue}
               </div>
               <div className="text-[13px] text-white/85">
-                median sale price · ▲ {DEMO_MARKET.trends.medianPrice.replace("+", "")}
+                median sale price{trend ? ` · ▲ ${trend}` : ""}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[
-                [DEMO_MARKET.closedSales, "Sold"],
-                [DEMO_MARKET.daysOnMarket, "Days"],
-                [DEMO_MARKET.pctOfAsk, "Of ask"],
+                [stat("Closed Sales"), "Sold"],
+                [stat("Avg DOM"), "Days"],
+                [stat("List-to-Sale"), "Of ask"],
               ].map(([v, l]) => (
                 <div key={l} className="rounded-[10px] bg-[#F6F5F1] px-2 py-3 text-center">
                   <div className="text-xl font-bold text-[#0F172A]">{v}</div>

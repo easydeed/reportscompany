@@ -185,9 +185,13 @@ export const PREVIEW_CONTENT: Record<PreviewReportType, PreviewContent> = {
     heroSub: "in the last 30 days",
     narrative:
       "Closed sales remained strong this period. Properties sold at near-asking prices with competitive days on market. The data confirms sustained buyer demand across most price tiers.",
+    // The same 42 sales in the same 30 days as market_snapshot, so the same
+    // median, trend and days on market. These said $1.08M / +2.1% / 18 while
+    // the snapshot said $925,000 / +4.2% / 24, and the landing page shows both
+    // previews side by side (D-228).
     stats: [
-      { label: "Median Sold", value: "$1.08M", sub: "+2.1%" },
-      { label: "Avg DOM", value: "18", sub: "-5 days" },
+      { label: "Median Sold", value: "$925K", sub: "+4.2%" },
+      { label: "Avg DOM", value: "24", sub: "-3 days" },
       { label: "Close-to-List", value: "98.2%" },
     ],
     listings: takeListings(PREVIEW_CAPS.closed, "Sold"),
@@ -196,7 +200,7 @@ export const PREVIEW_CONTENT: Record<PreviewReportType, PreviewContent> = {
       { address: "89 Maple Heights", beds: 3, baths: 2, sqft: "1,800", price: "$875K", dom: 21 },
       { address: "310 Sunset Blvd", beds: 4, baths: 3, sqft: "2,200", price: "$1.05M", dom: 8 },
     ],
-    quickTake: "42 homes sold at a median of $1.08M. Average DOM of 18 days with 98.2% close-to-list ratio. Sellers are getting strong offers quickly.",
+    quickTake: "42 homes sold at a median of $925K. Average DOM of 24 days with 98.2% close-to-list ratio. Sellers are getting strong offers quickly.",
     totalAvailable: 42,
   },
 
