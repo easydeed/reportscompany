@@ -52,11 +52,14 @@ describe('New Schedule Page', () => {
     // The wizard's own step rail. If the page is ever pointed at a different
     // component, these labels go and this fails — which is the thing the
     // mocked version could not notice.
+    // Design's rail labels (Wizards v3): Report, Audience, Area & window, and
+    // Schedule on this route. The step ids behind them are unchanged.
+    const rail = await screen.findByRole('navigation', { name: 'Steps' });
     await waitFor(() => {
-      expect(screen.getByText('Story')).toBeInTheDocument();
+      expect(rail).toHaveTextContent('Report');
     });
-    for (const label of ['Where & When', 'Deliver']) {
-      expect(screen.getByText(label)).toBeInTheDocument();
+    for (const label of ['Area & window', 'Schedule']) {
+      expect(rail).toHaveTextContent(label);
     }
 
     // THREE, not four. `effectiveSteps = needsAudience ? [0,1,2,3] : [0,2,3]`
@@ -65,14 +68,14 @@ describe('New Schedule Page', () => {
     // five of the eight report types never show the fourth. Asserted here
     // because a redesign measured against "four steps" is being measured
     // against something the product does not quite have.
-    expect(screen.queryByText('Audience')).not.toBeInTheDocument();
+    expect(rail).not.toHaveTextContent('Audience');
     expect(screen.getByText(/Step 1 of 3/)).toBeInTheDocument();
   });
 
   it('opens in schedule mode rather than send-now', async () => {
     const NewSchedulePage = require('../app/app/schedules/new/page').default;
     renderWithQuery(<NewSchedulePage />);
-    await waitFor(() => expect(screen.getByText('Story')).toBeInTheDocument());
+    await screen.findByRole('navigation', { name: 'Steps' });
 
     // `defaultMode="schedule"` is the only thing this route adds over
     // /app/reports/new, so it is the thing worth asserting about the route.

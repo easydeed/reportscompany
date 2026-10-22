@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 7 | Observed, not yet triaged |
+| `recorded` | 12 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
 | `fixed` | 141 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **235** | D-001 … D-235, contiguous, no duplicates |
+| **Total** | **240** | D-001 … D-240, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15202,6 +15202,41 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-235 — the render harness's chrome-only runs flip `/app/people` between degraded and ok, and move `/app/affiliate`'s button count, with no change to either
 
 **Severity:** ROUGH · filed during the landing adoption's before/after comparison.
+**Status:** `recorded`
+
+---
+
+### D-236 — the schedule edit route opens a blank wizard, and saving it creates a new schedule
+
+**Severity:** WRONG · filed during the report-wizard restyle: `/app/schedules/[id]/edit` passes `scheduleId` to `UnifiedReportWizard`, which accepts it and never reads it, so nothing loads and the submit is a `POST /v1/schedules`.
+**Status:** `recorded`
+
+---
+
+### D-237 — the wizard's ZIP list says "Up to 5" and accepts any number
+
+**Severity:** ROUGH · filed during the report-wizard restyle: `addZip` in `step-where-when.tsx` has no count check.
+**Status:** `recorded`
+
+---
+
+### D-238 — the recipients block in the wizard shows a "6" step badge
+
+**Severity:** ROUGH · filed during the report-wizard restyle: `RecipientsSection` is passed `stepNumber={undefined}` and renders 6; present before the restyle.
+**Status:** `recorded`
+
+---
+
+### D-239 — the deliver step's Send now / Schedule choice can never render
+
+**Severity:** ROUGH · filed during the report-wizard restyle: it is behind `!defaultMode`, and `defaultMode` always has a value, so each route is locked to one mode.
+**Status:** `recorded`
+
+---
+
+### D-240 — "five of the eight report types skip the audience step" is wrong; it is four of eight, three of the seven offered
+
+**Severity:** ROUGH · filed during the report-wizard restyle; the wrong count is in `docs/SCOPE_MARKETING_AND_WIZARDS_2026-10-21.md` and a comment in `NewSchedulePage.test.tsx`.
 **Status:** `recorded`
 
 ---
