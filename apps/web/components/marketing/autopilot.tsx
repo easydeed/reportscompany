@@ -3,12 +3,14 @@
 /**
  * "Autopilot" — Design's `Landing v4`, the phone with the monthly email.
  *
- * The market figures are the Market Snapshot preview's own — the same numbers
- * the report previews on this page draw — so the email and the report it
- * attaches agree about the city. Read from `lib/demo-data.ts` they did not:
- * the previews said a $925,000 median and 42 sales while this card said $1.2M
- * and 118 (D-228). People and dates still come from `lib/demo-data.ts`.
+ * The market figures are the Market Snapshot preview's own — the sample the
+ * worker renders the Snapshot page on this page from, read from the preview
+ * route's `/facts` — so the email and the report it attaches agree about the
+ * city. Read from `lib/demo-data.ts` they did not (D-228), and read from
+ * `SharedPDFPreview`'s sample they stopped agreeing the moment the page became
+ * the worker's. People and dates still come from `lib/demo-data.ts`.
  */
+import { useEffect, useState } from "react";
 import { Phone } from "lucide-react";
 import {
   DEMO_AGENT,
@@ -16,7 +18,6 @@ import {
   currentMonthName,
   monthlySendDates,
 } from "@/lib/demo-data";
-import { PREVIEW_CONTENT } from "@/components/shared/email-preview/sample-data";
 import {
   AgentDisc,
   DotField,
@@ -30,9 +31,10 @@ export function Autopilot() {
   const { primary, area } = useLandingTheme();
   const { last, next } = monthlySendDates();
   const firstName = DEMO_AGENT.name.split(" ")[0];
-  const snap = PREVIEW_CONTENT.market_snapshot;
-  const stat = (label: string) => snap.stats.find((s) => s.label === label)?.value ?? "—";
-  const trend = snap.heroSub?.match(/\d+(\.\d+)?%/)?.[0];
+  const facts = useSnapshotFacts();
+  const m = facts?.metrics ?? {};
+  const num = (v: unknown, f: (n: number) => string) => (typeof v === "number" ? f(v) : "—");
+  const median = num(m.median_close_price, (n) => `$${n.toLocaleString("en-US")}`);
 
   return (
     <SplitSection white>
@@ -60,17 +62,15 @@ export function Autopilot() {
                 {area} · Last 30 days
               </div>
               <div className="text-[40px] font-bold leading-none tracking-[-0.035em]">
-                {snap.heroValue}
+                {median}
               </div>
-              <div className="text-[13px] text-white/85">
-                median sale price{trend ? ` · ▲ ${trend}` : ""}
-              </div>
+              <div className="text-[13px] text-white/85">median sale price</div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[
-                [stat("Closed Sales"), "Sold"],
-                [stat("Avg DOM"), "Days"],
-                [stat("List-to-Sale"), "Of ask"],
+                [num(facts?.counts?.Closed, String), "Sold"],
+                [num(m.avg_dom, String), "Days"],
+                [num(m.close_to_list_ratio, (n) => `${n}%`), "Of ask"],
               ].map(([v, l]) => (
                 <div key={l} className="rounded-[10px] bg-[#F6F5F1] px-2 py-3 text-center">
                   <div className="text-xl font-bold text-[#0F172A]">{v}</div>
@@ -112,4 +112,25 @@ export function Autopilot() {
       </div>
     </SplitSection>
   );
+}
+
+interface SnapshotFacts {
+  counts?: Record<string, number>;
+  metrics?: Record<string, number>;
+}
+
+/** The Snapshot sample's figures. A dash until they arrive, never a guess. */
+function useSnapshotFacts() {
+  const [facts, setFacts] = useState<SnapshotFacts | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/proxy/v1/report-preview/market_snapshot/facts")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((f) => live && setFacts(f))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  return facts;
 }

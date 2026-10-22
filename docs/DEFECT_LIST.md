@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 25 | Observed, not yet triaged |
+| `recorded` | 36 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
 | `fixed` | 142 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **254** | D-001 … D-254, contiguous, no duplicates |
+| **Total** | **265** | D-001 … D-265, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15335,6 +15335,83 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-254 — the dashboard no longer mounts the onboarding checklist or the limit alerts
 
 **Severity:** ROUGH · filed during the App v3 drop-ins: Design's dashboard puts the limit in the lead sentence and drops `DashboardOnboarding`; IMPLEMENTATION.md leaves open whether sponsored accounts still need it. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-255 — market_snapshot is the one kind not on Design's `_v2` page — production still renders it on the legacy `_base` template
+
+**Severity:** ROUGH · filed during the report-preview batch: `V2_KINDS` in `market_builder.py` lists seven kinds and leaves out the one the wizard calls "the one most agents send monthly".
+**Status:** `recorded`
+
+---
+
+### D-256 — the legacy Snapshot page paints its median in the raw accent, so a #ffffff accent (D-243's default) makes the headline number invisible
+
+**Severity:** WRONG · filed during the report-preview batch: seen on `/app/reports/new` and `/app/get-started` for the fixture account (`secondary_color` #ffffff) — "MEDIAN SALE PRICE" under a blank line.
+**Status:** `recorded`
+
+---
+
+### D-257 — the Snapshot header states the window twice: "Last 30 days · Irvine · Last 30 days · Live MLS Data"
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `market_snapshot`.
+**Status:** `recorded`
+
+---
+
+### D-258 — the Open Houses page prints raw ISO timestamps ("2026-10-24T18:27:14.910390") under each card
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `open_houses`; not checked against a real feed.
+**Status:** `recorded`
+
+---
+
+### D-259 — one stock photo in the sample listings renders blank (the 7th gallery card, "322 Sycamore Blvd")
+
+**Severity:** ROUGH · filed during the report-preview batch: same card on `new_listings_gallery`, `open_houses` and the Snapshot grid; its Unsplash URL in `sample_report_data.py` does not load.
+**Status:** `recorded`
+
+---
+
+### D-260 — the API's default accent is #0d9488 and the worker's is #4F46E5, under a comment in `brand_resolver.py` saying they must match
+
+**Severity:** FRAGILE · filed during the report-preview batch: `brand_resolver.py:35-38` against `market_builder.py:96`.
+**Status:** `recorded`
+
+---
+
+### D-261 — `generate_sample_jpg`'s timeout handler logs an undefined `preview_url`, so a PDFShift timeout is a NameError and a 500, not the intended 504
+
+**Severity:** ROUGH · filed during the report-preview batch: `branding_tools.py`, the `except httpx.TimeoutException` branch.
+**Status:** `recorded`
+
+---
+
+### D-262 — the wizard's preview caption says "Pick a report to preview it here" while a preview is showing
+
+**Severity:** ROUGH · filed during the report-preview batch: on `/app/reports/new` before and after; Snapshot is preselected, the caption reads as if nothing were.
+**Status:** `recorded`
+
+---
+
+### D-263 — the property theme previews (D-245) cannot be regenerated without live SiteX and SimplyRETS credentials and one real address
+
+**Severity:** FRAGILE · filed during the report-preview batch: both `generate_*_preview_jpgs.py` read the HTML `gen_la_verne_all_themes.py` writes, and that script fetches the live record for 1358 5th St, La Verne; there is no fixture path.
+**Status:** `recorded`
+
+---
+
+### D-264 — the email preview is also a React redraw (`SharedEmailPreview`), not the worker's email template — the same shape the report previews had; not compared
+
+**Severity:** ROUGH · filed during the report-preview batch: used by the schedule wizard and both branding pages.
+**Status:** `recorded`
+
+---
+
+### D-265 — the New Listings page says "this week" beside its price range on a 30-day window
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `new_listings` and `new_listings_gallery` ("$950K – $2.2M this week").
 **Status:** `recorded`
 
 ---

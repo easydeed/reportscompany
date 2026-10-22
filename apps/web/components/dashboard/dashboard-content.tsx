@@ -84,12 +84,7 @@ export function DashboardContent() {
     lead = parts
   }
 
-  const agentName = me.first_name ? `${me.first_name} ${me.last_name ?? ""}`.trim() : me.email ?? ""
-  const previewProps = {
-    primaryColor: primary, accentColor: accent, headerLogoUrl: branding.logo_url ?? null, displayName: branding.display_name ?? null,
-    agentName, agentTitle: me.title ?? null, agentPhone: me.phone ?? null, agentEmail: me.email ?? "", agentPhotoUrl: me.avatar_url ?? null,
-    audienceLabel: null, lookbackDays: 30,
-  }
+  const previewProps = { primaryColor: primary, accentColor: accent, lookbackDays: 30 }
 
   const activity = [
     ...reports.map((r) => ({ id: `r-${r.id}`, title: `${KIND_TITLE[r.type] ?? r.type} · ${r.city ?? "—"}`, sub: r.status === "completed" ? "PDF ready" : r.status, ts: r.created_at })),
