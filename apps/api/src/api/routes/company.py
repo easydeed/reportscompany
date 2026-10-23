@@ -261,6 +261,28 @@ def get_overview(company: dict = Depends(get_company_admin)):
         last_month_reports = cur.fetchone()[0]
         reports_change_pct = round(((total_reports - last_month_reports) / max(last_month_reports, 1)) * 100)
 
+        # ── Homeowner leads brought in by the company's agents ──
+        # A READ of rows the agents' own pages already wrote: `leads` is filled
+        # by the property-report lead form (`leads.py`) and the home-value page
+        # (`lead_pages.py`), both keyed by the agent's `account_id`. Nothing
+        # here captures or creates a lead. Counts only — who the lead is stays
+        # with the agent. Market reports never capture leads, so this is a
+        # per-agent figure, not a per-report one.
+        cur.execute("""
+            SELECT
+                COUNT(*) FILTER (WHERE l.created_at >= date_trunc('month', NOW())),
+                COUNT(*) FILTER (WHERE l.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')
+                                   AND l.created_at <  date_trunc('month', NOW()))
+            FROM leads l
+            WHERE l.account_id IN (
+                SELECT sa.id FROM accounts sa
+                WHERE sa.sponsor_account_id IN (
+                    SELECT id FROM accounts WHERE parent_account_id = %s::uuid
+                )
+            )
+        """, (company_id,))
+        leads_this_month, leads_last_month = cur.fetchone()
+
         # ── Company initials ──
         initials = "".join(w[0].upper() for w in company_name.split()[:2]) if company_name else "CO"
 
@@ -338,6 +360,11 @@ def get_overview(company: dict = Depends(get_company_admin)):
             "reports_change_pct": reports_change_pct,
             "engagement_pct": engagement_pct,
             "agents_at_limit": agents_at_limit,
+            # The count `reports_change_pct` divides by. Sent so the page can
+            # say "none last month" instead of "up 3600%" when it was zero.
+            "reports_last_month": last_month_reports,
+            "leads_this_month": leads_this_month,
+            "leads_last_month": leads_last_month,
         },
         "reps": reps,
         "activity": activity,
