@@ -1,0 +1,23 @@
+[
+  {
+    "name": "R1 the API stops sending the lead count the page reads",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "            \"leads_this_month\": leads_this_month,\n",
+    "new": "",
+    "test": "tests/test_company_dashboard_reads_what_the_api_returns.py"
+  },
+  {
+    "name": "R2 the page reads a field the API never had",
+    "file": "apps/web/app/app/company/page.tsx",
+    "old": "m.leads_this_month > 0\n      ?",
+    "new": "m.homeowner_leads > 0\n      ?",
+    "test": "tests/test_company_dashboard_reads_what_the_api_returns.py"
+  },
+  {
+    "name": "R3 the overview starts writing",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "        # ── Company initials ──",
+    "new": "        cur.execute(\"UPDATE leads SET status = status WHERE false\")\n        # ── Company initials ──",
+    "test": "tests/test_company_dashboard_reads_what_the_api_returns.py"
+  }
+]
