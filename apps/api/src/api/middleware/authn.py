@@ -42,6 +42,7 @@ _PUBLIC_PREFIXES = (
     "/v1/property/public/",
     "/v1/cma/",
     "/v1/r/",
+    "/v1/report-preview/",
 )
 
 

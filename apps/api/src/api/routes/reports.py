@@ -343,7 +343,16 @@ def list_reports(
                  -- D-202, same as the single-report query above.
                  COALESCE(input_params->>'city', cities[1]) AS city,
                  html_url, json_url, csv_url, pdf_url,
-                 theme_id, generated_at::text
+                 theme_id, generated_at::text,
+                 -- The schedule that produced this run, if one did. The
+                 -- reports list reads it for the Scheduled / Manual filter
+                 -- and the row's sub-line; without it every row says
+                 -- "Manual". schedule_runs.report_run_id is indexed (0027).
+                 (SELECT s.name
+                    FROM schedule_runs sr
+                    JOIN schedules s ON s.id = sr.schedule_id
+                   WHERE sr.report_run_id = report_generations.id
+                   LIMIT 1) AS schedule_name
           FROM report_generations
           WHERE {' AND '.join(where)}
           ORDER BY generated_at DESC

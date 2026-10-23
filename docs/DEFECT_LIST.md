@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 19 | Observed, not yet triaged |
+| `recorded` | 41 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 142 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 144 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **248** | D-001 … D-248, contiguous, no duplicates |
+| **Total** | **272** | D-001 … D-272, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15244,7 +15244,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-241 — signing up does not sign you in; a new account lands on /login with nothing said
 
 **Severity:** WRONG · filed during the property-wizard walk: `POST /v1/auth/register` sets its cookie on its own response and returns `{"ok": true, "email_verified": false}` with no `access_token`, and `app/api/proxy/v1/auth/register/route.ts` only sets `mr_token` from `data.access_token`, so `router.push("/app")` is bounced to `/login`.
-**Status:** `recorded`
+**Status:** `fixed` — `fix/day-one-defaults`: register returns `access_token`, so the proxy writes `mr_token`; a fresh registration lands on `/app` (walked).
 
 ---
 
@@ -15258,7 +15258,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-243 — a fresh account's first property report goes out with a white accent, #ffffff
 
 **Severity:** WRONG · filed during the property-wizard walk: `loadAccountDefaults` lets the account's `secondary_color` override the theme's default accent, and a new account's is `#ffffff`; the request body carried `"accent_color": "#ffffff"` on both walks.
-**Status:** `recorded`
+**Status:** `fixed` — `fix/day-one-defaults`: migration 0059 drops the `#ffffff` default and clears it on accounts still on both column defaults; a fresh account's request carried the theme's `#D69649` (walked).
 
 ---
 
@@ -15293,6 +15293,174 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-248 — Design's "Who's reading it?" and "Public page + QR code" are product decisions, not built
 
 **Severity:** ROUGH · filed during the property-wizard restyle: seller/buyer maps to `report_type`, which `PropertyReportCreate` accepts and the wizard never sends; the public-page switch has no counterpart.
+**Status:** `recorded`
+
+---
+
+### D-249 — Design's App v3 rail hides Branding from sponsored agents; the old shell gave them their own
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: `getNavGroups` spreads Branding only when `!isSponsored`, against the old tier's "full tools + own branding + billing". Every other route survives the rewrite. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-250 — the reports list's "Sent to contacts" / "Downloaded only" filter is really "from a schedule" / "not"
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: both pills key on `schedule_name`, so a send-now report emailed to contacts is listed under "Downloaded only".
+**Status:** `recorded`
+
+---
+
+### D-251 — the schedules page still wraps Design's new table in the old stat tiles and boxed card
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: IMPLEMENTATION.md describes the page change; no file for `app/app/schedules/page.tsx` was provided.
+**Status:** `recorded`
+
+---
+
+### D-252 — the schedules list shows "—" for cadence on every row
+
+**Severity:** ROUGH · filed during the App v3 drop-ins; the same before and after.
+**Status:** `recorded`
+
+---
+
+### D-253 — report types the list does not know render as raw lowercase slugs ("dom", "price changes")
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: the new reports page falls back to `report_type.replace(/_/g, " ")`; the old list title-cased them. Seen on seeded rows.
+**Status:** `recorded`
+
+---
+
+### D-254 — the dashboard no longer mounts the onboarding checklist or the limit alerts
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: Design's dashboard puts the limit in the lead sentence and drops `DashboardOnboarding`; IMPLEMENTATION.md leaves open whether sponsored accounts still need it. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-255 — market_snapshot is the one kind not on Design's `_v2` page — production still renders it on the legacy `_base` template
+
+**Severity:** ROUGH · filed during the report-preview batch: `V2_KINDS` in `market_builder.py` lists seven kinds and leaves out the one the wizard calls "the one most agents send monthly".
+**Status:** `recorded`
+
+---
+
+### D-256 — the legacy Snapshot page paints its median in the raw accent, so a #ffffff accent (D-243's default) makes the headline number invisible
+
+**Severity:** WRONG · filed during the report-preview batch: seen on `/app/reports/new` and `/app/get-started` for the fixture account (`secondary_color` #ffffff) — "MEDIAN SALE PRICE" under a blank line.
+**Status:** `recorded`
+
+---
+
+### D-257 — the Snapshot header states the window twice: "Last 30 days · Irvine · Last 30 days · Live MLS Data"
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `market_snapshot`.
+**Status:** `recorded`
+
+---
+
+### D-258 — the Open Houses page prints raw ISO timestamps ("2026-10-24T18:27:14.910390") under each card
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `open_houses`; not checked against a real feed.
+**Status:** `recorded`
+
+---
+
+### D-259 — one stock photo in the sample listings renders blank (the 7th gallery card, "322 Sycamore Blvd")
+
+**Severity:** ROUGH · filed during the report-preview batch: same card on `new_listings_gallery`, `open_houses` and the Snapshot grid; its Unsplash URL in `sample_report_data.py` does not load.
+**Status:** `recorded`
+
+---
+
+### D-260 — the API's default accent is #0d9488 and the worker's is #4F46E5, under a comment in `brand_resolver.py` saying they must match
+
+**Severity:** FRAGILE · filed during the report-preview batch: `brand_resolver.py:35-38` against `market_builder.py:96`.
+**Status:** `recorded`
+
+---
+
+### D-261 — `generate_sample_jpg`'s timeout handler logs an undefined `preview_url`, so a PDFShift timeout is a NameError and a 500, not the intended 504
+
+**Severity:** ROUGH · filed during the report-preview batch: `branding_tools.py`, the `except httpx.TimeoutException` branch.
+**Status:** `recorded`
+
+---
+
+### D-262 — the wizard's preview caption says "Pick a report to preview it here" while a preview is showing
+
+**Severity:** ROUGH · filed during the report-preview batch: on `/app/reports/new` before and after; Snapshot is preselected, the caption reads as if nothing were.
+**Status:** `recorded`
+
+---
+
+### D-263 — the property theme previews (D-245) cannot be regenerated without live SiteX and SimplyRETS credentials and one real address
+
+**Severity:** FRAGILE · filed during the report-preview batch: both `generate_*_preview_jpgs.py` read the HTML `gen_la_verne_all_themes.py` writes, and that script fetches the live record for 1358 5th St, La Verne; there is no fixture path.
+**Status:** `recorded`
+
+---
+
+### D-264 — the email preview is also a React redraw (`SharedEmailPreview`), not the worker's email template — the same shape the report previews had; not compared
+
+**Severity:** ROUGH · filed during the report-preview batch: used by the schedule wizard and both branding pages.
+**Status:** `recorded`
+
+---
+
+### D-265 — the New Listings page says "this week" beside its price range on a 30-day window
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `new_listings` and `new_listings_gallery` ("$950K – $2.2M this week").
+**Status:** `recorded`
+
+---
+
+### D-266 — login ignores `?next=`: the admin pages redirect to `/login?next=/admin` and sign-in always lands on `/app`
+
+**Severity:** ROUGH · filed during the login/register adoption: the old page declared `useSearchParams()` and never read it; Design's drops it. Behaviour unchanged either way.
+**Status:** `recorded`
+
+---
+
+### D-267 — `/forgot-password`, `/reset-password` and `/verify-email` are still on the old dark split frame
+
+**Severity:** ROUGH · filed during the login/register adoption: Design's IMPLEMENTATION.md says they "should move onto it too (same move, not included)".
+**Status:** `recorded`
+
+---
+
+### D-268 — the landing city does not reach signup: Design's README says "Start free" carries `?city=` into signup, and `/register` reads no query parameter
+
+**Severity:** ROUGH · filed during the login/register adoption: true of the old page and of Design's.
+**Status:** `recorded`
+
+---
+
+### D-269 — login writes `mr_token` from JavaScript with `max-age=3600`, so a session cookie lasts an hour whatever the user wanted
+
+**Severity:** FRAGILE · filed during the login/register adoption: `app/login/page.tsx`, unchanged by the adoption; Design removed "Keep me signed in" because nothing read it. Not checked against the API's own cookie.
+**Status:** `recorded`
+
+---
+
+### D-270 — login's own error copy is unreachable: the API's `detail` ("Invalid credentials") always wins over "That email and password don't match."
+
+**Severity:** ROUGH · filed during the login/register adoption: seen on the error render.
+**Status:** `recorded`
+
+---
+
+### D-271 — with no stored accent, two worker readers fall back to ink `#1a1a1a` while the API resolves teal `#0d9488` and the market builder indigo `#4F46E5`
+
+**Severity:** FRAGILE · filed during the day-one fix: `property_tasks/property_report.py:162` and `tasks.py` (branding block, `row[11] or "#1a1a1a"`); the third default beside D-260's two. The document accent itself comes from the report row, so the walk's PDF was not affected.
+**Status:** `recorded`
+
+---
+
+### D-272 — a fresh account's primary colour is the column default `#03374f`, not the platform default `#18235c` the resolver uses for an empty value
+
+**Severity:** ROUGH · filed during the day-one fix: `0001_base.sql`; left as is — unlike white it is a real colour, and changing it would recolour every untouched account.
 **Status:** `recorded`
 
 ---

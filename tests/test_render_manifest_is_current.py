@@ -282,7 +282,19 @@ DASHBOARD = WEB / "components/dashboard/dashboard-content.tsx"
 
 #: Design's constraint #4: "show '—' or 'Nothing scheduled', never 0 as a fake
 #: value". Each of these is the words a real account sees on day one.
-ABSENCE_COPY = ("Nothing sent yet", "Nothing scheduled", "No new leads")
+#: Design's App v3 dashboard (2026-10-22) rewrote the empty-state copy: "No new
+#: leads" became "No one to call yet", and "Nothing scheduled" moved from a
+#: text node into the Next-send row's string. The rule is unchanged — a phrase,
+#: never a zero — so the phrases are the new ones.
+ABSENCE_COPY = ("Nothing sent yet", "Nothing scheduled", "No one to call yet")
+
+
+def _without_comments(src: str) -> str:
+    """Strip `//`, `/* */` and `{/* */}` comments, so a phrase quoted in a
+    comment explaining the rule cannot satisfy the rule."""
+    src = re.sub(r"\{/\*.*?\*/\}", "", src, flags=re.S)
+    src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+    return re.sub(r"(?m)//.*$", "", src)
 
 
 def test_the_manifest_renders_the_dashboard_as_an_account_with_nothing_on_it(manifest):
@@ -329,20 +341,24 @@ def test_the_dashboard_says_words_rather_than_zeros_when_there_is_nothing():
     written against that family, caught by the harness again. A JSX text node
     is the construct; a comment cannot satisfy `>…<`.
     """
-    src = DASHBOARD.read_text(encoding="utf-8")
-    missing = [c for c in ABSENCE_COPY if f">{c}<" not in src]
+    src = _without_comments(DASHBOARD.read_text(encoding="utf-8"))
+    # Rendered: a JSX text node (">Nothing sent yet." is fine — punctuation
+    # may follow) or a string literal the JSX renders. Comments are gone, so
+    # neither form can be satisfied by an explanation of the rule.
+    missing = [c for c in ABSENCE_COPY
+               if not re.search(r">\s*" + re.escape(c), src) and f'"{c}' not in src]
     assert missing == [], (
         f"the dashboard no longer RENDERS {missing} (the phrase may still be "
         f"in a comment). Design's constraint #4: show '—' or a phrase, never "
         f"0 as a fake value."
     )
     # The fallback itself, not the word "Overview" somewhere in the file.
-    assert 'title={sentenceTitle ?? "Overview"}' in src, (
+    assert ': "Overview"' in src, (
         "the sentence title no longer falls back to the page name, so an "
         "account whose state cannot be computed gets a sentence with a hole "
         "in it (constraint #6)"
     )
-    assert "mkt < 99999" in src, (
+    assert "limit < 999" in src, (
         "the sentence title no longer excludes an unlimited plan, so it will "
         "render a number for an allowance that has none"
     )

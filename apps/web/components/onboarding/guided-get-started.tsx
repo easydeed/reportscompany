@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { CityCombobox } from "@/components/shared/city-combobox"
 import { RecipientsSection } from "@/components/schedule-builder/sections/recipients-section"
-import { SharedPDFPreview } from "@/components/shared/pdf-preview"
+import { ReportThumb } from "@/components/shared/report-thumb"
 import { PREVIEW_DEFAULT_ACCENT, PREVIEW_DEFAULT_PRIMARY } from "@/components/shared/email-preview"
 import { queryKeys } from "@/hooks/use-api"
 import { cn } from "@/lib/utils"
@@ -517,21 +517,14 @@ export function GuidedGetStarted() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Live branded preview</p>
           </div>
           <div className="max-h-[calc(100vh-180px)] overflow-y-auto bg-stone-100/60 p-4">
-            <SharedPDFPreview
+            <ReportThumb
+              width={460}
+              className="mx-auto"
               primaryColor={branding.primaryColor}
               accentColor={branding.accentColor}
-              headerLogoUrl={branding.headerLogoUrl}
-              displayName={branding.displayName}
-              agentName={profile.name}
-              agentTitle={profile.title}
-              agentPhone={profile.phone}
-              agentEmail={profile.email}
-              agentPhotoUrl={profile.photoUrl}
               reportType={REPORT_TYPE}
-              audienceLabel={null}
-              areaName={city || "Your Area"}
+              areaName={city}
               lookbackDays={LOOKBACK_DAYS}
-              scale={0.92}
             />
           </div>
         </aside>

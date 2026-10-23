@@ -270,13 +270,17 @@ def test_no_usage_bar_draws_a_fraction_of_an_undefined_whole():
     """D-195. Five copies of `UsageBar`, one of which painted 20% of a track
     against an unlimited allowance. The other four already guarded it; nothing
     could report the divergence, because there is nothing shared to diff."""
+    # The rail's copy is `UsageRow` since Design's App v3 shell (2026-10-22);
+    # it is the same component under a new name, so it still counts. Five
+    # copies either way.
     defs = sorted(
         p for p in WEB.rglob("*.tsx")
         if _is_source(p)
-        and "function UsageBar(" in p.read_text(encoding="utf-8")
+        and ("function UsageBar(" in p.read_text(encoding="utf-8")
+             or "function UsageRow(" in p.read_text(encoding="utf-8"))
     )
     assert len(defs) == 5, (
-        f"UsageBar is defined {len(defs)} times, not 5. D-195's point is that "
+        f"UsageBar/UsageRow is defined {len(defs)} times, not 5. D-195's point is that "
         f"the count is the mechanism; re-read the entry before editing this."
     )
     unguarded = []
@@ -284,7 +288,7 @@ def test_no_usage_bar_draws_a_fraction_of_an_undefined_whole():
         src = f.read_text(encoding="utf-8")
         if "style={{ width:" not in src:
             continue  # a copy that draws no track at all
-        if "{!isUnlimited && (" not in src:
+        if "{!isUnlimited && (" not in src and "{!unlimited && (" not in src:
             unguarded.append(f.relative_to(WEB).as_posix())
     assert unguarded == [], (
         f"these draw a usage track without excluding an unlimited allowance, "

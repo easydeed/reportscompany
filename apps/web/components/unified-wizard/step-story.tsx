@@ -9,7 +9,7 @@
  * what decides that.
  */
 import { cn } from "@/lib/utils"
-import { SharedPDFPreview } from "@/components/shared/pdf-preview"
+import { ReportThumb } from "@/components/shared/report-thumb"
 import type { PreviewReportType } from "@/components/shared/email-preview/sample-data"
 import { REPORT_TYPES } from "./types"
 import { StepHeader } from "./wizard-ui"
@@ -63,29 +63,15 @@ export function StepStory({ selected, onSelect, primaryColor, accentColor }: Ste
                 off ? "cursor-not-allowed opacity-50" : "hover:border-[#0F172A]",
               )}
             >
-              <span
-                className="h-11 w-[34px] shrink-0 overflow-hidden rounded-[2px] bg-white"
-                style={{ boxShadow: "0 0 0 1px rgba(15,23,42,0.1)" }}
-                aria-hidden
-              >
-                <span className="block" style={{ width: 480, transform: `scale(${34 / 480})`, transformOrigin: "0 0" }}>
-                  <SharedPDFPreview
-                    primaryColor={primaryColor}
-                    accentColor={accentColor}
-                    headerLogoUrl={null}
-                    displayName={null}
-                    agentName=""
-                    agentTitle={null}
-                    agentPhone={null}
-                    agentEmail=""
-                    agentPhotoUrl={null}
-                    reportType={rt.id as PreviewReportType}
-                    audienceLabel={null}
-                    areaName=""
-                    lookbackDays={rt.defaultLookback}
-                  />
-                </span>
-              </span>
+              <ReportThumb
+                width={34}
+                shadow="thumb"
+                className="shrink-0"
+                primaryColor={primaryColor}
+                accentColor={accentColor}
+                reportType={rt.id as PreviewReportType}
+                lookbackDays={rt.defaultLookback}
+              />
               <span className="flex min-w-0 flex-col">
                 <span className="text-sm font-bold text-[#0F172A]">{rt.title}</span>
                 <span className="text-xs leading-[1.35] text-[#64748B]">{NOTES[rt.id]}</span>
