@@ -30,6 +30,10 @@ Pillow = "^10.0.0"
 boto3 = "^1.35.0"
 qrcode = {extras = ["pil"], version = "^7.4.0"}
 attrs = ">=23.1,<24"
+# The report previews and the branding page's sample PDF render the worker's
+# MarketReportBuilder in this process, and it imports jinja2. CI installs the
+# worker into the same venv, which is why this was missing and nothing failed.
+jinja2 = "^3.1.2"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.9"
