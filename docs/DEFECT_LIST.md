@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 41 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 142 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 144 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **270** | D-001 … D-270, contiguous, no duplicates |
+| **Total** | **272** | D-001 … D-272, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15244,7 +15244,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-241 — signing up does not sign you in; a new account lands on /login with nothing said
 
 **Severity:** WRONG · filed during the property-wizard walk: `POST /v1/auth/register` sets its cookie on its own response and returns `{"ok": true, "email_verified": false}` with no `access_token`, and `app/api/proxy/v1/auth/register/route.ts` only sets `mr_token` from `data.access_token`, so `router.push("/app")` is bounced to `/login`.
-**Status:** `recorded`
+**Status:** `fixed` — `fix/day-one-defaults`: register returns `access_token`, so the proxy writes `mr_token`; a fresh registration lands on `/app` (walked).
 
 ---
 
@@ -15258,7 +15258,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-243 — a fresh account's first property report goes out with a white accent, #ffffff
 
 **Severity:** WRONG · filed during the property-wizard walk: `loadAccountDefaults` lets the account's `secondary_color` override the theme's default accent, and a new account's is `#ffffff`; the request body carried `"accent_color": "#ffffff"` on both walks.
-**Status:** `recorded`
+**Status:** `fixed` — `fix/day-one-defaults`: migration 0059 drops the `#ffffff` default and clears it on accounts still on both column defaults; a fresh account's request carried the theme's `#D69649` (walked).
 
 ---
 
@@ -15447,6 +15447,20 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-270 — login's own error copy is unreachable: the API's `detail` ("Invalid credentials") always wins over "That email and password don't match."
 
 **Severity:** ROUGH · filed during the login/register adoption: seen on the error render.
+**Status:** `recorded`
+
+---
+
+### D-271 — with no stored accent, two worker readers fall back to ink `#1a1a1a` while the API resolves teal `#0d9488` and the market builder indigo `#4F46E5`
+
+**Severity:** FRAGILE · filed during the day-one fix: `property_tasks/property_report.py:162` and `tasks.py` (branding block, `row[11] or "#1a1a1a"`); the third default beside D-260's two. The document accent itself comes from the report row, so the walk's PDF was not affected.
+**Status:** `recorded`
+
+---
+
+### D-272 — a fresh account's primary colour is the column default `#03374f`, not the platform default `#18235c` the resolver uses for an empty value
+
+**Severity:** ROUGH · filed during the day-one fix: `0001_base.sql`; left as is — unlike white it is a real colour, and changing it would recolour every untouched account.
 **Status:** `recorded`
 
 ---

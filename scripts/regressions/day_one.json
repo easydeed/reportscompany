@@ -1,0 +1,23 @@
+[
+  {
+    "name": "R1 register stops returning the token",
+    "file": "apps/api/src/api/routes/auth.py",
+    "old": "return {\"ok\": True, \"email_verified\": False, \"access_token\": token}",
+    "new": "return {\"ok\": True, \"email_verified\": False}",
+    "test": "tests/test_day_one_defaults.py"
+  },
+  {
+    "name": "R2 the white default comes back",
+    "file": "db/migrations/0059_accent_default_is_not_white.sql",
+    "old": "ALTER TABLE accounts ALTER COLUMN secondary_color DROP DEFAULT;",
+    "new": "ALTER TABLE accounts ALTER COLUMN secondary_color SET DEFAULT '#FFFFFF';",
+    "test": "tests/test_day_one_defaults.py"
+  },
+  {
+    "name": "R3 the step is deleted outright",
+    "file": "db/migrations/0059_accent_default_is_not_white.sql",
+    "old": "ALTER TABLE accounts ALTER COLUMN secondary_color DROP DEFAULT;",
+    "new": "",
+    "test": "tests/test_day_one_defaults.py"
+  }
+]
