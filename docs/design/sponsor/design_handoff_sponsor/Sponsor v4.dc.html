@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap"></link>
+<style>body{margin:0;background:#fff;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#0F172A;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}a{color:#4F46E5;text-decoration:none}a:hover{color:#3730A3}h1,h2,h3,p{margin:0}input::placeholder{color:#94A3B8}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;background:#fff" onClick="{{ closeMenu }}">
+  <aside style="width:236px;flex-shrink:0;background:#FAFAF7;border-right:1px solid #ECEAE3;display:flex;flex-direction:column;padding:22px 14px 18px;gap:22px;position:sticky;top:0;height:100vh;box-sizing:border-box;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-left:10px">
+      <img src="indigo.png" alt="TrendyReports" style="height:26px;width:auto"></img>
+      <button onClick="{{ toggleTier }}" title="Switch tier (prototype only)" style="all:unset;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748B;padding:4px 8px;border-radius:6px;border:1px solid #E4E2DA;background:#fff">{{ tierShort }}</button>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ nav }}" as="it" hint-placeholder-count="5">
+        <button onClick="{{ it.go }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;height:38px;padding:0 10px;border-radius:8px;font-size:14px;font-weight:{{ it.weight }};color:{{ it.color }};background:{{ it.bg }}" style-hover="background:#F1EFE8">
+          <span style="width:17px;height:17px;flex-shrink:0;background:{{ it.color }};mask:url({{ it.icon }}) center/contain no-repeat"></span>{{ it.name }}
+        </button>
+      </sc-for>
+    </nav>
+    <div style="margin-top:auto;display:flex;flex-direction:column;gap:14px">
+      <button style="all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;height:38px;padding:0 10px;border-radius:8px;font-size:14px;font-weight:500;color:#334155" style-hover="background:#F1EFE8"><span style="width:17px;height:17px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/circle-help.svg) center/contain no-repeat"></span>Help</button>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px 0;border-top:1px solid #E4E2DA">
+        <div style="width:32px;height:32px;border-radius:999px;background:#0E7490;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ userIni }}</div>
+        <div style="min-width:0;display:flex;flex-direction:column;line-height:1.25"><span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ userName }}</span><span style="font-size:12px;color:#64748B">{{ userRole }}</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <div style="max-width:960px;width:100%;box-sizing:border-box;padding:44px 48px 80px;display:flex;flex-direction:column;gap:36px">
+
+      <!-- REP · MY AGENTS -->
+      <sc-if value="{{ is.agents }}" hint-placeholder-val="{{ true }}">
+        <div data-screen-label="Rep · My agents" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">My agents</h1><p style="font-size:16px;color:#64748B">{{ agentsSub }}</p></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input value="{{ inviteEmail }}" onChange="{{ setInviteEmail }}" placeholder="Add someone — type their email" style="box-sizing:border-box;flex:1;min-width:260px;height:50px;border-radius:10px;border:1.5px solid #D6D3CB;padding:0 16px;font:inherit;font-size:16px;background:#fff;outline:none" style-focus="border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,0.18)"></input>
+              <button onClick="{{ sendInvite }}" style="all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:50px;padding:0 22px;border-radius:10px;background:#0F172A;color:#fff;font-size:15px;font-weight:600" style-hover="background:#1E293B">Add</button>
+            </div>
+            <sc-if value="{{ justInvited }}" hint-placeholder-val="{{ false }}"><p style="font-size:14px;color:#065F46;font-weight:500">{{ justInvited }} is in your book. Offer them a seat from their row whenever you like.</p></sc-if>
+            <sc-if value="{{ notInvited }}" hint-placeholder-val="{{ true }}"><p style="font-size:14px;color:#64748B">Your book is everyone you send reports to. Agents you want to win can also get a seat — their own account, 10 reports a month, paid by Pacific Coast Title. <a href="#" style="font-weight:600">Whole office? Paste a list.</a></p></sc-if>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <sc-for list="{{ filters }}" as="f" hint-placeholder-count="4">
+                <button onClick="{{ f.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }}">{{ f.label }}</button>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ agents }}" as="a" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr) 190px;gap:20px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3" style-hover="background:#FAFAF7">
+                  <button onClick="{{ a.open }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;min-width:0;text-align:left">
+                    <div style="width:38px;height:38px;border-radius:999px;background:{{ a.bg }};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ a.ini }}</div>
+                    <div style="min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</span><sc-if value="{{ a.seat }}" hint-placeholder-val="{{ false }}"><span title="Trial agent — has a seat" style="width:14px;height:14px;flex-shrink:0;background:#4F46E5;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/badge-check.svg) center/contain no-repeat"></span></sc-if></span><span style="font-size:13px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.brokerage }}</span></div>
+                  </button>
+                  <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:9px;height:9px;border-radius:999px;background:{{ a.dot }};flex-shrink:0"></span><span style="font-size:15px;color:{{ a.textColor }}">{{ a.sentence }}</span></div>
+                  <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;position:relative">
+                    <sc-if value="{{ a.action }}" hint-placeholder-val="{{ false }}"><button onClick="{{ a.act }}" style="all:unset;box-sizing:border-box;cursor:pointer;height:36px;padding:0 14px;border-radius:9px;border:1px solid #E4E2DA;background:#fff;font-size:14px;font-weight:600;color:#0F172A;white-space:nowrap" style-hover="background:#FAFAF7">{{ a.action }}</button></sc-if>
+                    <sc-if value="{{ a.done }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#065F46;font-weight:600;white-space:nowrap">{{ a.done }}</span></sc-if>
+                    <sc-if value="{{ a.hasMenu }}" hint-placeholder-val="{{ false }}"><button onClick="{{ a.openMenu }}" aria-label="More" style="all:unset;cursor:pointer;width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center" style-hover="background:#ECEAE3"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/ellipsis.svg) center/contain no-repeat"></span></button></sc-if>
+                    <sc-if value="{{ a.menuOpen }}" hint-placeholder-val="{{ false }}">
+                      <div style="position:absolute;top:42px;right:0;z-index:10;width:300px;background:#fff;border:1px solid #E4E2DA;border-radius:12px;box-shadow:0 12px 32px -12px rgba(15,23,42,0.35);padding:6px;display:flex;flex-direction:column">
+                        <sc-for list="{{ a.menu }}" as="m" hint-placeholder-count="2">
+                          <button onClick="{{ m.act }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:8px;text-align:left" style-hover="background:#FAFAF7"><span style="font-size:14px;font-weight:600;color:{{ m.color }}">{{ m.label }}</span><span style="font-size:12.5px;color:#64748B;line-height:1.4">{{ m.note }}</span></button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ emptyFilter }}" hint-placeholder-val="{{ false }}"><p style="padding:28px 0;font-size:15px;color:#64748B">Nobody here right now.</p></sc-if>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- REP · PERSON -->
+      <sc-if value="{{ is.agent }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Rep · Person" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <button onClick="{{ goHome }}" style="all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;color:#4F46E5;align-self:flex-start"><span style="width:15px;height:15px;background:#4F46E5;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/arrow-left.svg) center/contain no-repeat"></span><span>My agents</span></button>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:18px">
+                <div style="width:56px;height:56px;border-radius:999px;background:{{ agent.bg }};color:#fff;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ agent.ini }}</div>
+                <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">{{ agent.name }}</h1><p style="font-size:16px;color:#64748B">{{ agent.brokerage }} · {{ agent.email }}</p></div>
+              </div>
+              <div style="display:flex;gap:8px;position:relative">
+                <a href="#" style="display:inline-flex;align-items:center;height:42px;padding:0 16px;border-radius:9px;background:#fff;border:1px solid #E4E2DA;color:#0F172A;font-size:14px;font-weight:600" style-hover="background:#FAFAF7;color:#0F172A"><span>Email {{ agent.first }}</span></a>
+                <sc-if value="{{ agent.action }}" hint-placeholder-val="{{ false }}"><button onClick="{{ agent.act }}" style="all:unset;box-sizing:border-box;cursor:pointer;height:42px;padding:0 16px;border-radius:9px;border:1px solid #E4E2DA;background:#fff;font-size:14px;font-weight:600;color:#0F172A" style-hover="background:#FAFAF7">{{ agent.action }}</button></sc-if>
+                <sc-if value="{{ agent.hasMenu }}" hint-placeholder-val="{{ false }}"><button onClick="{{ agent.openMenu }}" aria-label="More" style="all:unset;box-sizing:border-box;cursor:pointer;width:42px;height:42px;border-radius:9px;border:1px solid #E4E2DA;background:#fff;display:flex;align-items:center;justify-content:center" style-hover="background:#FAFAF7"><span style="width:16px;height:16px;background:#334155;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/ellipsis.svg) center/contain no-repeat"></span></button></sc-if>
+                <sc-if value="{{ agent.menuOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute;top:48px;right:0;z-index:10;width:300px;background:#fff;border:1px solid #E4E2DA;border-radius:12px;box-shadow:0 12px 32px -12px rgba(15,23,42,0.35);padding:6px;display:flex;flex-direction:column">
+                    <sc-for list="{{ agent.menu }}" as="m" hint-placeholder-count="2">
+                      <button onClick="{{ m.act }}" style="all:unset;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:8px;text-align:left" style-hover="background:#FAFAF7"><span style="font-size:14px;font-weight:600;color:{{ m.color }}">{{ m.label }}</span><span style="font-size:12.5px;color:#64748B;line-height:1.4">{{ m.note }}</span></button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:18px 20px;border-radius:12px;background:#FAFAF7"><span style="width:10px;height:10px;border-radius:999px;background:{{ agent.dot }}"></span><span style="font-size:17px;font-weight:600">{{ agent.sentence }}</span></div>
+          <sc-if value="{{ agent.seat }}" hint-placeholder-val="{{ true }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+              <sc-for list="{{ agentStats }}" as="s" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:4px;padding:18px 20px;border:1px solid #E4E2DA;border-radius:12px"><span style="font-size:13px;color:#64748B">{{ s.label }}</span><span style="font-size:28px;font-weight:800;letter-spacing:-0.03em;line-height:1.1;font-variant-numeric:tabular-nums">{{ s.value }}</span><span style="font-size:13px;color:{{ s.subColor }}">{{ s.sub }}</span></div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">{{ agentHeading }}</h2>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ agentActivity }}" as="r" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3">
+                  <div style="display:flex;align-items:center;gap:12px;min-width:0"><span style="width:16px;height:16px;flex-shrink:0;background:{{ r.iconColor }};mask:url({{ r.icon }}) center/contain no-repeat"></span><span style="font-size:15px;color:#0F172A">{{ r.text }}</span></div>
+                  <span style="font-size:14px;color:#64748B;text-align:right;white-space:nowrap">{{ r.when }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <p style="font-size:14px;color:#64748B">{{ agentFoot }}</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- REP · REPORTS (read-only feed) -->
+      <sc-if value="{{ is.reports }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Rep · Reports" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Reports</h1><p style="font-size:16px;color:#64748B">{{ reportsSub }}</p></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ whoFilters }}" as="f" hint-placeholder-count="3">
+              <button onClick="{{ f.pick }}" style="all:unset;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;background:{{ f.bg }};color:{{ f.color }};border:1px solid {{ f.border }}">{{ f.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <sc-for list="{{ allReports }}" as="r" hint-placeholder-count="6">
+              <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) 110px 150px;gap:18px;align-items:center;padding:13px 0;border-bottom:1px solid #ECEAE3" style-hover="background:#FAFAF7">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:30px;height:30px;border-radius:999px;background:{{ r.primary }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ r.ini }}</div><span style="font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.agent }}</span></div>
+                <div style="min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px;color:#0F172A">{{ r.name }} · {{ r.area }}</span><sc-if value="{{ r.lead }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#065F46;font-weight:600">{{ r.lead }}</span></sc-if></div>
+                <span style="font-size:14px;color:#64748B;white-space:nowrap">{{ r.date }}</span>
+                <span style="font-size:14px;color:{{ r.opensColor }};white-space:nowrap;text-align:right">{{ r.opens }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="font-size:14px;color:#64748B">You see that a report went out and whether it landed. The report itself belongs to the agent.</p>
+        </div>
+      </sc-if>
+
+      <!-- REP · SCHEDULES (read-only) -->
+      <sc-if value="{{ is.schedules }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Rep · Schedules" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Schedules</h1><p style="font-size:16px;color:#64748B">What your agents have going out on their own. 7 running across 5 agents.</p></div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <sc-for list="{{ schedules }}" as="s" hint-placeholder-count="5">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) 130px;gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3" style-hover="background:#FAFAF7">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:30px;height:30px;border-radius:999px;background:{{ s.bg }};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.ini }}</div><span style="font-size:15px;font-weight:600">{{ s.agent }}</span></div>
+                <div style="display:flex;flex-direction:column;line-height:1.3;min-width:0"><span style="font-size:15px;color:#0F172A">{{ s.name }}</span><span style="font-size:13px;color:#64748B">{{ s.cadence }} · {{ s.meta }}</span></div>
+                <span style="font-size:14px;color:{{ s.nextColor }};text-align:right;white-space:nowrap">{{ s.next }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <p style="font-size:14px;color:#64748B">These are the agents' schedules — you can see them, not change them.</p>
+        </div>
+      </sc-if>
+
+      <!-- REP · SETTINGS -->
+      <sc-if value="{{ is.settings }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Rep · Settings" style="display:flex;flex-direction:column;gap:36px;max-width:680px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Settings</h1><p style="font-size:16px;color:#64748B">You, your brand, and what we email you about.</p></div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Photo</span><div style="width:44px;height:44px;border-radius:999px;background:#0E7490;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center">AP</div><a href="#" style="font-size:14px;font-weight:600">Upload</a></div>
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Name</span><span style="font-size:15px;color:#334155">Alicia Park</span><a href="#" style="font-size:14px;font-weight:600">Edit</a></div>
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Phone</span><span style="font-size:15px;color:#334155">(714) 555-0191</span><a href="#" style="font-size:14px;font-weight:600">Edit</a></div>
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Email</span><span style="font-size:15px;color:#334155">alicia@pacificcoasttitle.com</span><a href="#" style="font-size:14px;font-weight:600">Edit</a></div>
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Password</span><span style="font-size:15px;color:#334155">Last changed in March</span><a href="#" style="font-size:14px;font-weight:600">Change</a></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Your brand</h2>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Logo</span><div style="display:inline-flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:8px;background:#0E7490;color:#fff;font-weight:800;font-size:14px;letter-spacing:-0.02em;width:fit-content"><span style="width:16px;height:16px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/waves.svg) center/contain no-repeat"></span>Pacific Coast Title</div><span style="font-size:13px;color:#94A3B8">Set by the company</span></div>
+              <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Colour</span><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;border-radius:6px;background:#0E7490"></span><span style="font-size:15px;color:#334155">Teal</span></div><span style="font-size:13px;color:#94A3B8">Set by the company</span></div>
+            </div>
+            <p style="font-size:14px;color:#64748B">Reports you run carry Pacific Coast Title's logo and colour with your photo and contact line. For changes, <a href="#" style="font-weight:600">ask Robert Chen</a>.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Email me</h2>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="4">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;padding:14px 0;border-bottom:1px solid #ECEAE3">
+                  <span style="font-size:15px;color:#0F172A">{{ n.label }}</span>
+                  <button onClick="{{ n.toggle }}" aria-label="On or off" style="all:unset;cursor:pointer;width:40px;height:24px;border-radius:999px;background:{{ n.track }};position:relative;flex-shrink:0;transition:background .2s"><span style="position:absolute;top:2px;left:{{ n.knob }};width:20px;height:20px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .2s"></span></button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <a href="#" style="font-size:14px;font-weight:600;color:#64748B;align-self:flex-start">Sign out</a>
+        </div>
+      </sc-if>
+
+      <!-- COMPANY · DASHBOARD -->
+      <sc-if value="{{ is.coHome }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Company · Dashboard" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;align-items:center;gap:18px">
+            <div style="width:56px;height:56px;border-radius:12px;background:#0E7490;display:flex;align-items:center;justify-content:center;flex-shrink:0"><span style="width:26px;height:26px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/waves.svg) center/contain no-repeat"></span></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Pacific Coast Title</h1><p style="font-size:16px;color:#64748B">{{ coSub }}</p></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+            <sc-for list="{{ coStats }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:4px;padding:20px 22px;border:1px solid #E4E2DA;border-radius:12px"><span style="font-size:13px;color:#64748B">{{ s.label }}</span><span style="font-size:32px;font-weight:800;letter-spacing:-0.03em;line-height:1.1;font-variant-numeric:tabular-nums">{{ s.value }}</span><span style="font-size:13px;color:{{ s.subColor }}">{{ s.sub }}</span></div>
+            </sc-for>
+          </div>
+          <sc-if value="{{ leadsOn }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;align-items:center;gap:12px;padding:18px 20px;border-radius:12px;background:#ECFDF5"><span style="width:18px;height:18px;flex-shrink:0;background:#065F46;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/phone-incoming.svg) center/contain no-repeat"></span><span style="font-size:17px;font-weight:600;color:#064E3B">Your agents' reports brought in 23 homeowner leads this month — up from 15 in September.</span></div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Your reps</h2><button onClick="{{ goReps }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:600;color:#4F46E5">Manage reps &amp; agents →</button></div>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ reps }}" as="r" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);gap:20px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3">
+                  <div style="display:flex;align-items:center;gap:12px;min-width:0"><div style="width:34px;height:34px;border-radius:999px;background:#0E7490;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ r.ini }}</div><div style="min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px;font-weight:600">{{ r.name }}</span><span style="font-size:13px;color:#64748B">{{ r.office }}</span></div></div>
+                  <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:9px;height:9px;border-radius:999px;background:{{ r.dot }};flex-shrink:0"></span><span style="font-size:15px;color:{{ r.textColor }}">{{ r.sentence }}</span></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">This week</h2>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ coActivity }}" as="r" hint-placeholder-count="5">
+                <div style="display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:18px;align-items:center;padding:13px 0;border-bottom:1px solid #ECEAE3">
+                  <div style="display:flex;align-items:center;gap:12px;min-width:0"><span style="width:16px;height:16px;flex-shrink:0;background:{{ r.iconColor }};mask:url({{ r.icon }}) center/contain no-repeat"></span><span style="font-size:15px;color:#0F172A">{{ r.text }}</span></div>
+                  <span style="font-size:14px;color:#64748B;text-align:right;white-space:nowrap">{{ r.when }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- COMPANY · REPS & AGENTS -->
+      <sc-if value="{{ is.coReps }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Company · Reps & agents" style="display:flex;flex-direction:column;gap:32px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Reps &amp; agents</h1><p style="font-size:16px;color:#64748B">{{ repsSub }}</p></div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <input value="{{ inviteEmail }}" onChange="{{ setInviteEmail }}" placeholder="Invite a title rep — type their email" style="box-sizing:border-box;flex:1;min-width:260px;height:50px;border-radius:10px;border:1.5px solid #D6D3CB;padding:0 16px;font:inherit;font-size:16px;background:#fff;outline:none" style-focus="border-color:#4F46E5;box-shadow:0 0 0 3px rgba(79,70,229,0.18)"></input>
+              <button onClick="{{ sendInvite }}" style="all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;height:50px;padding:0 22px;border-radius:10px;background:#0F172A;color:#fff;font-size:15px;font-weight:600" style-hover="background:#1E293B">Send invite</button>
+            </div>
+            <sc-if value="{{ justInvited }}" hint-placeholder-val="{{ false }}"><p style="font-size:14px;color:#065F46;font-weight:500">Invite sent to {{ justInvited }}. It takes a seat once they join.</p></sc-if>
+            <sc-if value="{{ notInvited }}" hint-placeholder-val="{{ true }}"><p style="font-size:14px;color:#64748B">They get your logo and colour on day one and start inviting their own agents. {{ seatsLine }}</p></sc-if>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <sc-for list="{{ reps }}" as="r" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;border-bottom:1px solid #ECEAE3">
+                <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.5fr) auto;gap:20px;align-items:center;padding:14px 0" style-hover="background:#FAFAF7">
+                  <button onClick="{{ r.toggle }}" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:12px;min-width:0;text-align:left"><span style="width:16px;height:16px;flex-shrink:0;background:#64748B;mask:url({{ r.chevron }}) center/contain no-repeat"></span><div style="width:38px;height:38px;border-radius:999px;background:#0E7490;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ r.ini }}</div><div style="min-width:0;display:flex;flex-direction:column;line-height:1.3"><span style="font-size:16px;font-weight:600;white-space:nowrap">{{ r.name }}</span><span style="font-size:13px;color:#64748B">{{ r.office }} · {{ r.agentsLabel }}</span></div></button>
+                  <div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:9px;height:9px;border-radius:999px;background:{{ r.dot }};flex-shrink:0"></span><span style="font-size:15px;color:{{ r.textColor }}">{{ r.sentence }}</span></div>
+                  <div style="display:flex;justify-content:flex-end">
+                    <sc-if value="{{ r.action }}" hint-placeholder-val="{{ false }}"><button onClick="{{ r.act }}" style="all:unset;box-sizing:border-box;cursor:pointer;height:36px;padding:0 14px;border-radius:9px;border:1px solid #E4E2DA;background:#fff;font-size:14px;font-weight:600;color:#0F172A;white-space:nowrap" style-hover="background:#FAFAF7">{{ r.action }}</button></sc-if>
+                    <sc-if value="{{ r.done }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;color:#065F46;font-weight:600">{{ r.done }}</span></sc-if>
+                  </div>
+                </div>
+                <sc-if value="{{ r.open }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;padding:0 0 10px 28px">
+                    <sc-for list="{{ r.agents }}" as="a" hint-placeholder-count="3">
+                      <div style="display:grid;grid-template-columns:minmax(0,1.2fr) 110px minmax(0,1fr);gap:20px;align-items:center;padding:9px 0 9px 22px;border-left:2px solid #ECEAE3">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:28px;height:28px;border-radius:999px;background:{{ a.bg }};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ a.ini }}</div><div style="min-width:0;display:flex;flex-direction:column;line-height:1.25"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</span><span style="font-size:12.5px;color:#64748B">{{ a.firm }}</span></div></div>
+                        <span style="font-size:13px;font-weight:600;color:{{ a.stColor }}">{{ a.status }}</span>
+                        <span style="font-size:14px;color:#334155">{{ a.last }}</span>
+                      </div>
+                    </sc-for>
+                    <sc-if value="{{ r.more }}" hint-placeholder-val="{{ false }}"><a href="#" style="font-size:13px;font-weight:600;padding:8px 0 4px 22px;border-left:2px solid #ECEAE3">{{ r.more }}</a></sc-if>
+                    <sc-if value="{{ r.noAgents }}" hint-placeholder-val="{{ false }}"><p style="font-size:14px;color:#64748B;padding:8px 0 4px 22px;border-left:2px solid #ECEAE3">No agents yet.</p></sc-if>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- COMPANY · BRANDING -->
+      <sc-if value="{{ is.coBranding }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Company · Branding" style="display:flex;flex-direction:column;gap:36px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Branding</h1><p style="font-size:16px;color:#64748B">On every report your reps run, and in the emails that carry them. Reps can't change it.</p></div>
+          <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+            <div style="display:flex;flex-direction:column;gap:28px;flex:1 1 360px;min-width:0">
+              <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+                <div style="display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Logo</span><div style="display:inline-flex;align-items:center;gap:10px;height:40px;padding:0 14px;border-radius:8px;background:#0E7490;color:#fff;font-weight:800;letter-spacing:-0.02em;width:fit-content"><span style="width:18px;height:18px;background:#fff;mask:url(https://unpkg.com/lucide-static@0.460.0/icons/waves.svg) center/contain no-repeat"></span>Pacific Coast Title</div><a href="#" style="font-size:14px;font-weight:600">Replace</a></div>
+                <div style="display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Colour</span><div style="display:flex;align-items:center;gap:10px"><span style="width:22px;height:22px;border-radius:6px;background:#0E7490"></span><span style="font-size:15px;color:#334155">#0E7490</span></div><a href="#" style="font-size:14px;font-weight:600">Change</a></div>
+                <div style="display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Name</span><span style="font-size:15px;color:#334155">Pacific Coast Title</span><a href="#" style="font-size:14px;font-weight:600">Edit</a></div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">What each rep adds</h2>
+                <div style="border:1px solid #E4E2DA;border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px"><div style="width:44px;height:44px;border-radius:999px;background:#0E7490;color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">AP</div><div style="display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px;font-weight:700">Alicia Park · Title Rep</span><span style="font-size:13px;color:#64748B">(714) 555-0191 · alicia@pacificcoasttitle.com</span></div></div>
+                <p style="font-size:14px;color:#64748B">Photo and contact line only. Your colour is never changed to fix contrast — if text wouldn't read on it, the report picks a readable ink on its own.</p>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;flex:0 0 300px">
+              <span style="font-size:13px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:0.06em">Live · a rep's report cover</span>
+              <div style="width:300px;height:388px;border-radius:6px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px rgba(15,23,42,0.08),0 24px 40px -24px rgba(15,23,42,0.45)"><div style="width:816px;height:1056px;transform:scale(0.3676);transform-origin:0 0"><dc-import name="Report Page" kind="snapshot" primary="#0E7490" accent="#D97706" area="Newport Beach" brand-name="Pacific Coast Title" agent-name="Alicia Park" agent-phone="(714) 555-0191" agent-email="alicia@pacificcoasttitle.com" hint-size="816px,1056px"></dc-import></div></div>
+              <a href="#" style="font-size:14px;font-weight:600">Download a sample PDF</a>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- COMPANY · PLAN -->
+      <sc-if value="{{ is.coPlan }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Company · Plan" style="display:flex;flex-direction:column;gap:36px;max-width:720px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Plan</h1><p style="font-size:16px;color:#64748B">{{ planSub }}</p></div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Rep seats</h2><a href="#" style="font-size:14px;font-weight:600">Add seats</a></div>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ seats }}" as="s" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3">
+                  <span style="font-size:13px;color:#64748B">Seat {{ s.n }}</span>
+                  <sc-if value="{{ s.rep }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:10px;min-width:0"><div style="width:30px;height:30px;border-radius:999px;background:#0E7490;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ s.ini }}</div><div style="display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px;font-weight:600">{{ s.rep }}</span><span style="font-size:13px;color:#64748B">{{ s.meta }}</span></div></div></sc-if>
+                  <sc-if value="{{ s.empty }}" hint-placeholder-val="{{ false }}"><span style="font-size:15px;color:#64748B">Open</span></sc-if>
+                  <sc-if value="{{ s.empty }}" hint-placeholder-val="{{ false }}"><button onClick="{{ goReps }}" style="all:unset;cursor:pointer;font-size:14px;font-weight:600;color:#4F46E5">Invite a rep</button></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Agents</h2>
+            <p style="font-size:15px;color:#334155;text-wrap:pretty">Agents don't take seats and don't cost you anything. Each rep can give an agent a trial seat — 10 reports a month, on your brand's goodwill, not your bill. Agents who want more upgrade and pay for themselves. Right now 52 agents are on trial seats and 6 have upgraded.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Billing</span><span style="font-size:15px;color:#334155">Yearly · renews March 2027</span><a href="#" style="font-size:14px;font-weight:600">Invoices</a></div>
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Card</span><span style="font-size:15px;color:#334155">Visa ending 4421</span><a href="#" style="font-size:14px;font-weight:600">Change</a></div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- COMPANY · SETTINGS -->
+      <sc-if value="{{ is.coSettings }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Company · Settings" style="display:flex;flex-direction:column;gap:36px;max-width:680px">
+          <div style="display:flex;flex-direction:column;gap:6px"><h1 style="font-size:34px;line-height:1.1;font-weight:800;letter-spacing:-0.03em">Settings</h1><p style="font-size:16px;color:#64748B">The company, who runs it, and what we email you about.</p></div>
+          <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Company</span><span style="font-size:15px;color:#334155">Pacific Coast Title</span><a href="#" style="font-size:14px;font-weight:600">Edit</a></div>
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Address</span><span style="font-size:15px;color:#334155">4000 MacArthur Blvd, Newport Beach, CA</span><a href="#" style="font-size:14px;font-weight:600">Edit</a></div>
+            <div style="display:grid;grid-template-columns:140px minmax(0,1fr) auto;gap:18px;align-items:center;padding:16px 0;border-bottom:1px solid #ECEAE3"><span style="font-size:13px;color:#64748B">Website</span><span style="font-size:15px;color:#334155">pacificcoasttitle.com</span><a href="#" style="font-size:14px;font-weight:600">Edit</a></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:16px"><h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Admins</h2><a href="#" style="font-size:14px;font-weight:600">Add an admin</a></div>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3"><div style="display:flex;align-items:center;gap:12px"><div style="width:34px;height:34px;border-radius:999px;background:#0E7490;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">RC</div><div style="display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px;font-weight:600">Robert Chen</span><span style="font-size:13px;color:#64748B">robert@pacificcoasttitle.com · you</span></div></div><span style="font-size:13px;color:#94A3B8">Owner</span></div>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;padding:14px 0;border-bottom:1px solid #ECEAE3"><div style="display:flex;align-items:center;gap:12px"><div style="width:34px;height:34px;border-radius:999px;background:#475569;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center">MS</div><div style="display:flex;flex-direction:column;line-height:1.3"><span style="font-size:15px;font-weight:600">Maria Santos</span><span style="font-size:13px;color:#64748B">maria@pacificcoasttitle.com</span></div></div><a href="#" style="font-size:14px;font-weight:600;color:#64748B">Remove</a></div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <h2 style="font-size:20px;font-weight:700;letter-spacing:-0.02em">Email me</h2>
+            <div style="display:flex;flex-direction:column;border-top:1.5px solid #0F172A">
+              <sc-for list="{{ coNotifs }}" as="n" hint-placeholder-count="3">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:18px;padding:14px 0;border-bottom:1px solid #ECEAE3">
+                  <span style="font-size:15px;color:#0F172A">{{ n.label }}</span>
+                  <button onClick="{{ n.toggle }}" aria-label="On or off" style="all:unset;cursor:pointer;width:40px;height:24px;border-radius:999px;background:{{ n.track }};position:relative;flex-shrink:0;transition:background .2s"><span style="position:absolute;top:2px;left:{{ n.knob }};width:20px;height:20px;border-radius:999px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .2s"></span></button>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <a href="#" style="font-size:14px;font-weight:600;color:#64748B;align-self:flex-start">Sign out</a>
+        </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;tier&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;rep&quot;,&quot;options&quot;:[&quot;rep&quot;,&quot;company&quot;],&quot;tsType&quot;:&quot;'rep' | 'company'&quot;},&quot;leads&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  static ICON(n) { return `https://unpkg.com/lucide-static@0.460.0/icons/${n}.svg`; }
+  state = { tier: null, page: null, filter: "all", who: "agents", inviteEmail: "", justInvited: "", invited: [], acted: {}, agentIdx: 3, notif: {}, coNotif: {}, menu: null, expanded: { 1: true, 3: true } };
+  renderVals() {
+    const S = this.state, I = Component.ICON;
+    const tier = S.tier ?? (this.props.tier ?? "rep");
+    const leadsOn = this.props.leads ?? true;
+    const isRep = tier === "rep";
+    const home = isRep ? "agents" : "coHome";
+    const page = S.page ?? home;
+    const go = p => () => this.setState({ page: p, justInvited: "", menu: null });
+    const navItem = (name, icon, p, alsoPages) => { const a = page === p || (alsoPages || []).includes(page); return { name, icon: I(icon), go: go(p), bg: a ? "#ECEAE3" : "transparent", color: a ? "#0F172A" : "#334155", weight: a ? 700 : 500 }; };
+    const nav = isRep
+      ? [navItem("My agents", "users", "agents", ["agent"]), navItem("Reports", "file-text", "reports"), navItem("Schedules", "calendar", "schedules"), navItem("Settings", "settings", "settings")]
+      : [navItem("Dashboard", "layout-dashboard", "coHome"), navItem("Reps & agents", "users", "coReps"), navItem("Branding", "palette", "coBranding"), navItem("Plan", "credit-card", "coPlan"), navItem("Settings", "settings", "coSettings")];
+    const pill = (on, label, pick) => ({ label, pick, bg: on ? "#0F172A" : "#fff", color: on ? "#fff" : "#475569", border: on ? "#0F172A" : "#E4E2DA" });
+    const GREEN = "#059669", AMBER = "#D97706", GREY = "#CBD5E1", RED = "#B91C1C";
+    // [name, firm, email, kind, sentence, dot, primary action, colour, role, leads]  kind: active|limit|quiet|pending|stale|paused = has a seat; contact = in the book only
+    const AG = [
+      ["Tom Becker", "Becker RE", "tom@beckerre.com", "stale", "Offered a seat 2 weeks ago, hasn't taken it", AMBER, "Resend invite", "#475569", "Agent", 0],
+      ["Daniel Kim", "Keller Williams", "dkim@kw.com", "quiet", "Has a seat · nothing sent in 5 weeks", AMBER, "Check in", "#0E7490", "Agent", 0],
+      ["Priya Nair", "eXp Realty", "priya.nair@exp.com", "pending", "Offered a seat Monday", GREY, "Resend invite", "#9F1239", "Agent", 0],
+      ["Jennifer Martinez", "Jennifer Realty", "jennifer@jenniferrealty.com", "active", "Has a seat · 7 reports this month", GREEN, "", "#4F46E5", "Agent", 2],
+      ["Marcus Reed", "Reed Homes", "marcus@reedhomes.com", "limit", "Has a seat · used all 10 this month", GREEN, "", "#B45309", "Agent", 3],
+      ["Sofia Alvarez", "Compass", "sofia@compass.com", "active", "Has a seat · 12 this month · pays for Growth", GREEN, "", "#7C3AED", "Agent", 4],
+      ["Rick Alvarado", "Coldwell Banker", "rick@cbhomes.com", "contact", "Got your Newport snapshot Monday · opened it", GREEN, "Give a seat", "#1D4ED8", "Agent", 0],
+      ["Mei Tanaka", "First Team", "mei@firstteam.com", "contact", "Got your Newport snapshot Monday · not opened", GREY, "Give a seat", "#B45309", "Agent", 0],
+      ["Hannah Lee", "Century 21", "hannah@c21.com", "active", "Has a seat · 6 reports this month", GREEN, "", "#065F46", "Agent", 1],
+      ["Paul Osterman", "Osterman Realty Group", "paul@orghomes.com", "contact", "Opened your last 4 reports", GREEN, "Give a seat", "#0E7490", "Broker", 0],
+      ["Lisa Feng", "Guild Mortgage", "lisa.feng@guild.com", "contact", "Got your Newport snapshot Monday · opened it", GREEN, "", "#7C3AED", "Lender", 0],
+      ["Chris Dawson", "Dawson Group", "chris@dawsongroup.com", "paused", "Seat paused since September", GREY, "Turn back on", "#334155", "Agent", 0],
+      ["Omar Haddad", "Redfin", "omar.h@redfin.com", "contact", "Added last week · nothing sent yet", GREY, "Give a seat", "#475569", "Agent", 0]
+    ];
+    const DONE = { "Resend invite": "Invite resent", "Check in": "Email sent", "Turn back on": "Seat back on", "Give a seat": "Seat offered", "Cancel the offer": "Offer withdrawn", "Pause their seat": "Seat paused", "Take the seat back": "Seat removed", "Remove from my book": "Removed" };
+    // Row menus: the code's resend / cancel / deactivate / reactivate / unsponsor, each with its effect stated. [JERRY] confirm effects against the server.
+    const MENU = {
+      pending: [["Cancel the offer", "They stay in your book and keep getting your reports. The seat offer is withdrawn.", RED]],
+      stale: [["Cancel the offer", "They stay in your book and keep getting your reports. The seat offer is withdrawn.", RED]],
+      active: [["Pause their seat", "They keep their account and their reports, but can't send until you turn it back on.", "#0F172A"]],
+      limit: [["Pause their seat", "They keep their account and their reports, but can't send until you turn it back on.", "#0F172A"]],
+      quiet: [["Pause their seat", "They keep their account and their reports, but can't send until you turn it back on.", "#0F172A"]],
+      paused: [["Take the seat back", "Frees the seat. Their account and past reports stay theirs; they stay in your book.", RED]],
+      contact: [["Remove from my book", "They stop getting your reports. Nothing else changes.", RED]]
+    };
+    const mk = (a, i) => { const key = "a" + i, acted = S.acted[key]; return { i, key, name: a[0], brokerage: a[8] === "Agent" ? a[1] : `${a[8]} · ${a[1]}`, email: a[2], first: a[0].split(" ")[0], kind: a[3], seat: ["active", "limit", "quiet", "paused"].includes(a[3]), sentence: a[4], dot: a[5], textColor: a[5] === GREY ? "#64748B" : "#0F172A", bg: a[7], ini: a[0].split(" ").map(w => w[0]).join(""), leads: a[9], action: acted ? "" : a[6], done: acted ? DONE[acted] : "", act: e => { e.stopPropagation(); this.setState({ acted: { ...S.acted, [key]: a[6] }, menu: null }); }, open: () => this.setState({ page: "agent", agentIdx: i, menu: null }), hasMenu: !acted && !!MENU[a[3]], menuOpen: S.menu === key, openMenu: e => { e.stopPropagation(); this.setState({ menu: S.menu === key ? null : key }); }, menu: (MENU[a[3]] || []).map(m => ({ label: m[0], note: m[1], color: m[2], act: e => { e.stopPropagation(); this.setState({ acted: { ...S.acted, [key]: m[0] }, menu: null }); } })) }; };
+    const titleCase = e => e.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    const invited = S.invited.map((e, k) => mk([titleCase(e), e.split("@")[1], e, "contact", "Added just now · gets your next report", GREY, "Give a seat", "#94A3B8", "Agent", 0], 100 + k));
+    const base = AG.map(mk);
+    const all = isRep ? invited.concat(base) : base;
+    const seated = all.filter(a => a.seat);
+    const needs = all.filter(a => ["stale", "quiet"].includes(a.kind));
+    const waiting = all.filter(a => ["pending", "stale"].includes(a.kind));
+    const sending = all.filter(a => a.kind === "active" || a.kind === "limit").length;
+    const leadsTotal = all.reduce((n, a) => n + a.leads, 0);
+    const filters = [["all", `Everyone ${all.length}`], ["seat", `Trial agents ${seated.length}`], ["noseat", `No seat yet ${all.length - seated.length}`], ["needs", `Gone quiet ${needs.length}`], ["waiting", `Waiting ${waiting.length}`]].map(([k, l]) => pill(S.filter === k, l, () => this.setState({ filter: k, menu: null })));
+    const agents = S.filter === "seat" ? seated : S.filter === "noseat" ? all.filter(a => !a.seat) : S.filter === "needs" ? needs : S.filter === "waiting" ? waiting : all;
+    const agent = (S.agentIdx >= 100 ? invited[S.agentIdx - 100] : base[S.agentIdx]) || base[3];
+    const ev = (icon, color, text, when) => ({ icon: I(icon), iconColor: color, text, when });
+    const SENT = "send", OPEN = "mail-open", LEAD = "phone-incoming", SEAT = "badge-check";
+    const seatActivity = [
+      ev(SENT, "#334155", `Sent an Irvine market snapshot to 10 people — 6 opened`, "Oct 14"),
+      ev(LEAD, "#065F46", `A homeowner on the Tustin closed-sales report left their number`, "Oct 9"),
+      ev(SENT, "#334155", `Sent Irvine new listings to 10 people — 5 opened`, "Oct 7"),
+      ev(SENT, "#334155", `Sent Tustin closed sales to 12 people — 7 opened`, "Oct 1"),
+      ev(LEAD, "#065F46", `A homeowner on the Irvine price-bands report asked for a call`, "Sep 26"),
+      ev(SENT, "#334155", `Sent Irvine price bands to 9 people — 4 opened`, "Sep 24"),
+      ev(SEAT, "#4F46E5", `Took the seat you offered`, "Mar 12")
+    ].filter(e => leadsOn || e.icon !== I(LEAD));
+    const contactActivity = [
+      ev(OPEN, "#334155", `Opened your Newport Beach market snapshot`, "Monday"),
+      ev(SENT, "#334155", `You sent them the Newport Beach market snapshot`, "Monday"),
+      ev(OPEN, "#334155", `Opened your Irvine inventory report`, "Sep 29"),
+      ev(SENT, "#334155", `You sent them the Irvine inventory report`, "Sep 29"),
+      ev("user-plus", "#334155", `Added to your book`, "Aug 2")
+    ];
+    const agentActivity = agent.seat ? seatActivity : contactActivity;
+    const agentStats = [
+      { label: "Sent this month", value: agent.kind === "limit" ? "10" : agent.kind === "quiet" ? "0" : "7", sub: agent.kind === "quiet" ? "4 in August, then nothing" : "Up from 4 in September", subColor: agent.kind === "quiet" ? "#B45309" : "#065F46" },
+      { label: "Opened", value: agent.kind === "quiet" ? "—" : "58%", sub: "Across everything they've sent", subColor: "#64748B" },
+      leadsOn ? { label: "Homeowner leads", value: String(agent.leads), sub: "This month · the lead is theirs", subColor: "#64748B" } : { label: "Seat since", value: "Mar", sub: "Paid by Pacific Coast Title", subColor: "#64748B" }
+    ];
+    const mine = { name: "Alicia Park", brokerage: "Pacific Coast Title", email: "alicia@pacificcoasttitle.com", bg: "#0E7490", ini: "AP" };
+    const byName = n => n === mine.name ? mine : base.find(a => a.name === n);
+    const RAW = [["Market snapshot", "Irvine", "Jennifer Martinez", "Today", "Not opened yet", 0], ["New listings", "Costa Mesa", "Sofia Alvarez", "Yesterday", "9 of 18 opened", 1], ["Closed sales", "Tustin", "Hannah Lee", "Yesterday", "5 of 11 opened", 0], ["Market snapshot", "Newport Beach", "Alicia Park", "Monday", "14 of 22 opened", 0], ["Inventory", "Irvine", "Marcus Reed", "Oct 19", "8 of 10 opened", 2], ["Price bands", "Irvine", "Jennifer Martinez", "Oct 17", "6 of 10 opened", 0], ["New listings", "Laguna", "Sofia Alvarez", "Oct 16", "11 of 18 opened", 0]];
+    const allReports = RAW.filter(r => S.who === "all" || (S.who === "mine" ? r[2] === mine.name : r[2] !== mine.name)).map(r => { const a = byName(r[2]); return { name: r[0], area: r[1], date: r[3], opens: r[4], opensColor: r[4].startsWith("Not") ? "#94A3B8" : "#334155", agent: a.name, ini: a.ini, primary: a.bg, lead: leadsOn && r[5] ? (r[5] === 1 ? "1 homeowner lead" : `${r[5]} homeowner leads`) : "" }; });
+    const whoFilters = [["agents", "My agents'"], ["mine", "Mine"], ["all", "Everything"]].map(([k, l]) => pill(S.who === k, l, () => this.setState({ who: k })));
+    const schedules = [["Jennifer Martinez", "Irvine · Market snapshot", "To 10 homeowners", "Monthly · 1st", "Next Nov 1", true], ["Sofia Alvarez", "Costa Mesa · New listings", "To 18 homeowners", "Every other Friday", "Next Oct 31", true], ["Sofia Alvarez", "Laguna · New listings", "To 18 homeowners", "Every other Friday", "Next Oct 31", true], ["Hannah Lee", "Tustin · Closed sales", "To 11 homeowners", "Monthly · 15th", "Next Nov 15", true], ["Marcus Reed", "Irvine · Inventory", "To 10 homeowners", "Weekly · Monday", "Paused — at limit", false], ["Daniel Kim", "Anaheim · Market snapshot", "To 6 homeowners", "Monthly · 1st", "Paused by Daniel", false]].map(s => { const a = byName(s[0]); return { agent: s[0], ini: a.ini, bg: a.bg, name: s[1], meta: s[2], cadence: s[3], next: s[4], nextColor: s[5] ? "#334155" : "#B45309" }; });
+    const toggles = (list, store, k) => list.map(([label, i]) => { const on = store[i] ?? true; return { label, on, knob: on ? "18px" : "2px", track: on ? "#059669" : "#CBD5E1", toggle: () => this.setState({ [k]: { ...store, [i]: !on } }) }; });
+    const notifs = toggles([["When an agent takes a seat", 0], ["When an agent goes quiet for a month", 1], ...(leadsOn ? [["When an agent's report brings in a lead", 3]] : []), ["Weekly digest of what my agents sent", 2]], S.notif, "notif");
+    const coNotifs = toggles([["When a rep joins or leaves", 0], ["When a rep's agents go quiet", 1], ["Monthly summary of the whole network", 2]], S.coNotif, "coNotif");
+    // Company
+    const REPS = [
+      ["Noah Patel", "Long Beach", "Invited Oct 18, hasn't joined", GREY, "Resend invite", 0, []],
+      ["Dana Whitfield", "Huntington Beach", "Left the company · 6 agents need a new rep", AMBER, "Reassign agents", 6, [["Ana Lopez", "Realty One", "Active", "Irvine snapshot · Oct 14", "#0E7490"], ["Will Chen", "Seven Gables", "Lapsed", "Nothing since Aug 30", "#475569"]]],
+      ["Grace Osei", "Anaheim", "11 agents · 39 reports this month · quiet since last week", AMBER, "Check in", 11, [["Luis Ortega", "Redfin", "Active", "Anaheim listings · Oct 15", "#7C3AED"], ["Sam Whitaker", "Compass", "Invited", "Offered a seat Oct 10", "#9F1239"]]],
+      ["Alicia Park", "Irvine", "8 agents · 61 reports this month · active today", GREEN, "", 8, [["Jennifer Martinez", "Jennifer Realty", "Active", "Irvine snapshot · today", "#4F46E5"], ["Sofia Alvarez", "Compass", "Active", "Costa Mesa listings · yesterday", "#7C3AED"], ["Hannah Lee", "Century 21", "Active", "Tustin closed sales · yesterday", "#065F46"], ["Marcus Reed", "Reed Homes", "Active", "Irvine inventory · Oct 19", "#B45309"], ["Daniel Kim", "Keller Williams", "Lapsed", "Nothing since Sep 15", "#0E7490"], ["Tom Becker", "Becker RE", "Invited", "Offered a seat Oct 9", "#475569"]]],
+      ["Ben Torres", "Newport Beach", "19 agents · 88 reports this month · active today", GREEN, "", 19, [["Elena Ruiz", "Pacific Sotheby's", "Active", "Newport snapshot · Oct 21", "#0E7490"], ["Kevin Ma", "eXp Realty", "Active", "Laguna listings · Oct 20", "#065F46"]]]
+    ];
+    const repDone = { "Resend invite": "Invite resent", "Check in": "Email sent", "Reassign agents": "Moved to Ben" };
+    const ST = { Active: "#065F46", Invited: "#64748B", Lapsed: "#B45309" };
+    const repsBase = REPS.map((r, i) => { const open = !!S.expanded[i], shown = r[6].length, left = r[5] - shown; return { name: r[0], office: r[1], sentence: r[2], dot: r[3], textColor: r[3] === GREY ? "#64748B" : "#0F172A", ini: r[0].split(" ").map(w => w[0]).join(""), action: S.acted["r" + i] ? "" : r[4], done: S.acted["r" + i] ? repDone[r[4]] : "", act: () => this.setState({ acted: { ...S.acted, ["r" + i]: true } }), agentCount: r[5], agentsLabel: r[5] === 0 ? "no agents yet" : `${r[5]} agents`, open, toggle: () => this.setState({ expanded: { ...S.expanded, [i]: !open } }), chevron: I(open ? "chevron-down" : "chevron-right"), agents: r[6].map(a => ({ name: a[0], firm: a[1], status: a[2], stColor: ST[a[2]], last: a[3], bg: a[4], ini: a[0].split(" ").map(w => w[0]).join("") })), more: left > 0 ? `All ${r[5]} of ${r[0].split(" ")[0]}'s agents →` : "", noAgents: r[5] === 0 }; });
+    const repsInvited = isRep ? [] : S.invited.map(e => ({ name: titleCase(e), office: e, sentence: "Invited just now", dot: GREY, textColor: "#64748B", ini: titleCase(e).split(" ").map(w => w[0]).join("").slice(0, 2), action: "", done: "", agentsLabel: "no agents yet", open: false, toggle: () => {}, chevron: I("chevron-right"), agents: [], more: "", noAgents: true }));
+    const reps = repsInvited.concat(repsBase);
+    const SEATS = 6, used = reps.length;
+    const seats = Array.from({ length: SEATS }, (_, n) => { const r = reps[n]; return r ? { n: n + 1, rep: r.name, ini: r.ini, meta: r.sentence.startsWith("Invited") ? "Invited · takes effect when they join" : `${r.office} · ${r.agentsLabel}`, empty: false } : { n: n + 1, rep: "", ini: "", meta: "", empty: true }; });
+    const coStats = [
+      { label: "Rep seats", value: `${used} of ${SEATS}`, sub: used < SEATS ? `${SEATS - used} open · 1 rep hasn't joined yet` : "All seats in use", subColor: "#64748B" },
+      { label: "Agents sending", value: "41 of 52", sub: "11 haven't sent anything in a month", subColor: "#B45309" },
+      { label: "Reports this month", value: "214", sub: "Up from 171 in September", subColor: "#065F46" }
+    ];
+    const coActivity = [
+      ev(SENT, "#334155", "Jennifer Martinez (Alicia's) sent an Irvine market snapshot", "Today"),
+      ev(LEAD, "#065F46", "A homeowner left their number on Sofia Alvarez's Costa Mesa listings", "Yesterday"),
+      ev(SENT, "#334155", "Hannah Lee (Alicia's) sent Tustin closed sales to 11 people", "Yesterday"),
+      ev("user-plus", "#334155", "Noah Patel was invited as a rep for Long Beach", "Oct 18"),
+      ev(SEAT, "#4F46E5", "Elena Ruiz (Ben's) took her seat", "Oct 17"),
+      ev("user-minus", "#B45309", "Dana Whitfield left — her 6 agents need a rep", "Oct 15")
+    ].filter(e => leadsOn || e.icon !== I(LEAD));
+    const is = {}; ["agents", "agent", "reports", "schedules", "settings", "coHome", "coReps", "coBranding", "coPlan", "coSettings"].forEach(k => is[k] = page === k);
+    if (!Object.values(is).some(Boolean)) is[home] = true;
+    return {
+      is, nav, filters, agents, agent, agentStats, agentActivity, allReports, whoFilters, reps, schedules, notifs, coNotifs, coStats, coActivity, seats, leadsOn,
+      tierShort: isRep ? "Rep" : "Co.",
+      userName: isRep ? "Alicia Park" : "Robert Chen", userIni: isRep ? "AP" : "RC", userRole: isRep ? "Title rep · Pacific Coast Title" : "Admin · Pacific Coast Title",
+      agentsSub: `${all.length} people in your book. ${seated.length} have a seat; ${sending} sent something this month${leadsOn ? ` and brought in ${leadsTotal} homeowner leads` : ""}.`,
+      agentHeading: agent.seat ? `What ${agent.first} has been doing` : `What you've sent ${agent.first}`,
+      agentFoot: agent.seat ? "You see that reports went out and whether they landed. The reports themselves — and any leads — belong to " + agent.first + "." : "Give them a seat and they can send their own — on Pacific Coast Title's dime, 10 a month.",
+      reportsSub: S.who === "mine" ? "3 this month. 22 left on your plan." : "61 sent by your agents this month. About half get opened.",
+      coSub: `${used} reps · 52 agents · 214 reports this month`,
+      repsSub: `${used} reps on ${SEATS} seats. Open a rep to see their agents.`,
+      seatsLine: `${SEATS - used} of ${SEATS} seats open.`,
+      planSub: `${SEATS} rep seats, ${used} in use. You pay for seats; agents pay for themselves.`,
+      emptyFilter: agents.length === 0,
+      inviteEmail: S.inviteEmail, justInvited: S.justInvited, notInvited: !S.justInvited,
+      setInviteEmail: e => this.setState({ inviteEmail: e.target.value, justInvited: "" }),
+      sendInvite: () => { const e = S.inviteEmail.trim(); if (!e.includes("@")) return; this.setState({ invited: [e].concat(S.invited), inviteEmail: "", justInvited: e, filter: "all" }); },
+      toggleTier: () => this.setState({ tier: isRep ? "company" : "rep", page: null, invited: [], justInvited: "", inviteEmail: "", menu: null }),
+      closeMenu: () => { if (S.menu) this.setState({ menu: null }); },
+      goHome: go(home), goReps: go("coReps")
+    };
+  }
+}
+</script>
+</body>
+</html>
