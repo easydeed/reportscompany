@@ -29,11 +29,17 @@ import uuid
 
 import pytest
 
-DB_URL = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+# DATABASE_URL ONLY. The app under test opens its pool on DATABASE_URL
+# (api/db.py), so the fixtures must seed that same database. This used to
+# prefer TEST_DATABASE_URL, which the worker suites use for an EMPTY
+# throwaway database: with both set, the fixtures wrote to one database while
+# the routes read another, and every test errored on a missing `accounts`
+# table. Caught when CI first set both (D-285).
+DB_URL = os.getenv("DATABASE_URL")
 
 psycopg = pytest.importorskip("psycopg", reason="psycopg is required for integration tests")
 pytestmark = pytest.mark.skipif(
-    not DB_URL, reason="Set DATABASE_URL (or TEST_DATABASE_URL) to run tenant-isolation tests"
+    not DB_URL, reason="Set DATABASE_URL to run tenant-isolation tests"
 )
 
 PASSWORD = "IsolationTest123!"
