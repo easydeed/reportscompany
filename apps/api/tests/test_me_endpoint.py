@@ -23,10 +23,10 @@ def regular_user_account(db_session):
     with db_conn() as (conn, cur):
         # Create account
         cur.execute("""
-            INSERT INTO accounts (id, name, account_type, plan_slug, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            INSERT INTO accounts (id, name, slug, account_type, plan_slug, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
             ON CONFLICT (id) DO NOTHING
-        """, (account_id, "Test Regular Account", "REGULAR", "free"))
+        """, (account_id, "Test Regular Account", f"test-regular-{account_id}", "REGULAR", "free"))
         
         # Create user
         cur.execute("""
@@ -56,10 +56,10 @@ def affiliate_user_account(db_session):
     with db_conn() as (conn, cur):
         # Create affiliate account
         cur.execute("""
-            INSERT INTO accounts (id, name, account_type, plan_slug, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            INSERT INTO accounts (id, name, slug, account_type, plan_slug, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
             ON CONFLICT (id) DO NOTHING
-        """, (account_id, "Test Affiliate Account", "INDUSTRY_AFFILIATE", "affiliate"))
+        """, (account_id, "Test Affiliate Account", f"test-affiliate-{account_id}", "INDUSTRY_AFFILIATE", "affiliate"))
         
         # Create user
         cur.execute("""

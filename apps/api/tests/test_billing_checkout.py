@@ -188,11 +188,12 @@ def test_checkout_url_uses_correct_path(
     mock_stripe_config
 ):
     """
-    Task 2.1: Verify that Stripe checkout URLs use /account/plan, not /app/account/plan.
-    
-    This test ensures the fix for Task 2.1 is working:
-    - success_url should be {WEB_BASE}/account/plan?checkout=success
-    - cancel_url should be {WEB_BASE}/account/plan?checkout=cancel
+    Stripe sends the customer back to the billing settings page that exists.
+
+    Task 2.1 moved these off `/app/account/plan`; the billing page later moved
+    to `/app/settings/billing` (apps/web/app/app/settings/billing/page.tsx) and
+    the route followed it. This test still asserted `/account/plan` and only
+    went unnoticed because nothing ran it with a database (D-285).
     """
     response = client.post(
         "/v1/billing/checkout",
@@ -210,20 +211,15 @@ def test_checkout_url_uses_correct_path(
     import os
     web_base = os.getenv("WEB_BASE", "https://reportscompany-web.vercel.app")
     
-    # CRITICAL: URLs should use /account/plan, NOT /app/account/plan
-    assert call_kwargs["success_url"] == f"{web_base}/account/plan?checkout=success"
-    assert call_kwargs["cancel_url"] == f"{web_base}/account/plan?checkout=cancel"
-    
-    # Ensure old path is NOT present
-    assert "/app/account/plan" not in call_kwargs["success_url"]
-    assert "/app/account/plan" not in call_kwargs["cancel_url"]
+    assert call_kwargs["success_url"] == f"{web_base}/app/settings/billing?checkout=success"
+    assert call_kwargs["cancel_url"] == f"{web_base}/app/settings/billing?checkout=cancelled"
+    assert "account/plan" not in call_kwargs["success_url"]
+    assert "account/plan" not in call_kwargs["cancel_url"]
 
 
 @pytest.mark.usefixtures("db_session")
 def test_portal_url_uses_correct_path(mock_stripe, mock_auth):
-    """
-    Task 2.1: Verify that Stripe portal return_url uses /account/plan, not /app/account/plan.
-    """
+    """The Stripe portal returns to the billing settings page (see above)."""
     with patch('api.routes.billing.db_conn') as mock_db, \
          patch('api.routes.billing.set_rls'), \
          patch('api.routes.billing.validate_stripe_config', return_value=(True, [])):
@@ -248,14 +244,21 @@ def test_portal_url_uses_correct_path(mock_stripe, mock_auth):
         import os
         web_base = os.getenv("WEB_BASE", "https://reportscompany-web.vercel.app")
         
-        # CRITICAL: return_url should use /account/plan, NOT /app/account/plan
-        assert call_kwargs["return_url"] == f"{web_base}/account/plan"
-        assert "/app/account/plan" not in call_kwargs["return_url"]
+        assert call_kwargs["return_url"] == f"{web_base}/app/settings/billing"
+        assert "account/plan" not in call_kwargs["return_url"]
 
 
 @pytest.mark.usefixtures("db_session")
-def test_checkout_rejects_sponsored_account(mock_stripe, mock_auth, mock_stripe_config):
-    """Verify that sponsored accounts cannot self-upgrade via Stripe."""
+def test_checkout_lets_a_sponsored_agent_pay_for_itself(mock_stripe, mock_auth, mock_stripe_config):
+    """
+    A sponsored agent (REGULAR with a sponsor) CAN start checkout.
+
+    This test used to assert the opposite — 400 `sponsored_account` — which was
+    the original rule. The rule changed: title companies are compliance-
+    prohibited from paying for agent subscriptions, so agents pay their own way
+    (routes/billing.py, the NOTE after the account-type check). The test was
+    never updated because nothing ran it with a database (D-285).
+    """
     with patch('api.routes.billing.db_conn') as mock_db, \
          patch('api.routes.billing.set_rls'):
         
@@ -263,23 +266,25 @@ def test_checkout_rejects_sponsored_account(mock_stripe, mock_auth, mock_stripe_
         mock_cur = MagicMock()
         mock_db.return_value.__enter__.return_value = (mock_conn, mock_cur)
         
-        # Mock sponsored account (has sponsor_account_id)
-        mock_cur.fetchone.return_value = (
-            "sponsored-account-id",
-            "Sponsored Account",
-            "REGULAR",
-            "sponsored_free",
-            "sponsor-id",  # sponsor_account_id is NOT None
-            None,
-        )
-        
+        mock_cur.fetchone.side_effect = [
+            (
+                "sponsored-account-id",
+                "Sponsored Account",
+                "REGULAR",
+                "sponsored_free",
+                "sponsor-id",  # sponsor_account_id is NOT None
+                None,
+            ),
+            ("agent@example.com",),
+        ]
+
         response = client.post(
             "/v1/billing/checkout",
             json={"plan_slug": "pro"}
         )
-        
-        assert response.status_code == 400
-        assert "sponsored_account" in response.json()["detail"]["error"]
+
+        assert response.status_code == 200, response.text
+        mock_stripe.checkout.Session.create.assert_called_once()
 
 
 @pytest.mark.usefixtures("db_session")

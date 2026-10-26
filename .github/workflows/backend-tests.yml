@@ -54,6 +54,37 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    # A REAL POSTGRES, BECAUSE THE TESTS THAT PROVE TENANT ISOLATION NEED ONE
+    # (D-285).
+    #
+    # Every suite that asks for `db_session`, and the two tenant-isolation
+    # suites (apps/api/tests/test_*_tenant_isolation.py, 36 cross-tenant
+    # tests), skips when DATABASE_URL is unset. Until this block they always
+    # skipped here: the proof that one sponsor cannot read another's agents
+    # ran only on a laptop, and the first time the full suite ran against a
+    # database it found eight tests that had gone stale unseen — a fixture
+    # missing a NOT NULL column, a mocked row two columns behind its query,
+    # billing URLs from two page moves ago, and a sponsored-checkout test
+    # asserting a policy the code reversed.
+    #
+    # 16, because that is what production runs. Trust auth on a throwaway
+    # service container is fine; the password is only there because the image
+    # refuses to start without one.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: market_reports
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -139,6 +170,23 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 
+      # Every migration, in order, the same runner local_stack.sh uses. A
+      # migration that fails on a fresh database fails here, before any test,
+      # which is a check this repository did not have either.
+      #
+      # TWO DATABASES, BECAUSE THE SUITES MEAN TWO THINGS. DATABASE_URL is the
+      # migrated schema the app opens its pool on; the API suites seed it and
+      # call routes against it. TEST_DATABASE_URL is an EMPTY throwaway: the
+      # worker suites (deactivate_schedules, reconcile_backfill,
+      # cadence_hazard_query) build their own schemas in it and run operator
+      # SQL through psql, which the runner image already has.
+      - name: Apply migrations
+        run: |
+          .venv/bin/python scripts/run_migrations.py
+          psql "$DATABASE_URL" -c "CREATE DATABASE scratch"
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/market_reports
+
       # One invocation from the repo root. pytest.ini's testpaths already covers
       # apps/api/tests and apps/worker/tests; running them as separate steps
       # would put the cross-package test in an environment missing half of what
@@ -160,6 +208,8 @@ jobs:
           .venv/bin/pytest -rf 2>&1 | tee pytest-output.txt
         env:
           PDF_CONTRAST_REQUIRE_BROWSER: "1"
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/market_reports
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scratch
 
       # A RED CHECK THAT SAYS WHICH TEST FAILED (D-191).
       #
