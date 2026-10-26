@@ -42,9 +42,10 @@ and owns the Environment, so all three drift surfaces disappear at once. The
 inputs these tests DO write by hand are `report_data` — the builder's own
 argument, the thing production also hands it.
 
-Confirmed no network: with the default 7-page set, `render_html()` fetches
-market trends only when "market_trends" is in the page set and calls the LLM
-only when "overview" is. Neither is, so the render is pure.
+No network in practice: the default six-page set includes `market_trends`,
+and `render_html()` tries SimplyRETS for it and the LLM for the cover's
+narrative; with no credentials in a test both fail fast, the page is dropped
+and the panel states its source.
 
 WHAT THIS COSTS, SAID PLAINLY
 -----------------------------
@@ -75,10 +76,6 @@ from worker.property_builder import (  # noqa: E402
 
 THEMES = list(THEME_TEMPLATES.keys())
 
-# The 7-page set the builder defaults to. Named here so the page-count test
-# asserts against the contract rather than against a number somebody typed.
-DEFAULT_PAGE_SET = ["cover", "contents", "aerial", "property", "analysis",
-                    "comparables", "range"]
 
 
 # ============================================================================
@@ -308,9 +305,7 @@ class TestHTMLStructure:
         """
         builder = PropertyReportBuilder({**FULL_REPORT_DATA, "theme": theme})
         html = builder.render_html()
-        pages = (html.count('class="page ')
-                 + html.count('class="page"')
-                 + html.count('class="sheet sheet-'))
+        pages = html.count('class="sheet sheet-')
         # `builder.page_set` is the MAXIMUM — `render_html` drops a page whose
         # data did not arrive and leaves the attribute alone (D-142) — so this
         # is `<=`, and the exact-equality version belongs to the tests that
@@ -320,9 +315,10 @@ class TestHTMLStructure:
             f"{theme}: declared {len(builder.page_set)} pages "
             f"({builder.page_set}), rendered {pages}"
         )
-        assert pages >= len(builder.page_set) - len(builder.CONDITIONAL_PAGES), (
+        # `market_trends` is the one page whose data can fail to arrive.
+        assert pages >= len(builder.page_set) - 1, (
             f"{theme}: declared {len(builder.page_set)} pages and rendered "
-            f"only {pages} — more were dropped than the conditional ones"
+            f"only {pages} — more were dropped than the conditional one"
         )
 
 

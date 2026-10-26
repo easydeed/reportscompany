@@ -19,6 +19,12 @@
 #   * linen's `--burgundy-on-dark` white fallback is annotated in the template
 #     rather than baselined: white is the fallback for TEXT ON DARK, not a brand
 #     value.
+#
+# 2026-10-26, HARBOR AND LINEN ONTO THE SHARED ARCHITECTURE. Thirteen entries
+# RETIRED — nine named `harbor_report.jinja2`, four `linen_report.jinja2`. Both
+# files are now 22 lines of typography that include `_v2/report.jinja2`, and the
+# literals went with the nine-page layouts. Removed by hand rather than by
+# --write-baseline, which also drops this header. Nothing was added.
 
 apps/web/templates/social/social-closed.html	BRAND-ADJACENT	#92400e
 apps/web/templates/social/social-closed.html	BRAND-ROLE	#7c3aed
@@ -68,20 +74,7 @@ apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#1a1f3
 apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#2d3348
 apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#ff6b5b
 apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#ff8a7d
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#bf5044
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#d94e3f
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#ff8a7d
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#ff9e94
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#ffb199
-apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2	BRAND-ROLE	#ffffff
 apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#1a1a1a
 apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#333333
 apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#b8977e
 apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#d4c4b0
-apps/worker/src/worker/templates/property/linen/linen_report.jinja2	BRAND-ROLE	#0d0d0d
-apps/worker/src/worker/templates/property/linen/linen_report.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/linen/linen_report.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/linen/linen_report.jinja2	BRAND-ROLE	#ffffff

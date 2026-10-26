@@ -12,7 +12,7 @@ import { StepTheme } from "./step-theme";
 import { StepGenerate } from "./step-generate";
 import { DEFAULT_THEME_ID, THEME_ID_TO_NAME } from "@/lib/themes.generated";
 import type { PropertyData, Comparable } from "./types";
-import { THEMES, COMPACT_PAGES, FULL_PAGES } from "./types";
+import { THEMES, REPORT_PAGES } from "./types";
 
 /** Design's labels for the rail (Wizards v3). The step indices are unchanged. */
 const STEP_LABELS = ["Address", "Comparables", "Look", "Generate"];
@@ -51,7 +51,7 @@ export function PropertyWizard() {
   const [selectedThemeId, setSelectedThemeId] = useState(4);
   const [accentColor, setAccentColor] = useState("#34d1c3");
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>(
-    COMPACT_PAGES.map((p) => p.id)
+    REPORT_PAGES.map((p) => p.id)
   );
 
   // Cache account defaults so handleReset can reuse them without an extra API call
@@ -98,10 +98,8 @@ export function PropertyWizard() {
     [selectedThemeId]
   );
 
-  const pages = useMemo(
-    () => (selectedTheme.compact ? COMPACT_PAGES : FULL_PAGES),
-    [selectedTheme]
-  );
+  // One page list for every theme: they share the six-page architecture.
+  const pages = REPORT_PAGES;
 
   const selectedComps = useMemo(
     () => availableComps.filter((c) => selectedCompIds.includes(c.id)),
@@ -258,8 +256,6 @@ export function PropertyWizard() {
     const theme = THEMES.find((t) => t.id === id);
     if (theme) {
       setAccentColor(theme.accentDefault);
-      const newPages = theme.compact ? COMPACT_PAGES : FULL_PAGES;
-      setSelectedPageIds(newPages.map((p) => p.id));
     }
   }
 
@@ -282,7 +278,7 @@ export function PropertyWizard() {
     setFallbackLevel(null);
     setSelectedThemeId(accountDefaultsRef.current.themeId);
     setAccentColor(accountDefaultsRef.current.accentColor);
-    setSelectedPageIds(COMPACT_PAGES.map((p) => p.id));
+    setSelectedPageIds(REPORT_PAGES.map((p) => p.id));
     setGenerationPhase("idle");
     setGenerationProgress(0);
     setCurrentStage(0);

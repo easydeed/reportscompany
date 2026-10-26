@@ -1,0 +1,121 @@
+[
+  {
+    "name": "W1 the wizard stops offering notes (the live defect)",
+    "file": "apps/web/components/property-wizard/types.ts",
+    "old": "  { id: \"notes\",         name: \"Agent & notes\",     required: true  },\n",
+    "new": "",
+    "test": "tests/test_wizard_pages_match_the_builder.py"
+  },
+  {
+    "name": "W2 the wizard lists the pages out of document order",
+    "file": "apps/web/components/property-wizard/types.ts",
+    "old": "  { id: \"range\",         name: \"Range of value\",    required: false },\n  { id: \"market_trends\", name: \"Market trends\",     required: false },\n",
+    "new": "  { id: \"market_trends\", name: \"Market trends\",     required: false },\n  { id: \"range\",         name: \"Range of value\",    required: false },\n",
+    "test": "tests/test_wizard_pages_match_the_builder.py"
+  },
+  {
+    "name": "W3 the wizard lets an agent untick notes",
+    "file": "apps/web/components/property-wizard/types.ts",
+    "old": "  { id: \"notes\",         name: \"Agent & notes\",     required: true  },",
+    "new": "  { id: \"notes\",         name: \"Agent & notes\",     required: false },",
+    "test": "tests/test_wizard_pages_match_the_builder.py"
+  },
+  {
+    "name": "W4 a nine-page list comes back",
+    "file": "apps/web/components/property-wizard/types.ts",
+    "old": "export const REPORT_PAGES: ReportPage[] = [",
+    "new": "export const FULL_PAGES: ReportPage[] = [];\nexport const REPORT_PAGES: ReportPage[] = [",
+    "test": "tests/test_wizard_pages_match_the_builder.py"
+  },
+  {
+    "name": "B1 the builder stops forcing notes (an old saved selection loses it)",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "REQUIRED_PAGES = frozenset({\"cover\", \"property\", \"comparables\", \"notes\"})",
+    "new": "REQUIRED_PAGES = frozenset({\"cover\", \"property\", \"comparables\"})",
+    "test": "apps/worker/tests/test_renders_exactly_six_in_order.py"
+  },
+  {
+    "name": "B2 the document renders its pages in some other order (alphabetical)",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "            \"pages\": [p for p in self.V2_PAGE_ORDER if p in page_set],\n",
+    "new": "            \"pages\": sorted(page_set),\n",
+    "test": "apps/worker/tests/test_renders_exactly_six_in_order.py"
+  },
+  {
+    "name": "B3 an optional page the caller asked for is dropped",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "            if page in cls.V2_PAGE_ORDER:\n                wanted.add(page)",
+    "new": "            if page in cls.V2_PAGE_ORDER and page != \"range\":\n                wanted.add(page)",
+    "test": "apps/worker/tests/test_renders_exactly_six_in_order.py"
+  },
+  {
+    "name": "T1 harbor stops including the shared architecture",
+    "file": "apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2",
+    "old": "{% include '_v2/report.jinja2' %}",
+    "new": "<!DOCTYPE html><html><body><section class=\"sheet sheet-cover\"></section></body></html>",
+    "test": "apps/worker/tests/test_renders_exactly_six_in_order.py"
+  },
+  {
+    "name": "T2 the footer total is a literal six",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "{% set total_pages = doc.pages | length %}",
+    "new": "{% set total_pages = 6 %}",
+    "test": "apps/worker/tests/test_renders_exactly_six_in_order.py"
+  },
+  {
+    "name": "C1 active listings are called sales again",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "            return {\"comp_noun\": \"nearby homes currently for sale\",\n                    \"comp_noun_short\": \"homes currently for sale\",",
+    "new": "            return {\"comp_noun\": \"recent nearby sales\",\n                    \"comp_noun_short\": \"sales\",",
+    "test": "apps/worker/tests/test_property_production_render.py"
+  },
+  {
+    "name": "C2 an empty comp set is graded again",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "        {% if doc.comp_count %}\n        <span class=\"conf-pill\">",
+    "new": "        {% if true %}\n        <span class=\"conf-pill\">",
+    "test": "apps/worker/tests/test_property_production_render.py"
+  },
+  {
+    "name": "F1 the font stacks are autoescaped again (every theme renders in Times)",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "    --display: {{ t_display | safe }};\n    --body-face: {{ t_body | safe }};\n",
+    "new": "    --display: {{ t_display }};\n    --body-face: {{ t_body }};\n",
+    "test": "apps/worker/tests/test_each_theme_renders_in_its_own_typefaces.py"
+  },
+  {
+    "name": "M1 the market chart renders with no monthly series (prints None)",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "      {% if market_trends.v2_months %}\n      <div class=\"chart-body\">",
+    "new": "      {% if true %}\n      <div class=\"chart-body\">",
+    "test": "apps/worker/tests/test_renders_exactly_six_in_order.py"
+  },
+  {
+    "name": "F2 lining figures removed (linen's cover reads 'I' for 1)",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "    font-variant-numeric: lining-nums;\n  }",
+    "new": "  }",
+    "test": "apps/worker/tests/test_each_theme_renders_in_its_own_typefaces.py"
+  },
+  {
+    "name": "D1 a box reads 'no data' although its number exists (D-167)",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "_cell(None if dom.get(\"current\") is None else str(round(dom[\"current\"])),",
+    "new": "_cell(None,",
+    "test": "apps/worker/tests/test_market_page_shows_the_numbers_it_has.py"
+  },
+  {
+    "name": "D2 a box shows another metric's number",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "_cell(None if ratio.get(\"current\") is None else f\"{ratio['current']:.1f}%\",",
+    "new": "_cell(None if ppsf.get(\"current\") is None else f\"{ppsf['current']:.1f}%\",",
+    "test": "apps/worker/tests/test_market_page_shows_the_numbers_it_has.py"
+  },
+  {
+    "name": "D3 a box's arrow describes a different metric (the old days-to-contract cell)",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "\"Days on market\" + self._v2_delta(dom)),",
+    "new": "\"Days on market\" + self._v2_delta(ppsf)),",
+    "test": "apps/worker/tests/test_market_page_shows_the_numbers_it_has.py"
+  }
+]
