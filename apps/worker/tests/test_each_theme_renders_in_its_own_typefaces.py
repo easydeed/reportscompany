@@ -71,3 +71,14 @@ def test_each_theme_renders_in_its_own_typefaces(theme, prop, var, styles):
 def test_no_html_entity_inside_a_style_block(theme, styles):
     found = sorted(set(ENTITY.findall(styles[theme])))
     assert not found, f"{theme}: HTML entities in CSS {found} — an autoescape accident"
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_figures_are_lining_on_every_theme(theme, styles):
+    """Cormorant's default figures are old-style: linen's cover read
+    "2 · I · 786 · 1949". The body sets lining figures and everything
+    inherits them."""
+    # A rule whose selector is exactly `body` — not the `html, body` reset.
+    bodies = re.findall(r"(?m)^\s*body\s*\{([^}]*)\}", styles[theme])
+    assert any(re.search(r"font-variant-numeric:\s*lining-nums", b) for b in bodies), (
+        f"{theme}: the body does not set lining figures")

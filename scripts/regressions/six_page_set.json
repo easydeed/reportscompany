@@ -89,5 +89,12 @@
     "old": "      {% if market_trends.v2_months %}\n      <div class=\"chart-body\">",
     "new": "      {% if true %}\n      <div class=\"chart-body\">",
     "test": "apps/worker/tests/test_renders_exactly_six_in_order.py"
+  },
+  {
+    "name": "F2 lining figures removed (linen's cover reads 'I' for 1)",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "    font-variant-numeric: lining-nums;\n  }",
+    "new": "  }",
+    "test": "apps/worker/tests/test_each_theme_renders_in_its_own_typefaces.py"
   }
 ]
