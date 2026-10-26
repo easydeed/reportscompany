@@ -36,57 +36,19 @@ from typing import Any, Dict, List, Optional
 
 from . import theme_registry as _registry
 
-#: The consumer CMA's page set.
-#:
-#: D-141. This diverged from the agent default by ACCIDENT, not by decision —
-#: `git log -S` on every distinguishing string traces it to commit 182 of 182,
-#: the squashed base, whose message is about Market Snapshot gallery rows. The
-#: divergence dropped `analysis`, and with it the only page that places the
-#: subject property against its comps: the comparison table, the sales chart,
-#: and the last-sale price row. A homeowner who asked what their house is
-#: worth received four neighbours' sale prices and nothing about their own.
-#:
-#: `analysis` restored 2026-09-30. `market_trends` and `overview` stay — they
-#: suit this reader — but they were additions and were never a reason to
-#: exclude the analysis.
-#:
-#: `contents` RESTORED 2026-10-01, D-121 fixed. It was held out because the
-#: block was hardcoded and unguarded — it would have listed pages this set
-#: does not contain and numbered them wrongly, and this set is exactly where
-#: that shows, since it differs from the default on four pages. The rows are
-#: now derived from the page set and the numbers counted at render time, so
-#: the contents of a consumer report describes a consumer report.
-#:
-#: BEWARE: `market_trends` needs a live SimplyRETS fetch and `overview` needs
-#: an OpenAI key, and `render_html` drops either without a word when its data
-#: does not arrive (D-142). So this list is the MAXIMUM, not the guarantee —
-#: six pages when both services answer, four when neither does. `analysis`
-#: renders unconditionally, which is half of why it belongs here.
-#:
-#: `comparables_all` is NOT listed here, and that is not an omission: the
-#: builder adds it when the set is larger than the cards page holds, the same
-#: way it REMOVES `market_trends` and `overview` when their data does not
-#: arrive. A page whose presence depends on the data belongs to the builder,
-#: not to a page list written before the data exists (D-159).
-#: THE NINE-PAGE SET ONLY, and the consumer path no longer reaches for it
-#: directly — see `consumer_pages()` below. Kept because the two tests that
-#: assert the maximum by name read it, and because the list's own commentary
-#: above is about this architecture.
-CONSUMER_PAGES = [
-    "cover", "contents", "aerial", "property", "analysis",
-    "comparables", "range",
-    "market_trends", "overview",
-]
-
-
 def consumer_pages(theme_id) -> List[str]:
-    """The consumer path's page set, for whichever architecture renders it.
+    """The consumer CMA's page set: the builder's six-page maximum.
 
-    ASKS THE BUILDER. `CONSUMER_PAGES` is the nine-page list and was handed
-    to every theme, so a theme on Design's six-page architecture got four
-    pages that do not exist there and lost the one page it always renders.
-    The builder owns which pages an architecture has; this function is the
-    consumer path asking rather than keeping its own copy.
+    ASKS THE BUILDER rather than keeping a list. This module used to hold
+    `CONSUMER_PAGES`, a copy of the nine-page set (D-141 restored `analysis`
+    to it, D-121 restored `contents`), and handing that list to a theme on the
+    six-page architecture cost it the notes page — the agent panel and the
+    explainers. Every theme is on the six-page architecture now, so there is
+    one maximum for both paths: `overview` is the cover's "In short" panel and
+    `analysis` is folded into the range page, and both are always present.
+
+    `market_trends` is still dropped at render time when SimplyRETS does not
+    answer (D-142), so this is six pages at most, five otherwise.
 
     Imported lazily: `property_builder` imports this module, so a top-level
     import here is a cycle.

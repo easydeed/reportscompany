@@ -62,7 +62,7 @@ to 3 and asks Design which five to give up.
 |---|---|
 | market baseline, 2026-10-07 | 6 |
 | market baseline now | **0** |
-| property baseline | 26 (linen 26, **harbor 0**, atlas 0) — was 55 on 2026-10-21 morning; D-205/D-206 retired 12, the muted/primary_ink swaps 5, the `ink_on` per-ground inks 9, and `on_primary` on harbor's brand-filled table row 3 |
+| property baseline | 0 (linen 0, harbor 0, atlas 0) — 26, all linen's, until 2026-10-26, when harbor and linen moved onto the shared six-page architecture and the old layouts' failures went with them; was 55 on 2026-10-21 morning; D-205/D-206 retired 12, the muted/primary_ink swaps 5, the `ink_on` per-ground inks 9, and `on_primary` on harbor's brand-filled table row 3 |
 
 **Zero baselined contrast failures on the market surface**, across 5,058 measured text runs, six brand
 colours and eight report types. Held by

@@ -13,9 +13,9 @@ Flow:
 
 Template System:
 - Templates are in templates/property/
-- Entry point: <theme>/<theme>_report.jinja2 per theme, extending _base/base.jinja2
-- Themes 1-5 (bold/classic/elegant/modern/teal) with a default 7-page set
-  or a custom set via selected_pages
+- Entry point: <theme>/<theme>_report.jinja2 per theme (harbor/linen/atlas),
+  each including the shared six-page `_v2/report.jinja2`; a custom
+  selected_pages is translated onto the six pages by the builder
 
 Usage:
     from worker.tasks.property_report import generate_property_report

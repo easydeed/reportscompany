@@ -1095,7 +1095,6 @@ async def generate_preview_html(payload: PreviewRequest, request: Request):
             "company_name": "Your Company",
         },
         "branding": payload.branding or {},
-        "selected_pages": ["cover", "contents", "aerial", "property", "analysis", "comparables", "range"],
     }
     
     # Pages to render — caller can limit to just a few pages for speed
