@@ -40,6 +40,13 @@ router = APIRouter(prefix="/v1/affiliate", tags=["affiliate"])
 
 EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 
+#: Bulk invite limits. Each row is an account created and an email sent in this
+#: affiliate's name, and the upload had no ceiling: a file of any size went
+#: straight to the loop. 100 rows covers a whole office; more is refused before
+#: a single row is read into the database.
+BULK_INVITE_MAX_ROWS = 100
+BULK_INVITE_MAX_BYTES = 256 * 1024
+
 
 def _inviter_user_id(request: Request) -> str | None:
     u = getattr(request.state, "user", None) or {}
@@ -284,21 +291,33 @@ async def bulk_invite_agents(
 
         inviter_name, company_name = _get_inviter_info(cur, account_id, request)
 
-        content = await file.read()
+        content = await file.read(BULK_INVITE_MAX_BYTES + 1)
+        if len(content) > BULK_INVITE_MAX_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"The file is over {BULK_INVITE_MAX_BYTES // 1024} KB. Split it and upload in parts.",
+            )
         try:
             text = content.decode("utf-8-sig")
         except UnicodeDecodeError:
             text = content.decode("latin-1")
 
-        reader = csv.DictReader(io.StringIO(text))
+        rows = list(csv.DictReader(io.StringIO(text)))
+        if len(rows) > BULK_INVITE_MAX_ROWS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{len(rows)} rows; the limit is {BULK_INVITE_MAX_ROWS} per upload. Nobody was invited.",
+            )
+
         errors: list[dict] = []
         invited = 0
         total_rows = 0
         email_tasks: list[tuple[str, str]] = []
+        seen: dict[str, int] = {}
 
-        for idx, row in enumerate(reader, start=2):
+        for idx, row in enumerate(rows, start=2):
             total_rows += 1
-            row = {k.strip().lower(): (v.strip() if v else "") for k, v in row.items()}
+            row = {(k or "").strip().lower(): (v.strip() if v else "") for k, v in row.items()}
 
             email = row.get("email", "").strip().lower()
             name = row.get("name", "")
@@ -309,6 +328,10 @@ async def bulk_invite_agents(
             if not EMAIL_RE.match(email):
                 errors.append({"row": idx, "email": email, "reason": "invalid email format"})
                 continue
+            if email in seen:
+                errors.append({"row": idx, "email": email, "reason": f"duplicate of row {seen[email]}"})
+                continue
+            seen[email] = idx
             if not name:
                 errors.append({"row": idx, "email": email, "reason": "name is required"})
                 continue
@@ -744,9 +767,20 @@ def deactivate_sponsored_account(
     account_id: str = Depends(require_account_id)
 ):
     """
-    Suspend/deactivate a sponsored account.
-    
-    Sets is_active = FALSE on the account.
+    Suspend a sponsored agent — what "Deactivate" and "Cancel Invitation" say.
+
+    D-273: this used to set `accounts.is_active` and nothing else, and nothing
+    reads that flag — login, accept-invite, the session check and the schedule
+    sender all read `users.is_active`. So the agent kept signing in, kept
+    sending, kept showing "active", and a cancelled invite still worked.
+
+    Now, for the agent's account only (the ownership predicate is unchanged):
+      * its users are deactivated — sign-in refused, an existing session
+        refused by the auth middleware, scheduled sends skipped
+        (`schedules_tick.account_can_send`);
+      * its unused invite tokens are spent, so a cancelled invite link stops
+        working (a reactivated invitee gets a new one from Resend);
+      * `accounts.is_active` is still set, for the admin views that read it.
     """
     with db_conn() as (conn, cur):
         # Verify this is an affiliate account
@@ -774,7 +808,14 @@ def deactivate_sponsored_account(
                 status_code=404,
                 detail="Sponsored account not found or not owned by you"
             )
-        
+
+        # Only reached for an account the caller sponsors (the UPDATE above).
+        cur.execute("UPDATE users SET is_active = FALSE WHERE account_id = %s::uuid", (row[0],))
+        cur.execute(
+            "UPDATE signup_tokens SET used = TRUE WHERE account_id = %s::uuid AND used = FALSE",
+            (row[0],),
+        )
+
         conn.commit()
         
         return {
@@ -862,9 +903,7 @@ def reactivate_sponsored_account(
     account_id: str = Depends(require_account_id)
 ):
     """
-    Reactivate a suspended account.
-    
-    Sets is_active = TRUE on the account.
+    Reactivate a suspended agent: the account and its users (D-273).
     """
     with db_conn() as (conn, cur):
         # Verify this is an affiliate account
@@ -892,7 +931,11 @@ def reactivate_sponsored_account(
                 status_code=404,
                 detail="Sponsored account not found or not owned by you"
             )
-        
+
+        # The reverse of deactivate (D-273). A spent invite token stays spent;
+        # an invitee who never joined gets a fresh link from Resend.
+        cur.execute("UPDATE users SET is_active = TRUE WHERE account_id = %s::uuid", (row[0],))
+
         conn.commit()
         
         return {

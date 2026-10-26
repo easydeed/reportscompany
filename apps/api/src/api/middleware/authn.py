@@ -206,11 +206,18 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             try:
                 with db_conn_autocommit() as cur:
                     cur.execute(
-                        "SELECT id, email, role, is_platform_admin FROM users "
+                        "SELECT id, email, role, is_platform_admin, COALESCE(is_active, TRUE) FROM users "
                         "WHERE id=%s::uuid AND account_id=%s::uuid",
                         (claims["user_id"], acct),
                     )
                     user_row = cur.fetchone()
+                    # A deactivated user's token is refused here, not left to
+                    # run until it expires (D-273). Login already refuses them.
+                    if user_row and not user_row[4]:
+                        return JSONResponse(
+                            status_code=401,
+                            content={"detail": "This account has been deactivated."},
+                        )
                     if user_row:
                         user_info = {
                             "id": str(user_row[0]),

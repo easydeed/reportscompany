@@ -27,9 +27,11 @@ def get_sponsored_accounts(cur, affiliate_account_id: str) -> List[Dict[str, Any
             a.created_at,
             COALESCE(rg.report_count, 0) AS reports_this_month,
             rg.last_report_at,
+            -- Deactivated first, as the company tier ranks it (D-282): a
+            -- cancelled invitation is deactivated, not still "pending".
             CASE
-                WHEN usr.email_verified = false OR usr.password_hash IS NULL THEN 'pending'
                 WHEN usr.is_active = false THEN 'deactivated'
+                WHEN usr.email_verified = false OR usr.password_hash IS NULL THEN 'pending'
                 ELSE 'active'
             END AS status,
             usr.email,

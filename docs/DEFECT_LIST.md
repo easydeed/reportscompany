@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 53 | Observed, not yet triaged |
+| `recorded` | 52 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 144 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 146 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **284** | D-001 … D-284, contiguous, no duplicates |
+| **Total** | **285** | D-001 … D-285, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15468,7 +15468,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-273 — a rep's Deactivate and "Cancel Invitation" write `accounts.is_active`, which nothing reads: the agent still signs in, still sends, still shows active, and an invite link still works
 
 **Severity:** WRONG · filed during the sponsor-views inventory: verified on the local stack — deactivate 200, rep and company lists still "active", agent login 200; a cancelled invite accepted with 200. Login, accept-invite (`auth.py:441`), `account_can_send` (`schedules_tick.py:424`) and both status lists read `users.is_active`. So Reactivate and Remove (shown only for "deactivated") are unreachable from the dashboard.
-**Status:** `recorded`
+**Status:** `fixed` — `fix/deactivate-and-bulk-cap`: deactivate now deactivates the agent's users and spends its unused invite tokens, the auth middleware refuses a deactivated user's session, reactivate reverses it; proved against the database by `apps/api/tests/test_sponsor_actions_do_what_they_say.py` (sign-in, session, `account_can_send`, accept-invite, the rep's list).
 
 ---
 
@@ -15531,7 +15531,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-282 — the rep and company tiers rank "pending" and "deactivated" in opposite order, so one agent can read differently on each
 
 **Severity:** ROUGH · filed during the sponsor-views inventory: `services/affiliates.py` (pending first) against `company.py` (deactivated first).
-**Status:** `recorded`
+**Status:** `fixed` — `fix/deactivate-and-bulk-cap`: the rep tier ranks "deactivated" first, as the company tier does.
 
 ---
 
@@ -15545,6 +15545,13 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-284 — a company's first branding save without a display name is a 500: the upsert inserts NULL into `affiliate_branding.brand_display_name`, which is NOT NULL
 
 **Severity:** ROUGH · filed while extending `test_company_tenant_isolation.py`: `PATCH /v1/company/branding` with `{"primary_color": ...}` for a company with no branding row raises `NotNullViolation`, unhandled. The company branding page always sends the name, so the page does not hit it; any other caller does.
+**Status:** `recorded`
+
+---
+
+### D-285 — eight database-backed API tests fail on `main`, and CI cannot see it because it provisions no database
+
+**Severity:** FRAGILE · filed while adding `test_sponsor_actions_do_what_they_say.py`: run against the local stack, `test_billing_checkout.py` (3: the checkout/portal URL moved to `/app/settings/billing`, and a fixture), `test_schedules_report_types.py` (3) and `test_me_endpoint.py` (2 errors: its fixture inserts an account with no `slug`, which is NOT NULL) fail identically with and without this branch. They skip in CI, so they have been red where nobody looks. Adding Postgres to CI turns CI red on exactly these eight until each is triaged.
 **Status:** `recorded`
 
 ---

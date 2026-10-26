@@ -193,12 +193,22 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
   }
 
   const actionLabels: Record<string, { title: string; description: string; confirm: string; variant: 'default' | 'destructive' }> = {
-    deactivate: {
-      title: 'Deactivate Account',
-      description: 'This will suspend the agent\'s account. They will lose access until reactivated.',
-      confirm: 'Deactivate',
-      variant: 'destructive',
-    },
+    // The same endpoint behind both items; what it does is what each says
+    // (D-273): a pending agent's invite link stops working, an active agent
+    // is signed out, can't sign in, and their schedules stop sending.
+    deactivate: confirmModal.agent?.status === 'pending'
+      ? {
+          title: 'Cancel Invitation',
+          description: 'Their invite link stops working. They stay in your book, and you can reactivate and resend later.',
+          confirm: 'Cancel invitation',
+          variant: 'destructive',
+        }
+      : {
+          title: 'Deactivate Account',
+          description: 'This will suspend the agent\'s account: they are signed out, can\'t sign in, and their scheduled reports stop sending until you reactivate them.',
+          confirm: 'Deactivate',
+          variant: 'destructive',
+        },
     reactivate: {
       title: 'Reactivate Account',
       description: 'This will restore the agent\'s account access.',
