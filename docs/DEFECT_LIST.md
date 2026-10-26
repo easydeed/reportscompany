@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 52 | Observed, not yet triaged |
+| `recorded` | 53 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
 | `fixed` | 144 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **283** | D-001 … D-283, contiguous, no duplicates |
+| **Total** | **284** | D-001 … D-284, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15538,6 +15538,13 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-283 — `reports_change_pct` divides by `max(last_month, 1)`, so growth from zero reads as "up 3600%"
 
 **Severity:** ROUGH · filed during the sponsor-views inventory: `company.py`; the company dashboard now reads `reports_last_month` and says "None last month" instead.
+**Status:** `recorded`
+
+---
+
+### D-284 — a company's first branding save without a display name is a 500: the upsert inserts NULL into `affiliate_branding.brand_display_name`, which is NOT NULL
+
+**Severity:** ROUGH · filed while extending `test_company_tenant_isolation.py`: `PATCH /v1/company/branding` with `{"primary_color": ...}` for a company with no branding row raises `NotNullViolation`, unhandled. The company branding page always sends the name, so the page does not hit it; any other caller does.
 **Status:** `recorded`
 
 ---
