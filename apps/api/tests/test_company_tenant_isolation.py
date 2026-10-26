@@ -42,6 +42,7 @@ A2_SECRET_CITY = "ISO-A2-CITY"
 B_SECRET_CITY = "ISO-B-SECRET-CITY"
 B_SECRET_SCHEDULE = "ISO-B-SECRET-SCHEDULE"
 B_REP_COLOR = "#0B0B0B"
+INDEP_CITY = "ISO-INDEP-CITY"
 A_PATCH_COLOR = "#123456"
 
 
@@ -59,6 +60,8 @@ class Tenants:
         self.b_company = _mk_id()
         self.b_rep1 = _mk_id()
         self.b_agent = _mk_id()
+        self.indep_rep = _mk_id()     # an affiliate with no company
+        self.indep_agent = _mk_id()   # sponsored by that affiliate
         self.suffix = self.a_company[:8]
 
     @property
@@ -76,7 +79,7 @@ class Tenants:
     @property
     def all_ids(self) -> list:
         return [self.a_company, self.a_rep1, self.a_rep2,
-                self.b_company, self.b_rep1, self.b_agent]
+                self.b_company, self.b_rep1, self.b_agent, self.indep_rep, self.indep_agent]
 
 
 def _account(cur, account_id, name, slug, account_type, plan, parent=None, sponsor=None):
@@ -160,6 +163,12 @@ def tenants():
             )
             _account(cur, t.b_agent, "ISO Agent B", f"iso-agent-b-{t.suffix}", "REGULAR", "sponsored_free", sponsor=t.b_rep1)
             _report(cur, t.b_agent, B_SECRET_CITY, report_type="closed")
+
+            # An independent affiliate — a rep under no company — and its agent.
+            # No company's sponsorship reaches them.
+            _account(cur, t.indep_rep, "ISO Independent Rep", f"iso-indep-rep-{t.suffix}", "INDUSTRY_AFFILIATE", "affiliate")
+            _account(cur, t.indep_agent, "ISO Independent Agent", f"iso-indep-agent-{t.suffix}", "REGULAR", "sponsored_free", sponsor=t.indep_rep)
+            _report(cur, t.indep_agent, INDEP_CITY)
             _schedule(cur, t.b_agent, B_SECRET_SCHEDULE, B_SECRET_CITY)
         conn.commit()
 
@@ -345,3 +354,16 @@ def test_owning_company_sees_its_own_rep_and_agent(client, tenants, company_b_au
     for path, needle in (("/v1/company/reps", tenants.b_rep1), ("/v1/company/agents", tenants.b_agent)):
         resp = client.get(path, headers=company_b_auth)
         assert resp.status_code == 200 and needle in resp.text, f"{path} lost B's own row"
+
+
+def test_a_rep_under_no_company_is_outside_every_company(client, tenants, company_a_auth):
+    """The company bound is `parent_account_id = company`: an independent
+    affiliate and its agents belong to no company's views."""
+    for path in ("/v1/company/overview", "/v1/company/reps", "/v1/company/agents",
+                 "/v1/company/reports", "/v1/company/schedules", "/v1/company/metrics"):
+        r = client.get(path, headers=company_a_auth)
+        assert r.status_code == 200, path
+        for secret in (tenants.indep_rep, tenants.indep_agent, "ISO Independent", INDEP_CITY):
+            assert secret not in r.text, f"{path} shows the independent affiliate's {secret!r}"
+    r = client.get(f"/v1/company/reports?rep_id={tenants.indep_rep}", headers=company_a_auth)
+    assert r.status_code == 404

@@ -41,6 +41,8 @@ A_CITY = "AFF-A-CITY"
 B_SECRET_CITY = "AFF-B-SECRET-CITY"
 B_SECRET_SCHEDULE = "AFF-B-SECRET-SCHEDULE"
 B_SECRET_LEAD = "AFF-B-SECRET-LEAD"
+INDEP_CITY = "AFF-INDEP-CITY"
+FORMER_CITY = "AFF-FORMER-CITY"
 
 
 def _mk_id() -> str:
@@ -54,6 +56,8 @@ class World:
         self.b_aff = _mk_id()
         self.b_agent = _mk_id()
         self.b_invitee = _mk_id()
+        self.a_former = _mk_id()   # sponsored by A until a test unsponsors it
+        self.indep = _mk_id()      # a REGULAR agent nobody sponsors
         self.suffix = self.a_aff[:8]
 
     def email(self, who: str) -> str:
@@ -61,7 +65,8 @@ class World:
 
     @property
     def all_ids(self) -> list:
-        return [self.a_aff, self.a_agent, self.b_aff, self.b_agent, self.b_invitee]
+        return [self.a_aff, self.a_agent, self.b_aff, self.b_agent, self.b_invitee,
+                self.a_former, self.indep]
 
 
 def _account(cur, account_id, name, account_type, plan, sponsor=None):
@@ -105,6 +110,17 @@ def world():
                 "VALUES (gen_random_uuid(), %s, 'market_snapshot', ARRAY[%s], 'completed', now())",
                 (w.a_agent, A_CITY),
             )
+
+            _account(cur, w.a_former, "ISO Aff Former A", "REGULAR", "sponsored_free", sponsor=w.a_aff)
+            _owner(cur, w.a_former, w.email("former-a"))
+            _account(cur, w.indep, "ISO Aff Independent", "REGULAR", "free")
+            _owner(cur, w.indep, w.email("indep"))
+            for acct, city in ((w.a_former, FORMER_CITY), (w.indep, INDEP_CITY)):
+                cur.execute(
+                    "INSERT INTO report_generations (id, account_id, report_type, cities, status, generated_at) "
+                    "VALUES (gen_random_uuid(), %s, 'market_snapshot', ARRAY[%s], 'completed', now())",
+                    (acct, city),
+                )
 
             _account(cur, w.b_aff, "ISO Aff B", "INDUSTRY_AFFILIATE", "affiliate")
             _owner(cur, w.b_aff, w.email("b"))
@@ -243,3 +259,44 @@ def test_b_sees_its_own_agent_and_report(client, world, b_auth):
 def test_a_sees_its_own_agent_and_report(client, world, a_auth):
     reports = client.get("/v1/affiliate/all-reports", headers=a_auth)
     assert reports.status_code == 200 and A_CITY in reports.text
+
+
+# ── The bound itself: sponsorship, not just "not another affiliate's" ───────
+#
+# Every per-agent route reads or acts across accounts on purpose — a rep sees
+# the agents it sponsors. What justifies it is `sponsor_account_id = caller`,
+# so the bound is that relation: an agent nobody sponsors is out, and an agent
+# stops being in the moment the sponsorship ends.
+
+def _row(account_id):
+    with psycopg.connect(DB_URL) as conn, conn.cursor() as cur:
+        cur.execute("SELECT is_active, sponsor_account_id::text, plan_slug FROM accounts WHERE id = %s", (account_id,))
+        return cur.fetchone()
+
+
+def _assert_out_of_book(client, auth, agent_id, city):
+    for path in ("/v1/affiliate/overview", "/v1/affiliate/all-reports", "/v1/affiliate/all-schedules"):
+        r = client.get(path, headers=auth)
+        assert r.status_code == 200 and agent_id not in r.text and city not in r.text, f"{path} still shows {agent_id}"
+    assert client.get(f"/v1/affiliate/accounts/{agent_id}", headers=auth).status_code == 404
+    for sub_path in ("reports", "schedules", "usage"):
+        assert client.get(f"/v1/affiliate/agents/{agent_id}/{sub_path}", headers=auth).status_code == 403
+    before = _row(agent_id)
+    assert client.post(f"/v1/affiliate/accounts/{agent_id}/deactivate", headers=auth).status_code == 404
+    assert _row(agent_id) == before
+
+
+def test_an_agent_nobody_sponsors_is_outside_every_book(client, world, a_auth):
+    _assert_out_of_book(client, a_auth, world.indep, INDEP_CITY)
+
+
+def test_unsponsoring_ends_the_access(client, world, a_auth):
+    # In the book: readable.
+    r = client.get(f"/v1/affiliate/agents/{world.a_former}/reports", headers=a_auth)
+    assert r.status_code == 200 and FORMER_CITY in r.text
+    # Unsponsor does what its label says: no sponsor, off the sponsored plan.
+    assert client.post(f"/v1/affiliate/accounts/{world.a_former}/unsponsor", headers=a_auth).status_code == 200
+    is_active, sponsor, plan = _row(world.a_former)
+    assert sponsor is None and plan == "free" and is_active
+    # Out of the book: everything the sponsorship justified is gone.
+    _assert_out_of_book(client, a_auth, world.a_former, FORMER_CITY)
