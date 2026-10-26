@@ -20,11 +20,13 @@ from pathlib import Path
 
 import pytest
 
-DB_URL = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+# DATABASE_URL only: the app under test reads DATABASE_URL, and the worker
+# suites use TEST_DATABASE_URL for an empty throwaway (#219, D-285).
+DB_URL = os.getenv("DATABASE_URL")
 
 psycopg = pytest.importorskip("psycopg", reason="psycopg is required for integration tests")
 pytestmark = pytest.mark.skipif(
-    not DB_URL, reason="Set DATABASE_URL (or TEST_DATABASE_URL) to run these tests"
+    not DB_URL, reason="Set DATABASE_URL to run these tests"
 )
 
 PASSWORD = "ActionsTest123!"
