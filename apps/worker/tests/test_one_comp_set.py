@@ -27,13 +27,9 @@ the analysis note, `total_comps`, the chart, and the rendered document all
 say the same number, and both ends of the range are visible. Any new cap
 anywhere in the chain fails it, whichever file it is added to.
 """
-import importlib.util
 import os
 import re
-import shutil
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -48,7 +44,6 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.consumer_report_data import build_consumer_report_data  # noqa: E402
 from worker.property_builder import (  # noqa: E402
-    CARDS_PER_COMPARABLES_PAGE,
     COMP_SET_MAX,
     THEME_TEMPLATES,
     PropertyReportBuilder,
@@ -58,7 +53,7 @@ from test_property_production_render import COMPS, report_data  # noqa: E402
 
 THEMES = sorted(THEME_TEMPLATES)
 
-from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES, chain  # noqa: E402
+from _template_chain import SHARED_THEMES, chain, is_shared  # noqa: E402
 
 
 def _text(html: str) -> str:
@@ -155,33 +150,6 @@ def test_every_count_in_the_document_is_the_same_count(theme, n):
         )
 
 
-@pytest.mark.parametrize("theme", SELF_CONTAINED_THEMES)
-@pytest.mark.parametrize("n", SIZES)
-def test_the_total_comps_badge_is_that_same_number(theme, n):
-    """Every theme prints it, on the range page.
-
-    THIS USED TO RUN ON TEAL ALONE, and the docstring said teal was the only
-    theme that printed the badge. That was never true — it was the only theme
-    whose label carried `class="lbl"`. The selector was theme-specific; the
-    badge is not. When the cut deleted teal the test failed with "found []",
-    which read as "the badge is gone from the product" and is really "the
-    selector described one theme's markup". §0.6, substring is not a
-    construct, in its locator form.
-
-    The badge is `'%02d' | format`, so the string is zero-padded; the number
-    is what is asserted, not the padding. One match per theme is asserted so
-    a future markup change cannot pass this by matching nothing.
-    """
-    html = agent_html(theme, n)
-    badge = re.findall(
-        r'>(\d+)</div><div class="range-stat-label">Total Comps', html
-    )
-    assert len(badge) == 1, f"{theme}: expected one Total Comps badge, found {badge}"
-    assert int(badge[0]) == n, (
-        f"{theme}: Total Comps reads {badge[0]} with {n} comps in the set"
-    )
-
-
 @pytest.mark.parametrize("theme", SHARED_THEMES)
 @pytest.mark.parametrize("n", SIZES)
 def test_the_shared_architecture_states_the_count_in_two_places_and_they_agree(theme, n):
@@ -248,67 +216,7 @@ def test_the_shared_architecture_draws_one_bar_per_comp(theme):
         )
 
 
-@pytest.mark.parametrize("theme", SELF_CONTAINED_THEMES)
-def test_the_chart_draws_the_set_the_table_summarises(theme):
-    """The analysis page's bar chart was `comparables[:4]` too — four bars
-    above a table summarising fifteen, on one page."""
-    html = agent_html(theme, COMP_SET_MAX)
-    # Located by the CHART, not by `class="…analysis…"` on the section: teal's
-    # analysis page is `<section class="page pad">` like every other teal
-    # page, and the class-based version found zero sections and reported
-    # "expected one analysis page" — a locator failure wearing a content
-    # failure's message.
-    page = [s for s in html.split("<section")
-            if 'class="analysis-chart"' in s or 'class="chart-wrap"' in s]
-    assert len(page) == 1, (
-        f"{theme}: expected one page carrying the comparable-sales chart, "
-        f"found {len(page)}")
-    # Two spellings: four themes draw `chart-bar`, teal draws `bar` inside
-    # its own `chart-wrap`. Counted by both rather than by the one that was
-    # in front of me — the single-spelling version passed teal at 0 bars and
-    # called it "a theme that draws no chart", which is the wrong verdict
-    # dressed as a pass.
-    chart = page[0]
-    bars = (len(re.findall(r'class="chart-bar[" ]', chart))
-            + len(re.findall(r'<div class="bar"', chart)))
-    assert bars in (0, COMP_SET_MAX), (
-        f"{theme}: the analysis chart draws {bars} bars for a set of "
-        f"{COMP_SET_MAX}. Themes that draw no chart are fine; a theme that "
-        f"draws SOME of them is the defect one page over."
-    )
-
-
 # ── the continuation page exists exactly when there is a continuation ───────
-
-# SELF-CONTAINED THEMES ONLY. Design's architecture has no continuation
-# page: page 4 lists every comp as its own bar, so there is nothing to
-# continue, and `_build_v2_context`'s page order has no `comparables_all`.
-# The property that replaces it — every comp appears somewhere — is
-# `test_the_shared_architecture_draws_one_bar_per_comp` above.
-@pytest.mark.parametrize("theme", SELF_CONTAINED_THEMES)
-@pytest.mark.parametrize("n,expected", [(0, False), (3, False),
-                                        (CARDS_PER_COMPARABLES_PAGE, False),
-                                        (CARDS_PER_COMPARABLES_PAGE + 1, True),
-                                        (COMP_SET_MAX, True)])
-def test_the_continuation_page_appears_only_when_the_cards_do_not_hold_it(theme, n, expected):
-    html = agent_html(theme, n)
-    assert ("comparables-all" in html) is expected, (
-        f"{theme}, n={n}: continuation page present={not expected and 'yes' or 'no'}"
-    )
-
-
-def test_the_continuation_page_is_on_the_contents_and_numbered():
-    """It is evidence behind the range, so a reader may want to turn to it.
-
-    Leaving it off the contents would be D-159's own omission one level up.
-    """
-    html = agent_html(SELF_CONTAINED_THEMES[0], COMP_SET_MAX)
-    contents = [s for s in html.split("<section") if "contents" in s[:200]]
-    assert len(contents) == 1
-    assert "Sales Comparables (continued)" in contents[0], (
-        "the continuation page is not listed on the contents page"
-    )
-
 
 # ── ONE NUMBER, ONE PLACE ───────────────────────────────────────────────────
 
@@ -502,97 +410,13 @@ def test_the_consumer_report_carries_the_same_set_as_the_agent_report(theme):
     )
 
 
-# ── the page holds it, measured rather than hoped ───────────────────────────
+def test_every_theme_is_on_the_shared_architecture():
+    """The consolidation, held. A theme whose entry file stopped including
+    `_v2/report.jinja2` would render a self-contained document again — and
+    every gate written against the shared architecture would skip it, because
+    they parametrize over `SHARED_THEMES`, which is derived."""
+    assert SHARED_THEMES == THEMES, (
+        f"self-contained again: {sorted(set(THEMES) - set(SHARED_THEMES))}")
+    for theme in THEMES:
+        assert is_shared(theme), theme
 
-LONG = "{n} Rancho Santa Margarita Buena Vista Boulevard Northwest"
-
-
-def _chromium():
-    """The same probe `test_pdf_contrast` uses: launch it, do not look for it."""
-    spec = importlib.util.spec_from_file_location(
-        "_measure_contrast_by_pixel", REPO / "scripts/measure_contrast_by_pixel.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    if shutil.which("node") is None:
-        return None, "node is not installed"
-    exe = module.find_chromium()
-    script = (
-        "const {chromium} = require('playwright');"
-        "const exe = process.argv[1] || null;"
-        "chromium.launch(exe ? {executablePath: exe} : {})"
-        "  .then(b => b.close()).then(() => process.exit(0))"
-        "  .catch(e => { console.error(e.message || String(e)); process.exit(1); });"
-    )
-    probe = subprocess.run(["node", "-e", script, exe], cwd=str(REPO),
-                           capture_output=True, text=True, timeout=180)
-    if probe.returncode != 0:
-        return None, "chromium will not launch"
-    return exe, None
-
-
-MEASURE_JS = r"""
-const {chromium} = require('playwright');
-(async () => {
-  const exe = process.argv[1] || null;
-  const b = await chromium.launch(exe ? {executablePath: exe} : {});
-  const out = {};
-  for (const f of process.argv.slice(2)) {
-    const p = await b.newPage({viewport: {width: 1100, height: 1400}});
-    await p.goto('file://' + f);
-    await p.waitForTimeout(400);
-    out[f] = await p.evaluate(() => {
-      const s = document.querySelector('.comparables-all');
-      if (!s) return null;
-      const r = s.getBoundingClientRect();
-      const note = s.querySelector('.comp-list-note');
-      const foot = s.querySelector('.page-footer');
-      return Math.round(foot.getBoundingClientRect().top - note.getBoundingClientRect().bottom);
-    });
-    await p.close();
-  }
-  await b.close();
-  console.log(JSON.stringify(out));
-})().catch(e => { console.error(e); process.exit(1); });
-"""
-
-
-def test_the_continuation_page_holds_the_whole_set_in_every_theme():
-    """MEASURED, in the worst case the data can produce.
-
-    `[:4]` on the cards page is page capacity — four cards fit with 101px to
-    spare and a fifth needs about 330. A list page that silently overflowed
-    would be the same defect wearing the fix's clothes: the rows would be
-    there in the HTML and off the bottom of the sheet in the PDF, and every
-    count test above would still pass.
-
-    The worst case is every one of the fifteen addresses wrapping to the
-    two-line clamp, which is what LONG produces. Skipped rather than faked
-    where no browser can run — a layout assertion with no renderer behind it
-    is not an assertion.
-    """
-    exe, why = _chromium()
-    if why:
-        pytest.skip(why)
-    with tempfile.TemporaryDirectory() as tmp:
-        files = []
-        # SELF-CONTAINED THEMES ONLY: the page being measured is the
-        # comparables continuation, and the shared architecture has none —
-        # measuring it there returned `None` slack, which the assertion below
-        # reported as an overflow. A missing page is not a page that overflows.
-        for theme in SELF_CONTAINED_THEMES:
-            data = dict(report_data(theme))
-            data["comparables"] = comps(COMP_SET_MAX, address=LONG)
-            path = Path(tmp) / f"{theme}.html"
-            path.write_text(PropertyReportBuilder(data).render_html(), encoding="utf-8")
-            files.append(str(path))
-        proc = subprocess.run(["node", "-e", MEASURE_JS, exe or ""] + files,
-                              cwd=str(REPO), capture_output=True, text=True, timeout=300)
-        assert proc.returncode == 0, proc.stderr[-800:]
-        import json
-        slack = json.loads(proc.stdout.strip().splitlines()[-1])
-    tight = {Path(f).stem: v for f, v in slack.items() if v is None or v < 0}
-    assert not tight, (
-        f"the continuation page overflows its sheet: {tight}. Every theme's "
-        f"slack, in px, below the last row: "
-        f"{ {Path(f).stem: v for f, v in slack.items()} }"
-    )

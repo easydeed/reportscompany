@@ -78,7 +78,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import PropertyReportBuilder, THEME_TEMPLATES  # noqa: E402
-from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES, chain  # noqa: E402
+from _template_chain import SHARED_THEMES, chain  # noqa: E402
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "src/worker/templates/property"
 THEMES = sorted(THEME_TEMPLATES)
@@ -184,24 +184,6 @@ def test_an_owner_identity_field_is_only_reachable_on_the_agent_path(path):
         "testing the audience. The property report is delivered to a stranger "
         "through the consumer lead-capture funnel; assessor-roll identity "
         "reaches the agent path only (D-116, D-157)."
-    )
-
-
-@pytest.mark.parametrize("theme", SELF_CONTAINED_THEMES)
-def test_every_self_contained_theme_actually_has_the_owner_block(theme):
-    """Otherwise the test above is satisfied by deleting the block.
-
-    Jerry asked for it back on the agent path in every theme, not in whichever
-    ones somebody got to.
-
-    SELF-CONTAINED THEMES ONLY, because a theme on the shared architecture
-    does not gate the block in its TEMPLATE at all — see the test below.
-    """
-    refs = {r for p in chain(theme) for r in _refs(parse(p), CONDITIONAL)}
-    assert refs, (
-        f"{theme} has no owner-of-record block. The gate above passes "
-        "trivially for a template that renders nothing, so this is the half "
-        "that says the restore happened here too."
     )
 
 

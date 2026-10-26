@@ -5,8 +5,8 @@ WHY THIS EXISTS
 Until 2026-10-06 a theme WAS a file: `THEME_TEMPLATES[theme]` named one
 self-contained template and six structural gates read it directly. Design's
 package replaces that with one shared page architecture (`_v2/report.jinja2`)
-plus a per-theme entry file that sets typography and includes it. bold is the
-first theme on it; elegant and modern are still self-contained.
+plus a per-theme entry file that sets typography and includes it. Every
+theme is on it now: atlas first (2026-10-06), harbor and linen after.
 
 So "the template for this theme" is now a CHAIN, and a gate that reads only
 the entry file sees thirty-four lines of `{% set %}` and concludes the theme
@@ -100,7 +100,8 @@ def is_shared(theme: str) -> bool:
     return len(chain(theme)) > 1
 
 
-#: Themes on the shared architecture, and themes still self-contained. Both
-#: are DERIVED; a gate that needs to treat them differently asks here.
+#: Themes on the shared architecture. DERIVED, and since harbor and linen
+#: moved it is every theme; `test_one_comp_set::test_every_theme_is_on_the_
+#: shared_architecture` fails if one ever renders a self-contained file again.
+#: The self-contained list this sat beside is gone with the last theme on it.
 SHARED_THEMES = sorted(t for t in THEME_TEMPLATES if is_shared(t))
-SELF_CONTAINED_THEMES = sorted(t for t in THEME_TEMPLATES if not is_shared(t))

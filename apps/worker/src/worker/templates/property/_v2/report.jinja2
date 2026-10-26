@@ -97,8 +97,16 @@
     --inactive: #EDEDEA;
     --dark: {{ doc.dark }};
 
-    --display: {{ t_display }};
-    --body-face: {{ t_body }};
+    {# `| safe` ON THESE TWO ONLY, and only because they are constants from
+       the theme's own entry file — never a value a user or a vendor supplied.
+       The builder renders with autoescape on, which turns the quotes in a
+       font stack into `&#39;`: `--display: &#39;Barlow Condensed&#39;…` is
+       not valid CSS, the declaration is dropped, and every theme rendered in
+       the browser's default serif from 2026-10-06 until this was found by
+       looking at a render. `test_each_theme_renders_in_its_own_typefaces`
+       compares the rendered stacks with the entry files. #}
+    --display: {{ t_display | safe }};
+    --body-face: {{ t_body | safe }};
     --display-weight: {{ t_display_weight }};
     --display-tracking: {{ t_display_tracking }};
     --display-case: {{ t_display_case }};
@@ -427,6 +435,7 @@
   .step-n { font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1; color: var(--primary-ink); }
   .step-title { font-size: 14px; font-weight: 700; }
   .step-body { font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .chart-empty { margin: 0; padding: 24px 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
   .disclaimer { padding: 16px 0; border-top: 1px solid var(--rule); font-size: 10.5px; line-height: 1.5; color: var(--muted); }
 </style>
 </head>
@@ -494,7 +503,7 @@
            panel says what the report is built from rather than rendering an
            empty paragraph — which is what the first v2 render did, and which
            is valid HTML and so failed nothing. #}
-        <p class="inshort-text">{% if overview_text %}{{ overview_text }}{% else %}This report compares {{ doc.comp_count }} recent nearby sales with your home as the public record describes it. The range on page {{ doc.pages.index('range') + 1 if 'range' in doc.pages else 4 }} is what those sales support.{% endif %}</p>
+        <p class="inshort-text">{% if overview_text %}{{ overview_text }}{% elif doc.comp_count %}This report compares {{ doc.comp_count }} {{ doc.comp_noun }} with your home as the public record describes it. The range on page {{ doc.pages.index('range') + 1 if 'range' in doc.pages else 4 }} {{ doc.comp_range_clause }}.{% else %}No comparable sales were found for this home in the search area, so this report describes your home as the public record has it and does not estimate a range.{% endif %}</p>
       </div>
     </div>
   </div>
@@ -545,8 +554,15 @@
     <div class="pagehead">
       <h2 class="h2">Comparable sales</h2>
       <div class="conf-wrap">
+        {# A grade is a statement about a set. With no comps there is no set,
+           so no pill — the nine-page themes said "No comparable sales" here
+           and the shared page said "A · Strict match" over nothing. #}
+        {% if doc.comp_count %}
         <span class="conf-pill"><span class="conf-grade">{{ doc.conf_grade }}</span>{{ doc.conf_label }}</span>
-        <span class="pagehead-aside">{{ doc.comp_count }} sales within {{ doc.comp_radius }} · {{ doc.comp_window | lower }} · {{ doc.pictured_note }}</span>
+        <span class="pagehead-aside">{{ doc.comp_count }} {{ doc.comp_noun_short }} within {{ doc.comp_radius }} · {{ doc.comp_window | lower }} · {{ doc.pictured_note }}</span>
+        {% else %}
+        <span class="pagehead-aside">No comparable sales were found for this home in the search area.</span>
+        {% endif %}
       </div>
     </div>
     <div class="comp-grid">
@@ -672,6 +688,7 @@
         <span class="label">Median sale price · last 6 months</span>
         <span class="chart-unit">Thousands of dollars</span>
       </div>
+      {% if market_trends.v2_months %}
       <div class="chart-body">
         <div class="chart-yaxis">
           <span>{{ market_trends.v2_y_top }}</span>
@@ -696,6 +713,11 @@
           {% for month in market_trends.v2_months %}<span>{{ month.label }}</span>{% endfor %}
         </div>
       </div>
+      {% else %}
+      {# No monthly series (the computation can return None). The axis used to
+         print the Python value "None" three times over an empty plot. #}
+      <p class="chart-empty">Not enough recorded sales to chart a monthly median for this area.</p>
+      {% endif %}
     </div>
   </div>
 

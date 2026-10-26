@@ -252,13 +252,17 @@ def test_the_baseline_is_not_empty():
     D-205's own fix added nothing: linen's white `--burgundy-on-dark` fallback is
     annotated in the template rather than baselined, because white as the fallback
     for text on dark is not a brand value.
+
+    65 -> 52 on 2026-10-26, the same non-progress again: the 13 entries named
+    the last two self-contained property entry files, whose literals went when
+    both moved onto `_v2/report.jinja2`. The shared file added none.
     """
     n = sum(lint.read_baseline().values())
     assert n > 0, "nothing baselined — has the rule stopped matching?"
-    assert n == 65, (
-        f"the baseline holds {n} entries, not the 65 left after the atlas rows "
-        f"were retired on 2026-10-21. Fewer is progress: update this number. "
-        f"More is a new violation that was baselined instead of fixed."
+    assert n == 52, (
+        f"the baseline holds {n} entries, not the 52 left after the last "
+        f"self-contained entry files' rows were retired on 2026-10-26. Fewer is progress: update "
+        f"this number. More is a new violation that was baselined instead of fixed."
     )
 
 

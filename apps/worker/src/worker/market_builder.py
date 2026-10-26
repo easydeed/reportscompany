@@ -317,8 +317,8 @@ def _v2_beds_baths(item) -> str:
 #: THE MIGRATION SEAM. Report types rendered by Design's `_v2` page rather than
 #: by `market.jinja2` + `_base/base.jinja2`.
 #:
-#: The property surface's equivalent is `property_builder.V2_THEMES`, and it is
-#: the same reasoning: eight kinds cannot land at once, the ones that have not
+#: The property surface had the same seam (`property_builder.V2_THEMES`, deleted
+#: when all three property themes moved), for the same reasons: eight kinds cannot land at once, the ones that have not
 #: moved must keep rendering exactly as they do, and "which document is this"
 #: has to be one readable fact rather than a condition spread through a
 #: template. A kind not in here is untouched by the redesign.
