@@ -75,4 +75,8 @@ def test_facts_are_the_sample_the_page_is_drawn_from():
     facts = client.get("/v1/report-preview/market_snapshot/facts").json()
     page = client.get("/v1/report-preview/market_snapshot").text
     median = facts["metrics"]["median_close_price"]
-    assert f"${median:,}" in page
+    # As the page prints it. Since D-255 the snapshot is Design's page, whose
+    # big number is the short form ("$1.4M") through the shared filter — not
+    # the legacy page's "$1,385,000".
+    from worker.template_filters import format_currency_short
+    assert format_currency_short(median, upper=True) in page

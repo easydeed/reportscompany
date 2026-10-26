@@ -86,7 +86,13 @@ PAGE_1_CAPACITY = {
     # the market adoption COSTS pages on.
     "featured_listings": {"no_narrative": 2, "with_narrative": 2},
     "open_houses": {"no_narrative": 6, "with_narrative": 6},
-    "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
+    # 0 / 0, ONE STATE, since D-255. Design's snapshot body carries no
+    # listings — inventory, price tiers, the median line, property types —
+    # so nothing paginates, as for `price_bands`. It was 3 / 3 / 0 on the
+    # legacy page, where `with_trend` (D-102) gave page 1 to the chart and
+    # sent the nine listings to page 2. Measured by
+    # `scripts/measure_market_pagination.py`: 1 page, [0].
+    "market_snapshot": {"no_narrative": 0, "with_narrative": 0},
     # 17 IN BOTH STATES since `closed` moved to Design's `_v2` page, and that
     # identity is the point: the narrative is suppressed for `V2_KINDS`, so
     # page-1 capacity is one number rather than a property of prose length.

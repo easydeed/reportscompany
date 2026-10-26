@@ -86,6 +86,8 @@ new_listings_gallery.page_1 = 6
 new_listings_gallery.continuation = 9
 open_houses.page_1 = 6
 open_houses.continuation = 9
+market_snapshot.page_1 = 3
+market_snapshot.continuation = 6
 ```
 
 **`new_listings` is the finding.** It runs on our `analytics` layout today at 3 rows on page 1 and 8
@@ -157,9 +159,8 @@ new_listings.no_narrative = 17
 new_listings.with_narrative = 17
 price_bands.no_narrative = 0
 price_bands.with_narrative = 0
-market_snapshot.no_narrative = 3
-market_snapshot.with_narrative = 3
-market_snapshot.with_trend = 0
+market_snapshot.no_narrative = 0
+market_snapshot.with_narrative = 0
 new_listings_gallery.no_narrative = 6
 new_listings_gallery.with_narrative = 6
 featured_listings.no_narrative = 2
@@ -222,7 +223,7 @@ own reference file could not be measured in this container:
 
 ---
 
-## 7 · Built, measured: the two wired kinds
+## 7 · Built, measured: the wired kinds (all eight since D-255)
 
 **§1, §2 and §2a above are the PREDICTION and are left exactly as they were taken.** Editing a
 forecast after the result is in destroys the only thing it was for — this section is worth reading
@@ -238,7 +239,8 @@ difference is the finding.
 | `new_listings_gallery` | 14 | **14** | — (no continuation row count given) |
 | `open_houses` | 12 | **12** | — |
 | `featured_listings` | 2 | **4** | — |
-| | **56** | **46** | 18 for the three kinds they gave rows for |
+| `market_snapshot` | 2 | **1** | — (D-255, 2026-10-26: no listings body; the median line kept as a fourth row) |
+| | **58** | **47** | 18 for the three kinds they gave rows for |
 
 **Ten pages saved across seven kinds**, and **the galleries cost two** — all of them on
 `featured_listings`, which goes 2 → 4. See §8 for the measurement.

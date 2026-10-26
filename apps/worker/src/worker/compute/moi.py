@@ -224,3 +224,47 @@ def describe(moi: Optional[float]) -> Dict[str, Any]:
         "pace_label": PACE_LABEL,
         "has_estimate": True,
     }
+
+
+#: How many one-month cells the months-of-inventory bar has, on every page that
+#: draws one. Design's property page 5 and market snapshot both draw eight.
+BAR_CELLS = 8
+
+
+def headline(moi: Optional[float], area: str) -> Dict[str, Any]:
+    """The months-of-inventory block both report pages print: a one-line
+    headline, a sentence, and which of the bar's cells are filled.
+
+    ONE PLACE FOR THE WORDS. The property report's market page wrote this
+    inline with its own copy of the 4/6 thresholds — the seventh copy D-182
+    warned about — and the market snapshot needed the same sentence. Both now
+    ask here, and the classification is `condition()`'s, so the headline and the
+    label any other surface prints cannot disagree.
+
+    `None` (not enough closings to estimate, D-056) says so in words and fills
+    no cells, rather than drawing an empty bar under a claim.
+    """
+    label = condition(moi)
+    if label is None:
+        return {
+            "headline": "Inventory is not measurable here",
+            "note": ("There were not enough recent sales to work out how long "
+                     "the homes for sale would take to sell."),
+            "cells": [False] * BAR_CELLS,
+        }
+    months = f"{moi:.1f}".rstrip("0").rstrip(".")
+    return {
+        "headline": {CONDITION_SELLERS: "It's a seller's market",
+                     CONDITION_BALANCED: "The market is balanced",
+                     CONDITION_BUYERS: "Buyers have the edge"}[label],
+        "note": (
+            f"{months} months of inventory. At this pace every home for sale in "
+            f"{area or 'this area'} would be gone in "
+            + ("under three months." if moi < 3
+               else "under six months." if moi < 6
+               else "more than six months.")
+        ),
+        # One cell a month; a market at 11 months fills all eight rather than
+        # overflowing the grid.
+        "cells": [i < max(0, min(BAR_CELLS, round(moi))) for i in range(BAR_CELLS)],
+    }

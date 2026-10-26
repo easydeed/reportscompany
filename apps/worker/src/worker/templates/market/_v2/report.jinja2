@@ -4,7 +4,8 @@
    `market.jinja2` already dispatched on `LAYOUT_MAP`, and their README says so
    ("`market.jinja2` already dispatches on layout; add the `listings` density
    switch and the shared band/table partials"). This is the shared band plus the
-   table body; only the kinds in `market_builder.V2_KINDS` render it.
+   table body (or the snapshot or bands body); every kind in
+   `market_builder.V2_KINDS` renders it, which since D-255 is all eight.
 
    WHAT IS NOT HERE, AND WHY. No running head and no footer: those are PDFShift's
    repeating `header` and `footer`, rendered by `_base/page_header.jinja2` and
@@ -21,6 +22,7 @@
    NO AI NARRATIVE. Design removes it from the table kinds so page-1 capacity is
    one state per kind; `market_builder` suppresses it for `V2_KINDS` before the
    generate call. Measured: 11 rows with it, 15 without. #}
+{% import '_base/macros.jinja2' as macros %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -232,6 +234,50 @@
      threshold, or whether a day count is zero, without reimplementing both. */
   .tvs-over { color: var(--accent-ink); font-weight: 600; }
   .tvs-under { color: var(--muted); font-weight: 400; }
+
+  /* ── The snapshot body ──────────────────────────────────────────────────
+     Design's three rows, each `200px 1fr`, gap 32: the inventory bar, price
+     tiers, by property type. The headline blocks are a FIXED 78px (one
+     nowrap headline + three clamped lines) so the rows do not move with copy
+     length. Bars are graphics on white: the tier fill is the accent, the
+     inventory cells the brand, the empty tracks Design's neutrals. Every
+     piece of TEXT is a neutral or `--ink`, so no brand colour has to clear
+     4.5:1 here. */
+  .snap { padding: 26px 52px 0; display: flex; flex-direction: column; gap: 30px; }
+  .snap-row { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+  .snap-head { display: flex; flex-direction: column; gap: 6px; height: 78px; overflow: hidden; }
+  .snap-title { font-size: 13px; font-weight: 600; color: var(--ink);
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .snap-note { font-size: 12px; line-height: 1.5; color: var(--muted);
+               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .moi-bar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 34px; margin-top: 4px; }
+  .moi-cell { background: #EDEDEA; border-radius: 3px; }
+  .moi-cell.on { background: var(--primary); }
+  .moi-legend { display: grid; grid-template-columns: 4fr 2fr 2fr; gap: 4px; margin-top: 8px;
+                font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em;
+                text-transform: uppercase; color: var(--muted); }
+  .moi-legend div { padding-top: 6px; }
+  .moi-legend .l-s { border-top: 2px solid #14161A; }
+  .moi-legend .l-b { border-top: 2px solid #B9BBC1; }
+  .moi-legend .l-y { border-top: 2px solid #DADBDF; }
+  .tiers { display: flex; flex-direction: column; gap: 10px; }
+  .tier { display: grid; grid-template-columns: 110px minmax(0, 1fr) 150px; gap: 14px; align-items: center;
+          font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .tier-name { font-weight: 600; color: var(--ink); display: block; }
+  .tier-range { font-size: 10.5px; color: var(--muted); display: block; }
+  .tier-bar { display: flex; align-items: center; gap: 10px; }
+  .tier-track { flex: 1; height: 22px; background: #F4F4F1; border-radius: 3px; overflow: hidden; }
+  .tier-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+  .tier-count { width: 24px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+  .tier-side { font-size: 11.5px; color: var(--muted); text-align: right; }
+  .ptypes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .ptype { background: #F6F5F1; border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .ptype-name { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ptype-value { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
+  .ptype-sub { font-size: 11px; color: var(--muted); }
+  .snap-empty { font-size: 12px; color: var(--muted); }
+  .snap-trend .trend-chart { break-inside: avoid; }
+  .snap-trend .trend-chart-note { font-size: 9px; color: var(--muted); margin: 2px 0 0; }
 
   /* ── The bands body ─────────────────────────────────────────────────────
      Design's grid: `120px 1fr 72 60 64` — band + tag, a 36px bar with the
@@ -446,6 +492,65 @@
     {% endfor %}
   </div>
 </section>
+
+{% if v2_snapshot %}
+<section class="snap">
+  <div class="snap-row">
+    <div class="snap-head">
+      <div class="snap-title">{{ v2_snapshot.moi.headline }}</div>
+      <div class="snap-note">{{ v2_snapshot.moi.note }}</div>
+    </div>
+    <div>
+      <div class="moi-bar">{% for on in v2_snapshot.moi.cells %}<div class="moi-cell{% if on %} on{% endif %}"></div>{% endfor %}</div>
+      <div class="moi-legend"><div class="l-s">Seller's &lt;4 mo</div><div class="l-b">Balanced</div><div class="l-y">Buyer's 6+</div></div>
+    </div>
+  </div>
+  <div class="snap-row">
+    <div class="snap-head">
+      <div class="snap-title">{{ v2_snapshot.tier_headline }}</div>
+      <div class="snap-note">{{ v2_snapshot.tier_note }}</div>
+    </div>
+    <div class="tiers">
+      {% for t in v2_snapshot.tiers %}
+      <div class="tier">
+        <div><span class="tier-name">{{ t.name }}</span><span class="tier-range">{{ t.range }}</span></div>
+        <div class="tier-bar"><div class="tier-track"><div class="tier-fill" style="width:{{ t.width }}%"></div></div><span class="tier-count">{{ t.closed }}</span></div>
+        <div class="tier-side">{{ t.median }} median · {{ t.moi }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% if monthly_trend %}
+  {# NOT IN DESIGN'S SNAPSHOT. The twelve-month median line led the legacy
+     page 1 by Jerry's decision (D-102, 2026-09-28) — the one thing here a
+     reader cannot get from Zillow — so it stays, as a fourth row in Design's
+     grid, through the same macro and its tests. Flagged to Design. #}
+  <div class="snap-row">
+    <div class="snap-head">
+      <div class="snap-title">Twelve months of prices</div>
+      <div class="snap-note">Median closed price by month in {{ header.city or 'this area' }}.</div>
+    </div>
+    <div class="snap-trend">{{ macros.monthly_trend_chart(monthly_trend, primary_ink, monthly_trend_note, monthly_trend_fmt, width=480, height=130) }}</div>
+  </div>
+  {% endif %}
+  <div class="snap-row">
+    <div class="snap-title">By property type</div>
+    {% if v2_snapshot.types %}
+    <div class="ptypes">
+      {% for t in v2_snapshot.types %}
+      <div class="ptype">
+        <div class="ptype-name">{{ t.name }}</div>
+        <div class="ptype-value">{{ t.median }}</div>
+        <div class="ptype-sub">{{ t.sold }} sold · {{ t.days }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="snap-empty">No homes sold in this period, so there is nothing to compare by type.</div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
 
 {% if v2_bands %}
 <section class="bands">

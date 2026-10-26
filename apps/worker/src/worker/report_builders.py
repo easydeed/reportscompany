@@ -245,6 +245,10 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
                         "median_price": _median([l["close_price"] for l in tier_closed if l.get("close_price")]) if tier_closed else 0,
                         "moi": tier_moi,
                         "moi_display": describe_moi(tier_moi),
+                        # The boundaries, so a page can say what the tier
+                        # covers ("Under $1.1M"). None at an open end.
+                        "min_price": min_price or None,
+                        "max_price": None if max_price == float('inf') else max_price,
                     })
         else:
             price_tiers = []

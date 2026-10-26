@@ -1756,8 +1756,15 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
         builder_data["branding"] = branding_ctx
 
-        # Generate AI narrative (non-fatal — report renders without it)
-        if not builder_data.get("ai_insights"):
+        # Generate AI narrative (non-fatal — report renders without it).
+        #
+        # NOT FOR A KIND ON DESIGN'S PAGE, which renders no narrative: the
+        # builder blanks `ai_insights` for those, so this call was an OpenAI
+        # round trip whose answer was thrown away. Since D-255 that is every
+        # kind; the guard stays so a kind added off the shared page still gets
+        # its narrative.
+        from .market_builder import V2_KINDS
+        if report_type not in V2_KINDS and not builder_data.get("ai_insights"):
             try:
                 from .ai_market_narrative import generate_market_pdf_narrative
                 narrative = generate_market_pdf_narrative(

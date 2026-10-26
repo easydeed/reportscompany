@@ -332,7 +332,7 @@ def _v2_beds_baths(item) -> str:
 #: docs/MARKET_TOKEN_MAPPING_2026-10-07.md.
 V2_KINDS = frozenset({"closed", "new_listings", "price_bands", "inventory",
                       "new_listings_gallery", "open_houses",
-                      "featured_listings"})
+                      "featured_listings", "market_snapshot"})
 
 #: Design's shared page. One template, dispatched on kind, per their README.
 V2_TEMPLATE_PATH = "_v2/report.jinja2"
@@ -422,6 +422,12 @@ V2_FASTEST_MIN_DAYS_AHEAD = 3
 #: The big number's size per kind. Design: 88px, "snapshot: 96px; bands: 64px
 #: headline" — a price range is wider than a count and does not fit at 88.
 V2_BIG_PX = {"price_bands": 64, "market_snapshot": 96}
+
+#: Design's word for the one subtype the extractor abbreviates. The
+#: extractor already writes "Condo" and "Townhome" (PropertyDataExtractor's
+#: subtype map), and "SFR" is not a word a homeowner reads. Anything else
+#: prints as the extractor wrote it, clipped to one line by the template.
+V2_PROPERTY_TYPE_NAMES = {"SFR": "Single-family"}
 V2_BIG_PX_DEFAULT = 88
 
 
@@ -629,6 +635,13 @@ class MarketReportBuilder:
     #: producer surviving with no consumer is recorded in the defect list
     #: rather than deleted, which is D-181's lesson applied before the fact
     #: instead of after it.
+    #: `market_snapshot` KEEPS ITS LINE ON DESIGN'S PAGE (D-255). Design's
+    #: snapshot is the band over three blocks and specifies no chart; the
+    #: twelve-month median line was Jerry's call for page 1 (D-102,
+    #: 2026-09-28) and is live since D-113. So it is drawn as a fourth row in
+    #: Design's `200px / 1fr` grid, through the same `monthly_trend_chart`
+    #: macro, and the page is still one page. Flagged to Design to restyle;
+    #: the data and its tests did not change.
     TREND_SERIES = {
         "market_snapshot": "median",
     }
@@ -978,6 +991,28 @@ class MarketReportBuilder:
             pill = headline["pill"]
             pill_sub = headline["pill_sub"]
 
+        elif self.report_type == "market_snapshot":
+            # Design: "$1.46M" at 96px / "median sale price in {area}", four
+            # stats: Closed sales · Days on market · Sale-to-list · New
+            # listings.
+            #
+            # NO PILL AND NO ARROWS. Design's pill is "▲ 3.1% vs. prior 30
+            # days" and three of its stats carry arrows. Nothing on the market
+            # path computes a prior period — `fetch_and_compute_market_trends`
+            # is the property report's and compares 90-day windows — so the
+            # pill is dropped and the stats show their values alone, rather
+            # than arrows nothing measured (D-137; MARKET_SURFACE_STATUS §6).
+            label = f"median sale price in {city}"
+            big = _v2_money(stats["median_close_price"])
+            ratio = stats["list_to_sale_pct"]
+            cells = [
+                ("Closed sales", _v2_count(stats["closed_count"])),
+                ("Days on market", _v2_days(stats["avg_dom"])),
+                ("Sale-to-list", f"{ratio:.1f}%" if ratio is not None else V2_NO_DATA),
+                ("New listings", _v2_count(stats["new_listings_count"])),
+            ]
+            pill, pill_sub = None, None
+
         else:
             raise NotImplementedError(
                 f"{self.report_type} is in V2_KINDS with no band spec. Every "
@@ -1175,6 +1210,80 @@ class MarketReportBuilder:
         if not known:
             return V2_NO_DATA
         return _v2_count(sum(1 for d in known if d <= V2_NEW_WITHIN_DAYS))
+
+    def _v2_snapshot(self) -> Dict[str, Any]:
+        """Design's snapshot body: three rows of `200px / 1fr`.
+
+        1. Months of inventory — headline, sentence and the eight-cell bar,
+           from `compute.moi.headline` (the property report's market page
+           prints the same block from the same function).
+        2. Price tiers — `build_market_snapshot_result`'s `price_tiers`, each a
+           bar sized to the busiest tier, its closed count beside it, median
+           and tier MOI on the right; headed by the tier with the most sales.
+        3. By property type — the same builder's `by_property_type`, the three
+           types with the most closed sales, median price · sold · days.
+
+        Every number has a producer; none is computed here beyond a share and
+        a bar width (MARKET_SURFACE_STATUS §6).
+        """
+        from worker.compute.moi import headline as moi_headline
+
+        metrics = self.report_data.get("metrics") or {}
+        city = self._build_header_context()["city"] or "this area"
+        moi = metrics.get("months_of_inventory")
+        moi_block = moi_headline(
+            moi if isinstance(moi, (int, float)) and not isinstance(moi, bool) else None, city)
+
+        raw_tiers = self.report_data.get("price_tiers") or {}
+        tiers_in = list(raw_tiers.values()) if isinstance(raw_tiers, dict) else list(raw_tiers)
+        busiest = max((t.get("count") or 0 for t in tiers_in), default=0)
+        tiers = []
+        for t in tiers_in:
+            lo, hi = t.get("min_price"), t.get("max_price")
+            if lo and hi:
+                span, closed_in = (f"{_v2_money(lo)} – {_v2_money(hi)}",
+                                   f"between {_v2_money(lo)} and {_v2_money(hi)}")
+            elif hi:
+                span, closed_in = f"Under {_v2_money(hi)}", f"under {_v2_money(hi)}"
+            elif lo:
+                span, closed_in = f"{_v2_money(lo)}+", f"at {_v2_money(lo)} or more"
+            else:
+                span, closed_in = "", ""
+            tier_moi = t.get("moi")
+            tiers.append({
+                # "Move-Up" -> Design's "Move-up".
+                "name": (t.get("label") or "")[:1] + (t.get("label") or "")[1:].lower(),
+                "range": span,
+                "closed_in": closed_in,
+                "closed": _v2_count(t.get("count") or 0),
+                "width": round((t.get("count") or 0) / busiest * 100) if busiest else 0,
+                "median": _v2_money(t.get("median_price")),
+                "moi": (f"{tier_moi:.1f}".rstrip("0").rstrip(".") + " mo"
+                        if isinstance(tier_moi, (int, float)) else "no MOI"),
+            })
+        total = sum(t.get("count") or 0 for t in tiers_in)
+        lead = max(tiers_in, key=lambda t: t.get("count") or 0) if tiers_in else None
+        if lead and total:
+            lead_row = tiers[tiers_in.index(lead)]
+            share = round((lead.get("count") or 0) / total * 100)
+            tier_headline = f"{lead_row['name']} homes lead"
+            tier_note = f"{share}% of this period's {total:,} sales closed {lead_row['closed_in']}."
+        else:
+            tier_headline = "No sales to group by price"
+            tier_note = "No homes closed in this period, so there are no price tiers to compare."
+
+        raw_types = self.report_data.get("by_property_type") or {}
+        types_in = list(raw_types.values()) if isinstance(raw_types, dict) else list(raw_types)
+        types_in = sorted(types_in, key=lambda t: t.get("count") or 0, reverse=True)[:3]
+        types = [{
+            "name": V2_PROPERTY_TYPE_NAMES.get(t.get("label"), t.get("label") or V2_DASH),
+            "median": _v2_money(t.get("median_price")),
+            "sold": _v2_count(t.get("count") or 0),
+            "days": _v2_days(round(t["avg_dom"]) if isinstance(t.get("avg_dom"), (int, float)) else None),
+        } for t in types_in]
+
+        return {"moi": moi_block, "tiers": tiers, "tier_headline": tier_headline,
+                "tier_note": tier_note, "types": types}
 
     def _v2_inventory_pill(self):
         """Design's `("1.9 months", "of inventory · seller's market")`.
@@ -1681,6 +1790,8 @@ class MarketReportBuilder:
                              if self.report_type == "price_bands" else None),
                 "v2_gallery": (self._v2_gallery()
                                if self.report_type in V2_GRID else None),
+                "v2_snapshot": (self._v2_snapshot()
+                                if self.report_type == "market_snapshot" else None),
                 "on_primary": tokens["on_primary"],
                 "display_ink": tokens["display_ink"],
                 # The pill's text sits on WHITE, not on the brand fill, at

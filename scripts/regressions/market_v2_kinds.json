@@ -2,8 +2,8 @@
   {
     "name": "D-178 reverts: the band reads the raw ratio instead of the normalised percent",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "            ratio = stats[\"list_to_sale_pct\"]",
-    "new": "            ratio = stats[\"list_to_sale_ratio\"]",
+    "old": "            label = f\"homes sold in {city}\"\n            ratio = stats[\"list_to_sale_pct\"]",
+    "new": "            label = f\"homes sold in {city}\"\n            ratio = stats[\"list_to_sale_ratio\"]",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
@@ -35,10 +35,10 @@
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
-    "name": "a kind is added to V2_KINDS with no band spec",
+    "name": "a kind is added to V2_KINDS with no band spec (synthetic since D-255 put every real kind in)",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\",\n                      \"new_listings_gallery\", \"open_houses\",\n                      \"featured_listings\"})",
-    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\",\n                      \"new_listings_gallery\", \"open_houses\",\n                      \"featured_listings\", \"market_snapshot\"})",
+    "old": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\",\n                      \"new_listings_gallery\", \"open_houses\",\n                      \"featured_listings\", \"market_snapshot\"})",
+    "new": "V2_KINDS = frozenset({\"closed\", \"new_listings\", \"price_bands\", \"inventory\",\n                      \"new_listings_gallery\", \"open_houses\",\n                      \"featured_listings\", \"market_snapshot\", \"synthetic_kind\"})",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
@@ -149,8 +149,8 @@
   {
     "name": "a layout macro goes dead with nothing recording it",
     "file": "apps/worker/tests/test_market_layout_map.py",
-    "old": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"gallery_layout\", \"pricebands_layout\"]",
-    "new": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"pricebands_layout\"]",
+    "old": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"gallery_layout\", \"market_narrative_layout\",\n                             \"pricebands_layout\"]",
+    "new": "UNREACHABLE_LAYOUT_MACROS = [\"analytics_layout\", \"closed_inventory_layout\",\n                             \"market_narrative_layout\",\n                             \"pricebands_layout\"]",
     "test": "apps/worker/tests/test_market_layout_map.py"
   },
   {
