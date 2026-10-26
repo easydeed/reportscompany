@@ -21,16 +21,10 @@ export function EmailFooter() {
             
             <div className="flex gap-2">
               <a
-                href="tel:3105551234"
+                href="mailto:support@trendyreports.io"
                 className="inline-block px-4 py-1.5 border border-[#1B365D]/20 rounded-md text-[#1B365D] text-xs font-medium hover:bg-[#1B365D]/5 transition"
               >
-                (310) 555-1234
-              </a>
-              <a
-                href="mailto:sarah@acmerealty.com"
-                className="inline-block px-4 py-1.5 border border-[#1B365D]/20 rounded-md text-[#1B365D] text-xs font-medium hover:bg-[#1B365D]/5 transition"
-              >
-                Email Me
+                support@trendyreports.io
               </a>
             </div>
           </div>
@@ -39,8 +33,11 @@ export function EmailFooter() {
 
       {/* Footer Links */}
       <div className="text-center mt-6 text-xs text-stone-400">
+        {/* Same identity as terms/privacy: the Glendora address and
+            support@, and no phone. A sample number here is how a fake
+            business line ships the day this layout is imported. */}
         <p className="mb-2">
-          Acme Realty &bull; 1234 Sunset Blvd, Los Angeles, CA 90028
+          TrendyReports &bull; 440 Rte. 66, Glendora, CA 91740
         </p>
         <p>
           <a href="#" className="text-[#1B365D] hover:underline">Unsubscribe</a>

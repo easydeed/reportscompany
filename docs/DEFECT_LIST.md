@@ -15549,6 +15549,23 @@ as a duplicate, the file goes with it rather than being ported.
 
 ---
 
+### D-285 — the property preview JPGs are the retired report, so regenerating all 50 would put back pages that no longer exist
+
+**Severity:** ROUGH · filed from the `fix/stale-placeholders` inventory of D-245 and D-263. The 50 JPGs in `apps/web/public/previews/` were last committed in `0459f6cb` (2026-03-10). The Atlas covers (`5.jpg`, `pages/5/cover.jpg`) still show Luxury Estates Realty, Jennifer Martinez, `(310) 555-4567`, and 1358 5th St, La Verne.
+
+**Not a re-run.** `scripts/generate_theme_preview_jpgs.py` and `scripts/generate_page_preview_jpgs.py` walk every theme and the old page keys. Running them again writes Contents, Executive Summary, and theme ids 1 and 4 back onto disk.
+
+**The scope, when someone has the fixture and the vendor credentials (D-263):**
+
+- Delete `1.jpg`, `4.jpg`, and `pages/1/`, `pages/4/` — 20 files. Nothing in `apps/web` references theme ids 1 or 4.
+- Atlas is theme id 5, and it is the only member of `V2_THEMES`. Its pages are `V2_PAGE_ORDER` in `property_builder.py`: `cover`, `property`, `comparables`, `range`, `market_trends`, `notes`. There is no `notes` JPG. `contents`, `overview`, `aerial`, and `analysis` under `pages/5/` are orphans for Atlas.
+- Harbor (id 2) and linen (id 3) still render the nine-page templates, including Contents and the overview page. Their JPG names still match those templates; the pixels are the March covers. Do not drop `contents` or `overview` for 2 and 3 until `V2_THEMES` includes them and the migration seam in `property_builder.py` is gone.
+- `ThemeSelector` also requests `https://assets.trendyreports.com/property-reports/previews/{id}.jpg` and `.../{id}/{n}.jpg`. No page imports it. Those R2 objects were not checked.
+
+**Status:** `recorded` — scope only. This branch does not regenerate or delete the images.
+
+---
+
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
 Jerry ran `scripts/probe_simplyrets_behaviour.py` against the production feed. **Verbatim, as
