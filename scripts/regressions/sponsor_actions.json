@@ -1,0 +1,44 @@
+[
+  {
+    "name": "A1 deactivate stops at accounts.is_active again",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "        cur.execute(\"UPDATE users SET is_active = FALSE WHERE account_id = %s::uuid\", (row[0],))\n",
+    "new": "",
+    "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
+  },
+  {
+    "name": "A2 a cancelled invite keeps its token",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "        cur.execute(\n            \"UPDATE signup_tokens SET used = TRUE WHERE account_id = %s::uuid AND used = FALSE\",\n            (row[0],),\n        )\n",
+    "new": "",
+    "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
+  },
+  {
+    "name": "A3 the session check ignores is_active",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "                    if user_row and not user_row[4]:",
+    "new": "                    if False:",
+    "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
+  },
+  {
+    "name": "A4 pending outranks deactivated again",
+    "file": "apps/api/src/api/services/affiliates.py",
+    "old": "                WHEN usr.is_active = false THEN 'deactivated'\n                WHEN usr.email_verified = false OR usr.password_hash IS NULL THEN 'pending'",
+    "new": "                WHEN usr.email_verified = false OR usr.password_hash IS NULL THEN 'pending'\n                WHEN usr.is_active = false THEN 'deactivated'",
+    "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
+  },
+  {
+    "name": "A5 bulk invite has no row limit",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "        if len(rows) > BULK_INVITE_MAX_ROWS:",
+    "new": "        if False:",
+    "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
+  },
+  {
+    "name": "A6 bulk invite stops deduping",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "            if email in seen:",
+    "new": "            if False:",
+    "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
+  }
+]
