@@ -1,6 +1,7 @@
 "use client"
 
-// Auth frame — App v3. Login and register share it.
+// Auth frame — App v3. Login, register, and the password and
+// verification pages share it.
 //
 // Design: one column on the cream ground (--surface-cream), the same ground
 // the rail and the landing page sit on. The dark #1E293B split panel is
@@ -58,12 +59,16 @@ export function AuthError({ children }: { children: ReactNode }) {
 
 // Primary button — ink, 46px (one step up from the rail's 42px "New report"
 // because it's the only button on the page), 9px radius to match.
+// `authSubmitClass` is the same treatment for a link that is the page's
+// one action (request a new link, go to the dashboard) and is not a submit.
+export const authSubmitClass = "flex h-[46px] w-full items-center justify-center rounded-[9px] bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+
 export function AuthSubmit({ loading, children, busy }: { loading: boolean; children: ReactNode; busy: string }) {
   return (
     <button
       type="submit"
       disabled={loading}
-      className="flex h-[46px] w-full items-center justify-center rounded-[9px] bg-primary text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-[var(--primary-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+      className={authSubmitClass}
     >
       {loading ? busy : children}
     </button>
