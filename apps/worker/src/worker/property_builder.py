@@ -2595,35 +2595,46 @@ class PropertyReportBuilder:
     def _build_v2_market(self, trends: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Design's page 5, from `fetch_and_compute_market_trends`.
 
-        THREE OF THE FOUR STAT CELLS HAVE NO PRODUCER. `market_trends.py`
-        imports `compute_price_cut_stats`, `compute_dom_distribution` and
-        `compute_timeline_metrics` from `worker.report_builders`, where none of
-        them is defined — the import raises every time and is swallowed by a
-        bare `except (ImportError, Exception)` logging at `info`. So
-        `price_cut_stats`, `dom_distribution` and `timeline_metrics` are
-        always None, and have been since they were written. D-167.
+        THE FOUR STAT CELLS ARE THE FOUR METRICS THAT HAVE A PRODUCER (D-167).
+        Design's page asked for median sale price, days to contract, share
+        sold in 30 days and share that took a price cut. The last three have
+        no producer — `market_trends.py` imports their helpers from
+        `worker.report_builders`, where none is defined, and the import fails
+        every time — so atlas printed "no data" three times from 2026-10-06,
+        and harbor and linen would have joined it on the move to this page.
 
-        They are rendered as "no data" rather than omitted, because a cell
-        that disappears is indistinguishable from a page that never had it —
-        and a reader comparing two reports would see a different number of
-        cells with nothing saying why.
+        The nine-page themes showed days on market, sale-to-list ratio and
+        price per square foot, from `_compute_trends` over the last 90 days of
+        closed sales, with a prior-90-day comparison. Those are what the cells
+        show now, LABELLED AS WHAT THEY ARE: days on market runs from listing
+        to close, which is not "days to contract" (listing to pending), and
+        the old cell was taking its arrow from days on market while its
+        number was meant to be days to contract — two metrics in one cell.
+        Design's metrics can come back when something computes them.
+
+        A cell still says "no data" when its metric's `current` is None, so a
+        reader comparing two reports sees the same four cells and is told
+        why one is empty.
         """
         if not trends:
             return None
 
         median = trends.get("median_sale_price") or {}
-        timeline = trends.get("timeline_metrics") or {}
-        dom = trends.get("dom_distribution") or {}
-        cuts = trends.get("price_cut_stats") or {}
+        dom = trends.get("avg_days_on_market") or {}
+        ratio = trends.get("list_to_sale_ratio") or {}
+        ppsf = trends.get("price_per_sqft") or {}
 
         def _cell(value, label):
             return {"value": self.V2_NO_DATA if value in (None, "") else value,
                     "label": label}
 
-        marketing_days = timeline.get("avg_marketing_days")
-        under_30 = dom.get("under_30")
-        cut_rate = cuts.get("rate")
-        median_cut = cuts.get("median_cut")
+        def _points(metric):
+            # Sale-to-list is already a percentage, so its move is stated in
+            # points; a percent change of a percent reads as nonsense.
+            cur, prior = metric.get("current"), metric.get("prior")
+            if cur is None or prior is None or abs(cur - prior) < 0.1:
+                return ""
+            return f" · {'▲' if cur > prior else '▼'} {abs(cur - prior):.1f} pts"
 
         stats = [
             # `_v2_short_money`, not `formatted_current`: the cell is 44px
@@ -2632,13 +2643,12 @@ class PropertyReportBuilder:
             _cell(None if median.get("current") is None
                   else self._v2_short_money(median["current"]),
                   "Median sale price" + self._v2_delta(median, "%")),
-            _cell(None if marketing_days is None else str(round(marketing_days)),
-                  "Days to contract" + self._v2_delta(trends.get("avg_days_on_market"))),
-            _cell(None if under_30 is None else f"{round(under_30)}%",
-                  "Sold in 30 days or less"),
-            _cell(None if cut_rate is None else f"{round(cut_rate)}%",
-                  "Took a price cut" + (
-                      f" · median {_fmt_currency(median_cut)}" if median_cut else "")),
+            _cell(None if dom.get("current") is None else str(round(dom["current"])),
+                  "Days on market" + self._v2_delta(dom)),
+            _cell(None if ratio.get("current") is None else f"{ratio['current']:.1f}%",
+                  "Sale-to-list" + _points(ratio)),
+            _cell(None if ppsf.get("current") is None else _fmt_currency(ppsf["current"]),
+                  "Price per sq ft" + self._v2_delta(ppsf, "%")),
         ]
 
         # ── months of inventory ─────────────────────────────────────────

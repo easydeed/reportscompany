@@ -96,5 +96,26 @@
     "old": "    font-variant-numeric: lining-nums;\n  }",
     "new": "  }",
     "test": "apps/worker/tests/test_each_theme_renders_in_its_own_typefaces.py"
+  },
+  {
+    "name": "D1 a box reads 'no data' although its number exists (D-167)",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "_cell(None if dom.get(\"current\") is None else str(round(dom[\"current\"])),",
+    "new": "_cell(None,",
+    "test": "apps/worker/tests/test_market_page_shows_the_numbers_it_has.py"
+  },
+  {
+    "name": "D2 a box shows another metric's number",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "_cell(None if ratio.get(\"current\") is None else f\"{ratio['current']:.1f}%\",",
+    "new": "_cell(None if ppsf.get(\"current\") is None else f\"{ppsf['current']:.1f}%\",",
+    "test": "apps/worker/tests/test_market_page_shows_the_numbers_it_has.py"
+  },
+  {
+    "name": "D3 a box's arrow describes a different metric (the old days-to-contract cell)",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "\"Days on market\" + self._v2_delta(dom)),",
+    "new": "\"Days on market\" + self._v2_delta(ppsf)),",
+    "test": "apps/worker/tests/test_market_page_shows_the_numbers_it_has.py"
   }
 ]
