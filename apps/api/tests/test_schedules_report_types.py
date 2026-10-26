@@ -3,6 +3,8 @@ Test Phase 3 - Gallery Report Types Support
 
 Verifies that new photo-driven report types can be created via schedules API.
 """
+from datetime import datetime, timezone
+
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
@@ -132,6 +134,41 @@ def _route_fetchone(mock_cur, schedule_row):
     mock_cur.fetchone.side_effect = answer
 
 
+def schedule_row(report_type="new_listings_gallery"):
+    """
+    The row `POST /v1/schedules` reads back, in its RETURNING order: id, name,
+    report_type, city, zip_codes, lookback_days, cadence, weekly_dow,
+    monthly_dom, send_hour, send_minute, timezone, recipients,
+    include_attachment, active, last_run_at, next_run_at, created_at, filters.
+
+    One builder, because there used to be two hand-written 17-column tuples
+    and both lost step when the route added `timezone` (and later `filters`):
+    the route read `include_attachment` (False) as the recipient list and
+    500'd on "'bool' object is not iterable" (D-285).
+    """
+    return (
+        f"schedule-{report_type}",  # id
+        f"Schedule for {report_type}",  # name
+        report_type,  # report_type
+        "Anaheim",  # city
+        [],  # zip_codes
+        30,  # lookback_days
+        "weekly",  # cadence
+        1,  # weekly_dow
+        None,  # monthly_dom
+        9,  # send_hour
+        0,  # send_minute
+        "America/Los_Angeles",  # timezone
+        ["test@example.com"],  # recipients
+        False,  # include_attachment
+        True,  # active
+        None,  # last_run_at
+        datetime(2025, 11, 22, 9, 0, tzinfo=timezone.utc),  # next_run_at
+        datetime(2025, 11, 15, 10, 0, tzinfo=timezone.utc),  # created_at
+        {},  # filters
+    )
+
+
 @pytest.fixture
 def mock_db():
     """Mock database operations."""
@@ -142,27 +179,8 @@ def mock_db():
         mock_cur = MagicMock()
         mock_db_conn.return_value.__enter__.return_value = (mock_conn, mock_cur)
         
-        # Mock successful INSERT returning schedule data
-        _route_fetchone(mock_cur, (
-            "schedule-id-123",  # id
-            "Test Schedule",  # name
-            "new_listings_gallery",  # report_type
-            "Anaheim",  # city
-            [],  # zip_codes
-            30,  # lookback_days
-            "weekly",  # cadence
-            1,  # weekly_dow
-            None,  # monthly_dom
-            9,  # send_hour
-            0,  # send_minute
-            ["test@example.com"],  # recipients
-            False,  # include_attachment
-            True,  # active
-            None,  # last_run_at
-            "2025-11-22T09:00:00Z",  # next_run_at
-            "2025-11-15T10:00:00Z",  # created_at
-        ))
-        
+        _route_fetchone(mock_cur, schedule_row())
+
         yield mock_cur
 
 
@@ -198,6 +216,7 @@ def test_create_schedule_with_featured_listings(mock_auth, mock_db):
     """
     Task 3.1: Verify that 'featured_listings' report type is accepted.
     """
+    _route_fetchone(mock_db, schedule_row("featured_listings"))
     response = client.post(
         "/v1/schedules",
         json={
@@ -223,49 +242,39 @@ def test_create_schedule_with_featured_listings(mock_auth, mock_db):
 @pytest.mark.usefixtures("db_session")
 def test_all_report_types_accepted(mock_auth, mock_db):
     """
-    Task 3.1: Verify all 7 report types are accepted by API validation.
-    
-    Original types: market_snapshot, new_listings, inventory, closed, price_bands
-    New types: new_listings_gallery, featured_listings
+    Task 3.1: every report type the API accepts creates a schedule.
+
+    The list is written out (so a type silently dropped from the route fails
+    here) and checked against the route's Literal (so a type added to the
+    route without a test fails here too). `open_houses` was added to the
+    route and never to this list; nothing noticed because nothing ran this
+    with a database (D-285).
     """
+    from typing import get_args
+    from api.routes.schedules import ScheduleCreate
+
     all_types = [
         "market_snapshot",
         "new_listings",
         "inventory",
         "closed",
         "price_bands",
+        "open_houses",
         "new_listings_gallery",
         "featured_listings",
     ]
-    
+    assert sorted(all_types) == sorted(get_args(ScheduleCreate.model_fields["report_type"].annotation))
+
     for report_type in all_types:
         # Update mock to return current report_type
-        _route_fetchone(mock_db, (
-            f"schedule-{report_type}",
-            f"Schedule for {report_type}",
-            report_type,
-            "Test City",
-            [],
-            30,
-            "weekly",
-            1,
-            None,
-            9,
-            0,
-            ["test@example.com"],
-            False,
-            True,
-            None,
-            "2025-11-22T09:00:00Z",
-            "2025-11-15T10:00:00Z",
-        ))
+        _route_fetchone(mock_db, schedule_row(report_type))
         
         response = client.post(
             "/v1/schedules",
             json={
                 "name": f"Test {report_type}",
                 "report_type": report_type,
-                "city": "Test City",
+                "city": "Anaheim",
                 "lookback_days": 30,
                 "cadence": "weekly",
                 "weekly_dow": 1,
@@ -276,7 +285,7 @@ def test_all_report_types_accepted(mock_auth, mock_db):
             }
         )
         
-        assert response.status_code == 201, f"Failed for report_type: {report_type}"
+        assert response.status_code == 201, f"Failed for report_type: {report_type}: {response.text}"
         assert response.json()["report_type"] == report_type
 
 
