@@ -19,5 +19,19 @@
     "old": "            SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid\n        \"\"\", (account_id,))\n        # cur returns UUID objects; account_id from the JWT is a str.",
     "new": "            SELECT id FROM accounts WHERE sponsor_account_id IS NOT NULL OR %s IS NULL\n        \"\"\", (account_id,))\n        # cur returns UUID objects; account_id from the JWT is a str.",
     "test": "apps/api/tests/test_affiliate_tenant_isolation.py"
+  },
+  {
+    "name": "R4 unsponsor leaves the sponsorship in place",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "            SET sponsor_account_id = NULL,\n                plan_slug = CASE ",
+    "new": "            SET sponsor_account_id = sponsor_account_id,\n                plan_slug = CASE ",
+    "test": "apps/api/tests/test_affiliate_tenant_isolation.py"
+  },
+  {
+    "name": "R5 an agent nobody sponsors counts as in the book",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "WHERE id = %s::uuid AND sponsor_account_id = %s::uuid\n        \"\"\", (agent_account_id, account_id))\n        if not cur.fetchone():\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n\n        cur.execute(\"\"\"\n            SELECT rg.id::text, rg.report_type, rg.status, rg.generated_at,",
+    "new": "WHERE id = %s::uuid AND (sponsor_account_id = %s::uuid OR sponsor_account_id IS NULL)\n        \"\"\", (agent_account_id, account_id))\n        if not cur.fetchone():\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n\n        cur.execute(\"\"\"\n            SELECT rg.id::text, rg.report_type, rg.status, rg.generated_at,",
+    "test": "apps/api/tests/test_affiliate_tenant_isolation.py"
   }
 ]

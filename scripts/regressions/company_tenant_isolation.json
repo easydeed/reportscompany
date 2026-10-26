@@ -26,5 +26,12 @@
     "old": "                parent_account_id=company_id,\n                account_type=\"INDUSTRY_AFFILIATE\",",
     "new": "                parent_account_id=None,\n                account_type=\"INDUSTRY_AFFILIATE\",",
     "test": "apps/api/tests/test_company_tenant_isolation.py"
+  },
+  {
+    "name": "R5 a rep under no company counts as the company's",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "WHERE rep_acct.parent_account_id = %s::uuid",
+    "new": "WHERE (rep_acct.parent_account_id = %s::uuid OR rep_acct.parent_account_id IS NULL)",
+    "test": "apps/api/tests/test_company_tenant_isolation.py"
   }
 ]
