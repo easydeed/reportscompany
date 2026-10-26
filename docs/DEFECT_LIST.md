@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 52 | Observed, not yet triaged |
 | `open` | 80 | Real, unfixed |
-| `fixed` | 146 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 147 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **285** | D-001 … D-285, contiguous, no duplicates |
+| **Total** | **286** | D-001 … D-286, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
 
@@ -15552,6 +15552,13 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-285 — eight database-backed API tests fail on `main`, and CI cannot see it because it provisions no database
 
 **Severity:** FRAGILE · filed while adding `test_sponsor_actions_do_what_they_say.py`: run against the local stack, `test_billing_checkout.py` (3: the checkout/portal URL moved to `/app/settings/billing`, and a fixture), `test_schedules_report_types.py` (3) and `test_me_endpoint.py` (2 errors: its fixture inserts an account with no `slug`, which is NOT NULL) fail identically with and without this branch. They skip in CI, so they have been red where nobody looks. Adding Postgres to CI turns CI red on exactly these eight until each is triaged.
+**Status:** `fixed` — #219. Backend Tests now runs a Postgres 16 service, applies every migration, and sets `DATABASE_URL` (migrated) and `TEST_DATABASE_URL` (empty scratch). The eight: the schedules row gained `timezone`/`filters` (one builder now), billing asserts `/app/settings/billing` and that a sponsored agent can check out (billing.py's compliance note), the `/me` fixtures insert `slug`. Running it also caught the two tenant-isolation suites seeding `TEST_DATABASE_URL` while the app read `DATABASE_URL`; they read `DATABASE_URL` only. `tests/test_ci_runs_the_database_suites.py` keeps CI provisioned; `scripts/regressions/ci_database.json` 5/5. First CI run: 3161 passed, 0 failed.
+
+---
+
+### D-286 — two regression-harness signal tests failed once in a full local run and passed alone and on rerun
+
+**Severity:** FRAGILE · seen on the first full DB-backed run for #219: `test_regression_harness_guards_itself.py::test_sigterm_mid_mutation_still_restores_and_exits_2` and `::test_sigkill_leaves_a_sentinel_and_the_next_run_refuses_to_start`. Both passed in isolation (with and without a database) and in the next full run. Likely timing in `_enter_mutation_window` under load; not yet reproduced, so not yet diagnosed.
 **Status:** `recorded`
 
 ---
