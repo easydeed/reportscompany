@@ -34,6 +34,12 @@ both are corrected below and in `DEFECT_LIST.md`.
 
 ## 0 · Read this first: there are two template trees and one of them renders nowhere
 
+> **UPDATED 2026-10-27 — THE DEAD TREE IS DELETED.** `templates/property/_base/` and the three
+> `<theme>/<theme>.jinja2` files are gone from the repository (D-131), after every report surface
+> rendered byte-identical without them. **There is now one property template tree:**
+> `_v2/report.jinja2` plus each theme's typography entry file, **0 dead lines**. Everything below
+> is the record of when there were two.
+
 **`<theme>/<theme>.jinja2` and everything in `templates/property/_base/` render nowhere. Do not read them, do not
 port them, do not take their copy as current.** (D-131.)
 

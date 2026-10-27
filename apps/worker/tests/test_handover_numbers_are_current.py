@@ -93,7 +93,7 @@ def test_every_field_jerry_is_asked_about_is_still_an_orphan():
 
 
 def test_both_template_trees_are_the_size_the_handover_says():
-    """5,570 dead across five files, 2,284 live across four.
+    """No dead property template, and the live tree the size the handover says.
 
     THE FIRST VERSION OF THIS NUMBER WAS 15,628, FROM A `wc -l` WHOSE GLOB
     LISTED ONE FILE TWICE. It went into two defect entries, a pull request
@@ -115,22 +115,16 @@ def test_both_template_trees_are_the_size_the_handover_says():
     def total(paths):
         return sum(len(p.read_text(encoding="utf-8").splitlines()) for p in paths)
 
-    # One dead file per theme plus the two in `property/_base/`. Derived, so the next
-    # cut moves it: the literal 7 here went stale on the theme cut and the
-    # failure read as "the dead tree changed" when it was "a theme left".
-    # One dead twin per theme plus the two in `property/_base/`. A theme moving to the
-    # shared architecture does not change this: its `<theme>.jinja2` twin
-    # stays dead and its entry file stays live.
-    expected_dead = len(THEME_TEMPLATES) + 2
-    assert len(dead) == expected_dead, (
-        f"{len(dead)} dead templates, expected {expected_dead} "
-        f"({len(THEME_TEMPLATES)} themes + _base/base + _base/_macros): "
-        f"{[p.name for p in dead]}"
-    )
-    for label, n in (("dead", total(dead)), ("live", total(sorted(live_paths)))):
-        assert f"{n:,}" in text, (
-            f"the {label} tree is {n:,} lines; the handover states something else"
-        )
+    # THE DEAD TREE IS DELETED (2026-10-27), which this docstring called the
+    # right outcome. There used to be one dead `<theme>.jinja2` per theme plus
+    # the two in `property/_base/`; now there are none, and the handover's
+    # section 0 opens by saying so. A dead file appearing again is the drift
+    # D-131 was — this fails on it.
+    assert dead == [], f"dead property templates again: {[p.name for p in dead]}"
+    assert "THE DEAD TREE IS DELETED" in text and "**0 dead lines**" in text
+    live = total(sorted(live_paths))
+    assert f"{live:,}" in text, (
+        f"the live tree is {live:,} lines; the handover states something else")
 
 
 @pytest.mark.parametrize("name", sorted(THEME_TEMPLATES.values()))

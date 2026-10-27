@@ -26,6 +26,10 @@
 # literals went with the nine-page layouts. Removed by hand rather than by
 # --write-baseline, which also drops this header. Nothing was added.
 
+#
+# 2026-10-26, THE DEAD PROPERTY TREE DELETED (D-131). 20 entries RETIRED with
+# `templates/property/_base/` and the three self-contained `<theme>.jinja2`
+# files, which rendered nowhere. Removed by hand, header kept. Nothing added.
 apps/web/templates/social/social-closed.html	BRAND-ADJACENT	#92400e
 apps/web/templates/social/social-closed.html	BRAND-ROLE	#7c3aed
 apps/web/templates/social/social-closed.html	BRAND-ROLE	#f26b2b
@@ -58,23 +62,3 @@ apps/web/templates/trendy-new-listings.html	BRAND-ROLE	#7c3aed
 apps/web/templates/trendy-new-listings.html	BRAND-ROLE	#f26b2b
 apps/web/templates/trendy-price-bands.html	BRAND-ROLE	#7c3aed
 apps/web/templates/trendy-price-bands.html	BRAND-ROLE	#f26b2b
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#333333
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#666666
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#888888
-apps/worker/src/worker/templates/property/atlas/atlas.jinja2	BRAND-ADJACENT	#0f1629
-apps/worker/src/worker/templates/property/atlas/atlas.jinja2	BRAND-ADJACENT	#64748b
-apps/worker/src/worker/templates/property/atlas/atlas.jinja2	BRAND-ROLE	#0f1629
-apps/worker/src/worker/templates/property/atlas/atlas.jinja2	BRAND-ROLE	#1a2744
-apps/worker/src/worker/templates/property/atlas/atlas.jinja2	BRAND-ROLE	#c9a227
-apps/worker/src/worker/templates/property/atlas/atlas.jinja2	BRAND-ROLE	#dbb94a
-apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ADJACENT	#1a1f36
-apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ADJACENT	#64748b
-apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#1a1f36
-apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#2d3348
-apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/harbor/harbor.jinja2	BRAND-ROLE	#ff8a7d
-apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#333333
-apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#b8977e
-apps/worker/src/worker/templates/property/linen/linen.jinja2	BRAND-ROLE	#d4c4b0

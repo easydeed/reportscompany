@@ -249,85 +249,15 @@ def test_the_layouts_no_report_type_reaches_are_recorded():
     )
 
 
-#: `price_bands[:4]` — D-107's construct — and where it still is.
-#:
-#: D-107 removed the four-of-six band slice from `pricebands_layout` and left an
-#: identical one in `analytics_layout`, which nobody noticed for ten days because
-#: the entry named one macro and the fix edited that macro. `grep -n
-#: "price_bands\[:4\]"` finds both on one line and was not run.
-#:
-#: Pinned rather than deleted. The surviving copy is dead three times over —
-#: `build_new_listings_result` emits no `price_bands` key, `analytics_layout`
-#: never served the `price_bands` kind, and no kind reaches `analytics_layout`
-#: at all since 2026-10-08 — so editing it would be a diff that looks like a fix
-#: and changes no rendered page. What this holds is the RECORD: if the count
-#: moves, either someone removed the dead slice (fine, say so here) or a second
-#: one appeared (not fine).
-BAND_SLICE_SITES = {"analytics_layout": 1, "pricebands_layout": 0}
-
-
-def test_the_four_of_six_band_slice_is_only_where_it_is_recorded():
-    """D-107's construct, counted per macro rather than per file.
-
-    A grep of the whole file would say "one `[:4]` remains" and not say which
-    macro, which is the information that mattered: one copy was reachable and
-    one was not, and the entry was about the reachable one.
-    """
-    import re
-    source = (Path(__file__).resolve().parents[1]
-              / "src/worker/templates/market/_base/macros.jinja2"
-              ).read_text(encoding="utf-8")
-    # Split on macro boundaries so a slice is attributed to the macro it is in.
-    starts = [(m.start(), m.group(1))
-              for m in re.finditer(r"\{%\s*macro\s+(\w+)", source)]
-    found = {name: 0 for name in BAND_SLICE_SITES}
-    for i, (pos, name) in enumerate(starts):
-        end = starts[i + 1][0] if i + 1 < len(starts) else len(source)
-        if name in found:
-            found[name] = source[pos:end].count("price_bands[:4]")
-    assert found == BAND_SLICE_SITES, (
-        f"D-107's `price_bands[:4]` is now {found}, recorded as "
-        f"{BAND_SLICE_SITES}. A market with six bands renders four cards and "
-        f"says nothing about the other two. If the dead copy in "
-        f"`analytics_layout` was removed, record that here; if a new one "
-        f"appeared, it is D-107 coming back."
-    )
-    whole = source.count("price_bands[:4]")
-    assert whole == sum(BAND_SLICE_SITES.values()), (
-        f"{whole} occurrences of `price_bands[:4]` in the file but "
-        f"{sum(BAND_SLICE_SITES.values())} inside the macros this test knows "
-        f"about — one is somewhere this test does not look."
-    )
-
-
-def test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout():
-    """Positive control: prove the assertion above can fail.
-
-    A checker whose normal output is 'match' is indistinguishable from one that
-    has stopped matching anything (§0.6, *a detector's silence*). Point a known
-    report type at a layout base.jinja2 has no branch for and the fallback
-    gallery must run instead.
-    """
-    # DERIVED, NOT NAMED. This line said `closed`, then `inventory`, and each
-    # became wrong when that kind joined the seam — a kind in `V2_KINDS` never
-    # reaches base.jinja2's dispatch, so it cannot exercise the fallback this
-    # control exists to prove is reachable. A positive control drawn from the
-    # set being migrated is consumed by the migration, so the remainder is
-    # computed and asserted non-empty.
-    outside = sorted(set(ALL_REPORT_TYPES) - V2_KINDS)
-    assert outside, (
-        "every report type is in V2_KINDS, so no kind can reach base.jinja2's "
-        "dispatch and this control cannot be run at all. The fallback is now "
-        "unreachable from production — retire it with the old layouts, or say "
-        "here why it stays."
-    )
-    data = report_data(outside[0])
-    builder = MarketReportBuilder(data)
-    builder.layout = "no_such_layout"
-    with recording_macros() as seen:
-        builder.render_html()
-    layout_macros = [m for m in seen if m.endswith("_layout")]
-    assert layout_macros == ["gallery_layout"], layout_macros
+# D-107'S `price_bands[:4]` RECORD AND THE DISPATCH-FALLBACK CONTROL WERE HERE.
+# Both were about code in `market/_base/` that no kind reached: the surviving
+# slice lived in `analytics_layout`, and the fallback was `base.jinja2`'s
+# `{% else %}` into `gallery_layout`. The four dead layouts, the fallback and
+# their helper macros were deleted on 2026-10-26 after every market body,
+# header and footer rendered byte-identical without them, so neither record
+# has a subject left. `UNREACHABLE_LAYOUT_MACROS` above still names the layouts
+# that went dead; `test_the_layouts_no_report_type_reaches_are_recorded` holds
+# that record against the dispatch map.
 
 
 #: How many listings each report type puts in the PDF, recorded from a render.

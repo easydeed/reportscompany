@@ -1414,27 +1414,10 @@
         {# PDF-COMPREHENSIVE — every layout receives the section label,
            truncation note, and "+ N more …" callout text from the
            builder so it can render the listings collection honestly. #}
-        {% if layout == "gallery" %}
-          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative,
-                                   listings_section_label, listings_truncation_note, listings_more_note) }}
-        {% elif layout == "market_narrative" %}
+        {% if layout == "market_narrative" %}
           {{ macros.market_narrative_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative,
                                             listings_section_label, listings_truncation_note, listings_more_note,
                                             monthly_trend, monthly_trend_note, monthly_trend_fmt, primary_ink) }}
-        {% elif layout == "closed_inventory" %}
-          {{ macros.closed_inventory_layout(header, listings, stats, report_type, agent, ai_insights, ai_narrative,
-                                            listings_section_label, listings_truncation_note, listings_more_note,
-                                            monthly_trend, monthly_trend_note, monthly_trend_fmt, primary_ink) }}
-        {% elif layout == "pricebands" %}
-          {{ macros.pricebands_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative,
-                                      listings_section_label, listings_truncation_note, listings_more_note,
-                                      band_chart_note, primary_ink) }}
-        {% elif layout == "analytics" %}
-          {{ macros.analytics_layout(header, listings, stats, price_bands, report_type, agent, ai_insights, ai_narrative,
-                                     listings_section_label, listings_truncation_note, listings_more_note) }}
-        {% else %}
-          {{ macros.gallery_layout(header, listings, stats, report_type, agent, ai_narrative,
-                                   listings_section_label, listings_truncation_note, listings_more_note) }}
         {% endif %}
       {% endblock %}
     </div>

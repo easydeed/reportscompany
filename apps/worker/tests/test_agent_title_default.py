@@ -38,7 +38,6 @@ import re
 from pathlib import Path
 
 import pytest
-from jinja2 import Environment, DictLoader, select_autoescape
 
 
 WORKER_SRC = Path(__file__).resolve().parents[1] / "src" / "worker"
@@ -76,8 +75,11 @@ def test_no_python_default_asserts_the_realtor_mark(module):
 def test_the_replacement_is_actually_present():
     """A test that only forbids the old value passes if someone deletes the
     default entirely, which would ship a blank title."""
-    found = [p for p in TEMPLATES if EXPECTED_DEFAULT in p.read_text()]
-    assert found, f"no template supplies the {EXPECTED_DEFAULT!r} default"
+    # The TEMPLATE half of this went with the templates: the six contact
+    # blocks carrying `default('Real Estate Agent', true)` were all in the
+    # nine-page property tree (D-131), deleted 2026-10-26. The live page does
+    # not print an agent title, and the default that reaches every report is
+    # the builder's, asserted here.
     assert EXPECTED_DEFAULT in (WORKER_SRC / "property_builder.py").read_text()
 
     # NOT `tasks.py` by name. This asserted the string was in that file until
@@ -96,69 +98,21 @@ def test_the_replacement_is_actually_present():
     )
 
 
-# ── the None leak, by render ────────────────────────────────────────────────
+# ── the None leak, by render — RETIRED WITH ITS TEMPLATES ──────────────────
+#
+# Five tests here rendered the contact-block title expression and checked that
+# a missing or NULL title fell back to the default rather than printing
+# "None". Every copy of that expression was in the nine-page property tree
+# (D-131) and the old self-contained theme files, which rendered nowhere and
+# were deleted on 2026-10-26 after a byte-identical render of every surface.
+# The live property page prints no agent title, so there is no expression left
+# to render. `test_every_template_uses_the_boolean_default_form` below still
+# holds any template that brings one back.
 
-# The expression this branch owns: the contact block, where the REALTOR® default
-# lived. The theme COVER blocks are a separate expression with per-theme copy
-# ("Luxury Property Specialist" for elegant, and so on) — deliberate design, not
-# a trademark claim, and not this branch's to flatten. They carry the same
-# None-leak bug; that is filed as D-067.
-# Matched WITH the quotes: the cover expression 'Licensed Real Estate Agent'
-# contains "Real Estate Agent" as a substring, so a bare substring test silently
-# picks up the very sites this branch is not touching.
+
+#: The contact-block default, matched WITH the quotes: the old cover expression
+#: 'Licensed Real Estate Agent' contained "Real Estate Agent" as a substring.
 OWNED = "'Real Estate Agent'"
-
-
-def _contact_block_expressions():
-    """
-    Every contact-block title expression, deduplicated.
-
-    NOT `next(...)`, which took whichever matching line came first and would
-    have gone on passing if one of the six themes diverged — silently testing
-    five templates it did not cover. Collecting them and asserting they agree
-    is the same cost and says what it checks. See §0.6.
-    """
-    lines = [
-        line for p in TEMPLATES for line in p.read_text().splitlines()
-        if "agent.title" in line and OWNED in line
-    ]
-    assert lines, "no contact-block title expression found — did the markup change?"
-    exprs = {re.search(r"\{\{[^}]*agent\.title[^}]*\}\}", ln).group(0) for ln in lines}
-    assert len(exprs) == 1, (
-        f"the {len(lines)} contact blocks no longer share one expression: {sorted(exprs)}"
-    )
-    return exprs.pop()
-
-
-def _render_title(agent):
-    """Render the exact expression the contact-block templates use."""
-    expr = _contact_block_expressions()
-    env = Environment(loader=DictLoader({"t.jinja2": expr}),
-                      autoescape=select_autoescape(["html", "xml", "jinja2"]))
-    return env.get_template("t.jinja2").render(agent=agent)
-
-
-@pytest.mark.parametrize(
-    "agent,why",
-    [
-        ({}, "key absent"),
-        ({"title": None}, "key present holding NULL — rendered the string 'None'"),
-        ({"title": ""}, "agent left it blank — rendered nothing beside a bare separator"),
-        ({"title": "   "}, "whitespace only"),
-    ],
-)
-def test_a_missing_title_falls_back_rather_than_leaking(agent, why):
-    out = _render_title(agent)
-    assert out.strip(), f"{why}: rendered empty"
-    assert out.strip() != "None", f"{why}: leaked the literal string None into the PDF"
-    assert "Realtor" not in out
-
-
-def test_an_agents_own_title_is_never_overridden():
-    """The default must not touch someone who set a title — including a member
-    who legitimately uses the mark."""
-    assert "Broker Associate" in _render_title({"title": "Broker Associate"})
-    assert "REALTOR®" in _render_title({"title": "REALTOR®"})
 
 
 def test_every_template_uses_the_boolean_default_form():
