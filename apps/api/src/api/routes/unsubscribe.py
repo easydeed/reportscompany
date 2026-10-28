@@ -122,6 +122,12 @@ def _suppress(email: str, token: str, reason: str) -> str:
                 detail="Invalid unsubscribe token"
             )
 
+        # A link signed for a rep whose seat was reassigned: their scheduled
+        # sends now belong to the account that took over their book, and the
+        # opt-out has to stop those too (services/seats.hand_over_book).
+        from ..services.seats import book_successors
+        matched += book_successors(cur, matched)
+
         # Idempotent on the UNIQUE (account_id, email). This is the row the
         # worker's send filter reads (worker/email/send.py).
         for account_id in matched:

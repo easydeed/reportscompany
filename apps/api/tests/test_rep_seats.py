@@ -519,3 +519,96 @@ def test_the_backfill_seats_every_current_rep_once_and_changes_no_account(world)
     assert before == after, "the backfill wrote to an account"
     assert sorted(r[0] for r in rows) == sorted([w.a1, w.b1, w.b2]), rows
     assert all(r[1] for r in rows), "each seat is dated from its rep's account creation"
+
+
+# ── the leaving rep's scheduled sends go where the agents go ────────────────
+#
+# Asserted through the WORKER's own recipient resolution, against the account
+# the schedule now belongs to: "handed over" means the next run still reaches
+# the same people, not that a column changed.
+
+def _worker_resolve(account_id, recipients):
+    import sys
+    sys.path.insert(0, str(REPO / "apps/worker/src"))
+    from worker.tasks import resolve_recipients_to_emails
+    with psycopg.connect(DB_URL) as conn, conn.cursor() as cur:
+        return sorted(resolve_recipients_to_emails(cur, account_id, recipients))
+
+
+def _book(cur, w):
+    """Rep A1's book: a contact, a group holding that contact and agent A1a,
+    a schedule sending to the contact, the group, agent A1b and a typed-in
+    address, and one recipient who unsubscribed from A1."""
+    import json
+    contact, group, sched = _id(), _id(), _id()
+    cur.execute("INSERT INTO contacts (id, account_id, name, email, type) VALUES (%s,%s,'Cli',%s,'client')",
+                (contact, w.a1, w.email("client")))
+    cur.execute("INSERT INTO contact_groups (id, account_id, name) VALUES (%s,%s,'Book')", (group, w.a1))
+    for kind, member in (("contact", contact), ("sponsored_agent", w.a1a)):
+        cur.execute("INSERT INTO contact_group_members (group_id, account_id, member_type, member_id) "
+                    "VALUES (%s,%s,%s,%s)", (group, w.a1, kind, member))
+    recipients = [json.dumps({"type": "contact", "id": contact}),
+                  json.dumps({"type": "group", "id": group}),
+                  json.dumps({"type": "sponsored_agent", "id": w.a1b}),
+                  json.dumps({"type": "manual_email", "email": w.email("typed")})]
+    cur.execute("INSERT INTO schedules (id, account_id, name, report_type, city, cadence, recipients, active) "
+                "VALUES (%s,%s,'A1 weekly','market_snapshot','Irvine','weekly',%s,true)", (sched, w.a1, recipients))
+    cur.execute("INSERT INTO email_suppressions (account_id, email, reason) VALUES (%s,%s,'user_request')",
+                (w.a1, w.email("opted-out")))
+    return sched, recipients
+
+
+@pytest.fixture
+def book(world):
+    with psycopg.connect(DB_URL) as conn, conn.cursor() as cur:
+        return _book(cur, world)
+
+
+def test_the_schedules_follow_the_agents_and_still_reach_everyone(client, world, book, sent):
+    w, (sched, recipients) = world, book
+    before = _worker_resolve(w.a1, recipients)
+    assert before == sorted([w.email("client"), w.email("ag-a1a"), w.email("ag-a1b"), w.email("typed")])
+    resp = client.post(f"/v1/company/reps/{w.a1}/reassign", json=_reassign_body(w),
+                       headers=_auth(client, w.email("co-a")))
+    assert resp.status_code == 200, resp.text
+    new = resp.json()["new_rep_account_id"]
+    assert resp.json()["schedules_moved"] == 1
+    assert _q("SELECT account_id::text, active FROM schedules WHERE id = %s", sched) == [(new, True)]
+    assert _worker_resolve(new, recipients) == before, "the handed-over schedule reaches different people"
+    assert _q("SELECT book_to_account_id::text, schedules_moved FROM rep_seat_assignments "
+              "WHERE rep_account_id = %s", w.a1) == [(new, 1)]
+
+
+def test_an_unsubscribe_follows_the_schedules(client, world, book, sent):
+    w = world
+    client.post(f"/v1/company/reps/{w.a1}/reassign", json=_reassign_body(w), headers=_auth(client, w.email("co-a")))
+    new = _q("SELECT successor_rep_account_id::text FROM rep_seat_assignments WHERE rep_account_id = %s", w.a1)[0][0]
+    rows = _q("SELECT account_id::text FROM email_suppressions WHERE email = %s", w.email("opted-out"))
+    assert sorted(r[0] for r in rows) == sorted([w.a1, new]), "they opted out; the new name must not mail them"
+
+
+def test_the_schedules_go_to_the_rep_the_agents_go_to(client, world, book, sent):
+    w, (sched, recipients) = world, book
+    before = _worker_resolve(w.a1, recipients)
+    resp = client.post(f"/v1/company/reps/{w.a1}/reassign", json=_reassign_body(w, agents_to_rep_id=w.a2),
+                       headers=_auth(client, w.email("co-a")))
+    assert resp.status_code == 200, resp.text
+    assert _q("SELECT account_id::text FROM schedules WHERE id = %s", sched) == [(w.a2,)]
+    assert _worker_resolve(w.a2, recipients) == before
+
+
+def test_a_link_sent_before_the_move_stops_the_sends_after_it(client, world, book, sent):
+    """The token was signed for A1. The schedule is the new rep's now."""
+    w = world
+    with psycopg.connect(DB_URL) as conn:
+        conn.execute("INSERT INTO email_log (account_id, provider, to_emails, subject, status) "
+                     "VALUES (%s, 'sendgrid', ARRAY[%s], 's', 'sent')", (w.a1, w.email("typed")))
+    client.post(f"/v1/company/reps/{w.a1}/reassign", json=_reassign_body(w), headers=_auth(client, w.email("co-a")))
+    new = _q("SELECT successor_rep_account_id::text FROM rep_seat_assignments WHERE rep_account_id = %s", w.a1)[0][0]
+    from api.routes.unsubscribe import generate_unsubscribe_token
+    r = client.post("/v1/email/unsubscribe",
+                    json={"email": w.email("typed"), "token": generate_unsubscribe_token(w.a1, w.email("typed"))})
+    assert r.status_code == 200, r.text
+    rows = _q("SELECT email FROM email_suppressions WHERE account_id = %s AND email = ANY(%s)",
+              new, [w.email("typed")])
+    assert rows == [(w.email("typed"),)], "the new rep's next run would still mail them"
