@@ -1049,7 +1049,11 @@ def update_branding(
 
     with db_conn() as (conn, cur):
         set_rls(cur, company_id)
-        # Upsert company's own branding
+        # Upsert company's own branding. The FIRST save creates the row, and
+        # `brand_display_name` is NOT NULL: a form saved with the name left
+        # empty inserted NULL and 500ed, so a new company could not save a
+        # colour. Unnamed, the brand is the company's own account name — the
+        # same fallback `copy_branding_to_child` gives its reps.
         cur.execute("""
             INSERT INTO affiliate_branding (
                 account_id, brand_display_name, logo_url, email_logo_url,
@@ -1058,7 +1062,9 @@ def update_branding(
                 contact_line1, contact_line2, website_url,
                 branding_override, updated_at
             ) VALUES (
-                %s::uuid, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, NOW()
+                %s::uuid,
+                COALESCE(%s, (SELECT name FROM accounts WHERE id = %s::uuid)),
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE, NOW()
             )
             ON CONFLICT (account_id) DO UPDATE SET
                 brand_display_name   = COALESCE(EXCLUDED.brand_display_name, affiliate_branding.brand_display_name),
@@ -1081,7 +1087,7 @@ def update_branding(
                 contact_line1, contact_line2, website_url
         """, (
             company_id,
-            body.brand_display_name, body.logo_url, body.email_logo_url,
+            body.brand_display_name, company_id, body.logo_url, body.email_logo_url,
             body.footer_logo_url, body.email_footer_logo_url,
             body.primary_color, body.accent_color, body.rep_photo_url,
             body.contact_line1, body.contact_line2, body.website_url,
