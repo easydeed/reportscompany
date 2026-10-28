@@ -10,9 +10,11 @@
  * - Key metrics from the report
  */
 
-// Default TrendyReports brand colors
+import { deriveBrandTokens } from "./brand-tokens";
+
+// Default TrendyReports brand colour. The accent is no longer read: Design's
+// stories (5th package) dropped it with the gradient it was the far end of.
 const DEFAULT_PRIMARY_COLOR = "#4F46E5";
-const DEFAULT_ACCENT_COLOR = "#F26B2B";
 
 /**
  * Escape HTML special characters to prevent XSS attacks.
@@ -45,12 +47,15 @@ function sanitizeUrl(url: string | null | undefined): string {
  * All brand values are sanitized to prevent XSS
  */
 function injectBrand(html: string, brand: any): string {
-  if (!brand) return html;
+  // No brand still gets the tokens: the templates read every one of them.
+  brand = brand || {};
 
   // Sanitize color values - only allow valid hex colors
   const colorRegex = /^#[0-9A-Fa-f]{6}$/;
   const primaryColor = colorRegex.test(brand.primary_color) ? brand.primary_color : DEFAULT_PRIMARY_COLOR;
-  const accentColor = colorRegex.test(brand.accent_color) ? brand.accent_color : DEFAULT_ACCENT_COLOR;
+  // The brand is a FILL and never moves; every text use is a derived ink, the
+  // same derivation as the reports (lib/brand-tokens.ts ports themes.py).
+  const t = deriveBrandTokens(primaryColor);
   
   // Sanitize text values
   const brandName = escapeHtml(brand.display_name) || "TrendyReports";
@@ -70,8 +75,11 @@ function injectBrand(html: string, brand: any): string {
   const colorOverride = `
     <style>
       :root {
-        --pct-blue: ${primaryColor};
-        --pct-accent: ${accentColor};
+        --pct-blue: ${t.primary};
+        --pct-on: ${t.onPrimary};
+        --pct-ink: ${t.primaryInk};
+        --pct-tint: ${t.tint};
+        --pct-on-dark: ${t.primaryOnDark};
       }
     </style>
   `;
@@ -205,7 +213,7 @@ function statsPairs(
   heroValue: string,
   heroLabel: string,
   sub: string,
-  stats: [string, string, string, string]
+  cells: Array<[string, string]>
 ): Record<string, string> {
   return {
     "{{market_name}}": ctx.market,
@@ -216,11 +224,28 @@ function statsPairs(
     "{{hero_size}}": heroPx(heroValue),
     "{{hero_label}}": escapeHtml(heroLabel),
     "{{hero_sub_html}}": heroSub(sub),
-    "{{stat_1}}": stats[0],
-    "{{stat_2}}": stats[1],
-    "{{stat_3}}": stats[2],
-    "{{stat_4}}": stats[3],
+    "<!-- STAT_CELLS -->": statCells(cells),
   };
+}
+
+/**
+ * The cells under the hero: four as a 2×2, three or fewer in one row.
+ *
+ * EVERY CELL IS A METRIC THE REPORT COMPUTES. A dash means "missing this
+ * time" — the feed had nothing for it on this run — never "this report does
+ * not calculate it". The first version shipped five cells that read a dash on
+ * every story (under $1M, detached, over 30 days, price cuts, and closed
+ * sales' price per square foot): none has a producer in report_builders.py,
+ * so the cell could only ever be empty, and a permanent dash reads as broken.
+ */
+function statCells(cells: Array<[string, string]>): string {
+  if (cells.length === 0) return "";
+  const cols = cells.length === 4 ? 2 : cells.length;
+  const size = cols === 2 ? 88 : 72;
+  const items = cells.map(([value, label]) =>
+    `<div style="background:#F8FAFC;border:2px solid #ECEAE3;padding:40px 36px"><div style="font-size:${size}px;font-weight:800;letter-spacing:-.03em;line-height:1">${value}</div><div style="margin-top:14px;font-size:25px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748B">${escapeHtml(label)}</div></div>`
+  ).join("");
+  return `<div style="margin-top:40px;display:grid;grid-template-columns:repeat(${cols},1fr);gap:24px">${items}</div>`;
 }
 
 /**
@@ -242,10 +267,10 @@ export function buildSocialMarketSnapshotHtml(templateHtml: string, data: any): 
     "Median sale price",
     "",
     [
-      formatNumber(counts.Closed),
-      formatNumber(present(metrics.avg_dom) ? Math.round(metrics.avg_dom) : null),
-      saleToList(metrics),
-      present(moi) ? formatDecimal(moi) : "—",
+      [formatNumber(counts.Closed), "Homes sold"],
+      [formatNumber(present(metrics.avg_dom) ? Math.round(metrics.avg_dom) : null), "Days to sell"],
+      [saleToList(metrics), "Sale to list"],
+      [present(moi) ? formatDecimal(moi) : "—", "Months supply"],
     ]
   ), data.brand);
 }
@@ -256,7 +281,11 @@ export function buildSocialMarketSnapshotHtml(templateHtml: string, data: any): 
 export function buildSocialNewListingsHtml(templateHtml: string, data: any): string {
   const ctx = reportContext(data);
   const { metrics, counts } = ctx;
-  const n = counts.NewListings ?? metrics.new_listings_count ?? null;
+  // `counts.Active` IS the new-listings count: build_new_listings_result emits
+  // the listings that came to market in the window as Active. The first version
+  // read `counts.NewListings`, which only the Snapshot builder emits, so this
+  // story's hero number was a dash on every run.
+  const n = counts.Active ?? null;
   const count = formatNumber(n);
   return fill(templateHtml, statsPairs(
     ctx,
@@ -265,10 +294,9 @@ export function buildSocialNewListingsHtml(templateHtml: string, data: any): str
     "New listings",
     "",
     [
-      formatCurrency(metrics.median_list_price),
-      pricePerSqft(metrics),
-      "—",
-      "—",
+      [formatCurrency(metrics.median_list_price), "Median asking"],
+      [pricePerSqft(metrics), "Per sq ft"],
+      [formatNumber(present(metrics.avg_dom) ? Math.round(metrics.avg_dom) : null), "Days on market"],
     ]
   ), data.brand);
 }
@@ -287,10 +315,9 @@ export function buildSocialClosedHtml(templateHtml: string, data: any): string {
     "Homes sold",
     "",
     [
-      formatCurrency(metrics.median_close_price),
-      pricePerSqft(metrics),
-      formatNumber(present(metrics.avg_dom) ? Math.round(metrics.avg_dom) : null),
-      saleToList(metrics),
+      [formatCurrency(metrics.median_close_price), "Median sale"],
+      [formatNumber(present(metrics.avg_dom) ? Math.round(metrics.avg_dom) : null), "Days to sell"],
+      [saleToList(metrics), "Sale to list"],
     ]
   ), data.brand);
 }
@@ -301,7 +328,11 @@ export function buildSocialClosedHtml(templateHtml: string, data: any): string {
 export function buildSocialInventoryHtml(templateHtml: string, data: any): string {
   const ctx = reportContext(data);
   const { metrics, counts, r } = ctx;
-  const active = counts.Active ?? null;
+  // `metrics.total_active` — everything for sale, the months-of-supply
+  // numerator and the Inventory email's hero. NOT `counts.Active`, which is the
+  // listings TABLE's population (only those listed inside the window), so
+  // "N homes are for sale" over it was a false sentence.
+  const active = present(metrics.total_active) ? metrics.total_active : null;
   const closed = counts.Closed ?? 0;
   const lookback = r.lookback_days || 30;
   const moi = present(metrics.months_of_inventory)
@@ -314,12 +345,13 @@ export function buildSocialInventoryHtml(templateHtml: string, data: any): strin
     count === "—" ? `Homes for sale in ${ctx.city}.` : `${count} homes are for sale in ${ctx.city}.`,
     count,
     "Active listings",
-    present(moi) ? `${formatDecimal(moi)} months of supply` : "",
+    "",
     [
-      formatCurrency(metrics.median_list_price),
-      formatNumber(present(days) ? Math.round(days) : null),
-      "—",
-      "—",
+      // Not the median asking price: build_inventory_result computes it over
+      // the windowed listings, a different set from the hero's.
+      [formatNumber(metrics.new_this_month), "New this month"],
+      [formatNumber(present(days) ? Math.round(days) : null), "Days on market"],
+      [present(moi) ? formatDecimal(moi) : "—", "Months supply"],
     ]
   ), data.brand);
 }
@@ -388,7 +420,7 @@ export function buildSocialPriceBandsHtml(templateHtml: string, data: any): stri
     hero,
     label ? `of listings are ${label}` : "of listings",
     top && share != null ? `${formatNumber(top.count)} of ${formatNumber(total)} homes` : "",
-    ["—", "—", "—", "—"]
+    []
   );
   let html = templateHtml;
   for (const [key, value] of Object.entries(pairs)) {

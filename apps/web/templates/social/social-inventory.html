@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=block" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  :root { --pct-blue: #7C3AED; --pct-accent: #F26B2B; }
+  :root { --pct-blue: #4F46E5; }
   html, body {
     width: 1080px; height: 1920px; overflow: hidden; background: #fff;
     font-family: "Plus Jakarta Sans", -apple-system, Helvetica, Arial, sans-serif;
@@ -19,26 +19,26 @@
 </head>
 <body>
 <div style="position:relative;width:1080px;height:1920px;display:flex;flex-direction:column">
-  <div style="height:120px;background:var(--pct-blue);display:flex;align-items:center;justify-content:space-between;padding:0 72px;color:#ffffff">
+  <div style="height:120px;background:var(--pct-blue);display:flex;align-items:center;justify-content:space-between;padding:0 72px;color:var(--pct-on)">
     <div style="font-size:34px;font-weight:800;letter-spacing:-.02em">{{brand_name}}</div>
     <div style="font-size:24px;font-weight:600;letter-spacing:.08em;text-transform:uppercase">Active Inventory</div>
   </div>
   <div style="padding:72px 72px 0;flex:1">
     <div style="font-size:26px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B">{{market_name}} · {{period_label}}</div>
     <h1 style="margin-top:22px;font-size:76px;line-height:1.08;font-weight:800;letter-spacing:-.035em;text-wrap:balance">{{headline}}</h1>
-    <div style="margin-top:56px;background:color-mix(in srgb, var(--pct-blue) 8%, #fff);padding:48px 52px">
-      <div style="font-size:{{hero_size}}px;line-height:.95;font-weight:800;letter-spacing:-.04em;color:var(--pct-blue)">{{hero_value}}</div>
+    <div style="margin-top:56px;background:var(--pct-tint);padding:48px 52px">
+      <div style="font-size:{{hero_size}}px;line-height:.95;font-weight:800;letter-spacing:-.04em;color:var(--pct-ink)">{{hero_value}}</div>
       <div style="margin-top:22px;font-size:34px;font-weight:600;color:#334155">{{hero_label}}</div>
       {{hero_sub_html}}
     </div>
-    <div style="margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><div style="background:#F8FAFC;border:2px solid #ECEAE3;padding:40px 36px"><div style="font-size:88px;font-weight:800;letter-spacing:-.03em;line-height:1">{{stat_1}}</div><div style="margin-top:14px;font-size:25px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748B">Median asking</div></div><div style="background:#F8FAFC;border:2px solid #ECEAE3;padding:40px 36px"><div style="font-size:88px;font-weight:800;letter-spacing:-.03em;line-height:1">{{stat_2}}</div><div style="margin-top:14px;font-size:25px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748B">Days on market</div></div><div style="background:#F8FAFC;border:2px solid #ECEAE3;padding:40px 36px"><div style="font-size:88px;font-weight:800;letter-spacing:-.03em;line-height:1">{{stat_3}}</div><div style="margin-top:14px;font-size:25px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748B">Over 30 days</div></div><div style="background:#F8FAFC;border:2px solid #ECEAE3;padding:40px 36px"><div style="font-size:88px;font-weight:800;letter-spacing:-.03em;line-height:1">{{stat_4}}</div><div style="margin-top:14px;font-size:25px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#64748B">Price cuts</div></div></div>
+    <!-- STAT_CELLS -->
   </div>
   <div style="position:absolute;left:0;right:0;bottom:0;height:260px;background:#0F172A;display:flex;align-items:center;justify-content:space-between;padding:0 72px;color:#fff">
     <div style="display:flex;align-items:center;gap:28px">
       {{#if rep_photo_url}}
-      <img src="{{rep_photo_url}}" alt="" style="width:120px;height:120px;border-radius:60px;object-fit:cover;border:5px solid var(--pct-accent)">
+      <img src="{{rep_photo_url}}" alt="" style="width:120px;height:120px;border-radius:60px;object-fit:cover;border:5px solid var(--pct-on-dark)">
       {{else}}
-      <div style="width:120px;height:120px;border-radius:60px;background:var(--pct-blue);border:5px solid var(--pct-accent);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:#ffffff">{{initials}}</div>
+      <div style="width:120px;height:120px;border-radius:60px;background:var(--pct-blue);border:5px solid var(--pct-on-dark);display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:700;color:var(--pct-on)">{{initials}}</div>
       {{/if}}
       <div>
         {{#if contact_line1}}<div style="font-size:38px;font-weight:700;letter-spacing:-.02em">{{contact_line1}}</div>{{/if}}
