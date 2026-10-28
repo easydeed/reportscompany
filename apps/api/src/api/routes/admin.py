@@ -4,8 +4,9 @@ Provides system-wide metrics, schedules, reports, and email logs for platform op
 Requires ADMIN role.
 """
 from fastapi import APIRouter, HTTPException, Request, Query, Depends, BackgroundTasks
-from pydantic import BaseModel, EmailStr, constr, field_validator
+from pydantic import BaseModel, EmailStr, conint, constr, field_validator
 from typing import Optional, List, Dict, Any
+from uuid import UUID
 from datetime import datetime, timedelta
 import calendar as _calendar
 import secrets
@@ -1036,6 +1037,13 @@ def create_affiliate(
             )
             if not cur.fetchone():
                 raise HTTPException(status_code=400, detail="Invalid company_id: not a Title Company")
+            # A rep under a company holds one of its seats, whoever creates
+            # it. Locks the company row; refused when every seat is held.
+            from ..services import seats
+            try:
+                seats.reserve_seat(cur, body.company_id)
+            except seats.SeatsFull as e:
+                raise HTTPException(status_code=409, detail={"error": "seats_full", "message": str(e)})
 
         slug = body.company_name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
         cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
@@ -1050,6 +1058,8 @@ def create_affiliate(
         """, (body.company_name, slug, body.plan_slug,
               body.company_id if body.company_id else None))
         account_id = cur.fetchone()[0]
+        if body.company_id:
+            seats.open_seat(cur, body.company_id, account_id)
 
         # Branding: copy from parent company if linked, otherwise use provided values
         if body.company_id:
@@ -1564,6 +1574,36 @@ def update_company(
 
         return {"ok": True, "account_id": row[0], "name": row[1],
                 "is_active": row[2], "plan_slug": row[3]}
+
+
+class RepSeatsRequest(BaseModel):
+    #: None takes the company off seats: nothing enforced.
+    rep_seats: Optional[conint(ge=0)] = None
+
+
+@router.put("/companies/{company_id}/rep-seats")
+def set_company_rep_seats(
+    company_id: UUID,
+    body: RepSeatsRequest,
+    _admin: dict = Depends(get_admin_user),
+):
+    """Set how many rep seats a title company has (platform admin only).
+
+    Companies are billed outside the app, so this is the only way a seat count
+    changes. The count is a business decision; nothing sets one by default.
+    Refused below the seats already held (pending invites included).
+    """
+    from ..services import seats
+    with db_conn() as (conn, cur):
+        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
+        try:
+            result = seats.set_seat_count(cur, str(company_id), body.rep_seats)
+        except seats.SeatNotFound:
+            raise HTTPException(status_code=404, detail="Company not found")
+        except seats.SeatConflict as e:
+            raise HTTPException(status_code=409, detail=str(e))
+        conn.commit()
+    return {"ok": True, "company_id": str(company_id), **result}
 
 
 class InviteCompanyAdminRequest(BaseModel):

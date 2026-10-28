@@ -8,12 +8,14 @@ and metrics for Title Company administrators.
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel, EmailStr, constr, field_validator
 from typing import Optional
+from uuid import UUID
 import logging
 
 from ..db import db_conn, set_rls, fetchall_dicts, fetchone_dict
 from ..verification import block_unverified_send
 from ..deps.company import get_company_admin
-from ..services.email import send_role_invite_email
+from ..services.email import send_rep_change_notice_email, send_role_invite_email
+from ..services import seats
 from ..services.usage import get_full_plan_usage
 from ..services.invite_service import (
     copy_branding_to_child,
@@ -42,6 +44,21 @@ class InviteRepRequest(BaseModel):
 
 class ResendRepInviteRequest(BaseModel):
     email: EmailStr
+
+
+class ReassignSeatRequest(BaseModel):
+    """The rep who takes the seat (invited here), and where the agents go.
+
+    `agents_to_rep_id` empty: the agents move with the seat, to the new rep.
+    Set: another rep of this company who holds a seat takes them instead.
+    """
+    name: str
+    email: EmailStr
+    first_name: str
+    last_name: str = ""
+    phone: Optional[str] = None
+    title: Optional[str] = None
+    agents_to_rep_id: Optional[UUID] = None
 
 
 # Hex colour pattern, identical to routes/account.py:74. Written straight into
@@ -146,6 +163,8 @@ def get_overview(company: dict = Depends(get_company_admin)):
         """, (company_id,))
         cols = [d.name for d in cur.description]
         raw_reps = [dict(zip(cols, row)) for row in cur.fetchall()]
+        idle_reps = seats.idle_rep_ids(cur, company_id)
+        seat_block = seats.seat_summary(cur, company_id)
 
         reps = []
         for r in raw_reps:
@@ -164,6 +183,7 @@ def get_overview(company: dict = Depends(get_company_admin)):
                 "reports_this_month": r["reports_this_month"],
                 "last_active": r["last_activity"].isoformat() if r.get("last_activity") else None,
                 "status": status,
+                "idle": r["rep_id"] in idle_reps,
             })
 
         total_reps = len(reps)
@@ -354,7 +374,6 @@ def get_overview(company: dict = Depends(get_company_admin)):
             "total_agents": total_agents,
             "reports_this_month": total_reports,
             "active_agents_30d": active_agents_30d,
-            "total_agent_seats": total_agents,
             "reps_change": reps_change,
             "agents_change": agents_change,
             "reports_change_pct": reports_change_pct,
@@ -366,6 +385,10 @@ def get_overview(company: dict = Depends(get_company_admin)):
             "leads_this_month": leads_this_month,
             "leads_last_month": leads_last_month,
         },
+        # `{total, held, open, pending, idle}`, or null when the company is
+        # not on seats. Replaces `total_agent_seats`, which was the agent count
+        # under a seat name: agents take no seat.
+        "seats": seat_block,
         "reps": reps,
         "activity": activity,
     }
@@ -421,6 +444,7 @@ def list_reps(company: dict = Depends(get_company_admin)):
         """, (company_id,))
         cols = [d.name for d in cur.description]
         rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+        idle_reps = seats.idle_rep_ids(cur, company_id)
 
     reps = []
     for r in rows:
@@ -442,6 +466,9 @@ def list_reps(company: dict = Depends(get_company_admin)):
             "total_reports": r["total_reports"],
             "last_active": r["last_activity"].isoformat() if r.get("last_activity") else None,
             "joined_date": r["created_at"].isoformat() if r.get("created_at") else None,
+            # A joined rep holding a seat whose agents finished no market or
+            # property report in 30 days (`seats.idle_rep_ids`).
+            "idle": r["rep_id"] in idle_reps,
         })
 
     return {"reps": reps}
@@ -710,6 +737,9 @@ def invite_rep(
                 action="invite a rep",
                 to_emails=[body.email] if body.email else None,
             )
+            # A pending invite holds a seat. Locks the company row first, so a
+            # second invite for the last seat waits and then sees this one.
+            seats.reserve_seat(cur, company_id)
             result = create_invited_user(
                 cur,
                 role="title_rep",
@@ -724,6 +754,7 @@ def invite_rep(
             copy_branding_to_child(
                 cur, source_account_id=company_id, target_account_id=result["account_id"]
             )
+            seats.open_seat(cur, company_id, result["account_id"])
             ctx = get_inviter_context(
                 cur, account_id=company_id, inviter_user_id=_company_inviter_user_id(request)
             )
@@ -745,6 +776,8 @@ def invite_rep(
             "rep_account_id": rep_account_id,
             "email_queued": True,
         }
+    except seats.SeatsFull as e:
+        raise HTTPException(status_code=409, detail={"error": "seats_full", "message": str(e)})
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
     except HTTPException:
@@ -819,6 +852,152 @@ def resend_rep_invite(
             status_code=500,
             detail={"error": "resend_failed", "message": str(e)},
         )
+
+
+# ── 5b. Seats ────────────────────────────────────────────────────────────────
+#
+# Seats are REP seats (services/seats.py has the model and the compliance
+# line). Every handler passes the caller's company id into the service, which
+# puts it in the predicate of every rep it touches: a rep id from another
+# company is a 404, never a read or a write.
+
+@router.get("/seats")
+def get_seats(company: dict = Depends(get_company_admin)):
+    """The seat count, who holds what, and every past reassignment."""
+    company_id = company["company_account_id"]
+    with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
+        return {
+            "seats": seats.seat_summary(cur, company_id),
+            "history": seats.seat_history(cur, company_id),
+        }
+
+
+@router.post("/reps/{rep_id}/reassign")
+def reassign_rep_seat(
+    rep_id: UUID,
+    body: ReassignSeatRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    company: dict = Depends(get_company_admin),
+):
+    """Move a rep's seat to a new rep, and their agents with it.
+
+    One transaction: the new rep is invited into the seat, the agents move to
+    them (or to `agents_to_rep_id`), the leaving rep is switched off, and the
+    move is recorded. Each moved agent is told who their rep is now.
+    """
+    company_id = company["company_account_id"]
+    actor = _company_inviter_user_id(request)
+    rep_id = str(rep_id)
+    agents_to = str(body.agents_to_rep_id) if body.agents_to_rep_id else None
+    try:
+        with db_conn() as (conn, cur):
+            set_rls(cur, company_id)
+            # D-019: this sends an invite and one notice per agent, all in the
+            # company's name.
+            block_unverified_send(
+                cur, company_id,
+                action="reassign a rep seat",
+                to_emails=[body.email] + seats.agent_emails_for(cur, company_id, rep_id),
+            )
+            created = {}
+
+            def create_successor(cur):
+                result = create_invited_user(
+                    cur,
+                    role="title_rep",
+                    email=body.email,
+                    first_name=body.first_name.strip(),
+                    last_name=(body.last_name or "").strip(),
+                    phone=body.phone,
+                    job_title=body.title,
+                    account_name=body.name.strip(),
+                    parent_account_id=company_id,
+                )
+                copy_branding_to_child(
+                    cur, source_account_id=company_id, target_account_id=result["account_id"]
+                )
+                created.update(result)
+                return result["account_id"]
+
+            outcome = seats.reassign_seat(
+                cur,
+                company_id=company_id,
+                from_rep_id=rep_id,
+                create_successor=create_successor,
+                agents_to_rep_id=agents_to,
+                actor_user_id=actor,
+            )
+            ctx = get_inviter_context(cur, account_id=company_id, inviter_user_id=actor)
+            # The name and address the agents are told about: the new rep's,
+            # or the existing rep's when the company sent the agents there.
+            if outcome["agents_to_rep_id"] == outcome["successor_rep_id"]:
+                rep_name, rep_email = body.name.strip(), created["email"]
+            else:
+                cur.execute(
+                    """
+                    SELECT a.name, u.email FROM accounts a
+                      JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
+                      JOIN users u ON u.id = au.user_id
+                     WHERE a.id = %s::uuid AND a.parent_account_id = %s::uuid
+                     LIMIT 1
+                    """,
+                    (outcome["agents_to_rep_id"], company_id),
+                )
+                rep_name, rep_email = cur.fetchone()
+            conn.commit()
+    except seats.SeatNotFound:
+        raise HTTPException(status_code=404, detail="Rep not found under your company, or holds no seat.")
+    except seats.SeatConflict as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except ValueError as e:          # the new rep's email is already registered
+        raise HTTPException(status_code=409, detail=str(e))
+
+    background_tasks.add_task(
+        send_role_invite_email,
+        created["email"], ctx["inviter_name"], ctx["company_name"], created["token"],
+        invitee_first_name=body.first_name.strip(), role="title_rep",
+    )
+    for r in outcome["notice_recipients"]:
+        background_tasks.add_task(
+            send_rep_change_notice_email,
+            r["email"],
+            first_name=r["first_name"],
+            company_name=ctx["company_name"],
+            new_rep_name=rep_name,
+            new_rep_email=rep_email,
+        )
+    return {
+        "ok": True,
+        "new_rep_account_id": outcome["successor_rep_id"],
+        "agents_to_rep_id": outcome["agents_to_rep_id"],
+        "agents_moved": len(outcome["agents_moved"]),
+        "notices_queued": len(outcome["notice_recipients"]),
+    }
+
+
+@router.post("/reps/{rep_id}/cancel-invite")
+def cancel_rep_invite(
+    rep_id: UUID,
+    request: Request,
+    company: dict = Depends(get_company_admin),
+):
+    """Withdraw a rep invite that has not been accepted, freeing its seat."""
+    company_id = company["company_account_id"]
+    try:
+        with db_conn() as (conn, cur):
+            set_rls(cur, company_id)
+            seats.cancel_rep_invite(
+                cur, company_id=company_id, rep_id=str(rep_id),
+                actor_user_id=_company_inviter_user_id(request),
+            )
+            conn.commit()
+    except seats.SeatNotFound:
+        raise HTTPException(status_code=404, detail="Rep not found under your company, or holds no seat.")
+    except seats.SeatConflict as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    return {"ok": True}
 
 
 # ── 6. GET /branding ─────────────────────────────────────────────────────────
