@@ -1,0 +1,16 @@
+[
+  {
+    "name": "O1 the public report data carries the owner's name again",
+    "file": "apps/api/src/api/routes/mobile_reports.py",
+    "old": "        apn=property_data.get(\"apn\"),",
+    "new": "        apn=(property_data.get(\"apn\") or \"\") + (property_data.get(\"owner_name\") or \"\") or None,",
+    "test": "apps/api/tests/test_consumer_report_does_not_name_the_owner.py"
+  },
+  {
+    "name": "O2 the viewer labels an owner again",
+    "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+    "old": "    { label: 'Bedrooms', value: report.property.bedrooms || '--' },",
+    "new": "    { label: 'Owner', value: '--' },\n    { label: 'Bedrooms', value: report.property.bedrooms || '--' },",
+    "test": "apps/api/tests/test_consumer_report_does_not_name_the_owner.py"
+  }
+]
