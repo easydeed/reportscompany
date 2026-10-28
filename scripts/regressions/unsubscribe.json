@@ -47,5 +47,12 @@
     "old": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n",
     "new": "            headers={},\n",
     "test": "apps/api/tests/test_unsubscribe_end_to_end.py"
+  },
+  {
+    "name": "G4 the footer link's GET unsubscribes again, so a scanner opening it removes the contact",
+    "file": "apps/web/app/api/v1/email/unsubscribe/route.ts",
+    "old": "  landing.searchParams.set(\"status\", \"confirm\");\n  landing.searchParams.set(\"email\", email);\n  landing.searchParams.set(\"token\", token);\n  return NextResponse.redirect(landing);",
+    "new": "  await fetch(`${API_BASE}/v1/email/unsubscribe`, { method: \"POST\", body: JSON.stringify({ email, token }) });\n  landing.searchParams.set(\"status\", \"success\");\n  return NextResponse.redirect(landing);",
+    "test": "apps/api/tests/test_unsubscribe_end_to_end.py"
   }
 ]
