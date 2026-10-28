@@ -97,7 +97,15 @@ def _cta_button(url: str, label: str) -> str:
 
 
 def _email_base(content_html: str, preheader: str = "") -> str:
-    """Design's transactional shell around rows built by the helpers above."""
+    """Design's transactional shell around rows built by the helpers above.
+
+    THE LOGO IS AN IMAGE OF OUTLINED SHAPES, NOT TEXT. Design's lockup sets its
+    wordmark in Plus Jakarta Sans, which no mail client loads; as live text it
+    would draw in a system typeface. The PNGs in apps/web/public/email/ are
+    rendered from outlined paths (scripts/outline_lockup.py). The light one
+    shows by default and in Outlook; dark mode swaps in the dark one. Blocked
+    images show the alt text, styled for each scheme.
+    """
     app = _app_base()
     return f'''<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -122,6 +130,8 @@ def _email_base(content_html: str, preheader: str = "") -> str:
     .tr-body{{color:#D1D5DB !important;}}
     .tr-muted{{color:#9CA3AF !important;}}
     .tr-rule{{border-color:#374151 !important;}}
+    .tr-logo-l{{display:none !important;}}
+    .tr-logo-d{{display:block !important;max-height:none !important;}}
   }}
   @media only screen and (max-width:620px){{
     .tr-wrap{{width:100% !important;}}
@@ -135,7 +145,7 @@ def _email_base(content_html: str, preheader: str = "") -> str:
 <tr><td align="center" style="padding:24px 12px;">
 <!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="tr-wrap tr-card" style="width:600px;max-width:600px;background:#ffffff;border-collapse:collapse;border:1px solid #E4E2DA;">
-<tr><td class="tr-pad" style="padding:26px 28px 0;font-family:{_FONT};"><table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;"><tr><td valign="baseline" class="tr-ink" style="font-family:{_FONT};font-size:21px;font-weight:800;letter-spacing:-.04em;color:#0F172A;">Trendy</td><td width="6" style="width:6px;"></td><td valign="middle" bgcolor="#D1FAE5" style="background:#D1FAE5;border-radius:4px;padding:2px 7px;font-family:{_FONT};font-size:10.5px;font-weight:700;color:#065F46;">&#9650;&nbsp;Reports</td></tr></table></td></tr>
+<tr><td class="tr-pad" style="padding:26px 28px 0;font-family:{_FONT};"><img class="tr-logo-l" src="{_e(app)}/email/trendy-lockup-light@3x.png" width="124" height="24" alt="TrendyReports" style="display:block;width:124px;height:24px;border:0;font-family:{_FONT};font-size:16px;font-weight:800;color:#0F172A;"><!--[if !mso]><!--><img class="tr-logo-d" src="{_e(app)}/email/trendy-lockup-dark@3x.png" width="124" height="24" alt="TrendyReports" style="display:none;max-height:0;overflow:hidden;width:124px;height:24px;border:0;font-family:{_FONT};font-size:16px;font-weight:800;color:#F3F4F6;"><!--<![endif]--></td></tr>
 {content_html}
 <tr><td style="height:30px;line-height:30px;font-size:0;">&nbsp;</td></tr>
 <tr><td class="tr-pad tr-rule" style="padding:22px 28px 28px;border-top:1px solid #ECEAE3;font-family:{_FONT};"><p class="tr-muted" style="margin:0;font-size:12px;line-height:1.6;color:#64748B;">TrendyReports · {_e(PLATFORM_POSTAL_ADDRESS)} · <a href="{_e(app)}/app/help" class="tr-muted" style="color:#64748B;text-decoration:underline;">Help</a> · <a href="mailto:support@trendyreports.io" class="tr-muted" style="color:#64748B;text-decoration:underline;">Contact support</a></p></td></tr>
