@@ -292,9 +292,12 @@ def test_no_estimate_renders_words_rather_than_a_blank_or_a_zero():
     assert shown["formatted_current"] not in ("0", "0.0", "N/A", "")
 
 
-@pytest.mark.parametrize("label_block", [
-    "stats-bar-label", "mini-stat-label", "stat-block-label", "stat-card-label",
-])
+# `mini-stat-label`, `stat-block-label` and `stat-card-label` WERE HERE: the
+# MOI cells of the analytics, closed/inventory and price-bands layouts, which
+# no kind had rendered since those kinds moved to Design's page and which were
+# deleted on 2026-10-26. `stats-bar-label` is the snapshot's legacy page and
+# goes when the snapshot does (D-255).
+@pytest.mark.parametrize("label_block", ["stats-bar-label"])
 def test_every_market_surface_that_prints_the_number_prints_the_pace(label_block):
     """
     Rendered, not grepped. Each macro is checked by putting the pace label in

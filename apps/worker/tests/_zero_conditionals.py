@@ -65,7 +65,6 @@ EXEMPT = {
     "sqft": "0 sqft on a dwelling is bad data; land carries None",
     "baths": "0 baths is not a habitable dwelling — and D-106 means the "
              "market field is None today regardless",
-    "bathrooms": "as baths",
     "list_price": "a $0 list price is bad data, not a price",
     "close_price": "a $0 sale is bad data, not a sale",
     "price": "as list_price",
@@ -81,16 +80,11 @@ EXEMPT = {
     "list_to_sale_pct": "the producer cannot emit 0 — `_ratio_as_percent` "
                         "returns None for a zero or non-numeric ratio, so "
                         "falsy means absent and nothing else (D-178)",
-    "year_built": "year 0 is not a year",
-    "lot_size": "0 lot size is missing parcel data",
-    # Surface-specific. `beds` on the market report IS fixed (renders
-    # "Studio"); `property.bedrooms` is not, and deliberately:
-    # property_builder collapses None to 0 (`sitex_data.get("bedrooms") or 0`),
-    # so on that surface a 0 does not yet mean a studio and rendering "Studio"
-    # would invent data. Filed as D-109. This entry is here so the next person
-    # does not "fix" the template into inventing it.
-    "property.bedrooms": "D-109: property_builder collapses None to 0, so 0 "
-                         "does not mean studio on this surface yet",
+    # `bathrooms`, `year_built`, `lot_size` and `property.bedrooms` WERE HERE,
+    # excusing truthiness tests in the nine-page property templates and the
+    # dead market layouts — all deleted 2026-10-26, so nothing relies on them.
+    # D-109's warning (a property 0 bedrooms is not yet a studio) still holds
+    # for any template that prints the field again.
 }
 
 

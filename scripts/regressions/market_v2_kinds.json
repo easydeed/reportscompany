@@ -168,20 +168,6 @@
     "test": "apps/worker/tests/test_pdf_contrast.py::test_the_market_surface_has_no_baselined_failure_left tests/test_market_token_mapping.py::test_the_market_baseline_is_spent"
   },
   {
-    "name": "D-107's four-of-six band slice comes back in pricebands_layout",
-    "file": "apps/worker/src/worker/templates/market/_base/macros.jinja2",
-    "old": "    {% for band in price_bands %}\n    <div class=\"stat-card\">",
-    "new": "    {% for band in price_bands[:4] %}\n    <div class=\"stat-card\">",
-    "test": "apps/worker/tests/test_market_layout_map.py::test_the_four_of_six_band_slice_is_only_where_it_is_recorded"
-  },
-  {
-    "name": "the dead slice is removed without the record being updated",
-    "file": "apps/worker/src/worker/templates/market/_base/macros.jinja2",
-    "old": "  {% for band in price_bands[:4] %}\n  <div class=\"stat-block",
-    "new": "  {% for band in price_bands %}\n  <div class=\"stat-block",
-    "test": "apps/worker/tests/test_market_layout_map.py::test_the_four_of_six_band_slice_is_only_where_it_is_recorded"
-  },
-  {
     "name": "inventory's Status column loses its exclusive boundary, so day 7 is not New",
     "file": "apps/worker/src/worker/market_builder.py",
     "old": "                         and dom <= V2_NEW_WITHIN_DAYS)",

@@ -7,9 +7,11 @@ and the documents built on it say **"everything in `_base/` renders
 nowhere"** — unqualified — and that sentence is in the handover that went to
 Design. It has been cited three times as a reason to delete.
 
-THERE ARE TWO `_base/` DIRECTORIES.
+THERE WERE TWO `_base/` DIRECTORIES; ONE IS LEFT.
 
-    templates/property/_base/   dead: nothing reaches it
+    templates/property/_base/   was dead: nothing reached it. DELETED
+                                2026-10-27 (D-131), after every surface
+                                rendered byte-identical without it.
     templates/market/_base/     LIVE: `market/market.jinja2` is one line,
                                 `{% extends '_base/base.jinja2' %}`, and that
                                 base imports `_base/macros.jinja2`. It is the

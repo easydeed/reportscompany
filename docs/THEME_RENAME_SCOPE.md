@@ -191,12 +191,12 @@ files in `RETIRED_NAME_ALLOWED`, each with its reason, and fails on any *other* 
 |---|---|---|
 | `apps/worker/tests/pdf_contrast_baseline.txt` | 0 entries: linen 0, harbor 0, **atlas 0**, **market 0** *(was 26, all linen's, until 2026-10-26 — linen moved onto the shared architecture and its old layout's failures went with it; was 55 before that; D-205 and D-206 retired 12 — the cover footer band and the gradient-clipped title, both fixed on 2026-10-21)* *(was 81; D-177 closed 20 accent-on-tint failures with no template change, and wiring `new_listings` and `price_bands` onto Design's page closed the remaining 6 badge rows by removing the tinted-chip construct)* | **a `sed` on the family column** — the key is `property__<theme>` |
 | `apps/worker/tests/golden/color_roles.json` | 3 `property_themes` keys | regenerate (`regen_color_roles_golden.py`) |
-| `scripts/template_color_baseline.txt` | 16 lines naming a `property/<theme>/` path *(was 29 until 2026-10-26, when harbor's and linen's self-contained templates went; was 34 before that; the five `atlas/` rows were retired on 2026-10-21 — they had been stale since atlas moved onto `_v2/` on 2026-10-06 and nothing had run `--write-baseline` to notice)* | **a `sed` on the path** |
+| `scripts/template_color_baseline.txt` | 0 lines naming a `property/<theme>/` path *(was 16 until 2026-10-27, when the dead `<theme>.jinja2` files were deleted with D-131's tree; was 29 until 2026-10-26, when harbor's and linen's self-contained templates went; was 34 before that; the five `atlas/` rows were retired on 2026-10-21 — they had been stale since atlas moved onto `_v2/` on 2026-10-06 and nothing had run `--write-baseline` to notice)* | **a `sed` on the path** |
 
 **Every remaining row is on the property surface.** The market surface reached zero baselined
 contrast failures on 2026-10-08, so a theme rename now touches nothing market-keyed at all.
 
-This is the one place a rename is mechanical-but-fiddly: **16 baseline rows** key on the theme name,
+This is the one place a rename was mechanical-but-fiddly: **0 baseline rows** key on the theme name now (16 until the dead tree went on 2026-10-27),
 and both files are ratchets whose whole point is that they may only shrink. A rename is a pure
 substitution in both — the measured colours and selectors are unchanged — but it must be done as a
 substitution, **not** by regenerating, or the diff stops being evidence of anything.
@@ -231,7 +231,7 @@ ratchet.
 
 **Measured on the first rewire: bold went from 37 baseline rows to ZERO.** The redesigned document
 has no baselined contrast failure on any of the six brands — the first property theme in this
-project with none — so the rewire *shrank* the ratchet by a third. **55** theme-keyed rows then (16 now),
+project with none — so the rewire *shrank* the ratchet by a third. **55** theme-keyed rows then (0 now),
 against 152 before bold moved; the three live themes carry 0 between them since harbor and
 linen moved onto the shared architecture on 2026-10-26 (the 26 before that were all
 elegant's — `harbor` reached zero on 2026-10-21).

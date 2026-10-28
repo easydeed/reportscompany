@@ -256,13 +256,18 @@ def test_the_baseline_is_not_empty():
     65 -> 52 on 2026-10-26, the same non-progress again: the 13 entries named
     the last two self-contained property entry files, whose literals went when
     both moved onto `_v2/report.jinja2`. The shared file added none.
+
+    52 -> 32 on 2026-10-26, non-progress once more: the 20 entries named
+    `templates/property/_base/` and the three self-contained `<theme>.jinja2`
+    files (D-131), deleted because they rendered nowhere.
     """
     n = sum(lint.read_baseline().values())
     assert n > 0, "nothing baselined — has the rule stopped matching?"
-    assert n == 52, (
-        f"the baseline holds {n} entries, not the 52 left after the last "
-        f"self-contained entry files' rows were retired on 2026-10-26. Fewer is progress: update "
-        f"this number. More is a new violation that was baselined instead of fixed."
+    assert n == 32, (
+        f"the baseline holds {n} entries, not the 32 left after the dead "
+        f"property tree's rows were retired on 2026-10-26. Fewer is progress: "
+        f"update this number. More is a new violation that was baselined "
+        f"instead of fixed."
     )
 
 

@@ -87,12 +87,16 @@ def test_the_market_base_is_live(reach):
     )
 
 
-def test_the_property_base_is_dead(reach):
-    """D-131's actual claim, scoped. Still true, and now derived."""
-    dead = reach["property"]["dead_files"]
-    assert "_base/base.jinja2" in dead and "_base/_macros.jinja2" in dead, (
-        f"templates/property/_base/ is reachable after all: dead set is {dead}"
-    )
+def test_the_property_base_is_gone_and_nothing_is_dead(reach):
+    """D-131's claim, resolved. `templates/property/_base/` and the three
+    self-contained `<theme>.jinja2` files rendered nowhere; they were deleted
+    on 2026-10-26 after every surface rendered byte-identical without them.
+    What holds now is that the property tree has no dead file left — a new
+    one would be the same drift again."""
+    from pathlib import Path as _P
+    assert not (_P(REPO) / "apps/worker/src/worker/templates/property/_base").exists()
+    assert reach["property"]["dead_files"] == [], (
+        f"dead property templates again: {reach['property']['dead_files']}")
     assert not reach["property"]["_base_is_live"]
 
 
