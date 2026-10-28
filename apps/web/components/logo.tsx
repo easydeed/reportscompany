@@ -10,6 +10,12 @@ interface LogoProps {
  * Ticker lockup, inlined so it uses the page's Plus Jakarta Sans
  * (an <img> of the SVG would not see next/font). The public SVG files
  * stay in /public for the favicon and direct URLs.
+ *
+ * The pill is 98 wide, not Design's 86: in Plus Jakarta Sans "Reports" ends
+ * at x 237.7, past an 86-wide pill and the 236 viewBox, so the "s" was cut
+ * off. 98 gives it the same 10 units on the right as the triangle has on the
+ * left. Email cannot use this (no web font): it uses the outlined PNGs in
+ * /public/email, made by scripts/outline_lockup.py.
  */
 function Lockup({ dark, className }: { dark: boolean; className?: string }) {
   const ink = dark ? "#FFFFFF" : "#0F172A"
@@ -18,7 +24,7 @@ function Lockup({ dark, className }: { dark: boolean; className?: string }) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 236 48"
+      viewBox="0 0 248 48"
       role="img"
       aria-label="Trendy Reports"
       className={cn("h-[26px] w-auto", className)}
@@ -27,7 +33,7 @@ function Lockup({ dark, className }: { dark: boolean; className?: string }) {
       <text x="0" y="38" fontSize="44" fontWeight="800" letterSpacing="-2" fill={ink}>
         Trendy
       </text>
-      <rect x="150" y="8" width="86" height="28" rx="6" fill={tag} />
+      <rect x="150" y="8" width="98" height="28" rx="6" fill={tag} />
       <g transform="translate(160 14) scale(1.15)">
         <path d="M7 2 L12 9 L2 9 Z" fill={tagInk} />
       </g>
