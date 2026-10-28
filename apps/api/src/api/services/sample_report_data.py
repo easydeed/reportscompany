@@ -458,63 +458,6 @@ _BUILDERS = {
 }
 
 
-# Stub AI narratives per report type so MarketReportBuilder doesn't try to
-# call OpenAI for sample renders. Tone matches production output.
-_SAMPLE_AI_INSIGHTS = {
-    "market_snapshot": (
-        "Conditions in {city} remain decisively in sellers' favor this period. "
-        "Active inventory is light at 89 homes against 42 recent closings, "
-        "translating to roughly 2.8 months of supply — well below the 5–6 month "
-        "balance point. Median sale prices are holding near $1.39M with a "
-        "close-to-list ratio above 98%, signaling that well-priced homes are "
-        "moving with minimal negotiation. Days on market continue to compress "
-        "compared with the prior period, particularly in the entry and move-up "
-        "tiers where buyer competition remains strongest."
-    ),
-    "new_listings": (
-        "Thirty-eight fresh listings entered the {city} market this period, a "
-        "healthy refresh of inventory across the price spectrum. The median "
-        "asking price of $1.32M is consistent with the broader market trend, "
-        "and most of the new supply is concentrated in the move-up tier where "
-        "buyer demand remains active."
-    ),
-    "new_listings_gallery": (
-        "{city} added 30 new listings this period. Inventory skews toward the "
-        "$1M–$2M range, with several well-positioned offerings in the move-up "
-        "tier that should generate immediate interest."
-    ),
-    "closed": (
-        "Twenty-eight sales closed in {city} this period at a strong 99.2% "
-        "close-to-list ratio. Median sale price reached $1.27M with an average "
-        "32 days on market — both indicators of a market where pricing accuracy "
-        "is being rewarded with quick, full-price outcomes."
-    ),
-    "inventory": (
-        "{city}'s active inventory sits at 30 homes — a balanced read at "
-        "roughly 3.2 months of supply. The market is neither tight nor flooded, "
-        "giving buyers reasonable selection while still rewarding sellers who "
-        "price competitively."
-    ),
-    "featured_listings": (
-        "This curated selection highlights eight of {city}'s most distinctive "
-        "current offerings, ranging from $6.5M to $9.4M. Each property reflects "
-        "the qualities defining the upper end of this market: scale, design, "
-        "and location."
-    ),
-    "price_bands": (
-        "Inventory in {city} is distributed across four clear price bands, with "
-        "the Move-Up tier ($1.5M–$3M) carrying the largest share at 58 homes. "
-        "The Luxury band remains thin at 22 listings, suggesting continued "
-        "scarcity at the top end."
-    ),
-    "open_houses": (
-        "Eighteen open houses are scheduled across {city} this weekend, "
-        "concentrated in the $1.3M–$2.5M range where weekend foot traffic "
-        "typically converts strongest into offers."
-    ),
-}
-
-
 def get_sample_data(
     report_type: str,
     *,
@@ -533,12 +476,9 @@ def get_sample_data(
     Returns:
         A dict shaped like `report_builders.build_*_result()` output, ready to
         be merged with branding/theme keys and passed to `MarketReportBuilder`.
-        Includes a stub `ai_insights` so the builder skips its OpenAI call.
     """
     builder = _BUILDERS.get(report_type, _market_snapshot)
     data = builder(city, lookback_days)
-    ai = _SAMPLE_AI_INSIGHTS.get(report_type, _SAMPLE_AI_INSIGHTS["market_snapshot"])
-    data["ai_insights"] = ai.format(city=city)
     return data
 
 

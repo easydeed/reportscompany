@@ -63,28 +63,18 @@ TEMPLATES = REPO / "apps/worker/src/worker/templates"
 # in advance to pre-clear a defect that has not been filed.
 EXEMPT = {
     "sqft": "0 sqft on a dwelling is bad data; land carries None",
-    "baths": "0 baths is not a habitable dwelling — and D-106 means the "
-             "market field is None today regardless",
     "list_price": "a $0 list price is bad data, not a price",
     "close_price": "a $0 sale is bad data, not a sale",
     "price": "as list_price",
     "price_per_sqft": "a market with no sales has nothing to divide by, so "
                       "the metric is None rather than 0",
-    # D-178 replaced the raw key with a normalised one, and the exemption's
-    # ARGUMENT got stronger rather than being carried over. It used to be "a 0
-    # ratio means every sale closed at $0" — an argument about plausibility,
-    # which is the weakest kind on this list. `_ratio_as_percent` now returns
-    # None for anything zero or non-numeric, so the value reaching the template
-    # CANNOT be 0: the truthiness test is safe by construction, not by the
-    # input being unlikely.
-    "list_to_sale_pct": "the producer cannot emit 0 — `_ratio_as_percent` "
-                        "returns None for a zero or non-numeric ratio, so "
-                        "falsy means absent and nothing else (D-178)",
     # `bathrooms`, `year_built`, `lot_size` and `property.bedrooms` WERE HERE,
     # excusing truthiness tests in the nine-page property templates and the
     # dead market layouts — all deleted 2026-10-26, so nothing relies on them.
     # D-109's warning (a property 0 bedrooms is not yet a studio) still holds
     # for any template that prints the field again.
+    # `baths` and `list_to_sale_pct` (D-178) went on 2026-10-28 with the legacy
+    # market page, the last template that tested either for truthiness.
 }
 
 

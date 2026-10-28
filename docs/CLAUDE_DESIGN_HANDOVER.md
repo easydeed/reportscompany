@@ -78,8 +78,11 @@ was updated, which is the mechanism working)* —
 the ratio got *worse*, because the cut deleted one live file and one dead file per retired
 theme while `templates/property/_base/` (2,821 lines, none of it rendered) stayed exactly where it was.
 
-> **`templates/market/_base/` IS LIVE and is a different directory.** `market/market.jinja2` is one
-> line — `{% extends '_base/base.jinja2' %}` — and that base imports `_base/macros.jinja2`. The two
+> **`templates/market/_base/` IS LIVE and is a different directory.** It holds the market
+> report's running head and foot (`page_header.jinja2`, `page_footer.jinja2`, which PDFShift repeats
+> on every page) and the 12-month trend chart macro that `_v2/report.jinja2` imports. The legacy
+> `market/market.jinja2` + `_base/base.jinja2` page was deleted on 2026-10-28, once every market
+> kind rendered Design's `_v2` page and every market surface rendered byte-identical without it. The two
 > builders give their Jinja loaders different directories, so the same string names two different
 > files depending on which surface is rendering. Every `_base/` in this document means the property
 > one. (`docs/design-corrections/00-SHARED.md` already had this right: its table is per surface and

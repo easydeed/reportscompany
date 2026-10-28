@@ -12,13 +12,16 @@ THERE WERE TWO `_base/` DIRECTORIES; ONE IS LEFT.
     templates/property/_base/   was dead: nothing reached it. DELETED
                                 2026-10-27 (D-131), after every surface
                                 rendered byte-identical without it.
-    templates/market/_base/     LIVE: `market/market.jinja2` is one line,
-                                `{% extends '_base/base.jinja2' %}`, and that
-                                base imports `_base/macros.jinja2`. It is the
-                                whole of every market report.
+    templates/market/_base/     LIVE: `_v2/report.jinja2` (every market
+                                report's body) imports `_base/macros.jinja2`,
+                                and `_base/page_header.jinja2` and
+                                `page_footer.jinja2` are PDFShift's running
+                                head and foot on every page. The legacy
+                                `market.jinja2` + `_base/base.jinja2` were
+                                deleted 2026-10-28 (D-255 follow-up).
 
 So "delete the `_base/` tree" is true of one and would delete the market
-report's entire base. The original classification was not wrong about
+report's header, footer and chart. The original classification was not wrong about
 `property/_base/` — it was written while looking at `templates/property/`,
 and the sentence it produced does not say so.
 
@@ -107,6 +110,7 @@ def python_roots():
         template = self.env.get_template(
             V2_TEMPLATE_PATH if self.report_type in V2_KINDS else TEMPLATE_PATH)
 
+    (as it read until 2026-10-28; now `get_template(V2_TEMPLATE_PATH)`)
     — module constants, not literals — so `_v2/report.jinja2` came back
     UNREACHABLE on its first render, and the gate's own message asked the right
     question: "are they reached from PYTHON?"
@@ -193,11 +197,13 @@ def main() -> int:
     prop_all = set(prop_dir.rglob("*.jinja2"))
 
     # ── market ──────────────────────────────────────────────────────────
-    # One root. `MarketReportBuilder` renders `market.jinja2` for every
-    # report type; the layout is chosen inside the template, not by file.
+    # Every root is a `get_template` argument. `MarketReportBuilder` renders
+    # `_v2/report.jinja2` for every kind (through `V2_TEMPLATE_PATH`) and the
+    # running head and foot by literal; there is no hardcoded entry file left
+    # to go stale, which is how `market.jinja2` would otherwise have stayed
+    # "live" here after it was deleted.
     market_dir = TEMPLATES / "market"
-    market_roots = ([market_dir / "market.jinja2"]
-                    + [market_dir / n for n in extra if (market_dir / n).exists()])
+    market_roots = [market_dir / n for n in extra if (market_dir / n).exists()]
     market_live = walk(market_dir, market_roots)
     market_all = set(market_dir.rglob("*.jinja2"))
 

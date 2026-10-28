@@ -20,8 +20,10 @@ serves and only because of what it accepts:
   * Every parameter is checked against a closed shape before it reaches the
     builder (a hex colour, a lookback from the wizard's own five, a city of
     letters and spaces). Jinja autoescapes as well; this does not rely on it.
-  * `ai_insights` is supplied by the sample, so the builder makes no OpenAI
-    call. A public route that paid per request would be the problem.
+  * The market builder makes no OpenAI call on any path (the narrative went
+    with the legacy page, 2026-10-28), so the sample no longer carries a stub
+    `ai_insights` to suppress one. A public route that paid per request would
+    be the problem.
   * The response forbids scripts (CSP), and the web app frames it with an
     empty `sandbox`, so nothing in it could run on either origin.
 """

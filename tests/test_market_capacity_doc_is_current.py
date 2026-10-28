@@ -439,31 +439,35 @@ def test_the_gallery_arithmetic_holds():
 
 
 def test_the_measurement_states_why_a_headless_render_is_faithful():
-    """The photo's fixed height is the whole reason, and it is checkable.
+    """The photo's reserved box is the whole reason, and it is checkable.
 
     Remote photos do not load in this container. The measurement is only
-    trustworthy because `.listing-photo` reserves 180px in CSS regardless — so
-    if that rule changes to an intrinsic height, this conclusion is void and
-    the document would be asserting something it can no longer support.
+    trustworthy because the photo reserves its box in CSS regardless — so if
+    that rule changes to an intrinsic height, this conclusion is void and the
+    document would be asserting something it can no longer support.
+
+    THE RULE MOVED. The legacy card reserved `height: 180px` on
+    `.listing-photo` in `base.jinja2`; the re-measurement in this document was
+    taken on Design's card, whose `.gphoto` reserves its box from the column
+    width with `aspect-ratio`. The legacy page was deleted on 2026-10-28, so
+    this reads the rule the gallery kinds actually render.
     """
-    css = (REPO / "apps/worker/src/worker/templates/market/_base/base.jinja2"
+    import re
+    css = (REPO / "apps/worker/src/worker/templates/market/_v2/report.jinja2"
            ).read_text(encoding="utf-8")
-    # LINE-ANCHORED, and the first version was not. `"height: 180px;" in css`
-    # matches inside `min-height: 180px;`, so changing the declaration to a
-    # MINIMUM — which makes the box content-driven and voids this whole
-    # measurement — left the gate green. The regression harness caught it;
-    # a hand-run would have reported a pass. Substring-is-not-a-construct,
-    # instance fifteen, in the gate guarding a measurement.
-    declared = any(line.strip() == "height: 180px;"
-                   for line in css.splitlines())
-    assert declared, (
-        "`.listing-photo` no longer carries a fixed 180px height. The gallery "
-        "measurement was taken without photos and is only faithful because "
-        "that space is reserved in CSS. Re-measure with images before "
-        "trusting the page counts."
-    )
+    rule = re.search(r"^\s*\.gphoto\s*\{([^}]*)\}", css, re.M)
+    assert rule, "`.gphoto` rule not found in the `_v2` page"
+    decls = [d.strip() for d in rule.group(1).split(";")]
+    # DECLARATIONS, not substrings: `min-height` contains `height` (§0.6), and
+    # a minimum would make the box content-driven and void the measurement.
+    assert "aspect-ratio: 4 / 3" in decls, (
+        "`.gphoto` no longer reserves its box with `aspect-ratio: 4 / 3`. The "
+        "gallery measurement was taken without photos and is only faithful "
+        "because that space is reserved in CSS. Re-measure with images before "
+        "trusting the page counts.")
+    assert not any(d.split(":")[0].strip() in ("min-height", "height") for d in decls), decls
     body = MEASURED.read_text(encoding="utf-8")
-    assert "height: 180px" in body
+    assert "sizes the photo from the column width" in body
     assert "invariant to content" in body or "does not depend on content" in body
 
 
