@@ -1,0 +1,16 @@
+[
+  {
+    "name": "L1 the email lockup goes back to live text",
+    "file": "apps/web/public/email/trendy-lockup-light-outlined.svg",
+    "old": "<rect x=\"150\" y=\"8\" width=\"98\" height=\"28\" rx=\"6\" fill=\"#D1FAE5\"/>",
+    "new": "<rect x=\"150\" y=\"8\" width=\"98\" height=\"28\" rx=\"6\" fill=\"#D1FAE5\"/><text font-family=\"Plus Jakarta Sans\">Trendy</text>",
+    "test": "tests/test_outlined_lockup.py"
+  },
+  {
+    "name": "L2 the web pill goes back to 86 and clips the s",
+    "file": "apps/web/components/logo.tsx",
+    "old": "<rect x=\"150\" y=\"8\" width=\"98\" height=\"28\" rx=\"6\" fill={tag} />",
+    "new": "<rect x=\"150\" y=\"8\" width=\"86\" height=\"28\" rx=\"6\" fill={tag} />",
+    "test": "tests/test_outlined_lockup.py"
+  }
+]

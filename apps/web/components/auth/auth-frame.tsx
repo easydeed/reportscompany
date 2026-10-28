@@ -15,6 +15,7 @@
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { AlertCircle } from "lucide-react"
+import { Logo } from "@/components/logo"
 
 export function AuthFrame({ title, description, children, footer }: {
   title: string
@@ -26,7 +27,7 @@ export function AuthFrame({ title, description, children, footer }: {
   return (
     <div className="flex min-h-screen flex-col bg-[var(--surface-cream)] text-foreground">
       <header className="px-6 pt-7 md:px-10">
-        <Link href="/" className="inline-block"><img src="/indigo.png" alt="TrendyReports" className="h-[26px] w-auto" /></Link>
+        <Link href="/" className="inline-block"><Logo className="h-[26px]" /></Link>
       </header>
       <main className="flex flex-1 flex-col items-center px-6 pb-16 pt-10 min-[720px]:justify-center min-[720px]:pt-0">
         <div className="flex w-full max-w-[420px] flex-col gap-6">
