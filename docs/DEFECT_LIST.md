@@ -59,14 +59,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 52 | Observed, not yet triaged |
-| `open` | 80 | Real, unfixed |
-| `fixed` | 147 | Corrected in code, with the branch or PR named on the entry |
+| `recorded` | 59 | Observed, not yet triaged |
+| `open` | 78 | Real, unfixed |
+| `fixed` | 158 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **286** | D-001 … D-286, contiguous, no duplicates |
+| **Total** | **302** | D-001 … D-302, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 22 · ROUGH 31. (Sums to 80, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -7956,7 +7956,7 @@ neither reports that the run has two.
 
 **Severity:** FRAGILE · **Affects:** nothing that renders — which is the problem ·
 **Found during:** D-117's copy fix
-**Status:** `open`
+**Status:** `fixed` — #222 (2026-10-26): `templates/property/_base/` and the three self-contained `property/<theme>/<theme>.jinja2` files deleted after every report surface rendered byte-identical without them (65 surfaces, positive control). `tests/test_template_reachability.py` holds the property tree at zero dead files.
 
 `templates/property/<theme>/` holds two files per theme: `<theme>_report.jinja2`, which
 `THEME_TEMPLATES` maps to, and `<theme>.jinja2`, which **nothing references**. Checked by
@@ -10543,7 +10543,7 @@ query is half the answer, and it is the half that looks complete.
 
 **Severity:** WRONG · **Affects:** every property report's market page — three of its four headline
 numbers · **Found during:** wiring Design's page 5, which asks for all three
-**Status:** `open`
+**Status:** `fixed` — #220: the four boxes are the four metrics that have a producer (median sale price, days on market, sale-to-list, price per sq ft), labelled as what they are; a box reads "no data" exactly when its own metric is missing. `apps/worker/tests/test_market_page_shows_the_numbers_it_has.py`.
 
 ```python
 # compute/market_trends.py:347
@@ -15342,7 +15342,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-255 — market_snapshot is the one kind not on Design's `_v2` page — production still renders it on the legacy `_base` template
 
 **Severity:** ROUGH · filed during the report-preview batch: `V2_KINDS` in `market_builder.py` lists seven kinds and leaves out the one the wizard calls "the one most agents send monthly".
-**Status:** `recorded`
+**Status:** `fixed` — #221: Market Snapshot renders Design's `_v2` page (band, months of inventory, price tiers, property types, and the 12-month median line kept as a fourth row by the D-102 decision); 2 pages to 1. The nine listing cards and the AI narrative are dropped, as Design's page has neither. The legacy page it left was deleted in #223.
 
 ---
 
@@ -15545,7 +15545,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-284 — a company's first branding save without a display name is a 500: the upsert inserts NULL into `affiliate_branding.brand_display_name`, which is NOT NULL
 
 **Severity:** ROUGH · filed while extending `test_company_tenant_isolation.py`: `PATCH /v1/company/branding` with `{"primary_color": ...}` for a company with no branding row raises `NotNullViolation`, unhandled. The company branding page always sends the name, so the page does not hit it; any other caller does.
-**Status:** `recorded`
+**Status:** `fixed` — #227: an unnamed first save names the brand after the company's account. The same PR fixes D-288, the rep-invite half of the same hole. `apps/api/tests/test_a_new_company_can_invite_reps.py`.
 
 ---
 
@@ -15559,6 +15559,120 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-286 — two regression-harness signal tests failed once in a full local run and passed alone and on rerun
 
 **Severity:** FRAGILE · seen on the first full DB-backed run for #219: `test_regression_harness_guards_itself.py::test_sigterm_mid_mutation_still_restores_and_exits_2` and `::test_sigkill_leaves_a_sentinel_and_the_next_run_refuses_to_start`. Both passed in isolation (with and without a database) and in the next full run. Likely timing in `_enter_mutation_window` under load; not yet reproduced, so not yet diagnosed.
+**Status:** `recorded`
+
+---
+
+### D-287 — both unsubscribe endpoints returned 500 to every request, and the lookup under them matched no schedule the API had created: recipients could not opt out
+
+**Severity:** BROKEN · filed while scoping the schedule hand-over: `routes/unsubscribe.py` `_suppress` did `with db_conn() as conn: conn.cursor()`; `db_conn()` yields `(conn, cur)`. Beneath it the account was found by `%s = ANY(schedules.recipients)`, and the API stores every recipient as JSON, so a fixed tuple would have answered "unsubscribed" and recorded nothing. The link and RFC 8058 one-click both. Opt-outs clicked while this was live were not recorded: the web route logs `[Unsubscribe] API returned 500 for {email}`, which is where they can be recovered from.
+
+**It never regressed; it never worked.** `_suppress` was written that way in `f1510014` (2025-11-11, *Phase 24B: Schedules CRUD API + Unsubscribe Endpoint*), and `db_conn()` yielded `(conn, cur)` in that same commit. `b82d0124` (2025-11-20, typed recipients) then made the lookup unable to match. The 2026-08-18 work (U1–U5, `c5086f1a`…`928b2d47`) verified signing, per-recipient links, encoding, the landing page and the RFC 8058 headers; `test_unsubscribe_token_roundtrip.py` stubs the database, and nothing called the route. Every part was verified except the one that records the opt-out.
+**Status:** `fixed` — #225: the candidates come from `email_log` (written for every scheduled send with the resolved addresses), the token picks the account, the suppression lands where the worker's send filter reads it. `apps/api/tests/test_unsubscribe_records_a_suppression.py` (5, red on main). **Gate: #229** — `apps/api/tests/test_unsubscribe_end_to_end.py` sends a real scheduled email through the worker's path, follows its footer link and its List-Unsubscribe header the way the web routes do, and requires the next send to skip both addresses; it fails rather than skips on GitHub Actions without a database. `scripts/regressions/unsubscribe.json` 7/7.
+
+---
+
+### D-288 — every rep invite from a title company with no branding row was a 500: `copy_branding_to_child`'s fallback omitted the NOT NULL `brand_display_name`
+
+**Severity:** BROKEN · filed while building rep seats: every company starts with no `affiliate_branding` row, so the next company to sign up would have hit it on its first invite. The `except` retried another INSERT omitting the name, inside the transaction the first failure had aborted. Pacific Coast Title has a row and was unaffected.
+**Status:** `fixed` — #227: the fallback names the rep's brand after the company's account. `apps/api/tests/test_a_new_company_can_invite_reps.py`; `scripts/regressions/new_company_branding.json` 2/2.
+
+---
+
+### D-289 — the property wizard's page picker still held the nine-page set, so every atlas report from the wizard had no notes page
+
+**Severity:** WRONG · filed during the six-page consolidation: `components/property-wizard/types.ts` listed `FULL_PAGES`/`COMPACT_PAGES` without `notes`, and the builder rendered only what it was sent — no agent panel, no explainers, on the default theme.
+**Status:** `fixed` — #220: `REPORT_PAGES` is the six pages and `PropertyReportBuilder.normalize_page_set` always adds the required ones. `tests/test_wizard_pages_match_the_builder.py`, `apps/worker/tests/test_renders_exactly_six_in_order.py`.
+
+---
+
+### D-290 — the `_v2` property themes' font stacks were autoescaped to `&#39;`, so every theme rendered in the browser's default serif
+
+**Severity:** WRONG · filed when a render was looked at on 2026-10-26: `--display: &#39;Barlow Condensed&#39;, …` is invalid CSS and was dropped; atlas had rendered in Times since it moved to the shared page on 2026-10-06. Nothing failed — every gate read text, numbers, colours and pages.
+**Status:** `fixed` — #220: `| safe` on the two custom properties, plus lining figures on every theme. `apps/worker/tests/test_each_theme_renders_in_its_own_typefaces.py` (no HTML entity inside a `<style>` block).
+
+---
+
+### D-291 — the market PDF paid for an OpenAI narrative on every kind and printed it on one
+
+**Severity:** ROUGH · filed during D-255: `tasks.py` generated a narrative unless the kind was in `V2_KINDS`, and the builder blanked it for those; Design's page renders none.
+**Status:** `fixed` — #221 stopped the call for `_v2` kinds; #223 removed narrative generation from the market path entirely when the legacy page went.
+
+---
+
+### D-292 — the legacy Market Snapshot labelled its months-of-inventory pace "90 days" over a 30-day window
+
+**Severity:** WRONG · filed during D-255's before render.
+**Status:** `fixed` — by removal: #221 moved the snapshot to Design's page, where the sentence and bar come from `compute.moi.headline`, and #223 deleted the legacy page.
+
+---
+
+### D-293 — the admin account page labels `sponsored_free` "Trial (10 reports/month)"; the plan enforces 3
+
+**Severity:** WRONG · filed during the sponsor compliance check: `apps/web/app/admin/(dashboard)/accounts/[id]/page.tsx:317`. The 10 is the legacy `monthly_report_limit` (D-051); enforcement reads `market_reports_limit` = 3, and production's `sponsored_free` is 3/3/1/1 like `free`.
+**Status:** `recorded`
+
+---
+
+### D-294 — the market running head prints a bare count before the title — "257 Market Snapshot" — with nothing saying what was counted
+
+**Severity:** ROUGH · filed during the report-surface plumbing check: `templates/market/_base/page_header.jinja2` `{{ total_count }} {{ report_title }}`, repeated on every page by PDFShift. On a listings kind the count reads as listings; on the snapshot it is a number with no noun.
+**Status:** `recorded`
+
+---
+
+### D-295 — `components/property/` (four components and an index), `lib/wizard-types.ts` and `lib/property-report-assets.ts` are reachable from no page
+
+**Severity:** ROUGH · filed during the six-page consolidation: nothing imports `@/components/property`; the live wizard is `components/property-wizard/`. `ThemeSelector` still offers the retired themes, which is the D-131 trap in the web app.
+**Status:** `recorded`
+
+---
+
+### D-296 — the invite and welcome emails put typed names into HTML unescaped
+
+**Severity:** FRAGILE · filed while writing the rep-change notice: `services/email.py` `send_role_invite_email`, `send_rep_welcome_email` and siblings interpolate inviter, company and first names straight into the markup. The names are typed by company admins and invitees. The new notice escapes every value.
+**Status:** `recorded`
+
+---
+
+### D-297 — a platform admin deactivating a rep's user leaves the rep's seat held
+
+**Severity:** ROUGH · filed with rep seats (#224): seats close on reassignment and on a cancelled invite. The admin user toggle (`routes/admin.py`, `is_active`) writes `users` only, so the seat stays open and counts against the company.
+**Status:** `recorded`
+
+---
+
+### D-298 — `MASTHEAD_SUBTITLE_ALPHA` and the masthead title-size ladder in `market_builder.py` feed context keys no template reads
+
+**Severity:** ROUGH · filed with #223: the legacy masthead that read `title_px` and the subtitle alpha was deleted. The band derivation stays (the running footer's tint colours use it); the ladder and the alpha are inert.
+**Status:** `recorded`
+
+---
+
+### D-299 — the company dashboard's "quiet" and "last active" count market reports only
+
+**Severity:** WRONG · filed during the seat scoping: `/v1/company/overview` and `/reps` read `report_generations` alone, so a rep whose agents send only property reports reads "nothing sent yet". The seat model's idle rule (`services/seats.py`) reads both tables — and they spell finished differently (`completed` / `complete`).
+**Status:** `recorded`
+
+---
+
+### D-300 — `/v1/company/overview` sent `total_agent_seats`, which was the agent count under a seat name
+
+**Severity:** ROUGH · filed during the seat scoping: agents take no seat. **Seats are rep seats** — the company pays for its own reps; agents stay `sponsored_free` and upgrade themselves. **If anyone later wants sponsored agents to get more than Free, that needs a compliance check first** (a thing of value from a title company to a referral source). Production on 2026-10-27: `free` and `sponsored_free` both 3/3/1/1, zero overrides on the 17 sponsored accounts.
+**Status:** `fixed` — #224: removed; a `seats` block (`total, held, open, pending, idle`, null when not on seats) replaces it.
+
+---
+
+### D-301 — one `free` account in production carries a per-product limit override; not identified
+
+**Severity:** ROUGH · filed from Jerry's production plans query (2026-10-27), which also confirmed zero overrides on the 17 sponsored accounts. Unrelated to the sponsor compliance question; recorded so it is not rediscovered.
+**Status:** `recorded`
+
+---
+
+### D-302 — the company reps and agents tables offer "Deactivate", "Remove", "Remove from Company" and the agents table's "Resend Invite" with no handler: the items do nothing
+
+**Severity:** WRONG · filed during the board filing: `app/app/company/reps/page.tsx:500`, `app/app/company/agents/page.tsx:398` and `:404` render `DropdownMenuItem`s with no `onClick`. Design's handoff note 7 recorded the reps half. The seat model's reassign and cancel-invite endpoints (#224) are what "a rep leaves" should reach. **Queued for the company UI work** (2026-10-28).
 **Status:** `recorded`
 
 ---
