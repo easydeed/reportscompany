@@ -65,16 +65,17 @@ def render(bands):
     )
 
 
-#: One band's row: the filled cell's width, then the label's percentage. The
-#: filled cell is the one with a background that is not the track's #e5e7eb.
+#: One band's row: the label's percentage ("12 listings · 12%"), then its bar
+#: table. The filled cell is the one whose fill is not the track's #ECEAE3; a
+#: band whose share rounds to zero has no filled cell, so the group is empty.
 ROW = re.compile(
-    r'<td width="(\d+)%" style="height: 24px; background-color: (?!#e5e7eb)'
-    r'[^"]*"></td>.*?<span style="[^"]*">\s*(\d+)%\s*</span>', re.S)
+    r'listings · (\d+)%</td>.*?<table[^>]*><tr>'
+    r'(?:<td width="(\d+)%" height="10" bgcolor="(?!#ECEAE3))?', re.S)
 
 
 def rendered_pairs(html):
     """(bar width, printed percentage) for every band row that drew a bar."""
-    return [(int(w), int(p)) for w, p in ROW.findall(html)]
+    return [(int(w), int(p)) for p, w in ROW.findall(html) if w]
 
 
 # ── the relation ───────────────────────────────────────────────────────────

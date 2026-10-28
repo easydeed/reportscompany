@@ -234,10 +234,9 @@ def test_postal_address_slot_is_invisible_until_populated():
     stays a B5 test and does not quietly re-assert B3.
     """
     html = _render(BRAND)
-    footer = re.search(r"Powered by.*?</td>", html, re.S).group(0)
     assert "TODO" not in html
-    assert "Marisol Ridge Realty &bull;" not in footer, (
-        "something was rendered into the address slot"
+    assert not re.search(r"Marisol Ridge Realty · \d", html), (
+        "an address was printed beside the account's brand, which has none"
     )
 
 
@@ -249,4 +248,4 @@ def test_postal_address_renders_once_supplied():
     """
     html = _render({**BRAND, "postal_address": "1 Example Way, Somewhere, CA 90000"})
     assert "1 Example Way, Somewhere, CA 90000" in html
-    assert "Marisol Ridge Realty &bull; 1 Example Way" in html
+    assert "Marisol Ridge Realty · 1 Example Way" in html

@@ -61,10 +61,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 59 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 158 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 159 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **302** | D-001 … D-302, contiguous, no duplicates |
+| **Total** | **303** | D-001 … D-303, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
@@ -15674,6 +15674,13 @@ as a duplicate, the file goes with it rather than being ported.
 
 **Severity:** WRONG · filed during the board filing: `app/app/company/reps/page.tsx:500`, `app/app/company/agents/page.tsx:398` and `:404` render `DropdownMenuItem`s with no `onClick`. Design's handoff note 7 recorded the reps half. The seat model's reassign and cancel-invite endpoints (#224) are what "a rep leaves" should reach. **Queued for the company UI work** (2026-10-28).
 **Status:** `recorded`
+
+---
+
+### D-303 — the market email's "Showing X of Y" counted listings the layout did not draw
+
+**Severity:** WRONG · found adopting Design's 5th-package market email. The truncation note took `showing` from the caller (the email cap, e.g. 8 for featured listings), while the adaptive gallery layouts drew their own number: the 2×2 layout drew 4 cards under "Showing 8 of N", the stacked one up to 3. The note now counts the listings the email actually renders, and every layout renders all it is given. Pinned by `test_the_note_counts_what_the_email_drew` (M10 in `scripts/regressions/market_email.json`).
+**Status:** `fixed` — feat/market-email-5th-package.
 
 ---
 

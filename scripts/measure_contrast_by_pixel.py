@@ -102,11 +102,12 @@ const COLLECT = () => {
 };
 
 (async () => {
-  const [dir, exePath, outJson] = process.argv.slice(2);
+  const [dir, exePath, outJson, scheme, width] = process.argv.slice(2);
   const b = await chromium.launch(exePath ? { executablePath: exePath } : {});
   const all = [];
   for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html'))) {
-    const p = await b.newPage({ viewport: { width: 816, height: 1056 } });
+    const p = await b.newPage({ viewport: { width: parseInt(width, 10) || 816, height: 1056 },
+                                colorScheme: scheme || 'light' });
     await p.goto('file://' + path.join(dir, f), { waitUntil: 'networkidle' }).catch(()=>{});
     const runs = await p.evaluate(COLLECT);
     await p.addStyleTag({ content:
@@ -171,20 +172,24 @@ def required(size, weight):
     return 3.0 if (size >= 24 or (size >= 18.66 and weight >= 700)) else 4.5
 
 
-def measure(html_dir: Path):
+def measure(html_dir: Path, scheme: str = "light", width: int = 816):
+    """`scheme` is the `prefers-color-scheme` the page is rendered under — the
+    email's dark-mode gate renders the same documents with "dark". `width` is
+    the viewport: 816 is a Letter page for the PDFs; the email is read at 680."""
     work = Path(tempfile.mkdtemp(prefix="pixel-contrast-"))
     js = REPO / "_measure_contrast_by_pixel.js"
     js.write_text(JS)
     out = work / "runs.json"
     try:
-        subprocess.run(["node", str(js), str(html_dir), find_chromium(), str(out)],
+        subprocess.run(["node", str(js), str(html_dir), find_chromium(), str(out),
+                        scheme, str(width)],
                        cwd=str(REPO), check=True)
     finally:
         js.unlink(missing_ok=True)
     return json.loads(out.read_text())
 
 
-def measure_docs(docs):
+def measure_docs(docs, scheme: str = "light", width: int = 816):
     """Same measurement, from `{name: html}` rather than a directory.
 
     `measure_pdf_contrast.py` builds the corpus — `market_documents()` and
@@ -195,7 +200,7 @@ def measure_docs(docs):
     work = Path(tempfile.mkdtemp(prefix="pixel-contrast-docs-"))
     for name, html in docs.items():
         (work / f"{name}.html").write_text(html, encoding="utf-8")
-    return measure(work)
+    return measure(work, scheme=scheme, width=width)
 
 
 def score(rows):
