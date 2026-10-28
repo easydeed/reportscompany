@@ -305,6 +305,22 @@ def _enter_mutation_window(proc):
     if reason:
         proc.kill()
         raise AssertionError(reason)
+    # The sentinel is written BEFORE the mutation (it records intent), so its
+    # existence alone does not mean the file has changed: a kill landing between
+    # the two writes leaves the original on disk, and a test that then asserts
+    # "mutated" fails for the timing, not the harness — which is what CI did on
+    # #236. Wait for the mutation itself. That window is covered on its own by
+    # `test_a_kill_before_the_write_leaves_a_sentinel_restore_can_clear`.
+    deadline = time.monotonic() + SENTINEL_CEILING
+    while time.monotonic() < deadline and proc.poll() is None:
+        try:
+            rec = json.loads(SENTINEL.read_text(encoding="utf-8"))
+            if Path(rec["file"]).read_text(encoding="utf-8") == rec["mutated"]:
+                return
+        except (OSError, ValueError, KeyError):
+            pass
+        time.sleep(0.005)
+    raise AssertionError("the harness never got from its sentinel to its mutation")
 
 
 @pytest.fixture(autouse=True)
@@ -434,3 +450,28 @@ def test_restore_refuses_when_the_file_moved_on_after_the_mutation(tmp_path):
     assert target.read_text(encoding="utf-8") == "ORIGINAL\n", (
         "--restore discarded an edit made after the mutation"
     )
+
+
+def test_a_kill_before_the_write_leaves_a_sentinel_restore_can_clear(tmp_path):
+    """
+    The window `_enter_mutation_window` now steps over: sentinel written, file
+    not yet mutated. Built directly rather than raced for, so it is tested every
+    run. A later run must still refuse (it cannot know without looking), and
+    `--restore` must clear it — it used to refuse, which wedged the tree over a
+    file that was never changed.
+    """
+    target = tmp_path / "f.txt"
+    target.write_text("ORIGINAL\n", encoding="utf-8")
+    SENTINEL.write_text(json.dumps({
+        "file": str(target), "original": "ORIGINAL\n", "mutated": "MUTATED\n", "pid": 0,
+    }), encoding="utf-8")
+    (tmp_path / "s").mkdir()
+    spec, _ = _slow_spec(tmp_path / "s", n=1)
+    refused = subprocess.run([sys.executable, str(HARNESS), str(spec)],
+                             cwd=REPO, capture_output=True, text=True)
+    assert refused.returncode == 2 and "is NOT" in refused.stderr, refused.stderr
+    cleared = subprocess.run([sys.executable, str(HARNESS), "--restore"],
+                             cwd=REPO, capture_output=True, text=True)
+    assert cleared.returncode == 0, cleared.stderr
+    assert not SENTINEL.exists()
+    assert target.read_text(encoding="utf-8") == "ORIGINAL\n"

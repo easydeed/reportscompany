@@ -242,6 +242,16 @@ def _handle_stale_sentinel(do_restore: bool) -> None:
             f"that run is suspect."
         )
 
+    if not still_mutated and current == rec["original"]:
+        # Killed between writing the sentinel and writing the mutation: the
+        # sentinel records intent before the write, so this window exists by
+        # design. The file was never changed; there is nothing to put back.
+        # Refusing here wedged the tree — every run refused to start and so did
+        # --restore — over a file that was already correct.
+        _clear_sentinel()
+        _say(f"{rec['file']} was never mutated (the run died before the write); "
+             f"cleared {SENTINEL.name}")
+        return
     if not still_mutated:
         raise MutationError(
             f"--restore refused: {rec['file']} is neither the text this "
