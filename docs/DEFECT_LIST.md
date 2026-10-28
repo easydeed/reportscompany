@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 59 | Observed, not yet triaged |
+| `recorded` | 58 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 159 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 160 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **303** | D-001 … D-303, contiguous, no duplicates |
@@ -15631,7 +15631,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-296 — the invite and welcome emails put typed names into HTML unescaped
 
 **Severity:** FRAGILE · filed while writing the rep-change notice: `services/email.py` `send_role_invite_email`, `send_rep_welcome_email` and siblings interpolate inviter, company and first names straight into the markup. The names are typed by company admins and invitees. The new notice escapes every value.
-**Status:** `recorded`
+**Status:** `fixed` — feat/transactional-shell: every typed value goes through `_e`; `test_every_typed_name_is_escaped` covers all 15 account emails.
 
 ---
 

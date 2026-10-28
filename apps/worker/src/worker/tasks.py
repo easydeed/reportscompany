@@ -1069,70 +1069,30 @@ def _send_failure_notification(
 
                 subject = f"\u26a0\ufe0f Your scheduled report failed \u2014 {schedule_name}"
 
-                cta_html = f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0;">
-                  <tr><td align="center">
-                    <a href="{schedule_url}" target="_blank" style="display: inline-block; background-color: #4F46E5; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; font-weight: bold; text-decoration: none; padding: 14px 32px; border-radius: 8px;">
-                      View Schedules
-                    </a>
-                  </td></tr>
-                </table>'''
-
-                content_html = f'''<p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
-                    Hi {first_name},
-                  </p>
-                  <p style="margin: 0 0 8px; font-size: 15px; line-height: 1.7; color: #374151;">
-                    Your scheduled report &ldquo;{schedule_name}&rdquo; for {area} failed to generate.
-                    We&rsquo;ll automatically retry on the next scheduled run.
-                  </p>
-                  <p style="margin: 0 0 20px; font-size: 15px; line-height: 1.7; color: #374151;">
-                    If this continues, please contact support.
-                  </p>
-                  <div style="background-color: #FEF2F2; border-left: 3px solid #EF4444; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 24px;">
-                    <p style="margin: 0 0 4px; font-size: 11px; font-weight: 600; color: #991B1B; text-transform: uppercase; letter-spacing: 0.5px;">Error details</p>
-                    <p style="margin: 0; font-size: 13px; color: #7F1D1D; font-family: monospace; word-break: break-all;">{brief_error}</p>
-                  </div>
-                  {cta_html}
-                  <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #6b7280;">
-                    This is an automated notification from TrendyReports.
-                  </p>'''
-
-                # Build full email using the branded shell (inlined to avoid cross-app imports)
-                html_body = f'''<!DOCTYPE html>
-<html lang="en"><head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="color-scheme" content="light only">
-  <title>TrendyReports</title>
-  <style>
-    body, table, td, p, a {{ -webkit-text-size-adjust: 100%; }}
-    body {{ margin: 0 !important; padding: 0 !important; }}
-    @media (prefers-color-scheme: dark) {{ .email-outer {{ background-color: #232323 !important; }} }}
-    @media screen and (max-width: 600px) {{ .email-wrapper {{ width: 100% !important; }} .content-pad {{ padding: 24px 20px !important; }} }}
-  </style>
-</head>
-<body style="margin:0;padding:0;background-color:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAFC;" class="email-outer"><tr>
-    <td align="center" style="padding:32px 16px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width:600px;width:100%;">
-        <tr><td align="center" style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#818CF8 100%);background-color:#4F46E5;padding:28px 24px 20px;border-radius:12px 12px 0 0;">
-          <img src="https://www.trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
-        </td></tr>
-        <tr><td style="background-color:#ffffff;padding:32px;" class="content-pad">
-          {content_html}
-        </td></tr>
-        <tr><td style="background-color:#ffffff;border-top:1px solid #EEF2FF;padding:20px 32px;border-radius:0 0 12px 12px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-            <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#6366F1;">TrendyReports</p>
-            <p style="margin:0 0 12px;font-size:12px;color:#9ca3af;">Branded Real Estate Reports</p>
-            <p style="margin:0;font-size:11px;color:#9ca3af;">
-              <a href="mailto:support@trendyreports.io" style="color:#6b7280;text-decoration:underline;">Contact Support</a>
-              &nbsp;&bull;&nbsp; &copy; 2026 TrendyReports
-            </p>
-          </td></tr></table>
-        </td></tr>
-      </table>
-    </td>
-  </tr></table>
-</body></html>'''
+                # Design's 5th-package account-email shell, mirrored from the
+                # API (worker/email/transactional.py). The wording is the
+                # current wording; Design's version promised a retry in an
+                # hour, which does not exist. Every value is escaped: the
+                # schedule name and city are typed, and the error is raw.
+                from .email.transactional import (
+                    _callout, _cta_button, _e, _email_base, _h1, _note, _p,
+                )
+                content_html = (
+                    _h1(f"Hi {_e(first_name)},")
+                    + _p(f"Your scheduled report &ldquo;{_e(schedule_name)}&rdquo; for {_e(area)} failed to generate. "
+                         f"We&rsquo;ll automatically retry on the next scheduled run.")
+                    + _p("If this continues, please contact support.")
+                    + _callout('<div style="font-size:11px;font-weight:700;text-transform:uppercase;'
+                               'letter-spacing:.05em;margin-bottom:4px;">Error details</div>'
+                               f'<div style="font-family:monospace;font-size:13px;word-break:break-all;">{_e(brief_error)}</div>',
+                               "red")
+                    + _cta_button(schedule_url, "View Schedules")
+                    + _note("This is an automated notification from TrendyReports.")
+                )
+                html_body = _email_base(
+                    content_html,
+                    preheader=f"Your scheduled report &ldquo;{_e(schedule_name)}&rdquo; failed to generate.",
+                )
 
                 # Send via Resend
                 resp = httpx.post(
