@@ -25,26 +25,17 @@
 # files are now 22 lines of typography that include `_v2/report.jinja2`, and the
 # literals went with the nine-page layouts. Removed by hand rather than by
 # --write-baseline, which also drops this header. Nothing was added.
+#
+# 2026-10-28, THE SOCIAL STORIES (#230). 15 entries RETIRED: the old story
+# templates hard-coded #7C3AED / #F26B2B and their tints; the per-kind stories
+# take every brand colour from injectBrand's derived tokens (lib/brand-tokens.ts)
+# and keep no default, and social-gallery.html is gone. Removed by hand, header
+# kept. Nothing added.
 
 #
 # 2026-10-26, THE DEAD PROPERTY TREE DELETED (D-131). 20 entries RETIRED with
 # `templates/property/_base/` and the three self-contained `<theme>.jinja2`
 # files, which rendered nowhere. Removed by hand, header kept. Nothing added.
-apps/web/templates/social/social-closed.html	BRAND-ADJACENT	#92400e
-apps/web/templates/social/social-closed.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-closed.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-gallery.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-gallery.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-inventory.html	BRAND-ADJACENT	#6d28d9
-apps/web/templates/social/social-inventory.html	BRAND-ADJACENT	#8b5cf6
-apps/web/templates/social/social-inventory.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-inventory.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-market-snapshot.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-market-snapshot.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-new-listings.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-new-listings.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-price-bands.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-price-bands.html	BRAND-ROLE	#f26b2b
 apps/web/templates/trendy-closed.html	BRAND-ROLE	#7c3aed
 apps/web/templates/trendy-closed.html	BRAND-ROLE	#f26b2b
 apps/web/templates/trendy-featured-listings.html	BRAND-ADJACENT	#9333ea
