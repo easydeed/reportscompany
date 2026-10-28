@@ -11,12 +11,14 @@
  * On a phone the two section links go, and Log in and Start free stay: the
  * four together do not fit at 390px beside the logo.
  */
+import { Logo } from "@/components/logo"
+
 export function SiteNav() {
   return (
     <nav className="border-b border-[#ECEAE3] bg-[#FAFAF7]">
       <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-6 px-4 py-[18px] md:px-8">
         <a href="/">
-          <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
+          <Logo className="h-7" />
         </a>
         <div className="flex items-center gap-5 md:gap-7">
           <a
