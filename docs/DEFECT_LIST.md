@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 61 | Observed, not yet triaged |
+| `recorded` | 62 | Observed, not yet triaged |
 | `open` | 79 | Real, unfixed |
 | `fixed` | 160 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **307** | D-001 … D-307, contiguous, no duplicates |
+| **Total** | **308** | D-001 … D-308, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
 
@@ -15708,6 +15708,13 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-307 — the market path picks "the agent" as any user on the account
 
 **Severity:** FRAGILE · found with D-306. Three more lookups in `tasks.py` take an account's agent as `LIMIT 1` over `users` with no ORDER BY: `_build_regular_brand` (the market email's agent block), the market PDF's branding context, and the agent CC on a manual send (which does `ORDER BY created_at`). A market schedule belongs to an account, not a user, so there is no agent id to scope by. Correct while every REGULAR account has one user (true locally; production unchecked), and nondeterministic the day one has two. Needs a rule ("the account owner") before a fix.
+**Status:** `recorded`
+
+---
+
+### D-308 — the self-signup welcome email promises 5 reports a month; Free allows 3
+
+**Severity:** WRONG · found keeping the account emails' wording inside Design's shell. `send_regular_agent_welcome_email` says "Your Free plan includes 5 reports per month." That 5 is `plans.monthly_report_limit`, the legacy column. The market-report gate reads `market_reports_limit`, which is **3** for `free` (and 3 for `sponsored_free`, whose legacy value is the 10 in Design's mocks). Kept as written in the shell PR because the owner asked for the current wording until Design's copy is fixed; marked with a TODO at the line. **Decision for Jerry:** say 3, or read the number from the plan at send time.
 **Status:** `recorded`
 
 ---
