@@ -132,9 +132,8 @@ def world():
         _seat(cur, w.b, w.b1)
         _seat(cur, w.b, w.b2)
 
-        # Both companies have a branding row, as every real one does. Without
-        # it `copy_branding_to_child`'s fallback INSERT omits the NOT NULL
-        # `brand_display_name` and every rep invite 500s — filed separately.
+        # Both companies have a branding row, as Pacific Coast Title does. A
+        # company without one is test_a_new_company_can_invite_reps.py's case.
         for co, name in ((w.a, "Seat Co A"), (w.b, "Seat Co B")):
             cur.execute("INSERT INTO affiliate_branding (account_id, brand_display_name) VALUES (%s, %s)",
                         (co, name))
