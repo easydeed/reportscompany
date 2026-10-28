@@ -1,46 +1,58 @@
-"use client"
-
 import { cn } from "@/lib/utils"
-import Image from "next/image"
 
 interface LogoProps {
   className?: string
+  /** full: light lockup. white: lockup for an ink surface. icon: bare triangle. */
   variant?: "full" | "icon" | "white"
-  showText?: boolean
 }
 
-export function Logo({ className, variant = "full", showText = true }: LogoProps) {
-  if (variant === "icon") {
-    return (
-      <div className={cn("flex items-center justify-center", className)}>
-        <svg
-          viewBox="0 0 230 290"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full"
-        >
-          <path
-            d="M94.2,152.3l-21.5,42.7h43.9l-16,46.5,46-63.8h-37.6l24.5-49.7h-27l-12.3,24.4h0ZM88.9,127.9H28.6l27.6-56.1h174.5l-27.6,56.1h-52.1l-16.7,34h43.1l-92.2,127.9c-2.5,3.5-7.1,4.5-10.8,2.6-3.8-2-5.5-6.3-4.1-10.3l24.5-71.4h-47.3l29.4-58.4,12.3-24.4h0ZM193.4,112.2l12.1-24.6H66l-12.1,24.6h139.5Z"
-            fill="#f26a21"
-          />
-        </svg>
-      </div>
-    )
-  }
-
-  const src = variant === "white" ? "/white.png" : "/indigo.png"
-
+/**
+ * Ticker lockup, inlined so it uses the page's Plus Jakarta Sans
+ * (an <img> of the SVG would not see next/font). The public SVG files
+ * stay in /public for the favicon and direct URLs.
+ */
+function Lockup({ dark, className }: { dark: boolean; className?: string }) {
+  const ink = dark ? "#FFFFFF" : "#0F172A"
+  const tag = dark ? "#065F46" : "#D1FAE5"
+  const tagInk = dark ? "#D1FAE5" : "#065F46"
   return (
-    <div className={cn("flex items-center", className)}>
-      <Image
-        src={src}
-        alt="TrendyReports"
-        width={160}
-        height={48}
-        className="w-auto"
-        style={{ height: "calc(var(--spacing) * 11)" }}
-        priority
-      />
-    </div>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 236 48"
+      role="img"
+      aria-label="Trendy Reports"
+      className={cn("h-[26px] w-auto", className)}
+      style={{ fontFamily: "var(--font-jakarta), sans-serif" }}
+    >
+      <text x="0" y="38" fontSize="44" fontWeight="800" letterSpacing="-2" fill={ink}>
+        Trendy
+      </text>
+      <rect x="150" y="8" width="86" height="28" rx="6" fill={tag} />
+      <g transform="translate(160 14) scale(1.15)">
+        <path d="M7 2 L12 9 L2 9 Z" fill={tagInk} />
+      </g>
+      <text x="180" y="28" fontSize="15" fontWeight="700" fill={tagInk}>
+        Reports
+      </text>
+    </svg>
   )
+}
+
+function Mark({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 32 32"
+      role="img"
+      aria-label="Trendy Reports"
+      className={cn("h-8 w-auto", className)}
+    >
+      <path d="M16 5 L29 24 L3 24 Z" fill="#059669" />
+    </svg>
+  )
+}
+
+export function Logo({ className, variant = "full" }: LogoProps) {
+  if (variant === "icon") return <Mark className={className} />
+  return <Lockup dark={variant === "white"} className={className} />
 }

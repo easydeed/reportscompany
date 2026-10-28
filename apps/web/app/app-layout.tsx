@@ -8,6 +8,7 @@
 import { Suspense, useMemo, useState, type ComponentType } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { Logo } from "@/components/logo"
 import {
   LayoutDashboard, FileText, Calendar, Users, Settings, Building2, Building, Home,
   UserCheck, MessageSquare, Link2, Palette, CreditCard, Plus, CircleHelp, Mail,
@@ -192,7 +193,7 @@ function Rail({ tier, onNavigate }: { tier: TierProps; onNavigate?: () => void }
   return (
     <div data-sidebar className="flex h-full flex-col gap-[22px] overflow-y-auto bg-[var(--sidebar)] px-[14px] pb-[18px] pt-[22px]">
       <Link href={homeHref} prefetch={false} onClick={onNavigate} className="ml-[10px] self-start">
-        <img src="/indigo.png" alt="TrendyReports" className="h-[26px] w-auto" />
+        <Logo className="h-[26px]" />
       </Link>
 
       {showNewReport && (
@@ -303,7 +304,7 @@ export default function AppLayoutClient({
             {/* <1100px: top bar + sheet */}
             <header className="flex h-14 items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--sidebar)] px-4 min-[1100px]:hidden">
               <button aria-label="Menu" onClick={() => setOpen(true)} className="flex size-9 items-center justify-center rounded-lg hover:bg-[var(--muted)]"><Menu className="size-5" /></button>
-              <img src="/indigo.png" alt="TrendyReports" className="h-6 w-auto" />
+              <Logo className="h-[26px]" />
               {!isAdmin && !isCompanyAdmin && (
                 <Link href="/app/reports/new" prefetch={false} className="ml-auto flex h-9 items-center gap-1.5 rounded-[9px] bg-primary px-3 text-[13px] font-semibold text-primary-foreground hover:text-primary-foreground"><Plus className="size-4" />New</Link>
               )}

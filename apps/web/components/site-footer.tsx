@@ -15,6 +15,8 @@
  * "Sponsors" anchors to the sponsor band rather than mailing sales directly,
  * for the same M4-T1 reason. All anchors are root-relative.
  */
+import { Logo } from "@/components/logo"
+
 const columns: { title: string; links: [string, string][] }[] = [
   {
     title: "Product",
@@ -54,7 +56,7 @@ export function SiteFooter() {
           style={{ gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}
         >
           <div className="col-span-full flex max-w-[320px] flex-col gap-4 md:col-span-1">
-            <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto self-start" />
+            <Logo className="h-7 self-start" />
             <p className="m-0 text-[15px] leading-[1.55] text-[#64748B]">
               Automated market reports for Southern California agents. Live MLS data, your brand,
               sent every month.
