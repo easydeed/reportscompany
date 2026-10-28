@@ -106,6 +106,15 @@ D-001 through D-024 are grouped by severity below. D-025 through D-034 are group
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
 
+## Standing rules
+
+Rules that hold across every change, learned from a defect that nearly shipped. Each names the check that enforces it.
+
+**R1 — Any asset URL an email has ever referenced is permanent.** *(2026-10-28, owner)* A sent email keeps its HTML in every inbox it reached and loads its images by URL each time it is opened. Deleting or renaming one of those files breaks the image in every past email, and nobody can change those emails any more. To stop using an asset, stop referencing it and keep the file.
+- **How it nearly shipped:** #235 (the Ticker logo) deleted `apps/web/public/white.png`. Every account email since 2026-04-10, the schedule-failure notice and the home-value email load their logo from `https://www.trendyreports.io/white.png`. It was caught in review and restored.
+- **How it already happened once:** on 2026-04-10, from 07:08 to 11:40, the account emails loaded `https://trendyreports.io/logo-white.png`, a file that never existed. Those emails have shown a broken logo ever since. A copy of `white.png` now sits at that path, so they heal.
+- **Enforced by:** `tests/test_permanent_email_assets.py`, which reads the list `tests/permanent_email_assets.txt` and does three things. It fails if a listed file is missing. It fails if email code references a public file that isn't listed. And it holds a floor, so an entry can't leave together with its file. `apps/api/tests/test_transactional_shell.py` checks the rendered side: every image an account email loads from the app is on the list and exists.
+
 ## Test environment
 
 Local, per Rev A §2A. Postgres **16.13** (system package — the Docker daemon is unavailable in this container, so `docker-compose.yml`'s `postgres:15-alpine` could not be used; **version deviation from production**), Redis 7.0.15, API on `127.0.0.1:10000` via uvicorn, venv **Python 3.12** (see D-003), `ENVIRONMENT=development`, `JWT_SECRET=local-test-secret`. Database built from `db/migrations/` (see D-001 for how). Accounts provisioned by `scripts/seed_test_accounts.py` (T2.1).

@@ -180,3 +180,29 @@ def test_the_dark_gate_sees_unclassed_body_text(monkeypatch):
     html = _render(*CALLS[0])
     rows = _measure({"x": html}, "dark")
     assert any(r["ratio"] < r["needs"] for r in rows)
+
+
+# ── every image an email loads from the app is permanent (board R1) ───────
+
+def _permanent():
+    out = set()
+    for line in (ROOT / "tests/permanent_email_assets.txt").read_text().splitlines():
+        p = line.split("#", 1)[0].strip()
+        if p:
+            out.add(p)
+    return out
+
+
+@pytest.mark.parametrize("call", CALLS, ids=_id)
+def test_every_image_the_email_loads_is_on_the_permanent_list(call):
+    """The rendered half of `tests/test_permanent_email_assets.py`: what a
+    recipient's client actually fetches, not what the source looks like."""
+    html = _render(*call)
+    base = em._app_base().rstrip("/")
+    srcs = re.findall(r'<img[^>]+src="([^"]+)"', html)
+    ours = [s[len(base) + 1:] for s in srcs if s.startswith(base + "/")]
+    assert ours, "no image from the app found; the check is reading the wrong thing"
+    unlisted = sorted(set(ours) - _permanent())
+    assert not unlisted, f"{_id(call)} loads {unlisted}, which is not on the permanent list"
+    for p in ours:
+        assert (ROOT / "apps/web/public" / p).is_file(), f"{p} is loaded and does not exist"
