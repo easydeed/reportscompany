@@ -28,17 +28,17 @@
     "test": "tests/test_market_capacity_doc_is_current.py"
   },
   {
-    "name": "the photo loses its fixed height, voiding the headless measurement",
-    "file": "apps/worker/src/worker/templates/market/_base/base.jinja2",
-    "old": "    .listing-photo {\n      width: 100%;\n      height: 180px;",
-    "new": "    .listing-photo {\n      width: 100%;\n      min-height: 180px;",
+    "name": "the photo loses its reserved box, voiding the headless measurement",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "aspect-ratio: 4 / 3;",
+    "new": "min-height: 180px;",
     "test": "tests/test_market_capacity_doc_is_current.py"
   },
   {
-    "name": "\u00a76 reverts to asking the question instead of answering it",
+    "name": "§6 reverts to asking the question instead of answering it",
     "file": "docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md",
-    "old": "## 6 \u00b7 Gallery continuation: measured, and it is three rows",
-    "new": "## 6 \u00b7 One question back: what does a gallery continuation page carry?",
+    "old": "## 6 · Gallery continuation: measured, and it is three rows",
+    "new": "## 6 · One question back: what does a gallery continuation page carry?",
     "test": "tests/test_market_capacity_doc_is_current.py"
   }
 ]

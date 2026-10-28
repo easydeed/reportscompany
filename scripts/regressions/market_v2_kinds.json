@@ -63,18 +63,18 @@
     "test": "apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs"
   },
   {
-    "name": "the narrative suppression goes, so a v2 render pays for prose it discards",
+    "name": "a market render pays for a narrative again",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "        if self.report_type in V2_KINDS:\n            ai_insights = \"\"\n        elif not ai_insights:",
-    "new": "        if not ai_insights:",
+    "old": "        ai_insights = \"\"\n",
+    "new": "        from worker import ai_market_narrative as _ai\n        ai_insights = _ai.generate_market_pdf_narrative(self.report_type, \"\", {}) and \"\"\n",
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
-    "name": "a V2 kind falls back to the old page",
+    "name": "a kind outside the seam renders an empty document instead of being refused",
     "file": "apps/worker/src/worker/market_builder.py",
-    "old": "            V2_TEMPLATE_PATH if self.report_type in V2_KINDS else TEMPLATE_PATH)",
-    "new": "            TEMPLATE_PATH)",
-    "test": "apps/worker/tests/test_market_layout_map.py tests/test_template_reachability.py"
+    "old": "        if self.report_type not in V2_KINDS:\n            raise ValueError(",
+    "new": "        if False:\n            raise ValueError(",
+    "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
     "name": "`Listed` reads 0 days as missing, so a listing posted today shows a dash",
@@ -161,7 +161,7 @@
     "test": "apps/worker/tests/test_market_v2_kinds.py"
   },
   {
-    "name": "a market contrast row is baselined back in, so the surface stops being at zero (anchored on the FILE HEADER since 2026-10-21: this mutation was anchored on a baseline data row twice and both rows were retired by a fix within a day of each other \u2014 linen's cover-agent-name, then harbor's div.brand. A row that can be fixed away is not an anchor; the header is prose and survives a regeneration)",
+    "name": "a market contrast row is baselined back in, so the surface stops being at zero (anchored on the FILE HEADER since 2026-10-21: this mutation was anchored on a baseline data row twice and both rows were retired by a fix within a day of each other — linen's cover-agent-name, then harbor's div.brand. A row that can be fixed away is not an anchor; the header is prose and survives a regeneration)",
     "file": "apps/worker/tests/pdf_contrast_baseline.txt",
     "old": "# Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.",
     "new": "# Format: family<TAB>selector<TAB>foreground<TAB>background, sorted.\nmarket__price_bands\tspan.status-badge.active\t#5E636B\t#E6EEF5",

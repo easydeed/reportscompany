@@ -282,48 +282,49 @@ def test_every_row_has_every_column_design_specifies():
         assert set(row) == columns, sorted(set(row) ^ columns)
 
 
-def test_a_v2_render_does_not_pay_for_a_narrative_it_discards(monkeypatch):
-    """What the `V2_KINDS` narrative suppression actually buys.
+def test_no_market_render_pays_for_a_narrative(monkeypatch):
+    """The market PDF generates no AI narrative, on any kind.
 
-    Not determinism — the `_v2` page has no narrative block, so prose could not
-    move the pagination even if it were generated. A mutation removing the
-    suppression came back `DID NOT FIRE`, which is how that claim got checked
-    and corrected.
+    It printed one only on the legacy page. Every kind left that page (D-255)
+    and it was deleted on 2026-10-28, so the builder and `tasks.py` stopped
+    calling the generator: before D-255 that was an OpenAI round trip per
+    render whose answer the `_v2` page threw away.
 
-    What it buys is not paying for it: an OpenAI round trip per render whose
-    output the template discards. So the assertion is about the CALL, which is
-    the thing that changes.
+    The assertion is about the CALL, the thing that costs, recorded at the
+    generator itself rather than at a name the builder imports — a re-import
+    in either module would be a call this sees.
     """
-    import worker.market_builder as mb
+    import worker.ai_market_narrative as ai
 
     calls = []
     monkeypatch.setattr(
-        mb, "generate_market_pdf_narrative",
+        ai, "generate_market_pdf_narrative",
         lambda *a, **k: calls.append(a) or "some generated prose")
+    for kind in ALL_REPORT_TYPES:
+        b = builder(kind)
+        b.report_data["ai_insights"] = ""      # nothing pre-supplied
+        html = b.render_html()
+        assert "some generated prose" not in html, kind
+    assert calls == [], f"the narrative generator was called {len(calls)} time(s)"
 
-    b = builder()
-    b.report_data["ai_insights"] = ""      # nothing pre-supplied
-    html = b.render_html()
-    assert calls == [], (
-        f"a v2 render called the narrative generator {len(calls)} time(s). "
-        f"The page discards the result, so this is a paid-for round trip with "
-        f"no output."
-    )
-    assert "some generated prose" not in html
 
-    # The control: a kind that has NOT moved still generates one, so this is
-    # not asserting that the generator is simply unreachable. Since D-255
-    # every real kind has moved, so `closed` is taken out of the seam for the
-    # length of this test — the legacy page still exists to render it.
-    monkeypatch.setattr(mb, "V2_KINDS", mb.V2_KINDS - {"closed"})
+def test_prose_in_old_run_data_is_not_printed():
+    """A run saved before the legacy page went may carry `ai_insights`."""
+    b = builder("market_snapshot")
+    b.report_data["ai_insights"] = "Prices in Irvine climbed sharply this month."
+    assert "climbed sharply" not in b.render_html()
+
+
+def test_a_kind_outside_the_seam_is_refused_not_rendered_empty(monkeypatch):
+    """`_v2/report.jinja2` is the only market page. A kind taken out of
+    `V2_KINDS` used to fall back to the legacy page; now there is nothing to
+    fall back to, and a document with no body must not go to a customer."""
+    import worker.market_builder as mb
+
     a_kind_outside_the_seam()          # asserts the real kinds are all in
-    other = builder("closed")
-    other.report_data["ai_insights"] = ""
-    other.render_html()
-    assert calls, (
-        "a non-v2 kind did not call the narrative generator either, so the "
-        "assertion above proves nothing about the seam."
-    )
+    monkeypatch.setattr(mb, "V2_KINDS", mb.V2_KINDS - {"closed"})
+    with pytest.raises(ValueError, match="only market page"):
+        builder("closed").render_html()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

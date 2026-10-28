@@ -129,11 +129,14 @@ def full_data():
 class TestTemplateExistence:
     """Verify template files exist."""
 
-    def test_template_file_exists(self):
-        assert (TEMPLATES_DIR / "market.jinja2").exists()
+    # `market.jinja2` and `_base/base.jinja2` were deleted on 2026-10-28;
+    # every kind renders `_v2/report.jinja2`.
+    def test_the_shared_page_exists(self):
+        assert (TEMPLATES_DIR / "_v2" / "report.jinja2").exists()
 
-    def test_base_template_exists(self):
-        assert (TEMPLATES_DIR / "_base" / "base.jinja2").exists()
+    def test_the_legacy_page_is_gone(self):
+        assert not (TEMPLATES_DIR / "market.jinja2").exists()
+        assert not (TEMPLATES_DIR / "_base" / "base.jinja2").exists()
 
     def test_macros_file_exists(self):
         assert (TEMPLATES_DIR / "_base" / "macros.jinja2").exists()

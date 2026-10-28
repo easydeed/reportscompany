@@ -23,7 +23,6 @@ the fact that a dark brand is not dulled, and that the degraded path stays
 unused. Two levels, deliberately — the same split as the layout map and the
 render diff.
 """
-import re
 import sys
 from pathlib import Path
 
@@ -41,7 +40,6 @@ from worker.market_builder import (  # noqa: E402
 from worker.property_builder import flatten_over  # noqa: E402
 from worker.themes import contrast  # noqa: E402
 
-MARKET_CSS = ROOT / "apps/worker/src/worker/templates/market/_base/base.jinja2"
 
 #: The same six the contrast audit and the email suite use, so a number here
 #: can be compared with a number there.
@@ -57,26 +55,10 @@ def band(primary, accent=DEFAULT_ACCENT):
 
 # ── the two halves of one decision ──────────────────────────────────────────
 
-def test_the_guaranteed_alpha_is_the_alpha_the_stylesheet_uses():
-    """
-    The band is darkened until text at `MASTHEAD_SUBTITLE_ALPHA` is readable.
-    If the stylesheet's opacity drops below that, the guarantee is being made
-    for a lighter colour than the one on the page and means nothing — the
-    §7.2 narrative-box contract, in a second place.
-    """
-    css = MARKET_CSS.read_text(encoding="utf-8")
-    rule = re.search(r"\.masthead-subtitle\s*\{(.*?)\}", css, re.S)
-    assert rule, ".masthead-subtitle rule not found"
-    alpha = re.search(r"rgba\(\s*255\s*,\s*255\s*,\s*255\s*,\s*([\d.]+)\s*\)", rule.group(1))
-    assert alpha, (
-        "`.masthead-subtitle` no longer sets an rgba white. If it now uses an "
-        "opaque colour, MASTHEAD_SUBTITLE_ALPHA should become 1.0 and this "
-        "test should assert that instead — do not delete it."
-    )
-    assert float(alpha.group(1)) >= MarketReportBuilder.MASTHEAD_SUBTITLE_ALPHA, (
-        f"the stylesheet renders the subtitle at {alpha.group(1)} but the band "
-        f"is only guaranteed down to {MarketReportBuilder.MASTHEAD_SUBTITLE_ALPHA}"
-    )
+# `test_the_guaranteed_alpha_is_the_alpha_the_stylesheet_uses` WAS HERE: it read
+# `.masthead-subtitle`'s opacity out of the legacy `base.jinja2`, deleted on
+# 2026-10-28. The band derivation below is still live: the running footer's
+# tint colours (`accent_on_tint`, `accent_light`) are computed against it.
 
 
 # ── the guarantee itself ────────────────────────────────────────────────────

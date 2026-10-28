@@ -38,7 +38,6 @@ from worker.template_filters import (
     format_number,
     truncate,
 )
-from worker.ai_market_narrative import generate_market_pdf_narrative
 from worker.compute.monthly_trend import (
     MIN_CLOSED_FOR_MEDIAN,
     count_series,
@@ -66,16 +65,6 @@ def _first_present(source, *keys):
     return None
 
 
-def _pct(val) -> str | None:
-    """Convert a ratio (0-1 or 90-110 range) to a percentage string for prompts."""
-    if val is None:
-        return None
-    v = float(val)
-    if v < 2:  # looks like 0.98 ratio
-        return f"{v * 100:.1f}"
-    return f"{v:.1f}"
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
@@ -96,7 +85,6 @@ DEFAULT_PRIMARY = "#18235c"
 DEFAULT_ACCENT = "#4F46E5"
 
 TEMPLATES_DIR = Path(__file__).parent / "templates" / "market"
-TEMPLATE_PATH = "market.jinja2"
 
 LAYOUT_MAP: Dict[str, str] = {
     "new_listings_gallery": "gallery",
@@ -314,8 +302,13 @@ def _v2_beds_baths(item) -> str:
     return f"{one(beds)}/{one(baths)}"
 
 
-#: THE MIGRATION SEAM. Report types rendered by Design's `_v2` page rather than
-#: by `market.jinja2` + `_base/base.jinja2`.
+#: THE MIGRATION SEAM, now closed. Report types rendered by Design's `_v2`
+#: page. Every kind is in it: `market_snapshot` moved last (D-255), and the
+#: legacy `market.jinja2` + `_base/base.jinja2` it moved off were deleted on
+#: 2026-10-28 after every market body, header and footer rendered
+#: byte-identical without them. A kind outside this set has no page to render
+#: on — `render_html` refuses it rather than produce an empty document, and
+#: `test_market_layout_map.py` holds the set equal to `ALL_REPORT_TYPES`.
 #:
 #: The property surface had the same seam (`property_builder.V2_THEMES`, deleted
 #: when all three property themes moved), for the same reasons: eight kinds cannot land at once, the ones that have not
@@ -1643,30 +1636,12 @@ class MarketReportBuilder:
 
     # ── render ────────────────────────────────────────────────────────────
 
-    def _build_narrative_data(self) -> Dict[str, Any]:
-        """Build a flat dict of data points for the AI narrative prompt."""
-        metrics = self.report_data.get("metrics") or {}
-        counts = self.report_data.get("counts") or {}
-        listings = self.report_data.get("listings") or self.report_data.get("listings_sample") or []
-        prices = [l.get("list_price") or 0 for l in listings if l.get("list_price")]
-        return {
-            "lookback_days": self.report_data.get("lookback_days", 30),
-            "listing_count": self.report_data.get("total_listings") or sum(counts.values()) or len(listings),
-            "median_list_price": metrics.get("median_list_price"),
-            "median_price": _first_present(metrics, "median_close_price", "median_list_price"),
-            "avg_dom": _first_present(metrics, "avg_dom", "median_dom"),
-            "months_of_inventory": metrics.get("months_of_inventory"),
-            "list_to_sale_ratio": _pct(_first_present(metrics, "list_to_sale_ratio", "sale_to_list_ratio")),
-            "close_to_list_ratio": _pct(_first_present(metrics, "close_to_list_ratio", "sale_to_list_ratio")),
-            "closed_count": counts.get("Closed", 0),
-            "active_count": counts.get("Active", 0),
-            "min_price": min(prices) if prices else None,
-            "max_price": max(prices) if prices else None,
-            "price_bands": self.report_data.get("price_bands") or [],
-        }
-
     def render_html(self) -> str:
         """Render the complete HTML report."""
+        if self.report_type not in V2_KINDS:
+            raise ValueError(
+                f"{self.report_type} is not in V2_KINDS, and `_v2/report.jinja2` "
+                f"is the only market page there is")
         primary_color, accent_color = self._resolve_colors()
         # BOTH ends of the header band, not just the first. A label derived against
         # one stop alone measured 9.90:1 where it starts and 2.53:1 where the
@@ -1679,36 +1654,10 @@ class MarketReportBuilder:
         band_start, band_end = self._masthead_band(primary_color, accent_color)
         color_roles = compute_color_roles(accent_color, (band_start, band_end))
 
-        # Resolve AI narrative: use pre-supplied value, otherwise generate.
-        #
-        # EXCEPT ON THE `_v2` TABLE KINDS, where Design removes it: "this design
-        # renders no AI narrative on table or gallery kinds, so there is no
-        # narrative variant. Page-1 capacity is one state per kind."
-        #
-        # AND THIS SUPPRESSION IS NOT WHAT MAKES CAPACITY DETERMINISTIC — the
-        # `_v2` page has no narrative block, so the prose could not affect
-        # pagination even if it were generated. The first version of this
-        # comment claimed otherwise, and a mutation that removed the
-        # suppression came back DID NOT FIRE, which is how the claim got
-        # checked: nothing about the rendered document changes.
-        #
-        # What it does do is avoid PAYING for prose nobody will read: an OpenAI
-        # round trip, on every render of every v2 kind, whose output is
-        # discarded by the template. That is the whole of it, and it is worth
-        # doing — it is just a cost, not a correctness property.
-        ai_insights = self.report_data.get("ai_insights") or ""
-        if self.report_type in V2_KINDS:
-            ai_insights = ""
-        elif not ai_insights:
-            try:
-                city = self.report_data.get("city", "")
-                narrative_data = self._build_narrative_data()
-                ai_insights = generate_market_pdf_narrative(
-                    self.report_type, city, narrative_data,
-                ) or ""
-            except Exception as e:
-                logger.warning("AI narrative generation failed (non-fatal): %s", e)
-                ai_insights = ""
+        # No AI narrative: Design's page renders none, and the legacy page that
+        # did was deleted on 2026-10-28. The context keys stay empty so a
+        # pre-supplied `ai_insights` in old run data is ignored, not printed.
+        ai_insights = ""
 
         listings_ctx = self._build_listings_context()
         monthly_trend, monthly_trend_note, monthly_trend_fmt = self._build_monthly_trend()
@@ -1820,8 +1769,7 @@ class MarketReportBuilder:
         )
 
         try:
-            template = self.env.get_template(
-            V2_TEMPLATE_PATH if self.report_type in V2_KINDS else TEMPLATE_PATH)
+            template = self.env.get_template(V2_TEMPLATE_PATH)
             # Every URL-shaped value is scheme-checked here, at the one place
             # a context can become HTML. See sanitize_context_urls.
             html = template.render(**sanitize_context_urls(context))

@@ -1756,35 +1756,16 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
         builder_data["branding"] = branding_ctx
 
-        # Generate AI narrative (non-fatal — report renders without it).
-        #
-        # NOT FOR A KIND ON DESIGN'S PAGE, which renders no narrative: the
-        # builder blanks `ai_insights` for those, so this call was an OpenAI
-        # round trip whose answer was thrown away. Since D-255 that is every
-        # kind; the guard stays so a kind added off the shared page still gets
-        # its narrative.
-        from .market_builder import V2_KINDS
-        if report_type not in V2_KINDS and not builder_data.get("ai_insights"):
-            try:
-                from .ai_market_narrative import generate_market_pdf_narrative
-                narrative = generate_market_pdf_narrative(
-                    report_type,
-                    builder_data.get("city", ""),
-                    builder_data,
-                )
-                if narrative:
-                    builder_data["ai_insights"] = narrative
-                    print(f"✅ REPORT RUN {run_id}: AI narrative generated ({len(narrative)} chars)")
-            except Exception as ai_err:
-                print(f"⚠️  REPORT RUN {run_id}: AI narrative failed (non-fatal): {ai_err}")
-
+        # NO AI NARRATIVE. The market PDF printed one only on the legacy page,
+        # which every kind has left (D-255) and which was deleted on
+        # 2026-10-28; Design's page renders none. An unknown `report_type` is
+        # rendered as `market_snapshot` by the builder, so no path needs it.
         builder = MarketReportBuilder(builder_data)
         html_content = builder.render_html()
         # HERO-EVERY-PAGE — Big gradient hero header repeats on EVERY page via
         # PDFShift's `header` param. Agent footer repeats on every page via
         # PDFShift's `footer` param. Both use start_at=1 (PDFShift requires
         # header.start_at and footer.start_at to match when either > 1).
-        # Inline body hero (macros.report_header) has been removed from base.jinja2.
         header_html = builder.render_page_header_html()
         footer_html = builder.render_page_footer_html()
         print(

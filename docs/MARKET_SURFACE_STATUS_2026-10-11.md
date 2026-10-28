@@ -1,5 +1,11 @@
 # The market PDF surface: seven of eight kinds, measured
 
+> **UPDATED 2026-10-28 — THE LEGACY MARKET PAGE IS DELETED.** `market.jinja2`, `_base/base.jinja2`
+> and `market_narrative_layout` went, with every market body, header and footer rendering
+> byte-identical without them (66 surfaces, positive control on the trend chart). The builder
+> refuses a kind outside `V2_KINDS` instead of falling back, and no market path generates an AI
+> narrative any more. The legacy columns below are history.
+>
 > **UPDATED 2026-10-26 — ALL EIGHT KINDS NOW RENDER DESIGN'S `_v2` PAGE (D-255).** `market_snapshot`
 > was built as scoped in §6: Design's band (median at 96px, four stats, no pill and no arrows, since
 > nothing on the market path computes a prior period) over inventory, price tiers and property

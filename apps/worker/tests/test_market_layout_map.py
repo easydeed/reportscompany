@@ -233,8 +233,10 @@ def test_a_v2_kind_calls_no_layout_macro_and_renders_the_v2_page(report_type):
 #:
 #: `market_narrative_layout` JOINED ON D-255, when `market_snapshot` moved, and
 #: with it every layout is dead: no kind reaches `base.jinja2` at all. They
-#: are not kept as a rollback path. The other four were deleted on 2026-10-26;
-#: `market_narrative_layout`, `base.jinja2` and `market.jinja2` are next.
+#: are not kept as a rollback path. The other four were deleted on 2026-10-26,
+#: and `market_narrative_layout` with `base.jinja2` and `market.jinja2` on
+#: 2026-10-28. This list now records which layouts WENT, against the 2026-09-24
+#: map; `render_html` refuses any kind outside `V2_KINDS`.
 UNREACHABLE_LAYOUT_MACROS = ["analytics_layout", "closed_inventory_layout",
                              "gallery_layout", "market_narrative_layout",
                              "pricebands_layout"]
