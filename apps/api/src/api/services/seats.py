@@ -265,6 +265,10 @@ def reassign_seat(
       * A's agents move — to B by default ("agents move with the seat"), or to
         `agents_to_rep_id`, another rep of THIS company holding a seat. Only
         `sponsor_account_id` changes; every agent keeps its plan.
+      * A's BOOK goes where the agents go (`hand_over_book`): A's scheduled
+        sends, the contacts and groups they resolve recipients from, and
+        copies of A's unsubscribes. Otherwise the agents stop getting their
+        reports the day their rep changes and nobody is told.
       * A is switched off.
 
     Returns the moved agents' ids, names and owner emails, for the notices.
@@ -289,16 +293,19 @@ def reassign_seat(
         (destination, from_rep_id),
     )
     moved = [{"id": r[0], "name": r[1]} for r in cur.fetchall()]
+    schedules_moved = hand_over_book(cur, from_account_id=from_rep_id, to_account_id=destination)
 
     cur.execute(
         """
         UPDATE rep_seat_assignments
            SET ended_at = NOW(), ended_reason = 'reassigned',
                successor_rep_account_id = %s::uuid,
-               ended_by_user_id = %s::uuid, agents_moved = %s
+               ended_by_user_id = %s::uuid, agents_moved = %s,
+               book_to_account_id = %s::uuid, schedules_moved = %s
          WHERE id = %s::uuid AND ended_at IS NULL
         """,
-        (successor_id, actor_user_id, len(moved), leaving["seat_id"]),
+        (successor_id, actor_user_id, len(moved), destination, schedules_moved,
+         leaving["seat_id"]),
     )
     open_seat(cur, company_id, successor_id)
     _switch_off(cur, from_rep_id)
@@ -323,8 +330,79 @@ def reassign_seat(
         "successor_rep_id": successor_id,
         "agents_to_rep_id": destination,
         "agents_moved": moved,
+        "schedules_moved": schedules_moved,
         "notice_recipients": recipients,
     }
+
+
+def hand_over_book(cur, *, from_account_id: str, to_account_id: str) -> int:
+    """Move a leaving rep's scheduled sends, and what they depend on, to the
+    account taking over their agents. Returns how many schedules moved.
+
+    WHAT HAS TO MOVE TOGETHER. The worker resolves a schedule's recipients
+    against the schedule's OWN account (`tasks.resolve_recipients_to_emails`):
+    a contact or a group is read `WHERE account_id = <schedule's account>`, and
+    an agent recipient must be sponsored by it. Moving the schedules alone
+    would leave every contact and group recipient unresolvable — the schedule
+    would run and send to nobody. So the contacts, the groups and the group
+    memberships move with them (ids unchanged, so every reference still
+    holds), and agent recipients resolve because the agents moved first.
+
+    AND THE UNSUBSCRIBES, COPIED. Suppressions are per account
+    (`email_suppressions.account_id`, read by worker/email/send.py). A
+    recipient who opted out of the leaving rep's emails must not start getting
+    the same emails under a new name. Copied rather than moved: the leaving
+    rep's record of who opted out stays theirs.
+
+    Schedules keep their timing, history and `active` flag. They send once the
+    receiving account can send (`schedules_tick.account_can_send`): at once
+    for an existing rep, and from when a newly invited rep accepts and
+    confirms their address — the D-019 rule that nothing goes out in the name
+    of an unconfirmed address.
+    """
+    cur.execute(
+        "UPDATE schedules SET account_id = %s::uuid WHERE account_id = %s::uuid RETURNING id",
+        (to_account_id, from_account_id),
+    )
+    moved = len(cur.fetchall())
+    for table in ("contacts", "contact_groups", "contact_group_members"):
+        cur.execute(
+            f"UPDATE {table} SET account_id = %s::uuid WHERE account_id = %s::uuid",
+            (to_account_id, from_account_id),
+        )
+    cur.execute(
+        """
+        INSERT INTO email_suppressions (account_id, email, reason)
+        SELECT %s::uuid, email, reason FROM email_suppressions WHERE account_id = %s::uuid
+        ON CONFLICT (account_id, email) DO NOTHING
+        """,
+        (to_account_id, from_account_id),
+    )
+    return moved
+
+
+def book_successors(cur, account_ids: List[str]) -> List[str]:
+    """Every account a book was handed to from `account_ids`, transitively —
+    A to B, then B to C if B's seat moved too. For the unsubscribe route: a
+    link signed for A, clicked after the move, must stop the sends that are
+    now B's."""
+    if not account_ids:
+        return []
+    cur.execute(
+        """
+        WITH RECURSIVE chain(account_id) AS (
+            SELECT book_to_account_id FROM rep_seat_assignments
+             WHERE rep_account_id = ANY(%s::uuid[]) AND book_to_account_id IS NOT NULL
+            UNION
+            SELECT s.book_to_account_id FROM rep_seat_assignments s
+              JOIN chain c ON s.rep_account_id = c.account_id
+             WHERE s.book_to_account_id IS NOT NULL
+        )
+        SELECT account_id::text FROM chain
+        """,
+        (account_ids,),
+    )
+    return [r[0] for r in cur.fetchall() if r[0] not in account_ids]
 
 
 def agent_emails_for(cur, company_id: str, rep_account_id: str) -> List[str]:

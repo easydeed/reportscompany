@@ -884,8 +884,9 @@ def reassign_rep_seat(
     """Move a rep's seat to a new rep, and their agents with it.
 
     One transaction: the new rep is invited into the seat, the agents move to
-    them (or to `agents_to_rep_id`), the leaving rep is switched off, and the
-    move is recorded. Each moved agent is told who their rep is now.
+    them (or to `agents_to_rep_id`), the leaving rep's scheduled sends go
+    where the agents go, the leaving rep is switched off, and the move is
+    recorded. Each moved agent is told who their rep is now.
     """
     company_id = company["company_account_id"]
     actor = _company_inviter_user_id(request)
@@ -973,6 +974,7 @@ def reassign_rep_seat(
         "new_rep_account_id": outcome["successor_rep_id"],
         "agents_to_rep_id": outcome["agents_to_rep_id"],
         "agents_moved": len(outcome["agents_moved"]),
+        "schedules_moved": outcome["schedules_moved"],
         "notices_queued": len(outcome["notice_recipients"]),
     }
 

@@ -110,5 +110,47 @@
     "old": "            conn.commit()\n    except seats.SeatNotFound:\n        raise HTTPException(status_code=404, detail=\"Rep not found under your company, or holds no seat.\")\n    except seats.SeatConflict as e:\n        raise HTTPException(status_code=409, detail=str(e))\n    return {\"ok\": True}\n",
     "new": "            conn.commit()\n    except seats.SeatConflict as e:\n        raise HTTPException(status_code=409, detail=str(e))\n    return {\"ok\": True}\n",
     "test": "tests/test_sponsor_routes_take_the_caller_from_the_token.py apps/api/tests/test_rep_seats.py::test_a_company_cannot_cancel_another_companys_invite"
+  },
+  {
+    "name": "H1 the leaving rep's schedules stay on the switched-off account",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "        \"UPDATE schedules SET account_id = %s::uuid WHERE account_id = %s::uuid RETURNING id\",",
+    "new": "        \"SELECT id FROM schedules WHERE %s::uuid IS NOT NULL AND account_id = %s::uuid\",",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_schedules_follow_the_agents_and_still_reach_everyone"
+  },
+  {
+    "name": "H2 the schedules move without the contacts and groups they resolve from",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    for table in (\"contacts\", \"contact_groups\", \"contact_group_members\"):",
+    "new": "    for table in ():",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_schedules_follow_the_agents_and_still_reach_everyone"
+  },
+  {
+    "name": "H3 unsubscribes are left behind, so opted-out recipients are mailed under the new name",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "        SELECT %s::uuid, email, reason FROM email_suppressions WHERE account_id = %s::uuid\n",
+    "new": "        SELECT %s::uuid, email, reason FROM email_suppressions WHERE FALSE AND account_id = %s::uuid\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_an_unsubscribe_follows_the_schedules"
+  },
+  {
+    "name": "H4 the schedules go to the new rep when the agents went to another",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    schedules_moved = hand_over_book(cur, from_account_id=from_rep_id, to_account_id=destination)",
+    "new": "    schedules_moved = hand_over_book(cur, from_account_id=from_rep_id, to_account_id=successor_id)",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_schedules_go_to_the_rep_the_agents_go_to"
+  },
+  {
+    "name": "H5 an old link's opt-out lands only on the switched-off rep",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "        matched += book_successors(cur, matched)\n",
+    "new": "",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_link_sent_before_the_move_stops_the_sends_after_it"
+  },
+  {
+    "name": "H6 where the book went is not recorded",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "        (successor_id, actor_user_id, len(moved), destination, schedules_moved,\n",
+    "new": "        (successor_id, actor_user_id, len(moved), None, schedules_moved,\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_link_sent_before_the_move_stops_the_sends_after_it"
   }
 ]
