@@ -65,46 +65,71 @@ def verify_unsubscribe_token(account_id: str, email: str, token: str) -> bool:
     return hmac.compare_digest(expected_token, token)
 
 
+def _candidate_accounts(cur, email: str) -> list:
+    """Every account that has sent a scheduled email to `email`.
+
+    FROM `email_log`, which the worker writes — committed BEFORE the provider
+    is called — for every scheduled send, with the account and the RESOLVED
+    addresses. This used to read `schedules.recipients` alone, which cannot
+    answer the question: the API stores every recipient as JSON
+    (`{"type":"manual_email","email":…}`, or a contact, group or agent id that
+    holds no address at all), so `%s = ANY(recipients)` matched no schedule
+    created through the API and every opt-out returned "unsubscribed" while
+    recording nothing. The plain-string match is kept for legacy rows.
+
+    Several candidates is normal (two agents can mail the same client). The
+    token decides which: it is an HMAC over `account_id:email`, so trying each
+    candidate does not weaken it — a forged token verifies against none.
+    """
+    cur.execute(
+        """
+        SELECT account_id::text FROM email_log
+         WHERE %s = ANY(to_emails) AND account_id IS NOT NULL
+        UNION
+        SELECT account_id::text FROM schedules
+         WHERE %s = ANY(recipients)
+        """,
+        (email, email),
+    )
+    return sorted({r[0] for r in cur.fetchall()})
+
+
 def _suppress(email: str, token: str, reason: str) -> str:
     """
-    Resolve the account for `email`, verify `token` against it, and record a
+    Find the account the token was signed for, verify it, and record a
     suppression. Shared by the link endpoint and the RFC 8058 one-click
     endpoint so there is exactly ONE implementation of the security check.
 
     Returns a short human-readable outcome. Raises HTTPException(400) when the
-    token does not verify.
+    token verifies against no account that has mailed this address.
+
+    `db_conn()` yields `(conn, cur)`. This was written `with db_conn() as conn:
+    conn.cursor()`, which raised on the tuple, so both endpoints returned 500
+    to every recipient and nobody could opt out.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
-
-        # Find account_id from schedules that contain this email
-        cur.execute("""
-            SELECT DISTINCT account_id::text
-            FROM schedules
-            WHERE %s = ANY(recipients)
-            LIMIT 1
-        """, (email,))
-
-        row = cur.fetchone()
-        if not row:
-            # Email not found in any schedules - still return success (idempotent)
+    with db_conn() as (conn, cur):
+        candidates = _candidate_accounts(cur, email)
+        if not candidates:
+            # Nothing we sent went to this address, so there is nothing to stop.
+            # Same answer as a success: the response must not say whether an
+            # address is on anyone's list.
             return "Email unsubscribed"
 
-        account_id = row[0]
-
-        # Verify token
-        if not verify_unsubscribe_token(account_id, email, token):
+        matched = [a for a in candidates if verify_unsubscribe_token(a, email, token)]
+        if not matched:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid unsubscribe token"
             )
 
-        # Insert into suppressions (idempotent due to UNIQUE constraint)
-        cur.execute("""
-            INSERT INTO email_suppressions (account_id, email, reason)
-            VALUES (%s::uuid, %s, %s)
-            ON CONFLICT (account_id, email) DO NOTHING
-        """, (account_id, email, reason))
+        # Idempotent on the UNIQUE (account_id, email). This is the row the
+        # worker's send filter reads (worker/email/send.py).
+        for account_id in matched:
+            cur.execute("""
+                INSERT INTO email_suppressions (account_id, email, reason)
+                VALUES (%s::uuid, %s, %s)
+                ON CONFLICT (account_id, email) DO NOTHING
+            """, (account_id, email, reason))
 
         conn.commit()
 
