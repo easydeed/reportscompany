@@ -4,14 +4,14 @@
     "file": "apps/api/src/api/routes/unsubscribe.py",
     "old": "    with db_conn() as (conn, cur):\n        candidates = _candidate_accounts(cur, email)",
     "new": "    with db_conn() as conn:\n        cur = conn.cursor()\n        candidates = _candidate_accounts(cur, email)",
-    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py"
+    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py apps/api/tests/test_unsubscribe_end_to_end.py"
   },
   {
     "name": "U2 the account is looked up in schedules.recipients only",
     "file": "apps/api/src/api/routes/unsubscribe.py",
     "old": "        SELECT account_id::text FROM email_log\n         WHERE %s = ANY(to_emails) AND account_id IS NOT NULL\n        UNION\n",
     "new": "        SELECT account_id::text FROM schedules WHERE FALSE AND %s IS NULL\n        UNION\n",
-    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py"
+    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py apps/api/tests/test_unsubscribe_end_to_end.py"
   },
   {
     "name": "U3 the token is not checked",
@@ -26,5 +26,26 @@
     "old": "        for account_id in matched:\n",
     "new": "        for account_id in candidates:\n",
     "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py::test_only_the_account_the_token_was_signed_for_is_suppressed"
+  },
+  {
+    "name": "G1 the worker's send ignores the suppression list",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "                    filtered_recipients = [r for r in recipients if r not in suppressed]\n",
+    "new": "                    filtered_recipients = recipients[:]\n",
+    "test": "apps/api/tests/test_unsubscribe_end_to_end.py"
+  },
+  {
+    "name": "G2 the footer link points at a path no web route serves",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "    return f\"{WEB_BASE}/api/v1/email/unsubscribe?token={token}&email={quote(email, safe='')}\"",
+    "new": "    return f\"{WEB_BASE}/api/v1/unsubscribe?token={token}&email={quote(email, safe='')}\"",
+    "test": "apps/api/tests/test_unsubscribe_end_to_end.py"
+  },
+  {
+    "name": "G3 messages go out without the one-click header",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n",
+    "new": "            headers={},\n",
+    "test": "apps/api/tests/test_unsubscribe_end_to_end.py"
   }
 ]
