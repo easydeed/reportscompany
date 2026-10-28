@@ -1,14 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  buildSocialMarketSnapshotHtml,
-  buildSocialNewListingsHtml,
-  buildSocialClosedHtml,
-  buildSocialInventoryHtml,
-  buildSocialGalleryHtml,
-  buildSocialPriceBandsHtml
-} from '@/lib/social-templates';
+import { SOCIAL_TEMPLATE_MAP } from '@/lib/social-templates';
 
 /**
  * Social Media Image Route Handler
@@ -67,16 +60,7 @@ async function loadTemplate(templateName: string): Promise<string> {
   return await fs.readFile(templatePath, 'utf-8');
 }
 
-const TEMPLATE_MAP: Record<string, { filename: string; builder: (t: string, d: any) => string }> = {
-  "market_snapshot": { filename: 'social-market-snapshot.html', builder: buildSocialMarketSnapshotHtml },
-  "new_listings": { filename: 'social-new-listings.html', builder: buildSocialNewListingsHtml },
-  "closed": { filename: 'social-closed.html', builder: buildSocialClosedHtml },
-  "inventory": { filename: 'social-inventory.html', builder: buildSocialInventoryHtml },
-  "open_houses": { filename: 'social-inventory.html', builder: buildSocialInventoryHtml },
-  "price_bands": { filename: 'social-price-bands.html', builder: buildSocialPriceBandsHtml },
-  "new_listings_gallery": { filename: 'social-gallery.html', builder: buildSocialGalleryHtml },
-  "featured_listings": { filename: 'social-gallery.html', builder: buildSocialGalleryHtml },
-};
+const TEMPLATE_MAP = SOCIAL_TEMPLATE_MAP;
 
 export async function GET(
   request: NextRequest,
