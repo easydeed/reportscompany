@@ -287,7 +287,9 @@ class TestPrintCSS:
     #: re-measuring seven kinds to buy a rule that changes nothing. Recorded
     #: instead, so the absence is a decision.
     HAS_AT_PAGE_RULE = {
-        "market_snapshot": True,     # the legacy page
+        # False since D-255: the snapshot left the legacy page, and with it the
+        # last `@page` rule on the market surface.
+        "market_snapshot": False,
         "closed": False, "inventory": False, "new_listings": False,
         "price_bands": False, "new_listings_gallery": False,
         "open_houses": False, "featured_listings": False,

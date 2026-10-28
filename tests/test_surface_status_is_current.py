@@ -40,24 +40,21 @@ def body():
 
 
 def test_the_report_says_how_many_kinds_are_wired(body):
-    """SEVEN, and the document must not claim eight.
+    """EIGHT since D-255, and the document must say so in its update.
 
-    This is the assertion that matters most in the file. A status report
-    claiming the surface is finished when one kind is unwired is the one error
-    here that would reach a customer, because it is the sentence somebody
-    forwards.
+    This was "SEVEN, and the document must not claim eight" — the assertion
+    that mattered most, because a status report claiming the surface finished
+    while one kind was unwired is the sentence somebody forwards. The kind
+    landed; the document's 2026-10-11 body is kept as measured, and the dated
+    update at its head is what makes the current claim.
     """
-    assert len(V2_KINDS) == 7, (
-        f"{len(V2_KINDS)} kinds are wired: {sorted(V2_KINDS)}. If "
-        f"`market_snapshot` has landed, this document's title, §1 table, §5 "
-        f"and §6 all change — update them together rather than one of them."
+    assert len(V2_KINDS) == 8, (
+        f"{len(V2_KINDS)} kinds are wired: {sorted(V2_KINDS)}; the document's "
+        f"update says all eight."
     )
-    unwired = sorted(set(ALL_REPORT_TYPES) - V2_KINDS)
-    assert unwired == ["market_snapshot"], unwired
-    assert "Seven of the eight" in body
-    assert "**`market_snapshot` is not wired**" in body
-    for claim in ("All eight kinds wired", "all eight kinds render"):
-        assert claim not in body, f"the document claims {claim!r}"
+    assert sorted(set(ALL_REPORT_TYPES) - V2_KINDS) == []
+    assert "ALL EIGHT KINDS NOW RENDER DESIGN'S `_v2` PAGE (D-255)" in body
+    assert "wired 2026-10-26 (D-255)" in body
 
 
 def test_the_page_and_row_figures_are_the_measured_ones(body):
@@ -105,9 +102,10 @@ def test_the_determinism_claim_holds_for_every_wired_kind(body):
         f"these wired kinds' page-1 capacity depends on prose length again: "
         f"{swinging}. §3 of the document claims otherwise."
     )
-    assert PAGE_1_CAPACITY["market_snapshot"]["with_trend"] == 0, (
-        "the document says `market_snapshot` still reads 3 / 3 / 0"
+    assert PAGE_1_CAPACITY["market_snapshot"] == {"no_narrative": 0, "with_narrative": 0}, (
+        "the document says `market_snapshot` reads 0 / 0 since D-255"
     )
+    assert "reads `0 / 0`" in body
 
 
 def test_every_defect_it_cites_exists_and_carries_the_status_quoted(body):

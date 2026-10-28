@@ -58,15 +58,19 @@ def a_kind_outside_the_seam() -> str:
     migration.** So it is derived from the remainder and the remainder is
     asserted non-empty: when the last kind moves, these tests say their control
     is gone rather than quietly passing for the wrong reason.
+
+    THE CONTROL WAS CONSUMED ON D-255, as this docstring said it would be:
+    `market_snapshot` was the last kind outside the seam. It is now a
+    SYNTHETIC kind — a report type no producer writes — taken out of the seam
+    by the caller where a test needs one (`monkeypatch` on `V2_KINDS`), so the
+    tests still prove the seam does something rather than passing because
+    every kind is in it.
     """
-    outside = sorted(set(ALL_REPORT_TYPES) - V2_KINDS)
-    assert outside, (
-        "every report type is now in V2_KINDS, so there is no kind left to act "
-        "as the control for these tests. They are no longer proving what they "
-        "say — replace the control with a synthetic report type, or retire the "
-        "tests with the seam."
+    assert set(ALL_REPORT_TYPES) <= V2_KINDS, (
+        "a real report type is outside V2_KINDS again; use it as the control "
+        "instead of the synthetic one."
     )
-    return outside[0]
+    return "synthetic_off_seam_kind"
 from worker.template_filters import format_currency_short  # noqa: E402
 
 
@@ -95,7 +99,8 @@ def test_every_kind_in_the_seam_has_its_band_values():
     """
     assert V2_KINDS == frozenset({"closed", "new_listings", "price_bands",
                                   "inventory", "new_listings_gallery",
-                                  "open_houses", "featured_listings"}), (
+                                  "open_houses", "featured_listings",
+                                  "market_snapshot"}), (
         f"V2_KINDS is {set(V2_KINDS)}. Every kind in it needs its own band "
         f"values from Design's per-kind table — big number, label, pill, three "
         f"stats — and `_v2_band` raises NotImplementedError without them."
@@ -103,7 +108,10 @@ def test_every_kind_in_the_seam_has_its_band_values():
     for kind in V2_KINDS:
         band = builder(kind)._v2_band()
         assert band["big"] is not None, f"{kind} has no big number"
-        assert len(band["cells"]) == 3, f"{kind} has {len(band['cells'])} stats"
+        # Three stats on every kind but the snapshot, which Design gives four
+        # ("3 cells (4 on snapshot)").
+        want = 4 if kind == "market_snapshot" else 3
+        assert len(band["cells"]) == want, f"{kind} has {len(band['cells'])} stats"
         # `label` is NOT asserted truthy: on `price_bands` Design's headline
         # rule deliberately returns no label when the data cannot support the
         # claim, and the plain title goes in `big` instead. Requiring a label
@@ -304,9 +312,12 @@ def test_a_v2_render_does_not_pay_for_a_narrative_it_discards(monkeypatch):
     assert "some generated prose" not in html
 
     # The control: a kind that has NOT moved still generates one, so this is
-    # not asserting that the generator is simply unreachable. DERIVED — this
-    # line said `inventory` until `inventory` joined the seam.
-    other = builder(a_kind_outside_the_seam())
+    # not asserting that the generator is simply unreachable. Since D-255
+    # every real kind has moved, so `closed` is taken out of the seam for the
+    # length of this test — the legacy page still exists to render it.
+    monkeypatch.setattr(mb, "V2_KINDS", mb.V2_KINDS - {"closed"})
+    a_kind_outside_the_seam()          # asserts the real kinds are all in
+    other = builder("closed")
     other.report_data["ai_insights"] = ""
     other.render_html()
     assert calls, (

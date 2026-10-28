@@ -1,0 +1,51 @@
+[
+  {
+    "name": "S1 the snapshot band invents Design's prior-period pill",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            pill, pill_sub = None, None\n\n        else:",
+    "new": "            pill, pill_sub = \"\u25b2 3.1%\", \"vs. prior 30 days\"\n\n        else:",
+    "test": "apps/worker/tests/test_market_snapshot_v2.py"
+  },
+  {
+    "name": "S2 the inventory block writes its own sentence instead of compute.moi's",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        moi_block = moi_headline(",
+    "new": "        moi_block = (lambda m, a: {**moi_headline(m, a), 'headline': 'Seller market'})(",
+    "test": "apps/worker/tests/test_market_snapshot_v2.py"
+  },
+  {
+    "name": "S3 a tier bar is a share of the total instead of the busiest tier",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "\"width\": round((t.get(\"count\") or 0) / busiest * 100) if busiest else 0,",
+    "new": "\"width\": round((t.get(\"count\") or 0) / max(1, sum(x.get(\"count\") or 0 for x in tiers_in)) * 100),",
+    "test": "apps/worker/tests/test_market_snapshot_v2.py"
+  },
+  {
+    "name": "S4 the type cards are taken in feed order, not by sales",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        types_in = sorted(types_in, key=lambda t: t.get(\"count\") or 0, reverse=True)[:3]",
+    "new": "        types_in = list(reversed(types_in))[:3]",
+    "test": "apps/worker/tests/test_market_snapshot_v2.py"
+  },
+  {
+    "name": "S5 the kept median line is dropped from the page (D-102)",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "  {% if monthly_trend %}\n  {# NOT IN DESIGN'S SNAPSHOT.",
+    "new": "  {% if false %}\n  {# NOT IN DESIGN'S SNAPSHOT.",
+    "test": "apps/worker/tests/test_market_snapshot_v2.py"
+  },
+  {
+    "name": "S6 an empty type block renders nothing instead of saying so",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "    <div class=\"snap-empty\">No homes sold in this period, so there is nothing to compare by type.</div>",
+    "new": "",
+    "test": "apps/worker/tests/test_market_snapshot_v2.py"
+  },
+  {
+    "name": "S7 the shared MOI bar overflows past eight cells",
+    "file": "apps/worker/src/worker/compute/moi.py",
+    "old": "\"cells\": [i < max(0, min(BAR_CELLS, round(moi))) for i in range(BAR_CELLS)],",
+    "new": "\"cells\": [i < round(moi) for i in range(max(BAR_CELLS, round(moi)))],",
+    "test": "apps/worker/tests/test_market_snapshot_v2.py"
+  }
+]

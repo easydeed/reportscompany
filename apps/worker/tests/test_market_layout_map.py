@@ -171,6 +171,7 @@ V2_BODY_MARKER = {
     "new_listings_gallery": 'class="grid"',
     "open_houses": 'class="grid"',
     "featured_listings": 'class="grid"',
+    "market_snapshot": 'class="snap"',
 }
 
 
@@ -229,8 +230,14 @@ def test_a_v2_kind_calls_no_layout_macro_and_renders_the_v2_page(report_type):
 #: dispatch still names them), but accumulating them unnoticed is how a
 #: template file comes to be two thirds dead without anyone having decided it —
 #: which is exactly what `property/_base/base.jinja2`'s 5,570 dead lines are.
+#:
+#: `market_narrative_layout` JOINED ON D-255, when `market_snapshot` moved, and
+#: with it every layout is dead: no kind reaches `base.jinja2` at all. They
+#: are not kept as a rollback path. The other four were deleted on 2026-10-26;
+#: `market_narrative_layout`, `base.jinja2` and `market.jinja2` are next.
 UNREACHABLE_LAYOUT_MACROS = ["analytics_layout", "closed_inventory_layout",
-                             "gallery_layout", "pricebands_layout"]
+                             "gallery_layout", "market_narrative_layout",
+                             "pricebands_layout"]
 
 
 def test_the_layouts_no_report_type_reaches_are_recorded():
@@ -296,8 +303,13 @@ RENDERED_LISTING_CAP = {
 #: the other four. What is recorded here is that it is inert for rendering —
 #: so if someone gives `price_bands` a listings table, 8 rows appear, and this
 #: gate fires asking whether 8 was ever a decision for that body.
+#:
+#: `market_snapshot` joined on D-255 for the same reason: Design's snapshot
+#: body is inventory, price tiers, the median line and property types — no
+#: listing cards. The legacy page showed nine on page 2; that page is gone.
 RENDERED_DESPITE_CAP = {
     "price_bands": 0,
+    "market_snapshot": 0,
 }
 
 #: Kinds whose `_v2` body renders CARDS rather than table rows, so the listing

@@ -2652,30 +2652,12 @@ class PropertyReportBuilder:
         ]
 
         # ── months of inventory ─────────────────────────────────────────
-        moi = (trends.get("months_of_inventory") or {}).get("current")
-        if moi is None:
-            headline = "Inventory is not measurable here"
-            note = ("There were not enough recent sales to work out how long "
-                    "the homes for sale would take to sell.")
-            cells = [False] * 8
-        else:
-            headline = ("It's a seller's market" if moi < 4
-                        else "The market is balanced" if moi <= 6
-                        else "Buyers have the edge")
-            months = f"{moi:.1f}".rstrip("0").rstrip(".")
-            note = (
-                f"{months} months of inventory. At this pace every home for sale "
-                f"in {self.report_data.get('property_city') or 'this area'} would "
-                f"be gone in "
-                + ("under three months." if moi < 3
-                   else "under six months." if moi < 6
-                   else "more than six months.")
-            )
-            # Eight cells, one a month. A market at 11 months fills all eight
-            # rather than overflowing the grid — the cap is stated here
-            # because the template cannot clamp what it is handed.
-            filled = max(0, min(8, round(moi)))
-            cells = [i < filled for i in range(8)]
+        # The words and the bar come from `compute.moi.headline`, shared with
+        # the market snapshot; the thresholds are `condition()`'s.
+        from worker.compute.moi import headline as _moi_headline
+        _moi = _moi_headline((trends.get("months_of_inventory") or {}).get("current"),
+                             self.report_data.get("property_city") or "this area")
+        headline, note, cells = _moi["headline"], _moi["note"], _moi["cells"]
 
         # ── the six-month chart ─────────────────────────────────────────
         series = trends.get("monthly_median")

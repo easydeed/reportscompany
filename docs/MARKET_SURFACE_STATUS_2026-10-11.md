@@ -1,5 +1,11 @@
 # The market PDF surface: seven of eight kinds, measured
 
+> **UPDATED 2026-10-26 — ALL EIGHT KINDS NOW RENDER DESIGN'S `_v2` PAGE (D-255).** `market_snapshot`
+> was built as scoped in §6: Design's band (median at 96px, four stats, no pill and no arrows, since
+> nothing on the market path computes a prior period) over inventory, price tiers and property
+> types, with the twelve-month median line kept as a fourth row (D-102). 2 pages → **1**, 9 listing
+> rows → **0**. Everything below is the 2026-10-11 measurement, kept as taken.
+
 **Status at 2026-10-11.** Seven of the eight market report types render Design's `_v2` page.
 **`market_snapshot` is not wired** — it is scoped (below) and is the remaining work.
 
@@ -83,8 +89,8 @@ of zero against an empty set is not a hit.
 ## 3 · Page-1 capacity is deterministic on every kind
 
 `PAGE_1_CAPACITY` reads **one number per kind** for all seven wired kinds — the same figure with and
-without an AI narrative. `market_snapshot` still reads `3 / 3 / 0`: its third state is the trend
-chart, which is a chart rather than prose, so the number does not depend on model output there either.
+without an AI narrative. `market_snapshot` read `3 / 3 / 0` on 2026-10-11: its third state was the
+trend chart. Since D-255 it reads `0 / 0` — no listings body, so nothing paginates.
 
 That was the architectural point of the adoption. Before it, `closed` and `inventory` read 15 without
 a narrative and 11 with one, so **how long an LLM happened to write decided where page 1 ended.**
@@ -107,16 +113,16 @@ a narrative and 11 with one, so **how long an LLM happened to write decided wher
 
 | | what |
 |---|---|
-| **`market_snapshot` unwired** | the remaining kind. Scoped in §6 |
+| ~~**`market_snapshot` unwired**~~ | wired 2026-10-26 (D-255) |
 | **D-184** `open` | Design's page-1 grids. Two asks, relayed with the arithmetic in `GALLERY_GRID_FOR_DESIGN_2026-10-10.md` |
 | **D-182** `[JERRY]` | which seller's-market threshold is right. Four `moi < 3` sites are live email copy and an LLM prompt; aligning them is a content change, now a one-line edit in one file |
 | **D-183** `[JERRY]` | the inventory report carries no trend at all. Restoring it is one line plus a chart slot Design would have to agree to |
-| **three dead layout macros** | `analytics_layout`, `closed_inventory_layout`, `gallery_layout`, `pricebands_layout` — no kind reaches any of them. Pinned in `UNREACHABLE_LAYOUT_MACROS`; they are the rollback path while one kind is unwired |
+| **dead layout macros** | `analytics_layout`, `closed_inventory_layout`, `gallery_layout`, `pricebands_layout`, and since D-255 `market_narrative_layout` — no kind reaches `base.jinja2` at all. Pinned in `UNREACHABLE_LAYOUT_MACROS`; the dead-template change deletes them |
 | **unsent to Design** | the 13-and-26 row counts are not simultaneously satisfiable (costs nothing — we render 17 and 26 at five pages, not six) |
 
 ---
 
-## 6 · `market_snapshot`, scoped
+## 6 · `market_snapshot`, scoped (built 2026-10-26, D-255)
 
 Design's snapshot is the most complex band in the package: median sale price at 96px with no label, a
 delta pill, **four** stat cells, and a body of three row-blocks — an MOI headline block with an 8-cell

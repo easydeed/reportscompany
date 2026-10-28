@@ -169,6 +169,29 @@ def _market_snapshot(city: str, lookback_days: int) -> Dict[str, Any]:
             "months_of_inventory": 2.8,
             "new_listings_count": 23,
         },
+        # The snapshot body's two breakdowns (D-255), in the shape
+        # `build_market_snapshot_result` writes. They add up to the counts
+        # above — 42 closed, 89 active — so the preview's tier bars and type
+        # cards agree with its band.
+        "price_tiers": {
+            "Entry": {"label": "Entry", "count": 17, "active_count": 30,
+                      "median_price": 1_150_000, "moi": 1.8,
+                      "min_price": None, "max_price": 1_300_000},
+            "Move-Up": {"label": "Move-Up", "count": 15, "active_count": 35,
+                        "median_price": 1_480_000, "moi": 2.4,
+                        "min_price": 1_300_000, "max_price": 1_700_000},
+            "Luxury": {"label": "Luxury", "count": 10, "active_count": 24,
+                       "median_price": 2_150_000, "moi": 2.4,
+                       "min_price": 1_700_000, "max_price": None},
+        },
+        "by_property_type": {
+            "SFR": {"label": "SFR", "count": 24, "active_count": 52,
+                    "median_price": 1_520_000, "avg_dom": 26},
+            "Condo": {"label": "Condo", "count": 11, "active_count": 22,
+                      "median_price": 980_000, "avg_dom": 31},
+            "Townhome": {"label": "Townhome", "count": 7, "active_count": 15,
+                         "median_price": 1_210_000, "avg_dom": 27},
+        },
         "listings_sample": listings_sample,
         "total_listings": 50,
     }

@@ -118,13 +118,16 @@ def test_the_comparison_is_against_the_no_narrative_column():
         f"wrote: {prose_swing}. That is D-102's defect and the thing Design's "
         f"one-state page removes."
     )
-    assert PAGE_1_CAPACITY["market_snapshot"]["with_trend"] == 0, (
-        f"`market_snapshot` reads "
-        f"{PAGE_1_CAPACITY['market_snapshot']} — the one remaining swing is "
-        f"its trend chart, and this control exists so the assertion above is "
-        f"not vacuously true of a surface where nothing varies at all. If "
-        f"`market_snapshot` has been wired, this suite has no control left: "
-        f"say so rather than deleting the line."
+    # THE CONTROL IS GONE, SAID RATHER THAN DELETED. `market_snapshot`'s
+    # `with_trend: 0` was the one remaining swing, kept so the assertion above
+    # was not vacuously true. D-255 wired the snapshot: its chart is a row of
+    # Design's page and it carries no listings, so it reads one state like
+    # every other kind. The assertion above now holds by construction — what
+    # is asserted instead is that no kind has a third state left to swing.
+    assert all(set(states) == {"no_narrative", "with_narrative"}
+               for states in PAGE_1_CAPACITY.values()), (
+        f"a kind has a capacity state beyond the two narrative states: "
+        f"{ {k: v for k, v in PAGE_1_CAPACITY.items() if len(v) != 2} }"
     )
     assert "the middle column" in body, (
         "the document no longer says which column the comparison is against. "
@@ -298,6 +301,7 @@ V2_CONTINUATION = {
     "new_listings": 26,
     "inventory": 26,
     "price_bands": None,
+    "market_snapshot": None,
     "new_listings_gallery": 9,
     "open_houses": 9,
     "featured_listings": 4,
@@ -315,6 +319,7 @@ V2_CONTINUATION = {
 #: which is a §0.6 rule this suite has now instantiated twice.
 V2_BUILT_PAGES = {
     "closed": 5, "new_listings": 5, "inventory": 5, "price_bands": 1,
+    "market_snapshot": 1,
     "new_listings_gallery": 14, "open_houses": 12, "featured_listings": 4,
 }
 
