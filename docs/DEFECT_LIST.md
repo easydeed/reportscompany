@@ -15566,7 +15566,9 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-287 — both unsubscribe endpoints returned 500 to every request, and the lookup under them matched no schedule the API had created: recipients could not opt out
 
 **Severity:** BROKEN · filed while scoping the schedule hand-over: `routes/unsubscribe.py` `_suppress` did `with db_conn() as conn: conn.cursor()`; `db_conn()` yields `(conn, cur)`. Beneath it the account was found by `%s = ANY(schedules.recipients)`, and the API stores every recipient as JSON, so a fixed tuple would have answered "unsubscribed" and recorded nothing. The link and RFC 8058 one-click both. Opt-outs clicked while this was live were not recorded: the web route logs `[Unsubscribe] API returned 500 for {email}`, which is where they can be recovered from.
-**Status:** `fixed` — #225: the candidates come from `email_log` (written for every scheduled send with the resolved addresses), the token picks the account, the suppression lands where the worker's send filter reads it. `apps/api/tests/test_unsubscribe_records_a_suppression.py` (5, red on main); `scripts/regressions/unsubscribe.json` 4/4.
+
+**It never regressed; it never worked.** `_suppress` was written that way in `f1510014` (2025-11-11, *Phase 24B: Schedules CRUD API + Unsubscribe Endpoint*), and `db_conn()` yielded `(conn, cur)` in that same commit. `b82d0124` (2025-11-20, typed recipients) then made the lookup unable to match. The 2026-08-18 work (U1–U5, `c5086f1a`…`928b2d47`) verified signing, per-recipient links, encoding, the landing page and the RFC 8058 headers; `test_unsubscribe_token_roundtrip.py` stubs the database, and nothing called the route. Every part was verified except the one that records the opt-out.
+**Status:** `fixed` — #225: the candidates come from `email_log` (written for every scheduled send with the resolved addresses), the token picks the account, the suppression lands where the worker's send filter reads it. `apps/api/tests/test_unsubscribe_records_a_suppression.py` (5, red on main). **Gate: #229** — `apps/api/tests/test_unsubscribe_end_to_end.py` sends a real scheduled email through the worker's path, follows its footer link and its List-Unsubscribe header the way the web routes do, and requires the next send to skip both addresses; it fails rather than skips on GitHub Actions without a database. `scripts/regressions/unsubscribe.json` 7/7.
 
 ---
 
@@ -15670,7 +15672,7 @@ as a duplicate, the file goes with it rather than being ported.
 
 ### D-302 — the company reps and agents tables offer "Deactivate", "Remove", "Remove from Company" and the agents table's "Resend Invite" with no handler: the items do nothing
 
-**Severity:** WRONG · filed during the board filing: `app/app/company/reps/page.tsx:500`, `app/app/company/agents/page.tsx:398` and `:404` render `DropdownMenuItem`s with no `onClick`. Design's handoff note 7 recorded the reps half. The seat model's reassign and cancel-invite endpoints (#224) are what "a rep leaves" should reach.
+**Severity:** WRONG · filed during the board filing: `app/app/company/reps/page.tsx:500`, `app/app/company/agents/page.tsx:398` and `:404` render `DropdownMenuItem`s with no `onClick`. Design's handoff note 7 recorded the reps half. The seat model's reassign and cancel-invite endpoints (#224) are what "a rep leaves" should reach. **Queued for the company UI work** (2026-10-28).
 **Status:** `recorded`
 
 ---
