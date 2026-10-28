@@ -260,12 +260,17 @@ def test_the_baseline_is_not_empty():
     52 -> 32 on 2026-10-26, non-progress once more: the 20 entries named
     `templates/property/_base/` and the three self-contained `<theme>.jinja2`
     files (D-131), deleted because they rendered nowhere.
+
+    32 -> 17 on 2026-10-28 (#230), and 13 of the 15 ARE progress: the six story
+    templates still exist and now take every brand colour from injectBrand's
+    derived tokens, with no default of their own. The other two named
+    `social-gallery.html`, which is deleted — the non-progress kind again.
     """
     n = sum(lint.read_baseline().values())
     assert n > 0, "nothing baselined — has the rule stopped matching?"
-    assert n == 32, (
-        f"the baseline holds {n} entries, not the 32 left after the dead "
-        f"property tree's rows were retired on 2026-10-26. Fewer is progress: "
+    assert n == 17, (
+        f"the baseline holds {n} entries, not the 17 left after the social "
+        f"stories' rows were retired on 2026-10-28. Fewer is progress: "
         f"update this number. More is a new violation that was baselined "
         f"instead of fixed."
     )

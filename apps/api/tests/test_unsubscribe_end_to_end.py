@@ -20,8 +20,13 @@ So this does exactly that, through the real code at every step:
      `_send_and_log_report_email`, which writes `email_log` and calls
      `send_schedule_email`. Only the provider's HTTP call is captured.
   2. The FOOTER LINK is taken out of the first recipient's rendered email and
-     followed as the web route does (GET /api/v1/email/unsubscribe forwards
-     to POST /v1/email/unsubscribe); the route file must exist.
+     followed as the web does since the one-tap confirm: its GET changes
+     nothing (security scanners open every link; the handler must call no
+     API), it lands on /unsubscribed with the address and token, and the
+     confirm button POSTs `{email, token, reason}` — which is what this sends
+     the API. The click itself is proved in the frontend suite
+     (`apps/web/__tests__/UnsubscribedConfirm.test.tsx`,
+     `UnsubscribeLink.route.test.ts`); this holds the seam between them.
   3. The LIST-UNSUBSCRIBE header is taken from the second recipient's message
      and POSTed as Gmail does, through the one-click route.
   4. Both must succeed, and the NEXT scheduled send must mail only the third
@@ -114,6 +119,14 @@ def _web_route_exists(path):
     return (REPO / "apps/web/app" / path.lstrip("/") / "route.ts").exists()
 
 
+def _route_handler(path, method):
+    """The source of one exported handler in a web route file, up to the next."""
+    src = (REPO / "apps/web/app" / path.lstrip("/") / "route.ts").read_text(encoding="utf-8")
+    m = re.search(rf"export async function {method}\(.*?(?=\nexport async function |\Z)", src, re.S)
+    assert m, f"{path} exports no {method}"
+    return m.group(0)
+
+
 def test_ci_runs_this_gate_rather_than_skipping_it():
     """A skip is green. Locally without a database the gate below skips, as
     every database suite does; on GitHub Actions it must run, so a workflow
@@ -140,8 +153,15 @@ def test_an_unsubscribed_recipient_is_not_mailed_again(client, world, worker):
     assert _web_route_exists(footer.path), f"the link points at {footer.path}, which no web route serves"
     q = {k: v[0] for k, v in parse_qs(footer.query).items()}
     assert q["email"] == link_person, "the link names someone else"
-    r = client.post("/v1/email/unsubscribe", json={"email": q["email"], "token": q["token"], "reason": "user_request"})
-    assert r.status_code == 200, f"clicking the link failed: {r.status_code} {r.text}"
+    get_handler = _route_handler(footer.path, "GET")
+    assert "fetch(" not in get_handler, (
+        "the footer link's GET calls out again: a scanner opening the link would unsubscribe the reader")
+    assert "status\", \"confirm\"" in get_handler, "the footer link no longer lands on the confirm step"
+    # The confirm button's POST, exactly as UnsubscribedConfirm.test.tsx pins it.
+    confirm = {"email": q["email"], "token": q["token"], "reason": "user_request"}
+    assert "/v1/email/unsubscribe`" in _route_handler(footer.path, "POST"), "the confirm POST no longer reaches the API"
+    r = client.post("/v1/email/unsubscribe", json=confirm)
+    assert r.status_code == 200, f"confirming the unsubscribe failed: {r.status_code} {r.text}"
 
     # 3. The header Gmail and Yahoo act on.
     header = by_recipient[oneclick_person]["headers"].get("List-Unsubscribe", "")

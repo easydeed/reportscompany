@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -15,7 +15,12 @@ const SUPPORT_EMAIL = "support@trendyreports.io";
  * mailing list, not a TrendyReports account holder — so the copy never assumes
  * they can log in, and a failure always gives them a way to reach a human.
  *
- * States are set by apps/web/app/api/v1/email/unsubscribe/route.ts:
+ * The footer link's GET lands here with `status=confirm`, the address and the
+ * token, and NOTHING HAS HAPPENED YET: security scanners open every link in a
+ * message, so the opt-out is this page's button, a POST, which they do not
+ * send (see apps/web/app/api/v1/email/unsubscribe/route.ts).
+ *
+ *   confirm           → one tap to unsubscribe; becomes one of the three below
  *   (none) | success  → confirmed
  *   invalid           → the token did not verify (HTTP 400 from the API)
  *   error             → the request could not be completed (5xx / network)
@@ -23,8 +28,47 @@ const SUPPORT_EMAIL = "support@trendyreports.io";
 function UnsubscribedContent() {
   const searchParams = useSearchParams();
   const status = searchParams.get("status");
+  const [result, setResult] = useState<"success" | "invalid" | "error" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const email = searchParams.get("email") || "";
+  const token = searchParams.get("token") || "";
+
+  if (status === "confirm" && result === null) {
+    const confirm = async () => {
+      setBusy(true);
+      try {
+        const res = await fetch("/api/v1/email/unsubscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, token, reason: "user_request" }),
+        });
+        setResult(res.ok ? "success" : res.status === 400 ? "invalid" : "error");
+      } catch {
+        setResult("error");
+      } finally {
+        setBusy(false);
+      }
+    };
+    return (
+      <Card
+        icon={<AlertCircle className="w-8 h-8 text-slate-600" />}
+        iconBg="bg-slate-100 dark:bg-slate-700"
+        title="Stop these emails?"
+      >
+        <p className="text-slate-600 dark:text-slate-400 mb-6">
+          <strong className="text-slate-900 dark:text-white">{email}</strong> will
+          no longer receive scheduled reports from this sender.
+        </p>
+        <Button variant="default" className="w-full" onClick={confirm} disabled={busy || !email || !token}>
+          {busy ? "Unsubscribing…" : "Unsubscribe"}
+        </Button>
+      </Card>
+    );
+  }
+
+  const shown = result ?? status;
   const state =
-    status === "invalid" || status === "error" ? status : "success";
+    shown === "invalid" || shown === "error" ? shown : "success";
 
   if (state === "success") {
     return (
