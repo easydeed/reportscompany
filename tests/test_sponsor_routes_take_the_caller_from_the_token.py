@@ -32,19 +32,33 @@ ROUTES = REPO / "apps/api/src/api/routes"
 CALLER_DEPENDENCIES = {"get_company_admin", "require_account_id"}
 
 #: Client-supplied ids that are allowed, each with why, and the text the route
-#: must contain to bound it to the caller.
+#: must contain to bound it to the caller — one of several, where a check can
+#: live in more than one place.
+#:
+#: THE SEAT ROUTES bound their rep ids in `services/seats.py`, which puts the
+#: caller's company in the predicate of every rep it looks up and raises
+#: `SeatNotFound` otherwise. What the route must show is that it turns that
+#: into a refusal (`except seats.SeatNotFound`); the service's predicates are
+#: proved cross-tenant by apps/api/tests/test_rep_seats.py, red first
+#: (scripts/regressions/rep_seats.json S1).
+SEAT_SERVICE_CHECK = "except seats.SeatNotFound"
 ALLOWED = {
     ("company.py", "rep_id"): (
-        "a filter on the company's own feed; it must be one of this company's reps (D-005)",
-        "matched_rep is None",
+        "a filter on the company's own feed, or the rep whose seat is acted on; "
+        "it must be one of this company's reps (D-005)",
+        ("matched_rep is None", SEAT_SERVICE_CHECK),
+    ),
+    ("company.py", "agents_to_rep_id"): (
+        "where a reassignment sends the agents; one of this company's reps holding a seat",
+        (SEAT_SERVICE_CHECK,),
     ),
     ("affiliates.py", "sponsored_account_id"): (
         "the agent being read or acted on; only one the caller currently sponsors",
-        "sponsor_account_id = %s::uuid",
+        ("sponsor_account_id = %s::uuid",),
     ),
     ("affiliates.py", "agent_account_id"): (
         "the agent being read; only one the caller currently sponsors",
-        "sponsor_account_id = %s::uuid",
+        ("sponsor_account_id = %s::uuid",),
     ),
 }
 
@@ -101,6 +115,6 @@ def test_every_sponsor_route_takes_the_caller_from_the_token_and_bounds_every_id
                 rule = ALLOWED.get((name, param))
                 if rule is None:
                     problems.append(f"{name}:{fn.name} takes {param!r} from the client and it is not in ALLOWED")
-                elif rule[1] not in body:
-                    problems.append(f"{name}:{fn.name} takes {param!r} but lacks its ownership check {rule[1]!r}")
+                elif not any(check in body for check in rule[1]):
+                    problems.append(f"{name}:{fn.name} takes {param!r} but lacks its ownership check, one of {rule[1]!r}")
     assert problems == [], "\n".join(problems)

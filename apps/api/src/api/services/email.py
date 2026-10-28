@@ -465,6 +465,48 @@ def send_role_invite_email(
     )
 
 
+def send_rep_change_notice_email(
+    email: str,
+    *,
+    first_name: str,
+    company_name: str,
+    new_rep_name: str,
+    new_rep_email: str,
+) -> Dict[str, Any]:
+    """Tell an agent who their rep is now, after a seat reassignment.
+
+    Without it the agent starts getting email from a stranger. Says who, from
+    which company, and that nothing about the agent's own account changed —
+    which is true: reassignment moves the sponsor and leaves the plan alone.
+
+    Every interpolated value is escaped. The names are typed by company admins
+    and agents, and this is HTML.
+    """
+    from html import escape as e
+    greeting = f"Hi {e(first_name.strip())}," if (first_name or "").strip() else "Hi,"
+    company = e(company_name or "your title company")
+    rep = e(new_rep_name)
+    rep_email = e(new_rep_email)
+    content = f"""
+              <p style="margin: 0 0 20px; font-family: Georgia, 'Times New Roman', serif; font-size: 18px; color: #111827;">
+                {greeting}
+              </p>
+              <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #374151;">
+                Your rep at <strong>{company}</strong> is now <strong>{rep}</strong>
+                (<a href="mailto:{rep_email}" style="color:#6366F1;text-decoration:underline;">{rep_email}</a>).
+              </p>
+              <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #374151;">
+                Nothing about your account changes: your reports, schedules and plan stay as they are.
+              </p>
+    """
+    return email_service.send_email_sync(
+        to=email,
+        subject=f"Your rep at {company_name or 'your title company'} is now {new_rep_name}",
+        html=_email_base(content),
+        tags=[{"name": "category", "value": "rep-change"}],
+    )
+
+
 # ============ Password Reset ============
 
 def get_password_reset_email_html(user_name: str, reset_url: str) -> str:

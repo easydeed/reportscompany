@@ -13,8 +13,9 @@
 // reports are in the feed too); (the feed is generated reports, and a report
 // can be downloaded without going anywhere); its heading is "Recent", not
 // "This week" (the API returns the last ten, however old); and a deactivated
-// rep's agents are "still in their book" — there is no reassign endpoint for
-// "need a new rep" to point at. "Reports this month" says "None last month"
+// rep's agents are "still in their book" — a deactivated rep holds no seat, so
+// the seat reassign endpoint (`POST /v1/company/reps/{id}/reassign`) is not
+// what "need a new rep" points at, and its UI is not built yet. "Reports this month" says "None last month"
 // rather than the API's percentage against a zero.
 
 import Link from "next/link"
@@ -27,6 +28,8 @@ type Rep = { id: string; name: string; email: string; office: string; agent_coun
 type Overview = {
   company: { name: string; plan: string; initials: string }
   metrics: { total_reps: number; total_agents: number; reports_this_month: number; active_agents_30d: number; reports_change_pct: number; reports_last_month: number; agents_at_limit: number; leads_this_month: number; leads_last_month: number }
+  /** null when the company is not on seats (nothing enforced). */
+  seats: { total: number; held: number; open: number; pending: number; idle: number } | null
   reps: Rep[]
   activity: { id: string; description: string; timestamp: string | null }[]
 }
@@ -41,6 +44,17 @@ export function repSentence(r: Rep): { tone: Tone; text: string } {
   if (!r.last_active) return { tone: "warn", text: `${head} · nothing sent yet` }
   if (quietDays > QUIET_DAYS) return { tone: "warn", text: `${head} · quiet for ${sinceLabel(r.last_active)}` }
   return { tone: "good", text: `${head} · active ${whenLabel(r.last_active).toLowerCase()}` }
+}
+
+/** "1 open · 2 invited, not joined · 1 idle for a month". Idle: a joined rep
+ *  whose agents finished no market or property report in 30 days. */
+export function seatSub(s: NonNullable<Overview["seats"]>): string {
+  const parts = [
+    s.open ? `${s.open} open` : "None open",
+    s.pending ? `${s.pending} invited, not joined` : null,
+    s.idle ? `${s.idle} idle for a month` : null,
+  ].filter(Boolean)
+  return parts.join(" · ")
 }
 
 export default function CompanyDashboard() {
@@ -86,8 +100,12 @@ export default function CompanyDashboard() {
 
       {m && (
         <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
-          {/* Seats: the API has no seat count yet (README → Decisions). Until it does, this cell reads reps, not seats-of-N. */}
-          <StatCell label="Reps" value={String(m.total_reps)} sub={reps.filter((r) => r.status === "pending").length ? `${reps.filter((r) => r.status === "pending").length} invited, not joined` : "All joined"} />
+          {/* Seats-of-N when the company is on seats; reps otherwise, as before seats existed. */}
+          {o?.seats ? (
+            <StatCell label="Seats" value={`${o.seats.held} of ${o.seats.total}`} sub={seatSub(o.seats)} subTone={o.seats.idle > 0 ? "warn" : "good"} />
+          ) : (
+            <StatCell label="Reps" value={String(m.total_reps)} sub={reps.filter((r) => r.status === "pending").length ? `${reps.filter((r) => r.status === "pending").length} invited, not joined` : "All joined"} />
+          )}
           <StatCell label="Agents sending" value={`${sending} of ${m.total_agents}`} sub={quietAgents > 0 ? `${quietAgents} haven't sent anything in a month` : "Everyone sent something this month"} subTone={quietAgents > 0 ? "warn" : "good"} />
           <StatCell label="Reports this month" value={String(m.reports_this_month)} sub={m.reports_last_month === 0 ? "None last month" : m.reports_change_pct === 0 ? "Same as last month" : `${m.reports_change_pct > 0 ? "Up" : "Down"} ${Math.abs(m.reports_change_pct)}% on last month`} subTone={m.reports_last_month === 0 || m.reports_change_pct >= 0 ? "good" : "warn"} />
         </div>
