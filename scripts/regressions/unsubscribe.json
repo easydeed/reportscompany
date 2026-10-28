@@ -1,0 +1,30 @@
+[
+  {
+    "name": "U1 the tuple is used as a connection again: every unsubscribe 500s",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "    with db_conn() as (conn, cur):\n        candidates = _candidate_accounts(cur, email)",
+    "new": "    with db_conn() as conn:\n        cur = conn.cursor()\n        candidates = _candidate_accounts(cur, email)",
+    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py"
+  },
+  {
+    "name": "U2 the account is looked up in schedules.recipients only",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "        SELECT account_id::text FROM email_log\n         WHERE %s = ANY(to_emails) AND account_id IS NOT NULL\n        UNION\n",
+    "new": "        SELECT account_id::text FROM schedules WHERE FALSE AND %s IS NULL\n        UNION\n",
+    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py"
+  },
+  {
+    "name": "U3 the token is not checked",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "        matched = [a for a in candidates if verify_unsubscribe_token(a, email, token)]",
+    "new": "        matched = list(candidates)",
+    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py::test_a_token_for_another_account_suppresses_nothing"
+  },
+  {
+    "name": "U4 every account that mailed the address is suppressed, not the one signed for",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "        for account_id in matched:\n",
+    "new": "        for account_id in candidates:\n",
+    "test": "apps/api/tests/test_unsubscribe_records_a_suppression.py::test_only_the_account_the_token_was_signed_for_is_suppressed"
+  }
+]
