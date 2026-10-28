@@ -1,0 +1,72 @@
+[
+  {
+    "name": "M1 the unsubscribe link loses tr-muted: dark mode never reaches it (3.08:1)",
+    "file": "apps/worker/src/worker/templates/email/blocks/signature.jinja2",
+    "old": "<a href=\"{{ unsubscribe_url }}\" class=\"tr-muted\" style=",
+    "new": "<a href=\"{{ unsubscribe_url }}\" style=",
+    "test": "apps/worker/tests/test_market_email_5th_package.py"
+  },
+  {
+    "name": "M2 the dark brand ink is the light one: navy prices invisible on the dark card",
+    "file": "apps/worker/src/worker/email/template.py",
+    "old": "    ink = derive_theme(brand_hex)[\"primary_on_dark\"]\n    for _ in range(64):",
+    "new": "    return derive_theme(brand_hex)[\"primary_ink\"]\n    for _ in range(64):",
+    "test": "apps/worker/tests/test_market_email_5th_package.py"
+  },
+  {
+    "name": "M3 every kind claims the PDF has every listing",
+    "file": "apps/worker/src/worker/email/template.py",
+    "old": "    return bool(cfg) and total_available <= cfg[\"cap\"]",
+    "new": "    return True",
+    "test": "apps/worker/tests/test_market_email_5th_package.py"
+  },
+  {
+    "name": "M4 the fallback postal line goes back to Design's order: the agent's name beside our address",
+    "file": "apps/worker/src/worker/email/template.py",
+    "old": "        postal_line = f\"{PLATFORM_SENDER_LABEL} · {PLATFORM_POSTAL_ADDRESS} · on behalf of {agent_name}\"",
+    "new": "        postal_line = f\"{PLATFORM_SENDER_LABEL} on behalf of {agent_name} · {PLATFORM_POSTAL_ADDRESS}\"",
+    "test": "apps/worker/tests/test_sender_postal_address.py"
+  },
+  {
+    "name": "M5 the shell goes back to light only",
+    "file": "apps/worker/src/worker/email/template.py",
+    "old": "<meta name=\"color-scheme\" content=\"light dark\">",
+    "new": "<meta name=\"color-scheme\" content=\"light only\">",
+    "test": "apps/worker/tests/test_market_email_5th_package.py"
+  },
+  {
+    "name": "M6 the per-brand dark rule is dropped",
+    "file": "apps/worker/src/worker/email/template.py",
+    "old": "    .tr-brand{{color:{tk[\"dark_ink\"]} !important;}}\n",
+    "new": "",
+    "test": "apps/worker/tests/test_market_email_5th_package.py"
+  },
+  {
+    "name": "M7 the Sold chip back to white on red",
+    "file": "apps/worker/src/worker/email/template.py",
+    "old": "    \"sold\": (\"#D1FAE5\", \"#065F46\"),",
+    "new": "    \"sold\": (\"#dc2626\", \"#ffffff\"),",
+    "test": "apps/worker/tests/test_email_contrast.py"
+  },
+  {
+    "name": "M8 the strip cells lose tr-stack: four-across on a phone",
+    "file": "apps/worker/src/worker/templates/email/blocks/spec_list.jinja2",
+    "old": "<td class=\"tr-cell tr-stack\" width=\"25%\"",
+    "new": "<td class=\"tr-cell\" width=\"25%\"",
+    "test": "apps/worker/tests/test_email_mobile_and_contact.py"
+  },
+  {
+    "name": "M9 the CTA promises one page",
+    "file": "apps/worker/src/worker/templates/email/blocks/cta.jinja2",
+    "old": "PDF · {{ sub }}",
+    "new": "PDF · one page · {{ sub }}",
+    "test": "apps/worker/tests/test_market_email_5th_package.py"
+  },
+  {
+    "name": "M10 the note trusts the caller's count instead of what was drawn",
+    "file": "apps/worker/src/worker/email/template.py",
+    "old": "    _shown = len(listings) if listings else 0\n",
+    "new": "    _shown = 4 if listings else 0\n",
+    "test": "apps/worker/tests/test_market_email_5th_package.py"
+  }
+]

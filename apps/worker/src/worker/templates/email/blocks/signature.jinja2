@@ -1,31 +1,40 @@
 {#-
-  BLOCK: signature — §06's `signature`. The platform footer: wordmark, postal
-  address, unsubscribe.
+  BLOCK: signature — §06's `signature`. The agent who sent it, then the footer
+  CAN-SPAM requires: why you are getting this, a working unsubscribe, and a
+  valid postal address. Invariant across all eight report types, and the most
+  legally loaded lines in the product.
 
-  Invariant across all eight report types, and the most legally loaded twelve
-  lines in the product.
+  THE AGENT: a 56px disc (the photo, or initials in `on_primary` on the brand
+  fill), the name, title · brand, and phone · email · website in `ink` (`primary_ink`,
+  with `tr-brand` for dark mode).
 
-  #6b7280 AND NOT #9ca3af, ON ALL THREE LINES. D-060 raised the postal address
-  off #9ca3af — 2.41:1 on this #f8f9fa panel, failing AA at 4.5 and failing the
-  large-text allowance at 3.0 too, at 10px — and NAMED the unsubscribe link as
-  the thing it was matching, then left it there. CAN-SPAM asks for the opt-out to
-  be clear and conspicuous on the same wording that drove the address. All three
-  are 4.59:1 now.
+  THE FOOTER, decided in Python and arriving pre-rendered (`postal_line`),
+  because whose address appears is a compliance decision:
+    the account set its own   "<brand> · <their address>"
+    falling back              "Sent by TrendyReports · <ours> · on behalf of <agent>"
+  Our name appears only in the second case (Design, 5th package; owner call
+  2026-10-28: follow Design). A wrong address is a false statement, not a
+  missing one, so ours is PLATFORM_POSTAL_ADDRESS from code — never the mock's.
 
-  `postal_address_html` arrives pre-rendered because whether the line appears,
-  and whose address it carries, is decided in Python: an account's own address
-  when set, the platform's otherwise, with a label saying which. A wrong address
-  is an affirmative false statement rather than a missing one, so that choice
-  does not belong in a template.
+  THE UNSUBSCRIBE LINK carries `tr-muted` AND IS NOT DECORATION. It sets its
+  colour inline; without the class the dark-mode rule never reaches it, and the
+  review measured it at 3.08:1 on the dark card — an opt-out that is not "clear
+  and conspicuous". `#64748B` on white is 4.76:1.
+
+  `unsubscribe_url` is the per-recipient sentinel `send.py` replaces; the link
+  must stay an `href` on the path the unsubscribe gate follows
+  (`/api/v1/email/unsubscribe`).
 -#}
-          <!-- ========== POWERED BY + UNSUBSCRIBE ========== -->
-          <tr>
-            <td style="background-color: #f8f9fa; padding: 16px 28px; border-radius: 0 0 8px 8px; text-align: center;">
-              <p style="margin: 0 0 4px 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
-                Powered by <span style="font-weight: 600; color: #6b7280;">TrendyReports</span>
-              </p>
-{{ postal_address_html }}              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 10px; color: #6b7280;">
-                <a href="{{ unsubscribe_url }}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
-              </p>
+          <tr><td class="tr-pad tr-rule" style="padding:28px 28px 24px;border-top:1px solid #ECEAE3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;"><tr>
+            <td width="56" valign="top" style="width:56px;">{% if photo_url %}<img src="{{ photo_url }}" alt="{{ agent_name }}" width="56" height="56" style="display:block;width:56px;height:56px;border-radius:28px;border:0;">{% else %}<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td width="56" height="56" align="center" valign="middle" bgcolor="{{ primary }}" style="width:56px;height:56px;border-radius:28px;background:{{ primary }};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:18px;font-weight:700;color:{{ on_primary }};">{{ initials }}</td></tr></table>{% endif %}</td>
+            <td valign="middle" style="padding-left:16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+              <div class="tr-ink" style="font-size:15px;font-weight:700;color:#0F172A;">{{ agent_name }}</div>
+              {% if title_line %}<div class="tr-muted" style="margin-top:2px;font-size:13px;color:#64748B;">{{ title_line }}</div>{% endif %}
+              {% if phone or email or website_url %}<div style="margin-top:4px;font-size:13px;">{% if phone %}{% if phone_href %}<a href="{{ phone_href }}" class="tr-brand" style="color:{{ ink }};text-decoration:none;font-weight:600;">{{ phone }}</a>{% else %}<span class="tr-brand" style="color:{{ ink }};font-weight:600;">{{ phone }}</span>{% endif %}{% endif %}{% if phone and email %}<span class="tr-muted" style="color:#64748B;"> · </span>{% endif %}{% if email %}<a href="mailto:{{ email }}" class="tr-brand" style="color:{{ ink }};text-decoration:none;font-weight:600;">{{ email }}</a>{% endif %}{% if website_url %}{% if phone or email %}<span class="tr-muted" style="color:#64748B;"> · </span>{% endif %}<a href="{{ website_url }}" class="tr-brand" style="color:{{ ink }};text-decoration:none;font-weight:600;">{{ website_label }}</a>{% endif %}</div>{% endif %}
             </td>
-          </tr>
+          </tr></table></td></tr>
+          <tr><td class="tr-pad" style="padding:0 28px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+            <p class="tr-muted" style="margin:0 0 6px;font-size:12px;line-height:1.6;color:#64748B;">{{ reason_line }} <a href="{{ unsubscribe_url }}" class="tr-muted" style="color:#64748B;text-decoration:underline;">Unsubscribe</a> — no sign-in needed.</p>
+            <p class="tr-muted" style="margin:0 0 6px;font-size:12px;line-height:1.6;color:#64748B;">{{ postal_line }}</p>
+            <p class="tr-muted" style="margin:0;font-size:12px;line-height:1.6;color:#64748B;">{{ data_line }}</p>
+          </td></tr>

@@ -19,7 +19,15 @@ os.environ.setdefault("AI_INSIGHTS_ENABLED", "false")
 os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
+from datetime import date  # noqa: E402
+
+import worker.email.template as _template  # noqa: E402
 from worker.email.template import schedule_email_html  # noqa: E402
+
+#: The masthead and the data line print the date. Pinned so the golden facts
+#: describe the layout and not the day the suite ran.
+FIXED_DATE = date(2026, 10, 28)
+_template._today = lambda: FIXED_DATE
 
 REPORT_TYPES = [
     "market_snapshot", "new_listings", "inventory", "closed",

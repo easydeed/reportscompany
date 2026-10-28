@@ -49,20 +49,14 @@ V3: Professional styling refresh with enhanced Market Snapshot data.
 import html
 import os
 import re
+from datetime import date
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 from typing import Dict, Optional, TypedDict, Tuple, List
 
-from worker.property_builder import compute_color_roles, normalize_hex_color, safe_url
-from worker.themes import contrast as _contrast, derive_theme
-
-
-def hex_to_rgba(hex_color: str, opacity: float) -> str:
-    """Convert #RRGGBB to rgba(R, G, B, opacity)."""
-    hex_color = hex_color.lstrip('#')
-    r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-    return f'rgba({r}, {g}, {b}, {opacity})'
+from worker.property_builder import normalize_hex_color, safe_url
+from worker.themes import _brighten, contrast as _contrast, derive_theme
 
 
 class Brand(TypedDict, total=False):
@@ -207,36 +201,6 @@ _UNSUB_URL_SENTINEL = "__TRENDYREPORTS_UNSUBSCRIBE_URL__"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Colour roles — Workstream A's token layer, consumed here
-# ═══════════════════════════════════════════════════════════════════════════
-#
-# An affiliate's colour arrives as `primary_color` and `accent_color`. Neither
-# is safe to use as text, and until now both were used as text in about thirty
-# places. Measured across seven brands and eight report types, that produced
-# 1,167 unreadable text runs out of 3,822 — including a Quick Take label at
-# 1.00:1, invisible, whenever an account sets one colour rather than two.
-#
-# The rule these two helpers encode: **a builder derives the role it needs from
-# the colour it was handed.** Not threaded from the caller, because a threaded
-# role can be threaded wrongly — `_build_quick_take` was passed the label colour
-# and the panel colour as independent arguments with nothing relating them, and
-# that is exactly how it came to paint one brand colour on another.
-#
-# Both are free to call repeatedly: `derive_theme` is cached on the colour.
-
-#: The DARKEST light surface this email puts brand text on. Cards are #ffffff,
-#: metric strips #f8fafc, the stat cells #f1f5f9, table rows alternate #f9fafb.
-#: `_ink` targets this one by default, which guarantees every lighter card by
-#: construction: a colour clearing 4.5:1 on #f1f5f9 clears more on white.
-#:
-#: The cost is real and small — an ink can be one 6% step darker than it would
-#: strictly need to be on a white card. That is preferable to threading a
-#: surface through twelve builders, where the failure mode is a builder that
-#: names the wrong one and is off by 0.07 with nothing to show it.
-DARKEST_LIGHT_SURFACE = "#f1f5f9"
-
-
-# ═══════════════════════════════════════════════════════════════════════════
 # The block environment — Workstream C's consolidation
 # ═══════════════════════════════════════════════════════════════════════════
 #
@@ -291,72 +255,6 @@ _BLOCK_ENV = Environment(
 def render_block(name: str, **context) -> str:
     """Render one §06 block. `name` is the stem, e.g. "cta"."""
     return _BLOCK_ENV.get_template(f"blocks/{name}.jinja2").render(**context)
-
-
-def _ink(brand_hex: str, on: str = DARKEST_LIGHT_SURFACE) -> str:
-    """
-    The brand colour as TEXT ON A LIGHT SURFACE — `derive_theme`'s `primary_ink`,
-    continued if the surface is not actually white.
-
-    §3.1 defines `primary_ink` as clearing 4.5:1 **on white**, and this email
-    does not put it on white: the metric strips and the agent block are
-    `#f8fafc`, the table rows alternate to `#f9fafb`. Luxury Estates' ink is
-    4.63:1 on white and **4.43:1** on `#f8fafc` — passing the specification and
-    failing the recipient by 0.07.
-
-    So the spec's token is the starting point and this continues the same 6%
-    darkening against the real surface. `derive_theme` is left exactly as
-    specified; the surface correction belongs to the surface that has one.
-
-    That §3.1's ink target assumes a white card while the design ships
-    near-white cards is a finding, recorded on D-097 — the alternative fix is to
-    make the cards white, which is a design decision and not this function's.
-    """
-    ink = derive_theme(brand_hex)["primary_ink"]
-    if _contrast(ink, on) >= 4.5:
-        return ink
-    for _ in range(64):
-        ink = _darken_6pct(ink)
-        if _contrast(ink, on) >= 4.5:
-            return ink
-    return "#14151a"
-
-
-def _on_band(*fills: str) -> str:
-    """
-    What to put on a GRADIENT. Picks whichever of white or near-black has the
-    better worst-case contrast across every stop.
-
-    The masthead is `linear-gradient(115deg, primary 0%, primary 30%, accent
-    100%)` with hardcoded white text. White is fine at the navy end and 1.98:1
-    at the lime end, so a single-colour choice against the first stop is not a
-    choice at all — the text has to survive the whole band. This is the concrete
-    form of the finding on D-097 about the market report's header: a token whose
-    contrast depends on where along the band it falls cannot be verified.
-    """
-    candidates = (derive_theme(fills[0])["on_primary"], "#ffffff", "#14151a")
-    best, best_score = candidates[0], -1.0
-    for c in candidates:
-        score = min(_contrast(c, f) for f in fills)
-        if score > best_score:
-            best, best_score = c, score
-    return best
-
-
-def _darken_6pct(hex_color: str) -> str:
-    h = hex_color.lstrip("#")
-    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
-    f = lambda c: max(0, min(255, int(round(c * 0.94))))  # noqa: E731
-    return "#{:02x}{:02x}{:02x}".format(f(r), f(g), f(b))
-
-
-def _on(fill_hex: str) -> str:
-    """
-    What to put ON a fill of `fill_hex`: whichever of white or near-black scores
-    higher against it. Replaces the hardcoded `#ffffff` that sat on brand fills
-    here — readable on a navy, 1.98:1 on a lime.
-    """
-    return derive_theme(fill_hex)["on_primary"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -545,115 +443,137 @@ def _tel_uri(phone: Optional[str]) -> Optional[str]:
 
 
 # ============================================================================
-# V16: LAYOUT-BASED EMAIL ARCHITECTURE
-# Translated from V0 React designs in apps/web/app/email-templates/layouts/
+# DESIGN'S 5TH PACKAGE — the market email
+# docs/design-claude/5thpackage/design_handoff_email_social/emails/market/
 # ============================================================================
+#
+# One brand colour, used two ways and never a third:
+#
+#   as a FILL      the masthead band, the button, the initials disc, the bars.
+#                  `primary` exactly as the account set it — the fill is theirs.
+#   as TEXT        the hero number, prices, the agent's links. `primary_ink`,
+#                  which `derive_theme` guarantees at 4.5:1 on white AND on the
+#                  tint — the only two light surfaces brand text lands on here.
+#
+# `accent_color` is no longer read. Design's emails are monochrome, and the
+# accent was the source of most of the 1,167 unreadable runs measured on the old
+# layout (a second colour nobody checked against the first).
+#
+# DARK MODE. Every element carries a `tr-*` class the shell's
+# `prefers-color-scheme: dark` block remaps. Brand text carries `tr-brand`, and
+# its dark colour is per brand, so the shell writes that one rule from
+# `dark_ink` below. Without it the review measured a navy brand's prices at
+# 1.00–1.13:1 on the dark card — present in the HTML, invisible on the phone.
+
+#: The lightest dark surface brand text lands on: `.tr-tint` / `.tr-cell` in the
+#: shell's dark block. The card (#1F2937) is darker, so clearing this clears it.
+DARK_TINT = "#273244"
 
 
-# ---------------------------------------------------------------------------
-# Phase 1: Shared Component Helpers
-# ---------------------------------------------------------------------------
+def _dark_ink(brand_hex: str) -> str:
+    """
+    The brand as TEXT in dark mode: `primary_on_dark`, brightened further until
+    it clears 4.5:1 on `DARK_TINT`.
 
-def _build_ai_narrative(insight_text: str, accent_color: str = "#0d9488",
-                        accent_on_light: str = "#0d7c72") -> str:
-    """§06 block `read`, insight variant. Markup in blocks/read.jinja2."""
+    `primary_on_dark` targets #0f172a, which is darker than any surface this
+    email paints in dark mode, so on its own it can fall short on the tint by a
+    step. Same value-first brightening as `themes._brighten` (D-099), so a navy
+    stays blue rather than greying out. White terminates it: 13.6:1 on the tint.
+    """
+    ink = derive_theme(brand_hex)["primary_on_dark"]
+    for _ in range(64):
+        if _contrast(ink, DARK_TINT) >= 4.5:
+            return ink
+        stepped = _brighten(ink)
+        if stepped == ink:
+            break
+        ink = stepped
+    return "#ffffff"
+
+
+def _tokens(primary_color: str) -> Dict[str, str]:
+    """Every colour a block reads, derived once from the one brand colour."""
+    t = derive_theme(primary_color)
+    return {
+        "primary": t["primary"],
+        "on_primary": t["on_primary"],
+        "ink": t["primary_ink"],
+        "tint": t["tint"],
+        "dark_ink": _dark_ink(primary_color),
+    }
+
+
+def _split_insight(text: str) -> Tuple[str, str]:
+    """
+    The insight paragraph as Design's headline and body: the first sentence, and
+    the rest. A sentence ends at . ! or ? followed by whitespace, so "$1.42M" and
+    "2.1%" do not end one. A one-sentence insight is all headline.
+    """
+    text = (text or "").strip()
+    m = re.match(r"(.+?[.!?])\s+(\S.*)", text, re.S)
+    if not m:
+        return text, ""
+    return m.group(1).strip(), m.group(2).strip()
+
+
+def _build_ai_narrative(insight_text: str) -> str:
+    """§06 block `read`, insight variant: the h1 and the paragraph under it."""
     if not insight_text:
         return ""
-    return render_block(
-        "read",
-        variant="insight",
-        text=insight_text,
-        bg_tint=hex_to_rgba(accent_color, 0.06),
-        border_tint=hex_to_rgba(accent_color, 0.4),
-        ink=accent_on_light,
-    )
+    headline, body = _split_insight(insight_text)
+    return render_block("read", variant="insight", headline=headline, body=body)
 
 
-def _build_hero_stat(value: str, label: str, primary_color: str,
-                     trend: str = None, trend_positive: bool = True,
-                     sub_label: str = None) -> str:
-    """§06 chrome `hero` — the centred headline figure. Markup in blocks/chrome.jinja2."""
-    trend_html = ""
-    if trend:
-        # §3.3 status colours: reserved, never drawn from the brand, so literals.
-        trend_html = render_block(
-            "chrome", piece="trend_chip", trend=trend,
-            chip_color="#15803d" if trend_positive else "#dc2626",
-            chip_bg="rgba(34,197,94,0.12)" if trend_positive else "rgba(220,38,38,0.12)",
-            arrow="&#8593;" if trend_positive else "&#8595;",
-        )
-    sub_html = (f'<p style="margin: 4px 0 0; font-size: 12px; color: #475569;">{sub_label}</p>'
-                if sub_label else "")
-    return render_block("chrome", piece="hero", value=value, label=label,
-                        ink=_ink(primary_color), sub_html=sub_html, trend_html=trend_html)
-
-
-def _build_gallery_count(count: int, label: str, primary_color: str) -> str:
-    """§06 chrome `count_pill`. The pill is a brand fill, so its text is derived."""
-    return render_block("chrome", piece="count_pill", count=count, label=label,
-                        primary_color=primary_color, on_fill=_on(primary_color))
-
-
-def _build_quick_take(text: str, accent_color: str, primary_color: str = "#18235c") -> str:
+def _build_quick_take(text: str, accent_color: str = None, primary_color: str = None) -> str:
     """
-    §06 block `read`, panel variant. Markup in blocks/read.jinja2.
+    §06 block `read`, panel variant — the Quick Take, which stands in as the
+    headline when a report type has no insight paragraph (open houses).
 
-    THIS WAS THE WORST CONTRAST DEFECT IN THE PRODUCT. The label colour and the
-    panel colour arrived as two independent arguments with nothing relating
-    them, so an account that set ONE brand colour rather than two rendered
-    `#dc2626` on `#dc2626` — invisible. `accent_color` is kept in the signature
-    so the six call sites need no change, and is deliberately unused: both text
-    colours derive from the panel, which is the only thing they can be readable
-    against.
+    THIS WAS THE WORST CONTRAST DEFECT IN THE PRODUCT: the label and the panel
+    arrived as two unrelated brand colours, and an account that set one colour
+    rendered it on itself, invisible. Design's panel has no brand colour at all —
+    it is the headline in ink — so the defect has nowhere left to live. The colour
+    arguments are kept so the call sites read as before, and are unused.
     """
     if not text:
         return ""
-    return render_block(
-        "read",
-        variant="panel",
-        text=text,
-        panel_color=primary_color,
-        on_panel=_on(primary_color),
-    )
+    return render_block("read", variant="panel", headline=text)
 
 
-def _build_section_label(label: str, primary_color: str) -> str:
-    """§06 chrome `section_label` — accent rule plus uppercase label."""
-    return render_block("chrome", piece="section_label", label=label,
-                        primary_color=primary_color, ink=_ink(primary_color))
+def _build_hero_stat(value: str, label: str, tk: Dict[str, str],
+                     sub_label: str = None) -> str:
+    """§06 chrome `hero` — the headline figure on the tint panel, in `ink`."""
+    return render_block("chrome", piece="hero", value=value, label=label,
+                        sub=sub_label, tint=tk["tint"], ink=tk["ink"])
 
 
-def _build_filter_blurb(filter_text: str, primary_color: str) -> str:
-    """§06 chrome `filter_blurb` — the optional report-criteria callout."""
+def _build_gallery_count(label: str, count: int) -> str:
+    """§06 chrome `count_pill` — the small uppercase line over a list."""
+    return render_block("chrome", piece="count_pill", text=f"{label} · {count}")
+
+
+def _build_section_label(label: str) -> str:
+    """§06 chrome `section_label` — the same line, over the price bands."""
+    return render_block("chrome", piece="section_label", text=label)
+
+
+def _build_filter_blurb(filter_text: str) -> str:
+    """§06 chrome `filter_blurb` — the optional report-criteria line."""
     if not filter_text:
         return ""
-    return render_block("chrome", piece="filter_blurb", text=filter_text,
-                        primary_color=primary_color, ink=_ink(primary_color),
-                        bg=hex_to_rgba(primary_color, 0.05))
+    return render_block("chrome", piece="filter_blurb", text=filter_text)
 
 
-def _build_stacked_stats(stats: List[Tuple[str, str]], primary_color: str = "#18235c") -> str:
+def _build_stacked_stats(stats: List[Tuple[str, str]]) -> str:
     """
-    §06 block `spec_list` — the four-across metric strip. Markup in
-    blocks/spec_list.jinja2.
+    §06 block `spec_list` — the four-across metric strip.
 
     Capped at four here rather than in the template: the cap is a layout fact
     (four 25% cells fill a row) and the block should not have to know it.
     """
     if not stats:
         return ""
-    return render_block(
-        "spec_list",
-        variant="strip",
-        stats=stats[:4],
-        ink=_ink(primary_color),   # text on a light card, not the raw brand value
-    )
-
-
-def _build_branded_divider(primary_color: str, accent_color: str) -> str:
-    """§06 chrome `divider` — the 64px gradient bar between stacked cards."""
-    return render_block("chrome", piece="divider",
-                        primary_color=primary_color, accent_color=accent_color)
+    return render_block("spec_list", variant="strip", stats=stats[:4])
 
 
 def _listing_price_str(listing: Dict) -> str:
@@ -664,390 +584,195 @@ def _listing_price_str(listing: Dict) -> str:
     return _format_price_clean(price)
 
 
-#: Per-size photo dimensions and the placeholder that stands in for a missing
-#: one. B5 on the register: an absent photo rendered as a broken-image glyph on
-#: one surface and a blank grey box on another. It is a grey block on all three
-#: here — current behaviour preserved, because this is a restructure. The
-#: register's "hatched fill, camera glyph, Photo pending" remains open.
-_GALLERY_SIZES = {
-    "plain": (
-        '<img src="{photo}" alt="{addr}" width="260" height="160" style="display: block; max-width: 260px; max-height: 160px; width: 100%; height: auto; object-fit: cover; border: 1px solid #e5e7eb;">',
-        '<div style="width: 100%; height: 160px; background: #f5f5f4; border: 1px solid #e5e7eb;"></div>',
-    ),
-    "large": (
-        '<img src="{photo}" alt="{addr}" width="260" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">',
-        '<div style="width: 100%; height: 180px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>',
-    ),
-    "compact": (
-        '<img src="{photo}" alt="{addr}" width="180" style="display: block; width: 100%; height: auto; border-radius: 8px 8px 0 0;">',
-        '<div style="width: 100%; height: 110px; background: #f5f5f4; border-radius: 8px 8px 0 0;"></div>',
-    ),
-    "stacked": (
-        '<img src="{photo}" alt="{addr}" width="520" height="240" style="display: block; width: 100%; height: 240px; object-fit: cover;">',
-        '<div style="width: 100%; height: 240px; background: #f5f5f4;"></div>',
-    ),
-    "badged": (
-        '<img src="{photo}" alt="{addr}" width="260" height="130" style="display: block; width: 100%; height: 130px; object-fit: cover; border-radius: 4px;">',
-        '<div style="width: 100%; height: 130px; background: #f5f5f4; border-radius: 4px;"></div>',
-    ),
-    "row": (
-        '<img src="{photo}" alt="{addr}" width="120" height="90" style="display: block; width: 120px; height: 90px; object-fit: cover;">',
-        '<div style="width: 120px; height: 90px; background: #f5f5f4;"></div>',
-    ),
-}
-
-
 def _listing_specs(listing: Dict) -> str:
-    """`3 bd • 2 ba • 1,800 sf`, omitting whatever is missing."""
+    """`3 bd · 2 ba · 1,800 sq ft`, omitting whatever is missing."""
     parts = []
     if listing.get("bedrooms"):
         parts.append(f"{listing['bedrooms']} bd")
     if listing.get("bathrooms"):
         parts.append(f"{listing['bathrooms']} ba")
     if listing.get("sqft"):
-        parts.append(f"{listing['sqft']:,} sf")
-    return " &bull; ".join(parts)
+        parts.append(f"{listing['sqft']:,} sq ft")
+    return " · ".join(parts)
 
 
-def _gallery_card_context(listing: Dict, size: str, ink: str, location: str) -> Dict:
-    img, placeholder = _GALLERY_SIZES[size]
-    photo = listing.get("hero_photo_url") or ""
-    addr = listing.get("street_address") or "Address N/A"
-    return {
-        "size": size,
-        "address": addr,
-        "price": _listing_price_str(listing),
-        "specs": _listing_specs(listing) if size != "plain" else "",
-        "location": location,
-        "ink": ink,
-        "photo_html": img.format(photo=photo, addr=addr) if photo else placeholder,
-    }
+#: Photo boxes: (width, height). Rows are Design's 120×90; cards 264×150.
+_PHOTO_SIZES = {"row": (120, 90), "card": (264, 150)}
 
 
-def _build_photo_card_2x2(listing: Dict, accent_color: str) -> str:
-    """§06 block `gallery`, plain size. Market Narrative 2x2 card."""
-    return render_block("gallery", **_gallery_card_context(
-        listing, "plain", _ink(accent_color), ""))
+def _photo_html(listing: Dict, size: str) -> str:
+    """
+    The listing photo, or a grey box the same size when there is none (B5: a
+    missing photo used to be a broken-image glyph on one surface and a blank box
+    on another; it is the box everywhere).
+
+    The box carries no "Photo" label. Design's has one, and it measures 3.7:1 in
+    light mode and 4.1:1 in dark — a label that fails the check to say nothing.
+    """
+    w, h = _PHOTO_SIZES[size]
+    photo = listing.get("hero_photo_url")
+    if photo:
+        alt = listing.get("street_address") or ""
+        return (f'<img src="{photo}" alt="{alt}" width="{w}" height="{h}" '
+                f'style="display:block;width:100%;max-width:{w}px;height:{h}px;'
+                f'object-fit:cover;border:0;">')
+    return (f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
+            f'width="100%" style="max-width:{w}px;border-collapse:collapse;"><tr>'
+            f'<td class="tr-ph" height="{h}" style="height:{h}px;background:#E4E2DA;'
+            f'font-size:0;line-height:0;">&nbsp;</td></tr></table>')
 
 
-def _build_gallery_card_large(listing: Dict, accent_color: str) -> str:
-    """§06 block `gallery`, large size. Photo on top, info below."""
-    city = listing.get("city") or ""
-    zip_code = listing.get("zip_code") or ""
-    return render_block("gallery", **_gallery_card_context(
-        listing, "large", _ink(accent_color),
-        f"{city}, {zip_code}" if zip_code else city))
+#: §3.3 status chips: reserved, never drawn from the brand, so literals. Dark
+#: text on a pale fill — 7.0:1 or better each — and the fill is inline with no
+#: `tr-*` class, so it stays pale in dark mode and the text stays readable on it.
+_STATUS_CHIPS = {
+    "sold": ("#D1FAE5", "#065F46"),
+    "active": ("#F1F5F9", "#475569"),
+    "pending": ("#FEF3C7", "#92400E"),
+}
 
 
-def _build_gallery_card_compact(listing: Dict, accent_color: str) -> str:
-    """§06 block `gallery`, compact size. The 3-across variant."""
-    return render_block("gallery", **_gallery_card_context(
-        listing, "compact", _ink(accent_color), listing.get("city") or ""))
+def _build_property_row(listing: Dict, tk: Dict[str, str], chip: str = "") -> str:
+    """§06 block `gallery`, row size — Design's photo-left list row."""
+    bg, fg = _STATUS_CHIPS.get(chip.lower(), ("", "")) if chip else ("", "")
+    return render_block(
+        "gallery", size="row",
+        photo_html=_photo_html(listing, "row"),
+        price=_listing_price_str(listing),
+        address=listing.get("street_address") or "Address N/A",
+        specs=_listing_specs(listing),
+        ink=tk["ink"],
+        chip_text=chip if bg else "", chip_bg=bg, chip_fg=fg,
+    )
 
 
-def _build_stacked_property_card(listing: Dict, primary_color: str, accent_color: str) -> str:
-    """§06 block `gallery`, stacked size — full-width card with spec chips."""
-    ink = _ink(primary_color)
-    city = listing.get("city") or ""
-    zip_code = listing.get("zip_code") or ""
-    chips = []
-    if listing.get("bedrooms"):
-        chips.append(f"{listing['bedrooms']} Bed")
-    if listing.get("bathrooms"):
-        chips.append(f"{listing['bathrooms']} Bath")
-    if listing.get("sqft"):
-        chips.append(f"{listing['sqft']:,} SF")
-    ctx = _gallery_card_context(listing, "stacked", ink,
-                                f"{city}, {zip_code}" if zip_code else city)
-    return render_block("gallery", chips=chips,
-                        chip_bg=hex_to_rgba(primary_color, 0.08), **ctx)
-
-
-def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color: str,
+def _build_photo_card_with_badge(listing: Dict, primary_color: str, accent_color: str = None,
                                  badge_text: str = "Sold") -> str:
-    """
-    §06 block `gallery`, badged size — sales/inventory card with a status badge.
+    """A sales/inventory row with its status chip. Kept for the contrast tests."""
+    return _build_property_row(listing, _tokens(primary_color), chip=badge_text)
 
-    The badge palette is §3.3: reserved, never drawn from the brand. #15803d and
-    #b45309 rather than the brighter pair because white on #16a34a is 3.30:1 and
-    on #f59e0b is 2.15:1. An unrecognised status falls back to the brand ink,
-    which is the only case where a badge is brand-coloured at all.
-    """
-    ink = _ink(accent_color)
-    ctx = _gallery_card_context(listing, "badged", ink, "")
+
+def _build_gallery_card(listing: Dict, tk: Dict[str, str]) -> str:
+    """§06 block `gallery`, card size — one half of Design's two-across gallery."""
+    city = listing.get("city") or ""
+    addr = listing.get("street_address") or "Address N/A"
     return render_block(
-        "gallery",
-        badge_text=badge_text,
-        badge_bg=_ROW_BADGE_COLOURS.get(badge_text.lower(), ink),
-        **ctx,
+        "gallery", size="card",
+        photo_html=_photo_html(listing, "card"),
+        price=_listing_price_str(listing),
+        address=f"{addr}, {city}" if city else addr,
+        specs=_listing_specs(listing),
+        ink=tk["ink"],
     )
 
 
-#: The NEW marker on a list row. A fixed pale-green pair at 7.4:1, and NOT a
-#: brand value: it marks recency, not identity, so it stays constant across
-#: affiliates the way §3.3's status colours do.
-_NEW_BADGE_HTML = (
-    '<td width="60" align="right" style="vertical-align: middle;">'
-    '<span style="display: inline-block; padding: 3px 8px; background-color: #dcfce7;'
-    ' color: #166534; font-size: 9px; font-weight: 700; text-transform: uppercase;'
-    ' letter-spacing: 0.5px; border-radius: 3px;">NEW</span></td>'
-)
+def _build_rows(listings: List[Dict], tk: Dict[str, str], chips: bool = False) -> str:
+    """§06 block `grid`, rows shape — a single column of `gallery:row`s."""
+    if not listings:
+        return ""
+    return render_block("grid", shape="rows", cards=[
+        _build_property_row(
+            l, tk, chip=("Sold" if l.get("close_price") else (l.get("status") or "Active"))
+            if chips else "")
+        for l in listings
+    ])
 
 
-def _build_property_row(listing: Dict, accent_color: str, is_last: bool = False) -> str:
-    """§06 block `gallery`, row size — photo-left list row with a NEW marker."""
-    ctx = _gallery_card_context(listing, "row", _ink(accent_color), "")
-    ctx["specs"] = _listing_specs(listing)
-    status = (listing.get("status") or "").lower()
-    return render_block(
-        "gallery",
-        margin_bottom=0 if is_last else 12,
-        badge_html=_NEW_BADGE_HTML if status in ("new", "active") else "",
-        **ctx,
-    )
+def _card_grid(cards: List[str]) -> str:
+    """
+    §06 block `grid`, cards shape — two across.
+
+    A short final row is padded with an EMPTY CELL rather than left ragged: a
+    `<tr>` with fewer `<td>`s than its siblings collapses the table's column
+    widths in Outlook.
+    """
+    if not cards:
+        return ""
+    rows = [list(cards[i:i + 2]) + [""] * (2 - len(cards[i:i + 2]))
+            for i in range(0, len(cards), 2)]
+    return render_block("grid", shape="cards", rows=rows)
 
 
-#: §3.3 status colours for the row badge. Literals, deliberately — a status
-#: colour is reserved and never drawn from the brand — and these values rather
-#: than the brighter pair because white on #16a34a is 3.30:1 and on #f59e0b is
-#: 2.15:1. Both replacements already appear in the PDF templates.
-_ROW_BADGE_COLOURS = {"sold": "#dc2626", "active": "#15803d", "pending": "#b45309"}
-
-
-def _sales_table_row(listing: Dict, index: int, last: bool) -> Dict[str, str]:
+def _sales_table_row(listing: Dict, index: int) -> Dict:
     """
     One row's values, formatted. Shaped here rather than in the template so that
-    `_format_price_clean`, the badge palette and the "N/A" fallbacks stay
-    testable in Python — a template is a bad place to hide any of them.
+    `_format_price_clean`, the chip palette and the fallbacks stay testable in
+    Python — a template is a bad place to hide any of them.
     """
     beds = listing.get("bedrooms") or ""
     baths = listing.get("bathrooms") or ""
     sqft = listing.get("sqft")
     price = listing.get("close_price") or listing.get("list_price")
     status = listing.get("status") or ""
-    badge = _ROW_BADGE_COLOURS.get(status.lower(), "")
+    bg, fg = _STATUS_CHIPS.get(status.lower(), ("", ""))
     return {
         "address": listing.get("street_address") or "N/A",
-        "specs": f"{beds}/{baths}" if beds and baths else "",
+        "specs": f"{beds} / {baths}" if beds and baths else "",
         "sqft": f"{sqft:,}" if sqft else "",
         "price": _format_price_clean(price) if price else "N/A",
         "dom": listing.get("days_on_market") or "",
-        "bg": "#ffffff" if index % 2 == 0 else "#f9fafb",
-        "border": "" if last else "border-bottom: 1px solid #f1f5f9;",
+        "zebra": index % 2 == 1,
         "badge_html": (
-            f' <span style="display: inline-block; background: {badge}; color: #ffffff;'
-            f' font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px;'
-            f' margin-left: 6px; text-transform: uppercase;">{status}</span>'
-            if status and badge else ""
+            f' <span style="display:inline-block;margin-left:6px;padding:1px 6px;'
+            f'font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;'
+            f'background:{bg};color:{fg};">{status}</span>'
+            if status and bg else ""
         ),
     }
 
 
 def _build_sales_table(listings: List[Dict], primary_color: str,
-                       accent_color: str = "#0d9488") -> str:
-    """
-    §06 block `table` — the five-column listings table. Markup in
-    blocks/table.jinja2.
-
-    The old version also computed an `hdr_style` local that nothing used: the
-    five header cells inlined the same style themselves. Dropped in the move,
-    which the render diff confirms changes nothing.
-    """
+                       accent_color: str = None) -> str:
+    """§06 block `table` — the five-column listings table."""
     if not listings:
         return ""
+    tk = _tokens(primary_color)
     return render_block(
         "table",
-        rows=[_sales_table_row(l, i, i == len(listings) - 1)
-              for i, l in enumerate(listings)],
-        primary_color=primary_color,
-        on_header=_on(primary_color),     # text ON the brand fill
-        price_ink=_ink(accent_color),     # brand text on a light row
+        rows=[_sales_table_row(l, i) for i, l in enumerate(listings)],
+        tint=tk["tint"],
+        price_ink=tk["ink"],
     )
 
 
 # ---------------------------------------------------------------------------
-# Phase 3: Layout Body Builders
-# Each returns the HTML between the content wrapper open and agent footer.
+# Layout body builders. Each returns the card rows between the masthead and
+# the CTA.
 # ---------------------------------------------------------------------------
 
 def _build_market_narrative_body(
     insight_text: str, hero_value: str, hero_label: str,
-    stats: List[Tuple[str, str]], quick_take: str,
-    pdf_url: str, primary_color: str, accent_color: str,
-    filter_description: str = None,
-    listings: List[Dict] = None,
-    accent_on_light: str = "#0d7c72",
-    listings_label: str = "Notable Listings",
+    stats: List[Tuple[str, str]], quick_take: str, tk: Dict[str, str],
+    filter_description: str = None, listings: List[Dict] = None,
+    listings_label: str = "Notable listings",
 ) -> str:
-    """Market Snapshot / New Listings / Open Houses layout.
-    Ref: V0 market-narrative.tsx
-
-    EMAIL-DEPTH-PASS1: render every listing the payload provides via
-    the adaptive layout selector instead of capping at 4. Email is the
-    destination — we don't want to punt to the PDF.
-    """
-    body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
-    body += _build_hero_stat(hero_value, hero_label, primary_color)
-    if listings and len(listings) >= 2:
-        body += _build_gallery_count(len(listings), listings_label, primary_color)
-        body += _render_adaptive_listings(listings, primary_color, accent_color)
-    body += _build_stacked_stats(stats, primary_color)
-    if not insight_text:
-        body += _build_quick_take(quick_take, accent_color, primary_color)
-    return body
-
-
-def _render_adaptive_listings(
-    listings: List[Dict], primary_color: str, accent_color: str
-) -> str:
-    """Render a listings collection using whichever layout best fits
-    the count. Used by market_snapshot, new_listings, open_houses, and
-    price_bands so the same visual language applies everywhere.
-    """
-    if not listings:
-        return ""
-    layout = _select_gallery_layout(len(listings))
-    if layout == "single_stacked":
-        chunks = []
-        for i, l in enumerate(listings):
-            chunks.append(_build_stacked_property_card(l, primary_color, accent_color))
-            if i < len(listings) - 1:
-                chunks.append(_build_branded_divider(primary_color, accent_color))
-        return f'<div style="margin-bottom: 32px;">{"".join(chunks)}</div>'
-    if layout == "gallery_2x2":
-        cards = [_build_gallery_card_large(l, accent_color) for l in listings[:4]]
-        rows = ""
-        for r in range(0, len(cards), 2):
-            c1 = cards[r] if r < len(cards) else ""
-            c2 = cards[r + 1] if r + 1 < len(cards) else ""
-            rows += (
-                f'<tr>'
-                f'<td width="50%" class="mobile-stack" style="padding: 0 4px 8px 0; vertical-align: top;">{c1}</td>'
-                f'<td width="50%" class="mobile-stack" style="padding: 0 0 8px 4px; vertical-align: top;">{c2}</td>'
-                f'</tr>'
-            )
-        return (
-            '<table role="presentation" cellpadding="0" cellspacing="0" '
-            'width="100%" style="margin-bottom: 32px;">' + rows + '</table>'
-        )
-    if layout == "gallery_3x2":
-        cards = [_build_gallery_card_compact(l, accent_color) for l in listings[:9]]
-        rows = ""
-        for r in range(0, len(cards), 3):
-            cells = ""
-            for c in range(3):
-                idx = r + c
-                pad = (
-                    "padding: 0 3px 6px 0;" if c == 0
-                    else ("padding: 0 0 6px 3px;" if c == 2 else "padding: 0 3px 6px 3px;")
-                )
-                card = cards[idx] if idx < len(cards) else ""
-                cells += f'<td width="33%" class="mobile-stack" style="{pad} vertical-align: top;">{card}</td>'
-            rows += f'<tr>{cells}</tr>'
-        return (
-            '<table role="presentation" cellpadding="0" cellspacing="0" '
-            'width="100%" style="margin-bottom: 32px;">' + rows + '</table>'
-        )
-    rows_html = "".join(
-        _build_property_row(l, accent_color, is_last=(i == len(listings) - 1))
-        for i, l in enumerate(listings)
-    )
-    return f'<div style="margin-bottom: 32px;">{rows_html}</div>'
-
-
-def _build_gallery_2x2_body(
-    insight_text: str, listings: List[Dict], quick_take: str,
-    pdf_url: str, primary_color: str, accent_color: str,
-    gallery_label: str = "Featured Listings", filter_description: str = None,
-    accent_on_light: str = "#0d7c72",
-) -> str:
-    """Gallery 2x2 layout: large photo cards. Ref: V0 gallery-2x2.tsx"""
-    body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
-    body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    body += _card_grid([_build_gallery_card_large(l, accent_color) for l in listings[:4]], 2)
-    if not insight_text:
-        body += _build_quick_take(quick_take, accent_color, primary_color)
-    return body
-
-
-def _build_gallery_3x2_body(
-    insight_text: str, listings: List[Dict], quick_take: str,
-    pdf_url: str, primary_color: str, accent_color: str,
-    gallery_label: str = "New Listings", filter_description: str = None,
-    accent_on_light: str = "#0d7c72",
-) -> str:
-    """Gallery 3x2 layout: compact photo cards. Ref: V0 gallery-3x2.tsx"""
-    body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
-    body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    body += _card_grid([_build_gallery_card_compact(l, accent_color) for l in listings[:9]], 3)
-    if not insight_text:
-        body += _build_quick_take(quick_take, accent_color, primary_color)
-    return body
-
-
-def _build_single_stacked_body(
-    insight_text: str, listings: List[Dict],
-    pdf_url: str, primary_color: str, accent_color: str,
-    filter_description: str = None,
-    accent_on_light: str = "#0d7c72",
-) -> str:
-    """Single stacked full-width cards with branded dividers. Ref: V0 single-stacked.tsx"""
-    body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
-    for i, listing in enumerate(listings[:5]):
-        body += _build_stacked_property_card(listing, primary_color, accent_color)
-        if i < len(listings) - 1:
-            body += _build_branded_divider(primary_color, accent_color)
-    return body
-
-
-def _build_large_list_body(
-    insight_text: str, listings: List[Dict], quick_take: str,
-    pdf_url: str, primary_color: str, accent_color: str,
-    gallery_label: str = "New Listings", filter_description: str = None,
-    accent_on_light: str = "#0d7c72",
-) -> str:
-    """Vertical list: photo-left, details-right. Ref: V0 large-list.tsx"""
-    body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
-    body += _build_gallery_count(len(listings), gallery_label, primary_color)
-    body += render_block("grid", shape="rows", cards=[
-        _build_property_row(l, accent_color, is_last=(i == len(listings) - 1))
-        for i, l in enumerate(listings)
-    ])
-    if not insight_text:
-        body += _build_quick_take(quick_take, accent_color, primary_color)
+    """Market Snapshot / New Listings / Open Houses — Design's market_snapshot."""
+    body = _build_ai_narrative(insight_text) or _build_quick_take(quick_take)
+    body += _build_filter_blurb(filter_description)
+    body += _build_hero_stat(hero_value, hero_label, tk)
+    if listings:
+        body += _build_gallery_count(listings_label, len(listings))
+        body += _build_rows(listings, tk)
+    body += _build_stacked_stats(stats)
     return body
 
 
 def _build_closed_sales_body(
     insight_text: str, hero_value: str, hero_label: str,
     listings: List[Dict], stats: List[Tuple[str, str]], quick_take: str,
-    pdf_url: str, primary_color: str, accent_color: str,
-    filter_description: str = None,
-    accent_on_light: str = "#0d7c72",
+    tk: Dict[str, str], filter_description: str = None,
 ) -> str:
-    """Closed Sales / Inventory table layout. Ref: V0 closed-sales-table.tsx"""
-    body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
-    body += _build_hero_stat(hero_value, hero_label, primary_color)
-    if listings and len(listings) >= 2:
+    """Closed Sales / Inventory — Design's closed: four rows, then the table."""
+    body = _build_ai_narrative(insight_text) or _build_quick_take(quick_take)
+    body += _build_filter_blurb(filter_description)
+    body += _build_hero_stat(hero_value, hero_label, tk)
+    if listings:
         show = listings[:4]
-        label = "Notable Sales" if any(l.get("close_price") for l in show) else "Featured Properties"
-        body += _build_gallery_count(len(show), label, primary_color)
-        body += _card_grid([
-            _build_photo_card_with_badge(
-                l, primary_color, accent_color,
-                "Sold" if l.get("close_price") else "Active")
-            for l in show
-        ], 2)
-    body += _build_sales_table(listings or [], primary_color, accent_color)
-    body += _build_stacked_stats(stats, primary_color)
-    if not insight_text:
-        body += _build_quick_take(quick_take, accent_color, primary_color)
+        label = "Recent sales" if any(l.get("close_price") for l in show) else "Newest listings"
+        body += _build_gallery_count(label, len(show))
+        body += _build_rows(show, tk, chips=True)
+        body += _build_sales_table(listings, tk["primary"])
+    body += _build_stacked_stats(stats)
     return body
 
 
@@ -1065,7 +790,7 @@ def _label_share(pct_str):
     return max(0, min(100, int(round(float(m.group(1))))))
 
 
-def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]:
+def _band_rows(trend_stats, primary_color: str = None, accent_color: str = None) -> List[Dict]:
     """
     One dict per price band, with the bar width and the percentage label
     computed together.
@@ -1076,29 +801,21 @@ def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]
     100%. Splitting the two calculations across a builder and a template is how
     that happens again.
 
-    FIXED 2026-10-01 (D-115): THE BAR IS THE NUMBER PRINTED BESIDE IT.
+    FIXED 2026-10-01 (D-115): THE BAR IS THE NUMBER PRINTED BESIDE IT. The width
+    is parsed from `pct_str` itself rather than recomputed from a total, so it
+    depicts the PRINTED value including its rounding.
 
-    It used to be `count / max_count` — the band's share of the LARGEST band —
-    while the label was its share of the TOTAL. Both correct in isolation;
-    the pairing was the defect. A reader takes the bar as a picture of the
-    number next to it, and it was a picture of a different one.
+    THE 2% FLOOR IS GONE, AND DESIGN'S 5TH PACKAGE ASKS FOR IT BACK. Kept, it
+    would draw a 2% bar beside a label reading 0% or 1% — this defect again,
+    smaller. The count is printed on every row, so a band with listings is never
+    invisible; only its bar is, and only when its share rounds to zero, which is
+    what the label says too.
 
-    The width is now parsed from `pct_str` itself rather than recomputed from
-    a total, so it depicts the PRINTED value including its rounding. Deriving
-    both from `count / total` would have left the bar and the label able to
-    differ by a rounding step, which is the same defect one order of
-    magnitude down.
-
-    THE 2% FLOOR IS GONE, AND THAT IS A JUDGEMENT WORTH SEEING. It existed so
-    a one-listing band would not vanish and read as "no listings in this
-    band". Kept, it would draw a 2% bar beside a label reading 0% or 1% —
-    this defect again, smaller. The count is printed on every row ("N
-    listings"), so a band with listings is never invisible; only its bar is,
-    and only when its share rounds to zero, which is what the label says too.
-    Restoring the floor means accepting a bar that contradicts its label.
+    The most-active band is no longer drawn in a second colour: Design's bars
+    are one brand fill, and the hero already names that band.
     """
     rows = []
-    for label, count_str, pct_str, is_highlight in trend_stats:
+    for label, count_str, pct_str, _is_highlight in trend_stats:
         # None when the label is not a percentage we can read. A bar drawn
         # from a guess would be the defect this fixes, so there is no bar.
         share = _label_share(pct_str)
@@ -1109,17 +826,6 @@ def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]
             "pct": pct_str,
             "bar_pct": bar_pct,
             "empty_pct": 100 - bar_pct,
-            "bar_bg": accent_color if is_highlight else primary_color,
-            "label_style": (
-                f"font-size: 13px; font-weight: 700; color: {_ink(primary_color, '#f8fafc')};"
-                if is_highlight else
-                "font-size: 13px; font-weight: 600; color: #1f2937;"
-            ),
-            "pct_style": (
-                f"font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: {_ink(accent_color, '#f8fafc')};"
-                if is_highlight else
-                "font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; font-weight: bold; color: #1f2937;"
-            ),
         })
     return rows
 
@@ -1127,62 +833,79 @@ def _band_rows(trend_stats, primary_color: str, accent_color: str) -> List[Dict]
 def _build_analytics_body(
     insight_text: str, hero_value: str, hero_label: str,
     trend_stats: List[Tuple[str, str, str, bool]],
-    quick_take: str, pdf_url: str, primary_color: str, accent_color: str,
+    quick_take: str, tk: Dict[str, str],
     filter_description: str = None,
-    accent_on_light: str = "#0d7c72",
     supporting_metrics: List[Tuple[str, str]] = None,
     listings: List[Dict] = None,
 ) -> str:
-    """Analytics / Price Bands layout with bar chart. Ref: V0 email-price-bands.html
+    """Price Bands — Design's price_bands.
 
-    trend_stats for price bands: each tuple is (band_label, listing_count_str, percentage_str, is_most_active).
-    supporting_metrics: optional list of (label, value) for the bottom row.
+    trend_stats: each tuple is (band_label, listing_count_str, percentage_str, is_most_active).
+    supporting_metrics: optional list of (label, value) for the row under the bars.
     """
-    body = _build_filter_blurb(filter_description, primary_color)
-    body += _build_ai_narrative(insight_text, accent_color, accent_on_light)
-    body += _build_hero_stat(hero_value, hero_label, primary_color)
+    body = _build_ai_narrative(insight_text) or _build_quick_take(quick_take)
+    body += _build_filter_blurb(filter_description)
+    body += _build_hero_stat(hero_value, hero_label, tk)
 
     if trend_stats:
-        body += _build_section_label("Price Distribution", primary_color)
-
-        body += render_block(
-            "bands",
-            bands=_band_rows(trend_stats, primary_color, accent_color),
-        )
+        body += _build_section_label("Price distribution")
+        body += render_block("bands", bands=_band_rows(trend_stats), primary=tk["primary"])
 
     if supporting_metrics:
-        n = len(supporting_metrics)
+        n = len(supporting_metrics[:3])
         body += render_block(
             "spec_list", variant="supporting",
             stats=supporting_metrics[:3],
-            cell_width=f"{100 // n}%" if n else "33%",
-            # #f1f5f9 rather than the cell's own #f8fafc: `_ink` targets the
-            # darkest light surface in the document so one value is safe on all
-            # of them. See DARKEST_LIGHT_SURFACE.
-            ink=_ink(primary_color, "#f1f5f9"),
+            cell_width=f"{100 // n}%",
         )
 
-    # EMAIL-DEPTH-PASS1: render example listings beneath the band
-    # aggregates so the email tells the full story (was: PDF-only).
-    if listings and len(listings) >= 2:
-        body += _build_gallery_count(len(listings), "Example Listings", primary_color)
-        body += _render_adaptive_listings(listings, primary_color, accent_color)
+    if listings:
+        body += _build_gallery_count("Example listings", len(listings))
+        body += _build_rows(listings, tk)
+    return body
 
-    if not insight_text:
-        body += _build_quick_take(quick_take, accent_color, primary_color)
+
+def _build_gallery_body(
+    insight_text: str, listings: List[Dict], quick_take: str, tk: Dict[str, str],
+    gallery_label: str = "Featured listings", filter_description: str = None,
+) -> str:
+    """
+    New Listings Gallery / Featured Listings — Design's two-across cards, at
+    every count. The adaptive layouts this replaces (stacked, 2×2, 3×2, list)
+    each drew a different number of listings from the one the truncation note
+    was given: the 2×2 drew 4 under a note reading "Showing 8".
+    """
+    body = _build_ai_narrative(insight_text) or _build_quick_take(quick_take)
+    body += _build_filter_blurb(filter_description)
+    if listings:
+        body += _build_gallery_count(gallery_label, len(listings))
+        body += _card_grid([_build_gallery_card(l, tk) for l in listings])
     return body
 
 
 # ---------------------------------------------------------------------------
-# EMAIL-DEPTH-PASS1: Truncation note + always-on PDF CTA
+# The truncation note, the CTA, the masthead and the signature
 # ---------------------------------------------------------------------------
 
-def _build_truncation_note(
-    total_available: int, showing: int, pdf_url: Optional[str],
-    primary_color: str,
-) -> str:
+def _pdf_has_all(report_type: str, total_available: int) -> bool:
     """
-    §06 chrome `truncation_note` — "Showing X of Y · View all in the PDF".
+    Whether the PDF really holds every listing the note counts.
+
+    Design's note says "All of them are in the report." That is true for the
+    catalog kinds, whose PDF lists everything (cap 200), and FALSE for the
+    snapshot kinds, whose PDF is itself a sample — market_snapshot shows 9,
+    price_bands 8, featured_listings 12. Read from `market_builder.PDF_CONFIG`
+    rather than restated, so the two cannot drift.
+    """
+    from worker.market_builder import PDF_CONFIG
+    cfg = PDF_CONFIG.get(report_type)
+    return bool(cfg) and total_available <= cfg["cap"]
+
+
+def _build_truncation_note(total_available: int, showing: int,
+                           pdf_url: Optional[str], pdf_has_all: bool = False) -> str:
+    """
+    §06 chrome `truncation_note` — "Showing X of Y."
 
     Both conditions stay here rather than in the template: a note claiming
     truncation that did not happen is worse than no note.
@@ -1190,106 +913,58 @@ def _build_truncation_note(
     if not pdf_url or total_available <= showing or showing <= 0:
         return ""
     return render_block("chrome", piece="truncation_note", showing=showing,
-                        total_available=total_available, pdf_url=pdf_url,
-                        ink=_ink(primary_color))
+                        total_available=total_available, pdf_has_all=pdf_has_all)
 
 
-def _build_masthead(primary_color: str, accent_color: str, on_band: str,
-                    logo_url: Optional[str], brand_name: str,
-                    title: str, subtitle: str,
-                    metric_value: str, metric_label: str) -> str:
+def _build_masthead(tk: Dict[str, str], logo_url: Optional[str], brand_name: str,
+                    date_label: str, kicker: str) -> str:
     """
-    §06 block `masthead` — the gradient banner. Markup in blocks/masthead.jinja2.
+    §06 block `masthead` — the solid brand band, then the kicker line.
 
-    Invariant across all eight report types; only the strings differ. `on_band`
-    is passed in rather than derived here because it depends on BOTH gradient
-    stops and the caller has already computed it once for the document.
+    Solid, not the old primary-to-accent gradient: a gradient's text has to clear
+    AA at every stop, and on a navy-to-lime band nothing did.
     """
     return render_block(
-        "masthead", primary_color=primary_color, accent_color=accent_color,
-        on_band=on_band, logo_url=logo_url, brand_name=brand_name,
-        title=title, subtitle=subtitle,
-        metric_value=metric_value, metric_label=metric_label,
+        "masthead", primary=tk["primary"], on_primary=tk["on_primary"],
+        logo_url=logo_url, brand_name=brand_name,
+        date_label=date_label, kicker=kicker,
     )
 
 
-def _build_signature(postal_address_html: str, unsubscribe_url: str) -> str:
+def _build_pdf_cta(pdf_url: Optional[str], tk: Dict[str, str], sub: str = "") -> str:
     """
-    §06 block `signature` — the platform footer. Markup in
-    blocks/signature.jinja2.
+    §06 block `cta` — "Open the full report", above the signature.
 
-    `postal_address_html` arrives pre-rendered: whether the line appears, and
-    whose address it carries, is a compliance decision (the account's own when
-    set, the platform's otherwise, labelled as which) and belongs in Python
-    where it is tested rather than behind a template conditional.
-    """
-    return render_block("signature", postal_address_html=postal_address_html,
-                        unsubscribe_url=unsubscribe_url)
-
-
-#: Horizontal padding per column position, so the gutter falls between cards and
-#: not at the outer edges of the content column.
-_GRID_PADS = {
-    2: ("padding: 0 4px 8px 0;", "padding: 0 0 8px 4px;"),
-    3: ("padding: 0 4px 8px 0;", "padding: 0 4px 8px 4px;", "padding: 0 0 8px 4px;"),
-}
-
-
-def _card_grid(cards: List[str], per_row: int) -> str:
-    """
-    §06 block `grid` — arrange rendered cards `per_row` across.
-
-    A short final row is padded with EMPTY CELLS rather than left ragged. A `<tr>`
-    with fewer `<td>`s than its siblings collapses the table's column widths in
-    Outlook, which is why the code this replaces always emitted both cells even
-    when the second was empty.
-    """
-    if not cards:
-        return ""
-    pads = _GRID_PADS[per_row]
-    rows = []
-    for start in range(0, len(cards), per_row):
-        chunk = list(cards[start:start + per_row])
-        chunk += [""] * (per_row - len(chunk))
-        rows.append([{"html": html, "pad": pads[i]} for i, html in enumerate(chunk)])
-    return render_block("grid", shape="table", rows=rows,
-                        cell_width=f"{100 // per_row}%")
-
-
-def _build_pdf_cta(pdf_url: Optional[str], primary_color: str) -> str:
-    """
-    §06 block `cta` — the "View Full PDF" button above the agent footer.
-
-    The markup now lives in templates/email/blocks/cta.jinja2. This function
-    stays as the seam: it decides whether the block renders at all and derives
-    the one colour role the block needs, which keeps that judgement in Python
-    where it is testable rather than in a template where it would be an `{% if %}`
-    nobody reads.
+    This function stays as the seam: it decides whether the block renders at
+    all, which keeps that judgement in Python where it is testable.
     """
     if not pdf_url:
         return ""
-    return render_block(
-        "cta",
-        pdf_url=pdf_url,
-        primary_color=primary_color,
-        on_fill=_on(primary_color),   # the button is a brand fill
-    )
+    return render_block("cta", pdf_url=pdf_url, primary=tk["primary"],
+                        on_primary=tk["on_primary"], sub=sub)
 
 
-# ---------------------------------------------------------------------------
-# Phase 4: Layout Routing
-# ---------------------------------------------------------------------------
+def _today() -> date:
+    """The "as of" date the masthead and data line print. A seam for tests."""
+    return date.today()
 
-def _select_gallery_layout(listing_count: int) -> str:
-    """Pick gallery layout name based on listing count. Ref: V8 adaptive layouts."""
-    if listing_count <= 3:
-        return "single_stacked"
-    elif listing_count in (4,):
-        return "gallery_2x2"
-    elif listing_count in (6, 9):
-        return "gallery_3x2"
-    else:
-        return "large_list"
+
+def _initials(name: str) -> str:
+    """Up to two initials from a display name; letters only, so markup cannot leak in."""
+    words = [w for w in re.split(r"\s+", html.unescape(name or "")) if w[:1].isalpha()]
+    return "".join(w[0].upper() for w in words[:2])
+
+
+def _build_signature(**ctx) -> str:
+    """
+    §06 block `signature` — the agent, then the footer CAN-SPAM requires.
+
+    The footer lines arrive pre-rendered: whether the postal line carries the
+    account's address or ours, and how it is labelled, is a compliance decision
+    and belongs in Python where it is tested rather than behind a template
+    conditional.
+    """
+    return render_block("signature", **ctx)
 
 
 #: The §06 blocks each report type renders, in first-use order, with the variant
@@ -1301,7 +976,7 @@ def _select_gallery_layout(listing_count: int) -> str:
 #: decides the sequence. It does not. Three types share the `market_narrative`
 #: layout and produce TWO different sequences: `open_houses` renders
 #: `read:panel` where the other two render `read:insight`, because the Quick Take
-#: panel is emitted only `if not insight_text`. Selection is conditional on the
+#: stands in as the headline only when there is no insight text. Selection is conditional on the
 #: DATA as much as on the type, and a map keyed by layout could not express it.
 #:
 #: Three more blocks are conditional and therefore absent below, each for a
@@ -1329,7 +1004,7 @@ def _select_gallery_layout(listing_count: int) -> str:
 #: Driving from the map requires every step to take a uniform context. That
 #: turns seven readable functions of sixteen to fifty lines into roughly fifteen
 #: small ones plus a context object plus a dispatcher — and the conditional
-#: selection documented above, which is a plain `if not insight_text` today,
+#: selection documented above, which is a plain `insight or quick_take` today,
 #: becomes a predicate function registered against a block name. The sequence
 #: then reads only through the registry, and the per-layout data gathering that
 #: genuinely differs between report types — and is where this module's defects
@@ -1348,35 +1023,35 @@ def _select_gallery_layout(listing_count: int) -> str:
 REPORT_BLOCKS = {
     "market_snapshot": (
         "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
-        "spec_list:strip", "chrome:truncation_note",
+        "grid:rows", "spec_list:strip", "chrome:truncation_note",
     ),
     "new_listings": (
         "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
-        "spec_list:strip", "chrome:truncation_note",
+        "grid:rows", "spec_list:strip", "chrome:truncation_note",
     ),
     "open_houses": (
-        # no insight text for this type, so the Quick Take panel stands in
-        "chrome:hero", "chrome:count_pill", "gallery:row",
-        "spec_list:strip", "read:panel", "chrome:truncation_note",
+        # no insight text for this type, so the Quick Take is the headline
+        "read:panel", "chrome:hero", "chrome:count_pill", "gallery:row",
+        "grid:rows", "spec_list:strip", "chrome:truncation_note",
     ),
     "closed": (
-        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:badged",
-        "grid:table", "table", "spec_list:strip", "chrome:truncation_note",
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
+        "grid:rows", "table", "spec_list:strip", "chrome:truncation_note",
     ),
     "inventory": (
-        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:badged",
-        "grid:table", "table", "spec_list:strip", "chrome:truncation_note",
+        "read:insight", "chrome:hero", "chrome:count_pill", "gallery:row",
+        "grid:rows", "table", "spec_list:strip", "chrome:truncation_note",
     ),
     "price_bands": (
         "read:insight", "chrome:hero", "spec_list:supporting",
-        "chrome:count_pill", "gallery:row", "chrome:truncation_note",
+        "chrome:count_pill", "gallery:row", "grid:rows", "chrome:truncation_note",
     ),
     "new_listings_gallery": (
-        "read:insight", "chrome:count_pill", "gallery:row", "grid:rows",
+        "read:insight", "chrome:count_pill", "gallery:card", "grid:cards",
         "chrome:truncation_note",
     ),
     "featured_listings": (
-        "read:insight", "chrome:count_pill", "gallery:row", "grid:rows",
+        "read:insight", "chrome:count_pill", "gallery:card", "grid:cards",
         "chrome:truncation_note",
     ),
 }
@@ -2338,7 +2013,8 @@ def schedule_email_html(
     #
     #   #4f46e5: white on it 6.29:1 · as ink on the darkest card 5.74:1
     primary_color = normalize_hex_color(brand.get("primary_color"), "#4f46e5")  # Indigo-600
-    accent_color = normalize_hex_color(brand.get("accent_color"), "#4f46e5")    # monochrome, per templates.ts
+    # `accent_color` is not read: Design's emails are one brand colour. See
+    # the 5TH PACKAGE header above `DARK_TINT`.
     rep_name = brand.get("rep_name")
     rep_title = brand.get("rep_title")
     rep_photo_url = brand.get("rep_photo_url")
@@ -2351,29 +2027,9 @@ def schedule_email_html(
     contact_line1 = brand.get("contact_line1") or rep_name
     contact_line2 = brand.get("contact_line2") or rep_title
     website_url = brand.get("website_url")
-    logo_url_footer = (
-        brand.get("email_footer_logo_url")
-        or brand.get("footer_logo_url")
-        or brand.get("logo_url")
-    )
 
-    color_roles = compute_color_roles(accent_color, dark_bg=primary_color)
-    accent_on_dark = color_roles["theme_color_on_dark"]
-    # NOT color_roles["theme_color_on_light"]. That helper's loop targets 3.0:1,
-    # not 4.5 — its own docstring claims AA and its code checks 3.0 — so it
-    # returned #0D9488 unchanged (3.74:1) for Luxury Estates and #69a311
-    # (3.07:1) for lime. Filed as D-099. `_ink` clears 4.5 on the card.
-    accent_on_light = _ink(accent_color)
-    # The masthead is a gradient from primary to accent; its text must clear AA
-    # at BOTH ends, so it is chosen against the worst of the two rather than
-    # hardcoded white (1.98:1 at the lime end).
-    _role_on_band = _on_band(primary_color, accent_color)
-    # The agent block and the metric strips are #f8fafc / #f1f5f9, not white, so
-    # the ink is derived against the card it lands on. See `_ink`.
-    _primary_on_card = _ink(primary_color, "#f8fafc")
-    _accent_on_card = _ink(accent_color, "#f8fafc")
-    _primary_on_strip = _ink(primary_color, "#f1f5f9")
-    _accent_on_strip = _ink(accent_color, "#f1f5f9")
+    # Every colour the blocks read, derived once from the one brand colour.
+    tk = _tokens(primary_color)
 
     # Get report config
     config = REPORT_CONFIG.get(report_type, {
@@ -2408,8 +2064,6 @@ def schedule_email_html(
     else:
         area_display = "Your Area"
     
-    # Date range display
-    date_range = f"Last {lookback_days} Days"
     
     # V4: Get 4-metric hero row (for all V4 report types)
     if has_hero_4:
@@ -2462,53 +2116,19 @@ def schedule_email_html(
     # V10: Quick Take (professional market insight)
     quick_take = _get_quick_take(report_type, area_display, metrics)
     
-    # Build logo HTML for email header
-    # Use email_logo_url if available (light version for gradient headers)
-    # Otherwise, use logo_url (will be displayed on gradient, may need inversion via CSS)
-    header_logo = email_logo_url or logo_url
-    if header_logo:
-        logo_html = f'<img src="{header_logo}" alt="{brand_name}" width="160" style="display: block; max-width: 160px; height: auto;">'
-    else:
-        logo_html = f'<span style="font-size: 24px; font-weight: 700; color: {_role_on_band};">{brand_name}</span>'
-    
+    header_logo_url = email_logo_url or logo_url
+
     # ------------------------------------------------------------------
     # V16: Build body via layout router
     # ------------------------------------------------------------------
     layout = LAYOUT_MAP.get(report_type, "market_narrative")
 
     if layout == "gallery":
-        listing_count = len(listings) if listings else 0
-        gallery_layout = _select_gallery_layout(listing_count)
-        gallery_label = preset_display_name or ("New Listings" if report_type == "new_listings_gallery" else "Featured Listings")
-
-        if gallery_layout == "single_stacked":
-            body_html = _build_single_stacked_body(
-                insight_text=insight_text, listings=listings or [],
-                pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
-                filter_description=filter_description,
-                accent_on_light=accent_on_light,
-            )
-        elif gallery_layout == "gallery_2x2":
-            body_html = _build_gallery_2x2_body(
-                insight_text=insight_text, listings=listings or [], quick_take=quick_take,
-                pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
-                gallery_label=gallery_label, filter_description=filter_description,
-                accent_on_light=accent_on_light,
-            )
-        elif gallery_layout == "gallery_3x2":
-            body_html = _build_gallery_3x2_body(
-                insight_text=insight_text, listings=listings or [], quick_take=quick_take,
-                pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
-                gallery_label=gallery_label, filter_description=filter_description,
-                accent_on_light=accent_on_light,
-            )
-        else:
-            body_html = _build_large_list_body(
-                insight_text=insight_text, listings=listings or [], quick_take=quick_take,
-                pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
-                gallery_label=gallery_label, filter_description=filter_description,
-                accent_on_light=accent_on_light,
-            )
+        gallery_label = preset_display_name or ("New listings" if report_type == "new_listings_gallery" else "Featured listings")
+        body_html = _build_gallery_body(
+            insight_text=insight_text, listings=listings or [], quick_take=quick_take,
+            tk=tk, gallery_label=gallery_label, filter_description=filter_description,
+        )
 
     elif layout == "closed_sales":
         hero_val = h1_value if has_hero_4 else m1_value
@@ -2521,9 +2141,7 @@ def schedule_email_html(
         body_html = _build_closed_sales_body(
             insight_text=insight_text, hero_value=hero_val, hero_label=hero_lbl,
             listings=listings or [], stats=secondary, quick_take=quick_take,
-            pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
-            filter_description=filter_description,
-            accent_on_light=accent_on_light,
+            tk=tk, filter_description=filter_description,
         )
 
     elif layout == "analytics":
@@ -2555,10 +2173,8 @@ def schedule_email_html(
 
         body_html = _build_analytics_body(
             insight_text=insight_text, hero_value=hero_val, hero_label=hero_lbl,
-            trend_stats=band_stats, quick_take=quick_take,
-            pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
+            trend_stats=band_stats, quick_take=quick_take, tk=tk,
             filter_description=filter_description,
-            accent_on_light=accent_on_light,
             supporting_metrics=supporting,
             listings=listings,
         )
@@ -2574,319 +2190,157 @@ def schedule_email_html(
         if not secondary:
             secondary = [(m1_label, m1_value), (m2_label, m2_value), (m3_label, m3_value)]
         narrative_label = {
-            "market_snapshot": "Recent Activity",
-            "new_listings":    "New Listings",
-            "open_houses":     "Open Houses",
-        }.get(report_type, "Notable Listings")
+            "market_snapshot": "Recent activity",
+            "new_listings":    "New listings",
+            "open_houses":     "Open houses",
+        }.get(report_type, "Notable listings")
         body_html = _build_market_narrative_body(
             insight_text=insight_text, hero_value=hero_val, hero_label=hero_lbl,
-            stats=secondary, quick_take=quick_take,
-            pdf_url=pdf_url, primary_color=primary_color, accent_color=accent_color,
+            stats=secondary, quick_take=quick_take, tk=tk,
             filter_description=filter_description,
             listings=listings,
-            accent_on_light=accent_on_light,
             listings_label=narrative_label,
         )
-    
-    # ------------------------------------------------------------------
-    # EMAIL-DEPTH-PASS1: Truncation note + always-on PDF CTA
-    # Appended AFTER the body builder runs so every report type gets
-    # both, regardless of which layout was selected.
-    # ------------------------------------------------------------------
-    # Fall back to the legacy total_shown / list length if a caller
-    # hasn't been updated to forward total_available/showing yet.
-    _shown = showing or total_shown or (len(listings) if listings else 0)
-    _total = total_available or total_found or _shown
-    body_html += _build_truncation_note(_total, _shown, pdf_url, primary_color)
-    body_html += _build_pdf_cta(pdf_url, primary_color)
 
-    # ============================================================================
-    # V16: Agent Footer (kept from V15 — already matches V0 email-footer.tsx)
-    # ============================================================================
-    
-    # (old inline V4/V15 HTML builders removed — now handled by layout body builders)
-    
-    # V15: Build agent footer HTML - branded background, serif name, pill buttons
-    # V0 company branding column
-    company_html = ""
-    if logo_url_footer:
-        company_html = f'''
-                            <td style="text-align: right; vertical-align: top; width: 100px;">
-                              <img src="{logo_url_footer}" alt="{brand_name}" width="100" style="display: block; max-width: 100px; height: auto;">
-                            </td>'''
-    elif brand_name and brand_name != "Market Reports":
-        company_html = f'''
-                            <td style="text-align: right; vertical-align: top; width: 100px;">
-                              <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: {_primary_on_card};">{brand_name}</p>
-                              {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #475569;">{city or ""}</p>' if city else ""}
-                            </td>'''
-
-    # ── Contact pills ───────────────────────────────────────────────────────
-    # Built once and reused by every footer branch below. They used to be
-    # inlined into the photo branch only, which meant an agent who had not
-    # uploaded a headshot sent reports carrying no phone number and no email
-    # address at all — the recipient had no way to reach them.
+    # ------------------------------------------------------------------
+    # Truncation note + PDF CTA, after the body on every report type.
     #
-    # The phone pill links only when the number resolves to a dialable tel:
-    # URI; otherwise it renders as plain text, because a pill styled like a
-    # link that goes nowhere is worse than one that never claimed to be
-    # tappable. The label is always the number as the agent entered it — only
-    # the href is normalised.
-    def _pill_style(margin_right: bool) -> str:
-        return (
-            "display: inline-block; font-family: -apple-system, BlinkMacSystemFont, sans-serif; "
-            f"font-size: 11px; color: {_accent_on_card}; text-decoration: none; "
-            f"border: 1px solid {accent_color}; padding: 4px 10px; border-radius: 12px;"
-            + (" margin-right: 6px;" if margin_right else "")
-        )
+    # `showing` is what this email DREW, not what the caller says it sent: the
+    # layouts above draw every listing they are handed, so the two agree — and
+    # where they did not (the old 2×2 gallery drew 4 of 8), the note was wrong.
+    # ------------------------------------------------------------------
+    _shown = len(listings) if listings else 0
+    _total = total_available or total_found or _shown
+    body_html += _build_truncation_note(_total, _shown, pdf_url,
+                                        _pdf_has_all(report_type, _total))
+    body_html += _build_pdf_cta(pdf_url, tk, f"{area_display}, last {lookback_days} days")
 
-    if rep_phone and rep_phone_href:
-        phone_pill_html = f'<a href="{rep_phone_href}" style="{_pill_style(True)}">{rep_phone}</a>'
-    elif rep_phone:
-        phone_pill_html = f'<span style="{_pill_style(True)}">{rep_phone}</span>'
-    else:
-        phone_pill_html = ''
-
-    # B23: this said "Email". A recipient who wants to reply from a different
-    # client, or who just wants to know who sent this, could not see the address
-    # anywhere in the document — the pill was a mailto: link wearing the word.
-    # The phone pill next to it already showed the number, so the inconsistency
-    # was visible in the same row.
-    email_pill_html = (
-        f'<a href="mailto:{rep_email}" style="{_pill_style(False)}">{rep_email}</a>'
-        if rep_email else ''
-    )
-    contact_pills_html = (
-        f'<div style="margin-top: 8px;">{phone_pill_html}{email_pill_html}</div>'
-        if (phone_pill_html or email_pill_html) else ''
-    )
+    # ── The agent ───────────────────────────────────────────────────────────
+    # Phone and email are built once and shown whether or not there is a photo:
+    # they used to live in the photo branch only, so an agent without a headshot
+    # sent reports carrying no way to reach them. The phone links only when it
+    # resolves to a dialable tel: URI; the label is always as the agent typed it.
+    agent_name = contact_line1 or rep_name or brand_name
+    title = contact_line2 or rep_title
+    title_line = " · ".join(x for x in (title, brand_name if brand_name != agent_name else None) if x)
 
     # ── Sender postal address (CAN-SPAM §7704(a)(5)) ────────────────────────
     #
-    # The slot built in #49 is now wired. All three things it was gated on have
-    # arrived: the address (a business decision, supplied — never guessed), a
-    # column to store per-account overrides in (0055), and the resolution rule
-    # below.
-    #
     # THE ATTRIBUTION IS THE WHOLE DESIGN HERE, and it is why this is not a
-    # one-line `or`. The footer line reads "<name> • <address>", so falling
-    # back naively would print the AFFILIATE'S brand beside TRENDYREPORTS'
-    # address — an affirmative statement that this business is located at an
-    # address that is not theirs. That is exactly the failure the original TODO
-    # warned about, arriving through the fallback instead of through a guess:
-    # a wrong address is a worse compliance posture than a missing one.
+    # one-line `or`. The line reads "<name> · <address>", so falling back
+    # naively would print the AFFILIATE'S brand beside TRENDYREPORTS' address —
+    # an affirmative statement that this business is located at an address that
+    # is not theirs. A wrong address is a worse compliance posture than a
+    # missing one. So the label travels with the value:
     #
-    # So the label travels with the value:
+    #   account set its own   "<their brand> · <their address>"
+    #   falling back          "Sent by TrendyReports · <ours> · on behalf of <agent>"
     #
-    #   account set its own   "<their brand> • <their address>"
-    #   falling back          "Sent by TrendyReports • <platform address>"
+    # The fallback is reordered from Design's "Sent by TrendyReports on behalf
+    # of <agent> · <ours>", which puts the agent's name immediately before our
+    # address — the pairing this block exists to prevent. Ours comes first and
+    # sits beside our own name.
     #
     # Both satisfy the statute, which requires the valid physical postal address
-    # of the sender or of the person who initiated the message — and on the
-    # fallback path the initiator is TrendyReports, which is what the line then
-    # says. Neither line claims an address for a business that does not have it.
+    # of the sender or of the person who initiated the message. Our name appears
+    # only on the fallback, where it is the truth (Design, 5th package; owner
+    # call 2026-10-28: follow Design, so no "Powered by" line). The address is
+    # PLATFORM_POSTAL_ADDRESS — never the one in Design's mocks, which is wrong.
     postal_address = (brand.get("postal_address") or "").strip()
     if postal_address:
-        postal_sender_label = brand_name
+        postal_line = f"{brand_name} · {postal_address}"
     else:
-        postal_address = PLATFORM_POSTAL_ADDRESS
-        postal_sender_label = PLATFORM_SENDER_LABEL
+        postal_line = f"{PLATFORM_SENDER_LABEL} · {PLATFORM_POSTAL_ADDRESS} · on behalf of {agent_name}"
 
-    # "CLEARLY AND CONSPICUOUSLY" IS THE STATUTE'S OWN WORDING, and the line
-    # inherited the styling of the decoration around it: 10px #9ca3af, the same
-    # as "Powered by TrendyReports" and the unsubscribe link.
-    #
-    # Measured rather than argued: #9ca3af on the #f8f9fa footer is a contrast
-    # ratio of **2.41:1**. WCAG AA asks 4.5:1 for normal text and 3.0:1 even
-    # for large text, and 10px is not large text. It fails both. #6b7280 —
-    # already used in this same block for the "TrendyReports" wordmark, so not
-    # a new colour — is 4.59:1 and passes.
-    #
-    # A compliance statement rendered identically to the decoration beside it
-    # reads as decoration. Present in the HTML and unreadable in the client
-    # satisfies the letter and not the point, which is the same shape as every
-    # other finding here: technically correct, practically absent.
-    #
-    # 11px rather than 10 for the same reason. Still smaller than body text —
-    # this is not meant to shout — but no longer the smallest thing on the page.
-    postal_address_html = (
-        '              <p style="margin: 0 0 6px 0; font-family: \'Outfit\', -apple-system, '
-        "'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 11px; color: #6b7280;\">"
-        f"{postal_sender_label} &bull; {postal_address}</p>\n"
+    as_of = _today().strftime("%B %-d, %Y")
+    signature_html = _build_signature(
+        primary=tk["primary"], on_primary=tk["on_primary"], ink=tk["ink"],
+        photo_url=rep_photo_url, initials=_initials(agent_name), agent_name=agent_name,
+        title_line=title_line, phone=rep_phone, phone_href=rep_phone_href,
+        email=rep_email,
+        website_url=website_url,
+        website_label=(website_url or "").replace("https://", "").replace("http://", "").rstrip("/"),
+        reason_line=f"You're getting this because you're in {agent_name}'s contacts.",
+        unsubscribe_url=unsubscribe_url,
+        postal_line=postal_line,
+        # Design's line adds "a dash means the MLS didn't report it". This email
+        # prints "N/A" for a missing figure, not a dash, so that clause would be
+        # false here and is left out. "the MLS" rather than Design's "CRMLS":
+        # which MLS feeds an account is not known at render time.
+        data_line=(f"Data from the MLS, {as_of}. Figures cover {area_display} "
+                   f"for the last {lookback_days} days."),
     )
 
-    if rep_photo_url and (contact_line1 or rep_name):
-        agent_footer_html = f'''
-              <!-- V0 AGENT FOOTER: photo | info+pills | company -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 0 0; margin-top: 4px;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td style="width: 70px; vertical-align: top;">
-                          <!--[if mso]>
-                          <v:oval xmlns:v="urn:schemas-microsoft-com:vml" style="width:70px;height:70px;" stroke="f">
-                            <v:fill type="frame" src="{rep_photo_url}"/>
-                          </v:oval>
-                          <![endif]-->
-                          <!--[if !mso]><!-->
-                          <img src="{rep_photo_url}" alt="{contact_line1 or rep_name}" width="70" height="70" style="display: block; width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                          <!--<![endif]-->
-                        </td>
-                        <td style="vertical-align: top; padding-left: 16px;">
-                          <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_primary_on_card};">
-                            {contact_line1 or rep_name}
-                          </p>
-                          {f'<p style="margin: 2px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 11px; color: #6b7280;">{contact_line2 or rep_title}</p>' if (contact_line2 or rep_title) else ''}
-                          {contact_pills_html}
-                        </td>
-                        {company_html}
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>'''
-    elif contact_line1 or website_url:
-        agent_footer_html = f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; margin-top: 4px;">
-                <tr>
-                  <td style="padding: 24px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                      <tr>
-                        <td style="vertical-align: top;">
-                          {f'<p style="margin: 0 0 2px 0; font-family: Outfit, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_primary_on_card};">{contact_line1}</p>' if contact_line1 else ''}
-                          {f'<p style="margin: 0 0 6px 0; font-size: 12px; color: #475569;">{contact_line2}</p>' if contact_line2 else ''}
-                          {f'<p style="margin: 0; font-size: 12px;"><a href="{website_url}" style="color: {_accent_on_card}; text-decoration: none;">{website_url.replace("https://", "").replace("http://", "")}</a></p>' if website_url else ''}
-                          {contact_pills_html}
-                        </td>
-                        {company_html}
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>'''
-    else:
-        agent_footer_html = f'''
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; margin-top: 4px;">
-                <tr>
-                  <td style="padding: 24px;" align="center">
-                    <p style="margin: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 16px; font-weight: bold; color: {_primary_on_card};">{brand_name}</p>
-                    {contact_pills_html}
-                  </td>
-                </tr>
-              </table>'''
-    
-    # Header logo (prefer email-specific light version, fall back to main logo)
-    header_logo_url = email_logo_url or logo_url
-    header_logo_html = (
-        f'<img src="{header_logo_url}" alt="{brand_name}" '
-        f'style="display: block; max-height: 40px; width: auto;" />'
-    ) if header_logo_url else ""
+    masthead_html = _build_masthead(
+        tk, header_logo_url, brand_name, as_of,
+        f"{report_label} · {area_display} · Last {lookback_days} days",
+    )
 
-    # Build the complete HTML email
+    # ── The shell (Design, 5th package) ─────────────────────────────────────
+    #
+    # `color-scheme: light dark` and the `tr-*` rules ARE the dark-mode support.
+    # This said `light only` before, which no client honours reliably: Apple
+    # Mail and Outlook inverted the card anyway and left brand text on navy at
+    # 1.00–1.13:1. Now the dark palette is ours, and `.tr-brand` — the one
+    # per-brand rule — is written from `dark_ink`, measured against the dark
+    # tint. `tests/test_email_dark_mode.py` renders it with a dark scheme and
+    # checks every text run.
+    #
+    # No web font: Design's stack is the system one, and the Outfit @import was
+    # a request to Google from every open.
     html = f'''<!DOCTYPE html>
 <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="x-apple-disable-message-reformatting">
-  <meta name="color-scheme" content="light only">
-  <meta name="supported-color-schemes" content="light only">
-  <title>{brand_name} - {report_label}</title>
-  
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:AllowPNG/>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
-  
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
-  </style>
-  <style>
-    /* Reset */
-    body, table, td, p, a, li {{ -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
-    table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
-    img {{ -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }}
-    body {{ margin: 0 !important; padding: 0 !important; width: 100% !important; }}
-    
-    /* Dark Mode — only adapts the outer chrome, NEVER the content card */
-    @media (prefers-color-scheme: dark) {{
-      .dark-bg {{ background-color: #232323 !important; }}
-      .dark-text {{ color: #e5e5e5 !important; }}
-      .dark-border {{ border-color: #3d3d5c !important; }}
-    }}
-    
-    /* Mobile */
-    @media only screen and (max-width: 600px) {{
-      .wrapper {{ width: 100% !important; }}
-      .mobile-padding {{ padding: 20px !important; }}
-      .mobile-stack {{ display: block !important; width: 100% !important; }}
-      .mobile-center {{ text-align: center !important; }}
-      .mobile-hide {{ display: none !important; }}
-      .metric-card {{ display: block !important; width: 100% !important; margin-bottom: 12px !important; }}
-      .band-row {{ display: block !important; width: 100% !important; }}
-    }}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="x-apple-disable-message-reformatting">
+<title>{report_label} · {area_display} — {brand_name}</title>
+<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+<style>
+  body{{margin:0;padding:0;-webkit-text-size-adjust:100%;}}
+  table{{mso-table-lspace:0;mso-table-rspace:0;}}
+  img{{border:0;line-height:100%;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;}}
+  a{{color:inherit;}}
+  @media (prefers-color-scheme: dark){{
+    .tr-page{{background:#111827 !important;}}
+    .tr-card{{background:#1F2937 !important;border-color:#374151 !important;}}
+    .tr-ink{{color:#F3F4F6 !important;}}
+    .tr-body{{color:#D1D5DB !important;}}
+    .tr-muted{{color:#9CA3AF !important;}}
+    .tr-rule{{border-color:#374151 !important;}}
+    .tr-tint{{background:{DARK_TINT} !important;}}
+    .tr-cell{{background:{DARK_TINT} !important;border-color:#374151 !important;}}
+    .tr-ph{{background:#374151 !important;}}
+    .tr-brand{{color:{tk["dark_ink"]} !important;}}
+  }}
+  @media only screen and (max-width:620px){{
+    .tr-wrap{{width:100% !important;}}
+    .tr-pad{{padding-left:20px !important;padding-right:20px !important;}}
+    .tr-stack{{display:block !important;width:100% !important;}}
+    .tr-hide{{display:none !important;}}
+  }}
+</style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f0efed; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-  
-  <!-- Preheader Text (hidden preview text) -->
-  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
-    {preheader} &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
-  </div>
-  
-  <!-- Email Container -->
-  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f0efed;" class="dark-bg">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        
-        <!-- Email Wrapper -->
-        <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="wrapper" style="max-width: 600px; width: 100%;">
-          
-{_build_masthead(
-              primary_color, accent_color, _role_on_band, header_logo_url, brand_name,
-              f'{report_label} &mdash; {area_display}',
-              f'{date_range} &bull; Data via MLS',
-              h1_value if has_hero_4 else m1_value,
-              h1_label if has_hero_4 else m1_label,
-          )}          
-          <!-- ========== MAIN CONTENT ========== -->
-          <tr>
-            <td style="background-color: #ffffff; padding: 24px 28px;" class="mobile-padding">
-
+<body class="tr-page" style="margin:0;padding:0;background:#FAFAF7;">
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{preheader}&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;</div>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" class="tr-page" style="background:#FAFAF7;border-collapse:collapse;">
+<tr><td align="center" style="padding:24px 12px;">
+<!--[if mso]><table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" class="tr-wrap tr-card" style="width:600px;max-width:600px;background:#ffffff;border-collapse:collapse;border:1px solid #E4E2DA;">
+{masthead_html}
 {body_html}
-
-            </td>
-          </tr>
-
-          <!-- ========== AGENT FOOTER ========== -->
-          <tr>
-            <td>
-{agent_footer_html}
-            </td>
-          </tr>
-          
-{_build_signature(postal_address_html, unsubscribe_url)}          
-        </table>
-        <!-- End Wrapper -->
-        
-      </td>
-    </tr>
-  </table>
-  <!-- End Container -->
-  
+{signature_html}
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
 </body>
 </html>'''
-    
-    return html
 
+    return html
 
 def schedule_email_subject(
     report_type: str, 

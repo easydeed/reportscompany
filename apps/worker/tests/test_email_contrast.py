@@ -221,15 +221,17 @@ def test_white_is_not_hardcoded_onto_a_brand_fill():
 
 
 @pytest.mark.parametrize("status,expect_hex", [
-    ("Sold", "#dc2626"),
-    ("Active", "#15803d"),
-    ("Pending", "#b45309"),
+    ("Sold", "#065f46"),
+    ("Active", "#475569"),
+    ("Pending", "#92400e"),
 ])
 def test_every_status_badge_carries_readable_text(status, expect_hex):
     """
     §3.3 — status colours are reserved, never drawn from the brand, and always
-    paired with a text label. They are therefore literals, and the literals were
-    chosen for brightness rather than for the white text sitting on them:
+    paired with a text label. They are therefore literals. Since Design's 5th
+    package they are dark text on a pale chip (each 7:1 or better) rather than
+    white on a saturated fill; the first literals were chosen for brightness
+    rather than for the white text sitting on them:
 
         #16a34a  white on it  3.30:1
         #f59e0b  white on it  2.15:1
