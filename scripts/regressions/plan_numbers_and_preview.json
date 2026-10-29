@@ -1,0 +1,38 @@
+[
+  {
+    "name": "P1 the welcome email types the Free limit again",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "    free_limit = _plan_market_limit(\"free\")   # D-308: from the plan, never typed",
+    "new": "    free_limit = 5",
+    "test": "apps/api/tests/test_plan_numbers_in_email_come_from_the_plan.py"
+  },
+  {
+    "name": "P2 the plan lookup reads the legacy column",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "cur.execute(\"SELECT market_reports_limit FROM plans WHERE plan_slug = %s\", (plan_slug,))",
+    "new": "cur.execute(\"SELECT monthly_report_limit FROM plans WHERE plan_slug = %s\", (plan_slug,))",
+    "test": "apps/api/tests/test_plan_numbers_in_email_come_from_the_plan.py"
+  },
+  {
+    "name": "P3 the link preview prints the estimate again",
+    "file": "apps/web/app/r/[id]/page.tsx",
+    "old": "  const description = 'Home value report: nearby sales, property details and the local market.';",
+    "new": "  const description = `Estimated value: $${report.value_estimate.low.toLocaleString()}`;",
+    "test": "tests/test_report_link_preview_has_no_estimate.py"
+  },
+  {
+    "name": "P4 the admin plan picker types its limits again",
+    "file": "apps/web/app/admin/(dashboard)/accounts/[id]/page.tsx",
+    "old": "                        {p.plan_name} ({planLimitLabel(p.market_reports_limit)})",
+    "new": "                        {p.plan_name} (5 reports/month)",
+    "test": "__tests__/PlanLimitLabel.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "P5 the admin plans endpoint stops carrying the enforced limit",
+    "file": "apps/api/src/api/routes/admin.py",
+    "old": "                \"market_reports_limit\": row[11],",
+    "new": "                \"market_reports_limit\": row[2],",
+    "test": "apps/api/tests/test_admin_plans_list_the_enforced_limit.py"
+  }
+]

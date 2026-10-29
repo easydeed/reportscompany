@@ -22,12 +22,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const report = await getReportData(resolvedParams.id);
   if (!report) return { title: 'Report Not Found' };
   
+  // No estimate here (D-305, owner decision 2026-10-29). This metadata is the
+  // link preview — it shows in texts, Slack and email to anyone the link is
+  // forwarded to. The estimate stays in the report, beside how it was worked out.
+  const description = 'Home value report: nearby sales, property details and the local market.';
   return {
     title: `Home Value Report | ${report.property.address}`,
-    description: `Estimated value: $${report.value_estimate.low.toLocaleString()} - $${report.value_estimate.high.toLocaleString()}`,
+    description,
     openGraph: {
       title: `Home Value Report | ${report.property.address}`,
-      description: `Estimated value: $${report.value_estimate.low.toLocaleString()} - $${report.value_estimate.high.toLocaleString()}`,
+      description,
     },
   };
 }
