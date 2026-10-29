@@ -2603,7 +2603,8 @@ def list_plans(_admin: dict = Depends(get_admin_user)):
                 is_active,
                 created_at,
                 updated_at,
-                (SELECT COUNT(*) FROM accounts WHERE plan_slug = plans.plan_slug) as account_count
+                (SELECT COUNT(*) FROM accounts WHERE plan_slug = plans.plan_slug) as account_count,
+                market_reports_limit
             FROM plans
             ORDER BY monthly_report_limit ASC
         """)
@@ -2622,6 +2623,10 @@ def list_plans(_admin: dict = Depends(get_admin_user)):
                 "created_at": row[8].isoformat() if row[8] else None,
                 "updated_at": row[9].isoformat() if row[9] else None,
                 "account_count": row[10] or 0,
+                # What the market-report gate enforces (D-293). The admin
+                # account page labels its plan picker from this, not from
+                # `monthly_report_limit`, the legacy column.
+                "market_reports_limit": row[11],
             })
 
         return {"plans": plans, "count": len(plans)}

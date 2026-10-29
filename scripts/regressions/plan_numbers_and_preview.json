@@ -19,5 +19,20 @@
     "old": "  const description = 'Home value report: nearby sales, property details and the local market.';",
     "new": "  const description = `Estimated value: $${report.value_estimate.low.toLocaleString()}`;",
     "test": "tests/test_report_link_preview_has_no_estimate.py"
+  },
+  {
+    "name": "P4 the admin plan picker types its limits again",
+    "file": "apps/web/app/admin/(dashboard)/accounts/[id]/page.tsx",
+    "old": "                        {p.plan_name} ({planLimitLabel(p.market_reports_limit)})",
+    "new": "                        {p.plan_name} (5 reports/month)",
+    "test": "__tests__/PlanLimitLabel.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "P5 the admin plans endpoint stops carrying the enforced limit",
+    "file": "apps/api/src/api/routes/admin.py",
+    "old": "                \"market_reports_limit\": row[11],",
+    "new": "                \"market_reports_limit\": row[2],",
+    "test": "apps/api/tests/test_admin_plans_list_the_enforced_limit.py"
   }
 ]

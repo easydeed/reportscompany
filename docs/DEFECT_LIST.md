@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 60 | Observed, not yet triaged |
+| `recorded` | 59 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 164 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 165 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **309** | D-001 … D-309, contiguous, no duplicates |
@@ -15620,7 +15620,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-293 — the admin account page labels `sponsored_free` "Trial (10 reports/month)"; the plan enforces 3
 
 **Severity:** WRONG · filed during the sponsor compliance check: `apps/web/app/admin/(dashboard)/accounts/[id]/page.tsx:317`. The 10 is the legacy `monthly_report_limit` (D-051); enforcement reads `market_reports_limit` = 3, and production's `sponsored_free` is 3/3/1/1 like `free`.
-**Status:** `recorded`
+**Status:** `fixed` — fix/plan-numbers-and-preview (#240), owner decision 2026-10-29: the plan picker is built from `GET /v1/admin/plans`, which now carries `market_reports_limit`, and the page's limit card and override placeholder read the enforced limit. No plan number is typed into the page (`__tests__/PlanLimitLabel.test.ts`, `apps/api/tests/test_admin_plans_list_the_enforced_limit.py`).
 
 ---
 

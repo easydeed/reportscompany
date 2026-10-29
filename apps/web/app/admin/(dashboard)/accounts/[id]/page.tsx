@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react"
+import { planLimitLabel } from "@/lib/plan-limit-label"
 
 interface AccountDetail {
   account: {
@@ -42,6 +43,8 @@ interface AccountDetail {
     plan_name: string
     plan_slug: string
     monthly_report_limit: number
+    /** The enforced market-report limit for this account, overrides included. */
+    market_reports_limit: number
     allow_overage: boolean
     overage_price_cents: number
   }
@@ -58,6 +61,14 @@ interface AccountDetail {
   }
 }
 
+interface PlanRow {
+  plan_slug: string
+  plan_name: string
+  is_active: boolean
+  /** What the gate enforces (`plans.market_reports_limit`). */
+  market_reports_limit: number | null
+}
+
 export default function AccountDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -68,11 +79,19 @@ export default function AccountDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [account, setAccount] = useState<AccountDetail | null>(null)
+  const [plans, setPlans] = useState<PlanRow[]>([])
 
   // Form state
   const [planSlug, setPlanSlug] = useState("")
   const [limitOverride, setLimitOverride] = useState("")
   const [isActive, setIsActive] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/v1/admin/plans", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { plans: [] }))
+      .then((d) => setPlans(d.plans || []))
+      .catch(() => setPlans([]))
+  }, [])
 
   useEffect(() => {
     fetchAccount()
@@ -158,7 +177,7 @@ export default function AccountDetailPage() {
     )
   }
 
-  const effectiveLimit = account.account.monthly_report_limit_override || account.plan.monthly_report_limit
+  const effectiveLimit = account.plan.market_reports_limit
   const usagePercent = Math.round((account.usage.reports_this_month / effectiveLimit) * 100)
 
   return (
@@ -220,7 +239,7 @@ export default function AccountDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Plan Limit</p>
-                <p className="text-2xl font-bold text-slate-900">{account.plan.monthly_report_limit}</p>
+                <p className="text-2xl font-bold text-slate-900">{account.plan.market_reports_limit}</p>
                 <p className="text-xs text-slate-400">{account.plan.plan_name}</p>
               </div>
               <Building className="h-8 w-8 text-blue-200" />
@@ -310,11 +329,13 @@ export default function AccountDetailPage() {
                   <SelectValue placeholder="Select plan" />
                 </SelectTrigger>
                 <SelectContent className="bg-white border-slate-200">
-                  <SelectItem value="free">Free (5 reports/month)</SelectItem>
-                  <SelectItem value="pro">Growth Plus (300 reports/month)</SelectItem>
-                  <SelectItem value="team">Team (1,000 reports/month)</SelectItem>
-                  <SelectItem value="affiliate">Affiliate (5,000 reports/month)</SelectItem>
-                  <SelectItem value="sponsored_free">Trial (10 reports/month)</SelectItem>
+                  {plans
+                    .filter((p) => p.is_active || p.plan_slug === planSlug)
+                    .map((p) => (
+                      <SelectItem key={p.plan_slug} value={p.plan_slug}>
+                        {p.plan_name} ({planLimitLabel(p.market_reports_limit)})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-400">Current: {account.plan.plan_name}</p>
@@ -325,7 +346,7 @@ export default function AccountDetailPage() {
               <Input
                 type="number"
                 min="0"
-                placeholder={`Plan default: ${account.plan.monthly_report_limit}`}
+                placeholder={`Plan default: ${plans.find((p) => p.plan_slug === planSlug)?.market_reports_limit ?? account.plan.market_reports_limit}`}
                 value={limitOverride}
                 onChange={(e) => setLimitOverride(e.target.value)}
                 className="bg-white border-slate-300 text-slate-900"
