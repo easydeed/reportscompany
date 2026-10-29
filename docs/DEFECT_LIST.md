@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 59 | Observed, not yet triaged |
+| `recorded` | 58 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 165 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 166 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **309** | D-001 … D-309, contiguous, no duplicates |
@@ -15732,7 +15732,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-309 — the public lead-page search returns the assessor's owner name, tax and last-sale data for any address
 
 **Severity:** WRONG · found reviewing #238 (the home value funnel). `POST /v1/cma/{code}/search` needs no login (`/v1/cma/` is exempt in `middleware/authn.py`) and, for whatever address a visitor types, returns `owner_name` plus assessed value, land and improvement value, tax amount, and last sale price and date (`lead_pages.py:262-289`). The funnel shows none of it, but every visitor's browser receives it and the lead posts `owner_name` back. Nothing on the server reads it as the requester's name — the lead record, the delivery email, the agent SMS and the CRM view all use `requester_name` / `payload.name` (checked 2026-10-29) — so this is exposure, not misattribution: the D-116 data leaving through the lookup instead of the report. The consumer path has no use for the owner name since D-304. **Proposed fix:** drop `owner_name` and the tax and sale fields from the public search response and from what the funnel posts; the authenticated agent path (`/v1/property/search`) keeps them.
-**Status:** `recorded`
+**Status:** `fixed` — fix/public-search-strips-owner-data. Owner decision (2026-10-29): the public search returns none of `owner_name`, `assessed_value`, `land_value`, `improvement_value`, `tax_amount`, `tax_year`, `last_sale_price`, `last_sale_date`, `last_sale_price_per_sqft`; the agent's signed-in `/v1/property/search` keeps them. `PropertySearchResult` no longer declares them (Pydantic drops anything undeclared, so the model is the boundary), and the funnel no longer posts `owner_name`. `apps/api/tests/test_public_search_strips_owner_data.py` posts to the real route with every field filled in the record and asserts neither the keys nor their values come back — red on main — and that the house facts and the agent path are unchanged. `scripts/regressions/public_search.json`, 5/5 fire.
 
 ---
 
