@@ -13,7 +13,7 @@ import logging
 
 from ..db import db_conn, set_rls, fetchall_dicts, fetchone_dict
 from ..verification import block_unverified_send
-from ..deps.company import get_company_admin
+from ..deps.company import get_company_admin, get_company_member
 from ..services.email import send_rep_change_notice_email, send_role_invite_email
 from ..services import seats
 from ..services.usage import get_full_plan_usage
@@ -106,7 +106,7 @@ def _get_company_rep_ids(cur, company_id: str) -> list[str]:
 # ── 1. GET /overview ─────────────────────────────────────────────────────────
 
 @router.get("/overview")
-def get_overview(company: dict = Depends(get_company_admin)):
+def get_overview(company: dict = Depends(get_company_member)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
@@ -391,13 +391,16 @@ def get_overview(company: dict = Depends(get_company_admin)):
         "seats": seat_block,
         "reps": reps,
         "activity": activity,
+        # D-280: whether the person looking can use the admin actions. Every
+        # user on the account sees the same numbers; only the admin acts.
+        "can_manage": company["is_company_admin"],
     }
 
 
 # ── 2. GET /reps ─────────────────────────────────────────────────────────────
 
 @router.get("/reps")
-def list_reps(company: dict = Depends(get_company_admin)):
+def list_reps(company: dict = Depends(get_company_member)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
@@ -480,13 +483,13 @@ def list_reps(company: dict = Depends(get_company_admin)):
             "holds_seat": bool(r["holds_seat"]),
         })
 
-    return {"reps": reps}
+    return {"reps": reps, "can_manage": company["is_company_admin"]}
 
 
 # ── 3. GET /agents ───────────────────────────────────────────────────────────
 
 @router.get("/agents")
-def list_agents(company: dict = Depends(get_company_admin)):
+def list_agents(company: dict = Depends(get_company_member)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
@@ -562,7 +565,7 @@ def get_company_reports(
     rep_id: str = None,
     limit: int = 50,
     offset: int = 0,
-    company: dict = Depends(get_company_admin),
+    company: dict = Depends(get_company_member),
 ):
     """All reports across reps and agents under this company."""
     company_id = company["company_account_id"]
@@ -645,7 +648,7 @@ def get_company_reports(
 @router.get("/schedules")
 def get_company_schedules(
     rep_id: str = None,
-    company: dict = Depends(get_company_admin),
+    company: dict = Depends(get_company_member),
 ):
     """All schedules across reps and agents under this company."""
     company_id = company["company_account_id"]
@@ -875,7 +878,7 @@ def resend_rep_invite(
 # company is a 404, never a read or a write.
 
 @router.get("/seats")
-def get_seats(company: dict = Depends(get_company_admin)):
+def get_seats(company: dict = Depends(get_company_member)):
     """The seat count, who holds what, and every past reassignment."""
     company_id = company["company_account_id"]
     with db_conn() as (conn, cur):
@@ -1018,7 +1021,7 @@ def cancel_rep_invite(
 # ── 6. GET /branding ─────────────────────────────────────────────────────────
 
 @router.get("/branding")
-def get_branding(company: dict = Depends(get_company_admin)):
+def get_branding(company: dict = Depends(get_company_member)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
@@ -1034,9 +1037,10 @@ def get_branding(company: dict = Depends(get_company_admin)):
         row = cur.fetchone()
 
     if not row:
-        return {"branding": None}
+        return {"branding": None, "can_manage": company["is_company_admin"]}
 
     return {
+        "can_manage": company["is_company_admin"],
         "branding": {
             "brand_display_name": row[0],
             "logo_url": row[1],
@@ -1209,7 +1213,7 @@ def update_branding(
 # ── 8. GET /metrics ─────────────────────────────────────────────────────────
 
 @router.get("/metrics")
-def get_metrics(company: dict = Depends(get_company_admin)):
+def get_metrics(company: dict = Depends(get_company_member)):
     company_id = company["company_account_id"]
 
     with db_conn() as (conn, cur):
