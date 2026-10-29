@@ -1,0 +1,20 @@
+[
+  {"name": "B1 the account button loses its dark-mode class", "file": "apps/api/src/api/services/email.py",
+   "old": "<td bgcolor=\"#0F172A\" class=\"tr-fill\" '", "new": "<td bgcolor=\"#0F172A\" '",
+   "test": "tests/test_email_buttons_are_visible.py"},
+  {"name": "B2 the shell drops the dark fill rule", "file": "apps/api/src/api/services/email.py",
+   "old": "    .tr-fill{{background:#F3F4F6 !important;}}\n", "new": "",
+   "test": "tests/test_email_buttons_are_visible.py"},
+  {"name": "B3 the step discs lose their dark-mode class", "file": "apps/api/src/api/services/email.py",
+   "old": "bgcolor=\"#0F172A\" class=\"tr-fill tr-fill-ink\" style=\"width:24px", "new": "bgcolor=\"#0F172A\" style=\"width:24px",
+   "test": "tests/test_email_buttons_are_visible.py"},
+  {"name": "B4 the market button loses its dark edge", "file": "apps/worker/src/worker/templates/email/blocks/cta.jinja2",
+   "old": "class=\"tr-edge\" style=\"background:{{ primary }}", "new": "style=\"background:{{ primary }}",
+   "test": "tests/test_email_buttons_are_visible.py"},
+  {"name": "B5 a pale brand's button loses its light edge", "file": "apps/worker/src/worker/email/template.py",
+   "old": "    if _contrast(t[\"primary\"], \"#FFFFFF\") >= NON_TEXT_CONTRAST:\n        return \"\"", "new": "    if True:\n        return \"\"",
+   "test": "tests/test_email_buttons_are_visible.py"},
+  {"name": "B6 the home-value button loses its dark edge", "file": "apps/worker/src/worker/templates/email/home_value.jinja2",
+   "old": "    .tr-edge{border:2px solid {{ dark_ink }} !important;}\n", "new": "",
+   "test": "tests/test_email_buttons_are_visible.py"}
+]

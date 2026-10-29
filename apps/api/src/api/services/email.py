@@ -267,10 +267,13 @@ def _callout(text_html: str, tone: str) -> str:
 
 
 def _cta_button(url: str, label: str) -> str:
-    """Design's button: an ink fill holding a padded block link."""
+    """Design's button: an ink fill holding a padded block link. In dark mode
+    the fill turns light and the label ink (`tr-fill`, `tr-fill-ink`): an ink
+    button on the dark card was nearly invisible (D-313), and it is the one
+    thing in the email meant to be pressed."""
     return _row(f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
-                f'style="border-collapse:separate;"><tr><td bgcolor="#0F172A" '
-                f'style="background:#0F172A;border-radius:10px;"><a href="{_e(url)}" '
+                f'style="border-collapse:separate;"><tr><td bgcolor="#0F172A" class="tr-fill" '
+                f'style="background:#0F172A;border-radius:10px;"><a href="{_e(url)}" class="tr-fill-ink" '
                 f'style="display:block;padding:14px 26px;font-family:{_FONT};font-size:15px;'
                 f'font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">'
                 f'{_e(label)}</a></td></tr></table>', pad="24px 28px 0")
@@ -286,7 +289,7 @@ def _step_row(number: int, heading: str, description: str, cta_url: str, cta_lab
         f'<tr><td width="34" valign="top" class="tr-rule" style="width:34px;padding:14px 0;'
         f'border-top:1px solid #ECEAE3;"><table role="presentation" cellpadding="0" '
         f'cellspacing="0" border="0"><tr><td width="24" height="24" align="center" '
-        f'valign="middle" bgcolor="#0F172A" style="width:24px;height:24px;border-radius:12px;'
+        f'valign="middle" bgcolor="#0F172A" class="tr-fill tr-fill-ink" style="width:24px;height:24px;border-radius:12px;'
         f'background:#0F172A;font-family:{_FONT};font-size:12px;font-weight:700;color:#ffffff;">'
         f'{number}</td></tr></table></td>'
         f'<td valign="top" class="tr-rule" style="padding:14px 0 14px 8px;border-top:1px solid '
@@ -344,6 +347,8 @@ def _email_base(content_html: str, preheader: str = "", reason: str = "") -> str
     .tr-rule{{border-color:#374151 !important;}}
     .tr-logo-l{{display:none !important;}}
     .tr-logo-d{{display:block !important;max-height:none !important;}}
+    .tr-fill{{background:#F3F4F6 !important;}}
+    .tr-fill-ink{{color:#0F172A !important;}}
   }}
   @media only screen and (max-width:620px){{
     .tr-wrap{{width:100% !important;}}

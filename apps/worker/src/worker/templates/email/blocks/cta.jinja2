@@ -6,8 +6,14 @@
   `on_primary`, radius 10. No VML: a filled cell with a padded link is a button
   in Outlook too, square-cornered, which is the accepted cost.
 
+  In dark mode the fill stays the brand's (so Gmail's own inversion has a
+  brand to invert) and `tr-edge` draws a 2px edge in the brand's dark ink: a
+  navy brand's fill alone was nearly invisible on the dark card (D-313). In
+  light mode `edge` is the same for a pale brand (amber, lime) on white, and
+  empty for any brand whose fill already stands out.
+
   The sub-line says what is behind the button and nothing it cannot know. Design
   wrote "PDF · one page"; the page count varies by kind (Closed and Inventory run
   to several), so it is not printed.
 -#}
-          <tr><td align="center" class="tr-pad" style="padding:30px 28px 8px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:separate;"><tr><td bgcolor="{{ primary }}" style="background:{{ primary }};border-radius:10px;"><a href="{{ pdf_url }}" style="display:block;padding:15px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:{{ on_primary }};text-decoration:none;border-radius:10px;">Open the full report</a></td></tr></table><div class="tr-muted" style="margin-top:10px;font-size:12.5px;color:#64748B;">PDF · {{ sub }}</div></td></tr>
+          <tr><td align="center" class="tr-pad" style="padding:30px 28px 8px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:separate;"><tr><td bgcolor="{{ primary }}" class="tr-edge" style="background:{{ primary }};border-radius:10px;{{ edge }}"><a href="{{ pdf_url }}" style="display:block;padding:15px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:{{ on_primary }};text-decoration:none;border-radius:10px;">Open the full report</a></td></tr></table><div class="tr-muted" style="margin-top:10px;font-size:12.5px;color:#64748B;">PDF · {{ sub }}</div></td></tr>
