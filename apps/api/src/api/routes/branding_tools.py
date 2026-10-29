@@ -11,6 +11,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 import io
+import re
 import os
 import httpx
 import logging
@@ -576,46 +577,22 @@ def _build_fallback_test_email(report_type: str, branding: dict, metrics: dict) 
 </html>'''
 
 
-@router.post("/test-email")
-async def send_test_email(
-    body: TestEmailRequest,
-    request: Request,
-    account_id: str = Depends(require_account_id)
-):
-    """
-    Send a test branded email to the specified address.
-    
-    Uses sample data (not real MLS data) to show how branding appears in emails.
-    
-    V3.1: Now uses the UNIFIED template from worker/email/template.py
-    This ensures test emails match production emails exactly.
-    
-    Pass B4.2: Test Email
-    """
-    # Check if SendGrid is configured
-    if not SENDGRID_API_KEY:
-        logger.warning("[Test Email] SENDGRID_API_KEY not configured")
-        raise HTTPException(
-            status_code=503,
-            detail="Email service not configured. Please contact support."
-        )
-    
-    # Verify affiliate account and get branding
-    with db_conn() as (conn, cur):
-        verify_affiliate_account(cur, account_id)
-        # D-019. A test email is a real email — it leaves the platform and
-        # lands in whatever inbox `body.email` names, which need not be the
-        # sender's own.
-        block_unverified_send(
-            cur, account_id,
-            action="send a test email",
-            to_emails=[body.email] if body.email else None,
-        )
-        branding = get_branding_for_account(cur, account_id)
-    
+#: What the top of every test email says. The figures are canned (`report_sample_data`).
+TEST_EMAIL_NOTICE = "This is a test email."
+TEST_EMAIL_NOTICE_SUB = "The figures are sample data, not a real market. It shows how your brand appears in a scheduled report email."
+TEST_EMAIL_DATA_LINE = "Sample figures for a test email, not MLS data."
+TEST_EMAIL_REASON_LINE = "You're getting this because you asked for a test email."
+
+
+def build_test_email(branding: dict, report_type: str, *, unsubscribe_url: str,
+                     postal_address: Optional[str] = None) -> tuple:
+    """`(subject, html)` for a test email: the unified schedule template on
+    sample data, with a banner saying it is a test. Shared by the agent test
+    email (`/v1/branding/test-email`) and the company's
+    (`/v1/company/branding/test-email`)."""
     brand_name = branding.get("brand_display_name") or "Your Brand"
     primary_color = branding.get("primary_color") or "#7C3AED"
-    report_type_display = body.report_type.replace("_", " ").title()
+    report_type_display = report_type.replace("_", " ").title()
     
     # Build sample metrics for test email
     # V5: Immaculate test data matching EXACTLY what report builders produce
@@ -848,22 +825,28 @@ async def send_test_email(
     }
     
     # Get metrics for the requested report type
-    sample_metrics = report_sample_data.get(body.report_type, report_sample_data["market_snapshot"])
+    sample_metrics = report_sample_data.get(report_type, report_sample_data["market_snapshot"])
     
     # Get listings for gallery reports
-    sample_listings = sample_listings_data.get(body.report_type)
+    sample_listings = sample_listings_data.get(report_type)
     
     # Build brand dict for template
     brand_dict = {
         "display_name": branding.get("brand_display_name"),
         "logo_url": branding.get("logo_url"),
         "email_logo_url": branding.get("email_logo_url"),
-        "primary_color": branding.get("primary_color") or "#7C3AED",
-        "accent_color": branding.get("accent_color") or "#F26B2B",
+        # The account's own colours or none: an unset colour takes the
+        # template's default, as the real send does. A test email that filled
+        # one in would show a brand no real email carries.
+        "primary_color": branding.get("primary_color"),
+        "accent_color": branding.get("accent_color"),
         "rep_photo_url": branding.get("rep_photo_url"),
         "contact_line1": branding.get("contact_line1"),
         "contact_line2": branding.get("contact_line2"),
         "website_url": branding.get("website_url"),
+        # The footer's postal line: the account's own, or — when unset — the
+        # platform's, attributed to TrendyReports (template.py, D-060).
+        "postal_address": postal_address,
     }
     
     # Sample cities per report type for visual distinction in test emails
@@ -877,121 +860,132 @@ async def send_test_email(
         "new_listings_gallery": "Redondo Beach",
         "featured_listings": "Malibu",
     }
-    sample_city = sample_cities.get(body.report_type, "Los Angeles")
+    sample_city = sample_cities.get(report_type, "Los Angeles")
     
     # Use unified template if available
     if UNIFIED_TEMPLATE_AVAILABLE and schedule_email_html:
         logger.info("[Test Email] Using unified template from worker")
-        logger.info(f"[Test Email] Report type: {body.report_type}, City: {sample_city}")
+        logger.info(f"[Test Email] Report type: {report_type}, City: {sample_city}")
         email_html = schedule_email_html(
             account_name=brand_name,
-            report_type=body.report_type,
+            report_type=report_type,
             city=sample_city,  # Report-specific sample city
             zip_codes=None,
             lookback_days=30,
             metrics=sample_metrics,
             pdf_url="#",  # Placeholder for test
-            unsubscribe_url="#",  # Placeholder for test
+            unsubscribe_url=unsubscribe_url,
             brand=brand_dict,
             listings=sample_listings,  # V5: Photo gallery for gallery reports
         )
         
-        # Add test email notice banner after the preheader
-        test_notice = '''
-              <!-- Test Email Notice -->
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background-color: #fef3c7; border-radius: 10px; padding: 16px 20px; border: 1px solid #fde68a;">
-                    <p style="margin: 0; font-size: 14px; color: #92400e; line-height: 1.5;">
-                      <strong>🧪 This is a test email</strong> — It shows how your branding appears in scheduled report emails.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-'''
-        # Insert test notice after "MAIN CONTENT" comment
-        # V4 templates may not have "Section Label" so try multiple insertion points
-        has_v4_insight = '<!-- V4: Insight Paragraph -->' in email_html
-        has_v4_hero = '<!-- V4: 4-Metric Hero Row' in email_html
-        has_v4_core = '<!-- V4: Core Indicators' in email_html
-        logger.info(f"[Test Email] V4 markers - Insight: {has_v4_insight}, Hero: {has_v4_hero}, Core: {has_v4_core}")
-        
-        if has_v4_insight:
-            # V4: Insert before the insight paragraph
-            logger.info("[Test Email] Using V4 template layout")
-            email_html = email_html.replace(
-                '<!-- V4: Insight Paragraph -->',
-                test_notice + '\n              <!-- V4: Insight Paragraph -->'
-            )
-        elif '<!-- Section Label' in email_html:
-            # V3 fallback: Insert before Section Label
-            logger.info("[Test Email] Using V3 template layout (Section Label found)")
-            email_html = email_html.replace(
-                '<!-- Section Label',
-                test_notice + '\n              <!-- Section Label'
-            )
-        else:
-            # Ultimate fallback: Insert after MAIN CONTENT start
-            logger.info("[Test Email] Using fallback insertion point")
-            email_html = email_html.replace(
-                'class="dark-card mobile-padding">',
-                'class="dark-card mobile-padding">' + test_notice
-            )
+        # The banner that says this is a test and its figures are made up.
+        # It went in before markers of older templates (V4's insight
+        # paragraph, V3's section label, a "dark-card" class); Design's 5th
+        # package has none of them, so every test email went out looking like
+        # a real report on real figures. Now it goes straight after <body>,
+        # which every template has.
+        test_notice = (
+            '<table role="presentation" cellpadding="0" cellspacing="0" width="100%" '
+            'style="background:#fef3c7;border-bottom:1px solid #fde68a;"><tr>'
+            '<td style="padding:14px 20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;'
+            'line-height:1.5;color:#78350f;text-align:center;">'
+            f'<strong>{TEST_EMAIL_NOTICE}</strong> {TEST_EMAIL_NOTICE_SUB}'
+            '</td></tr></table>'
+        )
+        email_html, inserted = re.subn(r"(<body\b[^>]*>)", lambda m: m.group(1) + test_notice, email_html, count=1)
+        if not inserted:
+            email_html = test_notice + email_html
+        # Two footer lines the real send states as fact, untrue of a test:
+        # the figures are canned, not the MLS's, and the reader asked for
+        # this email rather than being in anyone's contacts.
+        email_html = re.sub(r"Data from the MLS, [^<]*", TEST_EMAIL_DATA_LINE, email_html)
+        email_html = re.sub(r"You(?:'|&#x27;|&#39;|&rsquo;)re getting this because you(?:'|&#x27;|&#39;|&rsquo;)re in [^<]*?contacts\.",
+                            TEST_EMAIL_REASON_LINE, email_html)
     else:
         # Fallback to inline template if import failed
         logger.warning("[Test Email] Using fallback inline template")
-        email_html = _build_fallback_test_email(body.report_type, branding, sample_metrics)
+        email_html = _build_fallback_test_email(report_type, branding, sample_metrics)
     
-    # Send via SendGrid
+    return f"[Test] Sample {report_type_display} Report - {brand_name}", email_html
+
+
+async def sendgrid_send(*, to: str, subject: str, html: str, from_name: str,
+                        headers: Optional[dict] = None) -> int:
+    """Send one email through SendGrid; return the HTTP status. Raises the
+    HTTPException a route can return when the service refuses or times out."""
     payload = {
-        "personalizations": [
-            {
-                "to": [{"email": body.email}],
-                "subject": f"[Test] Sample {report_type_display} Report - {brand_name}",
-            }
-        ],
-        "from": {
-            "email": DEFAULT_FROM_EMAIL,
-            "name": brand_name,  # Use affiliate brand name as sender
-        },
-        "content": [
-            {
-                "type": "text/html",
-                "value": email_html,
-            }
-        ],
+        "personalizations": [{"to": [{"email": to}], "subject": subject}],
+        "from": {"email": DEFAULT_FROM_EMAIL, "name": from_name},
+        "content": [{"type": "text/html", "value": html}],
     }
-    
-    headers = {
-        "Authorization": f"Bearer {SENDGRID_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    
+    if headers:
+        payload["headers"] = headers
     try:
-        logger.info(f"[Test Email] Sending to {body.email} for brand {brand_name}")
-        
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(SENDGRID_API_URL, json=payload, headers=headers)
-            
-            if response.status_code == 202:
-                logger.info(f"[Test Email] Sent successfully to {body.email}")
-                return {
-                    "ok": True,
-                    "message": f"Test email sent to {body.email}",
-                    "report_type": body.report_type,
-                }
-            else:
-                error_text = response.text
-                logger.error(f"[Test Email] SendGrid error {response.status_code}: {error_text}")
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Failed to send email. Please try again."
-                )
-                
+            response = await client.post(
+                SENDGRID_API_URL, json=payload,
+                headers={"Authorization": f"Bearer {SENDGRID_API_KEY}", "Content-Type": "application/json"},
+            )
     except httpx.TimeoutException as e:
         logger.error(f"[Test Email] SendGrid timeout: {e}")
         raise HTTPException(status_code=504, detail="Email service timeout. Please try again.")
     except httpx.RequestError as e:
         logger.error(f"[Test Email] Request error: {e}")
         raise HTTPException(status_code=500, detail="Failed to send email. Please try again.")
+    if response.status_code != 202:
+        logger.error(f"[Test Email] SendGrid error {response.status_code}: {response.text}")
+    return response.status_code
+
+
+@router.post("/test-email")
+async def send_test_email(
+    body: TestEmailRequest,
+    request: Request,
+    account_id: str = Depends(require_account_id)
+):
+    """
+    Send a test branded email to the specified address.
+    
+    Uses sample data (not real MLS data) to show how branding appears in emails.
+    
+    V3.1: Now uses the UNIFIED template from worker/email/template.py
+    This ensures test emails match production emails exactly.
+    
+    Pass B4.2: Test Email
+    """
+    # Check if SendGrid is configured
+    if not SENDGRID_API_KEY:
+        logger.warning("[Test Email] SENDGRID_API_KEY not configured")
+        raise HTTPException(
+            status_code=503,
+            detail="Email service not configured. Please contact support."
+        )
+    
+    # Verify affiliate account and get branding
+    with db_conn() as (conn, cur):
+        verify_affiliate_account(cur, account_id)
+        # D-019. A test email is a real email — it leaves the platform and
+        # lands in whatever inbox `body.email` names, which need not be the
+        # sender's own.
+        block_unverified_send(
+            cur, account_id,
+            action="send a test email",
+            to_emails=[body.email] if body.email else None,
+        )
+        branding = get_branding_for_account(cur, account_id)
+    
+    subject, email_html = build_test_email(branding, body.report_type, unsubscribe_url="#")
+    brand_name = branding.get("brand_display_name") or "Your Brand"
+
+    logger.info(f"[Test Email] Sending to {body.email} for brand {brand_name}")
+    status_code = await sendgrid_send(to=body.email, subject=subject, html=email_html, from_name=brand_name)
+    if status_code != 202:
+        raise HTTPException(status_code=502, detail="Failed to send email. Please try again.")
+    logger.info(f"[Test Email] Sent successfully to {body.email}")
+    return {
+        "ok": True,
+        "message": f"Test email sent to {body.email}",
+        "report_type": body.report_type,
+    }
 

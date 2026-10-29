@@ -1,0 +1,60 @@
+[
+ {
+  "name": "S1 another company's people are listed",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "             WHERE au.account_id = %s::uuid\n             ORDER BY (au.role = 'OWNER') DESC, u.email",
+  "new": "             WHERE au.account_id = %s::uuid OR true\n             ORDER BY (au.role = 'OWNER') DESC, u.email",
+  "test": "apps/api/tests/test_company_settings_api.py"
+ },
+ {
+  "name": "S2 every user is labelled admin",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "\"role\": _ROLE_LABEL.get(r[3], \"viewer\")}",
+  "new": "\"role\": \"admin\"}",
+  "test": "apps/api/tests/test_company_settings_api.py"
+ },
+ {
+  "name": "S3 a member is told they can manage",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "        \"you\": company.get(\"id\"),\n        \"can_manage\": company[\"is_company_admin\"],",
+  "new": "        \"you\": company.get(\"id\"),\n        \"can_manage\": True,",
+  "test": "apps/api/tests/test_company_settings_api.py"
+ },
+ {
+  "name": "S4 a non-admin can edit the website",
+  "file": "apps/web/app/app/company/settings/page.tsx",
+  "old": "{canManage\n              ? <input aria-label=\"Website\"",
+  "new": "{true\n              ? <input aria-label=\"Website\"",
+  "test": "tests/test_company_settings_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "S5 Design's Add an admin is drawn",
+  "file": "apps/web/app/app/company/settings/page.tsx",
+  "old": "isn&apos;t available in the app yet.</p>",
+  "new": "isn&apos;t available in the app yet.</p><button type=\"button\">Add an admin</button>",
+  "test": "tests/test_company_settings_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "S6 an emptied or malformed website is sent",
+  "file": "apps/web/lib/company-settings.ts",
+  "old": "  if (!/^https?:\\/\\/[^\\s/]+\\.[^\\s/]+/i.test(url)) return null\n",
+  "new": "",
+  "test": "__tests__/CompanySettings.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "S7 a removed photo is sent",
+  "file": "apps/web/lib/company-settings.ts",
+  "old": "if (after.avatar_url && after.avatar_url !== before.avatar_url)",
+  "new": "if (after.avatar_url !== before.avatar_url)",
+  "test": "__tests__/CompanySettings.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "S8 the rail's Settings goes back to the agent profile",
+  "file": "apps/web/app/app-layout.tsx",
+  "old": "{ name: \"Settings\", href: \"/app/company/settings\", icon: Settings }",
+  "new": "settings",
+  "test": "tests/test_company_settings_reads_what_the_api_returns.py"
+ }
+]

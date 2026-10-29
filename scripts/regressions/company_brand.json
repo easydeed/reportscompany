@@ -1,0 +1,69 @@
+[
+ {
+  "name": "B1 the page sends a rep's photo",
+  "file": "apps/web/lib/company-brand.ts",
+  "old": "\"primary_color\" | \"accent_color\">>",
+  "new": "\"primary_color\" | \"accent_color\" | \"rep_photo_url\">>",
+  "test": "tests/test_company_brand_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "B2 Save offered to a non-admin",
+  "file": "apps/web/app/app/company/branding/page.tsx",
+  "old": "{canManage ? (\n              <div className=\"flex flex-wrap items-center gap-4\">",
+  "new": "{true ? (\n              <div className=\"flex flex-wrap items-center gap-4\">",
+  "test": "tests/test_company_brand_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "B3 Design's untrue contrast sentence comes back",
+  "file": "apps/web/app/app/company/branding/page.tsx",
+  "old": "the report darkens it just enough to read.",
+  "new": "your colour is never changed to fix contrast.",
+  "test": "tests/test_company_brand_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "B4 the report stops darkening, the page still says it does",
+  "file": "apps/worker/src/worker/market_builder.py",
+  "old": "            darken_until_readable(primary, \"#ffffff\", self.MASTHEAD_SUBTITLE_ALPHA),\n            darken_until_readable(accent, \"#ffffff\", self.MASTHEAD_SUBTITLE_ALPHA),\n",
+  "new": "            primary,\n            accent,\n",
+  "test": "tests/test_company_brand_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "B5 a removed logo is sent as null",
+  "file": "apps/web/lib/company-brand.ts",
+  "old": "if (after.logo && after.logo !== before.logo)",
+  "new": "if (after.logo !== before.logo)",
+  "test": "__tests__/CompanyBrand.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "B6 a case-only colour change is sent",
+  "file": "apps/web/lib/company-brand.ts",
+  "old": "after.primary.toLowerCase() !== before.primary.toLowerCase()",
+  "new": "after.primary !== before.primary",
+  "test": "__tests__/CompanyBrand.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "B7 a half-typed colour is sent",
+  "file": "apps/web/lib/company-brand.ts",
+  "old": "if (HEX.test(after.accent) && ",
+  "new": "if (",
+  "test": "__tests__/CompanyBrand.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "B8 a new company is given a colour it never chose",
+  "file": "apps/web/lib/company-brand.ts",
+  "old": "primary: b?.primary_color || \"\",",
+  "new": "primary: b?.primary_color || \"#818CF8\",",
+  "test": "__tests__/CompanyBrand.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "B9 a Remove control comes back",
+  "file": "apps/web/app/app/company/branding/page.tsx",
+  "old": "<RowButton onClick={() => input.current?.click()}>{busy ? \"Uploading\u2026\" : label}</RowButton>",
+  "new": "<RowButton onClick={() => input.current?.click()}>{busy ? \"Uploading\u2026\" : label}</RowButton><button type=\"button\">Remove</button>",
+  "test": "tests/test_company_brand_reads_what_the_api_returns.py"
+ }
+]

@@ -7,6 +7,7 @@ and metrics for Title Company administrators.
 
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel, EmailStr, constr, field_validator
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 import logging
@@ -92,6 +93,16 @@ class UpdateBrandingRequest(BaseModel):
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _utc_iso(ts: Optional[datetime]) -> Optional[str]:
+    """`report_generations.generated_at` is `timestamp without time zone`,
+    written by NOW() on a UTC database. Sent bare, a browser reads it as its
+    own local time — seven or eight hours late in California, so a report
+    made last night reads "Today". Say it is UTC."""
+    if ts is None:
+        return None
+    return (ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts).isoformat()
+
 
 def _get_company_rep_ids(cur, company_id: str) -> list[str]:
     """Return account IDs of all INDUSTRY_AFFILIATE reps under this company."""
@@ -346,7 +357,7 @@ def get_overview(company: dict = Depends(get_company_member)):
             activity.append({
                 "id": row[4],
                 "description": f"{name} generated {rtype} for {city}",
-                "timestamp": row[3].isoformat() if row[3] else None,
+                "timestamp": _utc_iso(row[3]),
             })
 
     return {
@@ -622,9 +633,12 @@ def get_company_reports(
                    rg.pdf_url, a.name AS account_name,
                    CASE WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 'Rep'
                         ELSE 'Agent' END AS user_type,
-                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name
+                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
+                   a.id::text, COALESCE(sp.id, a.id)::text, COALESCE(sp.name, a.name)
             FROM report_generations rg
             JOIN accounts a ON a.id = rg.account_id
+            -- An agent's rep is their sponsor; a rep is their own.
+            LEFT JOIN accounts sp ON sp.id = a.sponsor_account_id
             LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
             LEFT JOIN users u ON u.id = au.user_id
             WHERE rg.account_id = ANY(%s)
@@ -634,10 +648,11 @@ def get_company_reports(
         reports = [
             {
                 "id": r[0], "report_type": r[1], "status": r[2],
-                "generated_at": r[3].isoformat() if r[3] else None,
+                "generated_at": _utc_iso(r[3]),
                 "city": r[4], "pdf_url": r[5],
                 "account_name": r[6], "user_type": r[7],
                 "user_name": (r[8] or "").strip(),
+                "account_id": r[9], "rep_id": r[10], "rep_name": r[11],
             }
             for r in cur.fetchall()
         ]
@@ -703,9 +718,12 @@ def get_company_schedules(
                         ELSE 'Agent' END AS user_type,
                    u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
                    s.send_hour, s.send_minute, s.timezone,
-                   (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs
+                   (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs,
+                   a.id::text, COALESCE(sp.id, a.id)::text, COALESCE(sp.name, a.name),
+                   s.weekly_dow, s.monthly_dom
             FROM schedules s
             JOIN accounts a ON a.id = s.account_id
+            LEFT JOIN accounts sp ON sp.id = a.sponsor_account_id
             LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
             LEFT JOIN users u ON u.id = au.user_id
             WHERE s.account_id = ANY(%s)
@@ -721,6 +739,8 @@ def get_company_schedules(
                 "user_name": (r[10] or "").strip(),
                 "send_hour": r[11], "send_minute": r[12], "timezone": r[13],
                 "total_runs": r[14],
+                "account_id": r[15], "rep_id": r[16], "rep_name": r[17],
+                "weekly_dow": r[18], "monthly_dom": r[19],
             }
             for r in cur.fetchall()
         ]
@@ -879,13 +899,17 @@ def resend_rep_invite(
 
 @router.get("/seats")
 def get_seats(company: dict = Depends(get_company_member)):
-    """The seat count, who holds what, and every past reassignment."""
+    """The seat count, who holds what, every past reassignment, and the
+    plan the company's agents are on."""
     company_id = company["company_account_id"]
     with db_conn() as (conn, cur):
         set_rls(cur, company_id)
         return {
             "seats": seats.seat_summary(cur, company_id),
             "history": seats.seat_history(cur, company_id),
+            # What an agent gets, for Plan & Seats: agents take no seat.
+            "agent_plan": seats.agent_plan(cur),
+            "can_manage": company["is_company_admin"],
         }
 
 
@@ -1057,6 +1081,57 @@ def get_branding(company: dict = Depends(get_company_member)):
     }
 
 
+# ── 6b. GET /settings ───────────────────────────────────────────────────────
+
+#: account_users.role as the company's Settings page says it (D-280).
+_ROLE_LABEL = {"OWNER": "admin"}
+
+
+@router.get("/settings")
+def get_settings(company: dict = Depends(get_company_member)):
+    """The company's details and everyone on the account, for Settings.
+
+    Read-only for everyone on the account. `postal_address` is shown, never
+    set here (B5 is gated: the slot exists, the value comes from elsewhere).
+    Adding or removing people has no endpoint yet, so none is offered.
+    """
+    company_id = company["company_account_id"]
+    with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
+        cur.execute(
+            """
+            SELECT a.name, ab.website_url, ab.postal_address
+              FROM accounts a
+              LEFT JOIN affiliate_branding ab ON ab.account_id = a.id
+             WHERE a.id = %s::uuid
+            """,
+            (company_id,),
+        )
+        name, website, postal = cur.fetchone() or (None, None, None)
+        cur.execute(
+            """
+            SELECT u.id::text, TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')),
+                   u.email, au.role
+              FROM account_users au
+              JOIN users u ON u.id = au.user_id
+             WHERE au.account_id = %s::uuid
+             ORDER BY (au.role = 'OWNER') DESC, u.email
+            """,
+            (company_id,),
+        )
+        people = [
+            {"id": r[0], "name": r[1] or "", "email": r[2],
+             "role": _ROLE_LABEL.get(r[3], "viewer")}
+            for r in cur.fetchall()
+        ]
+    return {
+        "company": {"name": name, "website_url": website, "postal_address": postal},
+        "people": people,
+        "you": company.get("id"),
+        "can_manage": company["is_company_admin"],
+    }
+
+
 # ── 7. PATCH /branding ──────────────────────────────────────────────────────
 
 @router.patch("/branding")
@@ -1208,6 +1283,82 @@ def update_branding(
         },
         "reps_updated": reps_updated,
     }
+
+
+# ── 7b. POST /branding/test-email ────────────────────────────────────────────
+
+class CompanyTestEmailRequest(BaseModel):
+    report_type: str = "market_snapshot"
+
+
+@router.post("/branding/test-email")
+async def send_company_test_email(
+    body: CompanyTestEmailRequest,
+    company: dict = Depends(get_company_admin),
+):
+    """A sample report email in the company's brand, to the signed-in admin.
+
+    To the caller's own address and nobody else's — there is no recipient in
+    the request. The same rules as a real send: the brand as the reps' emails
+    resolve it, the footer's postal line (the company's, else the platform's),
+    and a working unsubscribe link and one-click header signed for this
+    company and this address, with the `email_log` row the unsubscribe route
+    looks for.
+    """
+    from .branding_tools import SENDGRID_API_KEY, build_test_email, get_branding_for_account, sendgrid_send
+    from .unsubscribe import generate_unsubscribe_token
+    from ..settings import settings
+    from urllib.parse import quote
+
+    if not SENDGRID_API_KEY:
+        raise HTTPException(status_code=503, detail="Email service not configured. Please contact support.")
+    company_id = company["company_account_id"]
+    with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
+        cur.execute("SELECT email FROM users WHERE id = %s::uuid", (company.get("id"),))
+        row = cur.fetchone()
+        if not row or not row[0]:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        to = row[0]
+        block_unverified_send(cur, company_id, action="send a test email", to_emails=[to])
+        branding = get_branding_for_account(cur, company_id)
+        # The colours as stored, not as `resolve_brand` fills them: the
+        # worker's real email brand (`_resolve_email_brand`) leaves an unset
+        # colour unset and the template supplies its default, so the sample
+        # must too or it shows a colour no real email carries.
+        cur.execute("SELECT primary_color, accent_color, postal_address FROM affiliate_branding "
+                    "WHERE account_id = %s::uuid", (company_id,))
+        primary, accent, postal = cur.fetchone() or (None, None, None)
+        branding = {**branding, "primary_color": primary, "accent_color": accent}
+
+        token = generate_unsubscribe_token(company_id, to)
+        q = f"token={token}&email={quote(to, safe='')}"
+        base = settings.APP_BASE.rstrip("/")
+        subject, html = build_test_email(
+            branding, body.report_type,
+            unsubscribe_url=f"{base}/api/v1/email/unsubscribe?{q}", postal_address=postal)
+        # Logged BEFORE the send, as the worker does: the unsubscribe route
+        # finds the account to verify the token against in email_log.
+        cur.execute(
+            """INSERT INTO email_log (account_id, provider, to_emails, subject, status)
+               VALUES (%s::uuid, 'sendgrid', %s, %s, 'queued') RETURNING id""",
+            (company_id, [to], subject))
+        log_id = cur.fetchone()[0]
+        conn.commit()
+
+    status_code = await sendgrid_send(
+        to=to, subject=subject, html=html,
+        from_name=branding.get("brand_display_name") or "TrendyReports",
+        headers={"List-Unsubscribe": f"<{base}/api/v1/email/unsubscribe/one-click?{q}>",
+                 "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"})
+    with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
+        cur.execute("UPDATE email_log SET response_code = %s, status = %s WHERE id = %s",
+                    (status_code, "sent" if status_code == 202 else "failed", log_id))
+        conn.commit()
+    if status_code != 202:
+        raise HTTPException(status_code=502, detail="The test email didn't send. Please try again.")
+    return {"ok": True, "sent_to": to}
 
 
 # ── 8. GET /metrics ─────────────────────────────────────────────────────────

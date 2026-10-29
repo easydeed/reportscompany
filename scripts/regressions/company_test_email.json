@@ -1,0 +1,72 @@
+[
+ {
+  "name": "E1 the test email goes to someone other than the caller",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "        to = row[0]\n",
+  "new": "        to = \"someone-else@example.com\"\n",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E2 the log row names a different address, so the unsubscribe cannot find it",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "            (company_id, [to], subject))",
+  "new": "            (company_id, [to.upper()], subject))",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E3 the unsubscribe link is a placeholder again",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "unsubscribe_url=f\"{base}/api/v1/email/unsubscribe?{q}\", postal_address=postal)",
+  "new": "unsubscribe_url=\"#\", postal_address=postal)",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E4 the company's postal address is dropped from the footer",
+  "file": "apps/api/src/api/routes/branding_tools.py",
+  "old": "        \"postal_address\": postal_address,\n",
+  "new": "        \"postal_address\": None,\n",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E5 the sample takes the resolver's colour, which no real email carries",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "branding = {**branding, \"primary_color\": primary, \"accent_color\": accent}",
+  "new": "branding = {**branding}",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E6 a member can send one",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "    company: dict = Depends(get_company_admin),\n):\n    \"\"\"A sample report email",
+  "new": "    company: dict = Depends(get_company_member),\n):\n    \"\"\"A sample report email",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E7 the button is offered to a non-admin",
+  "file": "apps/web/app/app/company/branding/page.tsx",
+  "old": "{canManage && (\n            <button type=\"button\" onClick={testEmail}",
+  "new": "{true && (\n            <button type=\"button\" onClick={testEmail}",
+  "test": "tests/test_company_brand_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "E8 the one-click header is dropped",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "        headers={\"List-Unsubscribe\": f\"<{base}/api/v1/email/unsubscribe/one-click?{q}>\",\n                 \"List-Unsubscribe-Post\": \"List-Unsubscribe=One-Click\"})",
+  "new": "        headers={})",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E9 the test banner is not added (as on Design's template before)",
+  "file": "apps/api/src/api/routes/branding_tools.py",
+  "old": "        email_html, inserted = re.subn(r\"(<body\\b[^>]*>)\", lambda m: m.group(1) + test_notice, email_html, count=1)\n        if not inserted:\n            email_html = test_notice + email_html\n",
+  "new": "",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E10 the test says its canned figures are the MLS's",
+  "file": "apps/api/src/api/routes/branding_tools.py",
+  "old": "        email_html = re.sub(r\"Data from the MLS, [^<]*\", TEST_EMAIL_DATA_LINE, email_html)\n",
+  "new": "",
+  "test": "apps/api/tests/test_company_test_email.py"
+ }
+]

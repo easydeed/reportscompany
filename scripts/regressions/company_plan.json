@@ -1,0 +1,68 @@
+[
+ {
+  "name": "P1 the agents' market-report limit is typed in",
+  "file": "apps/api/src/api/services/seats.py",
+  "old": "\"market_reports\": ok(row[1])",
+  "new": "\"market_reports\": 10",
+  "test": "apps/api/tests/test_company_plan_api.py"
+ },
+ {
+  "name": "P2 an unset limit is filled in instead of dropped",
+  "file": "apps/api/src/api/services/seats.py",
+  "old": "ok = lambda v: v if isinstance(v, int) and 0 < v < 10000 else None",
+  "new": "ok = lambda v: v if v else 1",
+  "test": "apps/api/tests/test_company_plan_api.py"
+ },
+ {
+  "name": "P3 an unknown plan shows the Free plan's features again",
+  "file": "apps/web/app/app/settings/billing/page.tsx",
+  "old": "?.features ?? []).map(",
+  "new": "?.features || plans[0].features).map(",
+  "test": "tests/test_company_plan_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "P4 the rail's Plan & Seats goes back to agent billing",
+  "file": "apps/web/app/app-layout.tsx",
+  "old": "href: \"/app/company/plan\"",
+  "new": "href: \"/app/settings/billing\"",
+  "test": "tests/test_company_plan_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "P5 a company on the billing page is not sent to its own",
+  "file": "apps/web/app/app/settings/billing/page.tsx",
+  "old": "if (isCompany) router.replace(\"/app/company/plan\")",
+  "new": "if (isCompany) router.refresh()",
+  "test": "tests/test_company_plan_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "P6 open seats offer Invite to a non-admin",
+  "file": "apps/web/app/app/company/plan/page.tsx",
+  "old": "seatsData?.can_manage === true",
+  "new": "true",
+  "test": "tests/test_company_plan_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "P7 every seat counted open, held ones included",
+  "file": "apps/web/lib/company-plan.ts",
+  "old": "Math.max(seats.total - holders.length, 0)",
+  "new": "seats.total",
+  "test": "__tests__/CompanyPlan.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "P8 nobody is ever counted as upgraded",
+  "file": "apps/web/lib/company-plan.ts",
+  "old": "const upgraded = agents.length - onPlan",
+  "new": "const upgraded = 0",
+  "test": "__tests__/CompanyPlan.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "P9 an idle seat reads as fine",
+  "file": "apps/web/lib/company-plan.ts",
+  "old": "if (r.idle) return",
+  "new": "if (false) return",
+  "test": "__tests__/CompanyPlan.test.ts",
+  "runner": "jest"
+ }
+]

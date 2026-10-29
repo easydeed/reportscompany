@@ -59,14 +59,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 55 | Observed, not yet triaged |
-| `open` | 78 | Real, unfixed |
-| `fixed` | 174 | Corrected in code, with the branch or PR named on the entry |
+| `recorded` | 59 | Observed, not yet triaged |
+| `open` | 79 | Real, unfixed |
+| `fixed` | 178 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **314** | D-001 … D-314, contiguous, no duplicates |
+| **Total** | **323** | D-001 … D-323, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -15777,6 +15777,69 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** BROKEN · found 2026-10-29 building the company People page, whose seat calls had the same gap. The `/api/proxy` layer is one route file per endpoint, not a catch-all, and nothing checked that a path the web app calls has one. `app/app/admin/leads/actions.tsx` (`DELETE /v1/admin/leads/{id}`), `admin/leads/filters.tsx` (`GET /v1/admin/leads/export`), `admin/property-reports/actions.tsx` (`POST …/{id}/retry`) and `components/mobile-report/MobileReportViewer.tsx` (`GET /v1/r/{id}/pdf/status`) all had working API endpoints and no route between them and the browser: the admin buttons did nothing, and a consumer's "Download PDF" spun forever whenever the PDF was not ready on the first try (its poll called `.json()` on Next's 404 page and stopped). #224's seat endpoints (`/v1/company/seats`, `/reps/{id}/reassign`, `/reps/{id}/cancel-invite`) were in the same state, unused until now.
 **Status:** `fixed` — feat/company-people. Proxy routes for the three admin calls and the three seat calls; the mobile viewer polls the existing `r/[id]/pdf` GET, which is the status check. `tests/test_every_proxied_call_has_a_route.py` reads every literal `/v1/…` path the web app passes to fetch / apiFetch / apiFetchRQ / post and requires a matching route directory — red on main with these seven.
+
+---
+
+### D-315 — a title company's "Plan & Seats" link opened the agent billing page, which listed the Free plan's features under the company's plan name
+
+**Severity:** WRONG · found 2026-10-29 building the company Plan & Seats page. The rail sent a company admin to `/app/settings/billing`. That page shows the features of the plan whose slug is in its own typed list, and fell back to `plans[0]` — Free — for any other slug: a company, a title rep and a sponsored agent each saw "3 Market Reports / month · 1 Automated Schedule · 1 Property Report / month · CMA Lead Page" under their own plan's name. For a company the numbers that matter — its rep seats — were nowhere.
+**Status:** `fixed` — feat/company-pages. `/app/company/plan` reads `GET /v1/company/seats`, which now also returns `agent_plan` from the `plans` row agents are put on; the rail points there; the billing page sends a `TITLE_COMPANY` to it and shows no features for a plan it has no list for. `apps/api/tests/test_company_plan_api.py` changes the plan row and watches the answer move; `tests/test_company_plan_reads_what_the_api_returns.py` holds the page's types to the API's keys — 9 of 10 red on main. `scripts/regressions/company_plan.json`: 9/9.
+
+---
+
+### D-316 — the billing page's plan cards are typed into the page: names, prices and limits that duplicate the `plans` table and Stripe
+
+**Severity:** FRAGILE · found 2026-10-29 alongside D-315. `apps/web/app/app/settings/billing/page.tsx` declares three plans by hand — name, `$` price and a features list with each limit as text. The limits match the table today (Starter 25 / 3 / 5, Pro unlimited / unlimited / 25), but the names already disagree with it ("Growth" for `starter`, "Growth Plus" for `pro`; the table says Starter and Pro), the prices are not read from Stripe, and "CMA Lead Page" is listed on every plan while `plans.lead_capture_enabled` is false on all of them. A change to the table or to Stripe changes what an agent is charged and allowed without changing what this page promises.
+**Status:** `recorded` — not changed in this branch. The fix is to read names and limits from `plans` (as the account emails do since #243) and prices from the Stripe price ids; whether "CMA Lead Page" is gated by `lead_capture_enabled` needs checking first.
+
+---
+
+### D-317 — the company Reports and Schedules pages read fields the API never returns: every report read "Generating" with no name, date or PDF, and schedules counted nothing
+
+**Severity:** BROKEN · found 2026-10-29 building the company Activity page. `app/app/company/reports/page.tsx` typed its rows as `{user_name, user_type: "rep" | "agent", status: "complete" | …, created_at, rep_id, rep_name, zip_codes, is_scheduled}` against `GET /v1/company/reports`, which returns `generated_at`, `user_type: "Rep" | "Agent"`, `status: "completed"` and none of the rest. Rendered against the local fixture: blank names, every row "Generating", no date, no PDF link, "By reps 0 · By agents 0". `schedules/page.tsx` did the same against `/v1/company/schedules` (`run_count`, `city`, a `metrics` block) and showed "0" everywhere. The same class as D-311: `tsc` passes, because a hand-written type is a claim about the API, not a check of it.
+**Status:** `fixed` — feat/company-pages. One Activity page (`/app/company/activity`, Reports · Schedules) typed from `lib/company-activity.ts`; both endpoints now also return each row's rep (`rep_id`, `rep_name` — an agent's sponsor, a rep's own) and the schedule's `weekly_dow` / `monthly_dom`; the old paths redirect. `tests/test_company_activity_reads_what_the_api_returns.py` holds the types to the routes' row keys and `apps/api/tests/test_company_activity_api.py` checks the rows against a real database, cross-tenant included — 9 of 11 red on main (the two cross-tenant checks pass on main and guard it). `scripts/regressions/company_activity.json`: 9/9.
+
+---
+
+### D-318 — the company's report times went out without a time zone, so a browser west of Greenwich put them hours late
+
+**Severity:** WRONG · found alongside D-317. `report_generations.generated_at` is `timestamp without time zone`, written by `NOW()` on a UTC database. `/v1/company/overview` (the Dashboard's Recent) and `/v1/company/reports` sent it as a bare ISO string; a browser reads a bare string as its own local time, so in California every time landed seven or eight hours late — a report made at 10 pm Pacific on Tuesday (05:00 UTC Wednesday) showed as made Wednesday at 5 am, "Today" on Wednesday instead of "Yesterday".
+**Status:** `fixed` — feat/company-pages. `_utc_iso` in `routes/company.py` marks the value `+00:00`; `test_report_times_are_marked_utc` covers both endpoints. The same bare value leaves four other places — D-319.
+
+---
+
+### D-319 — agent, admin and rep report lists send `generated_at` without a time zone (the D-318 defect outside the company pages)
+
+**Severity:** WRONG · found 2026-10-29 by grep after D-318. `routes/usage.py:102-103` (an agent's report list), `routes/reports.py` (`generated_at::text`), `routes/admin.py:399` and `routes/affiliates.py:991,1079` (the rep's feeds) each send `generated_at` with no zone. Not verified in a browser for each page; the API side is the same as D-318's.
+**Status:** `open` — the rep feeds (`affiliates.py`) are fixed with the rep-side build; the agent and admin lists need the same one-line change and a test.
+
+---
+
+### D-320 — the company Branding page offered two controls that saved nothing: a theme picker whose choice was never sent, and a logo Remove the API keeps
+
+**Severity:** WRONG · found 2026-10-29 rebuilding the page. `app/app/company/branding/page.tsx` held `default_theme_id` in state and drew three theme cards, but its PATCH body never carried it, and `PATCH /v1/company/branding` has no theme field — every pick reverted on reload. Its two `ImageUpload`s carry a Remove (×) that sets the logo to `null`; the PATCH upserts with `COALESCE(EXCLUDED.x, existing)`, so a null is kept as the old logo and the page said "Branding Saved". Design's copy for the replacement also said the brand colour "is never changed to fix contrast"; the market report's `_masthead_band` darkens it under white text (D-112).
+**Status:** `fixed` — feat/company-pages. The page is rebuilt on Design's rule list: name, logo on the colour, logo on white, two colours, with a live report page beside them. Replace, never Remove; no theme; only the changed fields are sent, never a rep's photo, contact lines or website; only the admin gets controls (D-280); the contrast sentence says what the report does. The admin's own name, title and photo, which the old page also saved, move to Settings. The email-preview panel is not carried over; the test email is (Jerry, 2026-10-29) as "Email me a sample report": `POST /v1/company/branding/test-email`, to the signed-in admin only, with a working unsubscribe link and one-click header, its `email_log` row, the real footer address and the colours as stored (`apps/api/tests/test_company_test_email.py`, 6, all red without it; `scripts/regressions/company_test_email.json` 8/8). `tests/test_company_brand_reads_what_the_api_returns.py` (7, all red on main — the sentence check also fails if the builder stops darkening) and `__tests__/CompanyBrand.test.ts`; `scripts/regressions/company_brand.json`: 9/9.
+
+---
+
+### D-321 — the rail labels every user on a company account "Company admin", including a viewer who can change nothing
+
+**Severity:** ROUGH · found 2026-10-29 rendering the company pages as a MEMBER (D-280). `app-layout.tsx` sets the footer's role label from `tier.isCompanyAdmin`, which follows the account type, not the user's role on it; since D-280 a MEMBER is read-only. The pages themselves gate on `can_manage` and say so; only the label is wrong.
+**Status:** `recorded` — the fix reads `can_manage` (or the role) into the layout's tier; no company user other than the owner exists in production today, because no code path adds one.
+
+---
+
+### D-322 — the agent "send test email" links its unsubscribe to "#", and could paint a brand colour no real email carries
+
+**Severity:** WRONG · found 2026-10-29 building the company's test email. `POST /v1/branding/test-email` renders the real template with `unsubscribe_url="#"`, writes no `email_log` row and sends no one-click header, to any address the caller types — so the one email the product sends to a stranger with no way out. It also filled an unset brand colour with `#7C3AED`, where the real send leaves it unset and the template uses `#4f46e5`. And its "This is a test email" banner was inserted before markers of older templates that Design's 5th package does not have, so every test email arrived looking like a real report on real figures.
+**Status:** `recorded` — the colour and the banner are fixed in feat/company-pages (the banner now goes straight after `<body>` and says the figures are sample data: `test_it_says_it_is_a_test_on_sample_figures`) (the shared `build_test_email` now passes the stored colour, and the company test email is covered by `test_an_unset_colour_is_the_real_emails_default_not_an_invented_one`). The unsubscribe half remains: the agent endpoint should take the company endpoint's shape (the caller's own address, a signed link, the log row).
+
+---
+
+### D-323 — the sample-image route's timeout handler names a variable that does not exist
+
+**Severity:** ROUGH · found 2026-10-29 by pyflakes in `routes/branding_tools.py` (present on main). The `/v1/branding/sample-jpg` handler's `except httpx.TimeoutException` logs `{preview_url}`, which is never defined, so a timeout raises `NameError` and the caller gets a 500 instead of the intended 504 "timed out".
+**Status:** `recorded`.
 
 ---
 

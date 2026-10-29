@@ -133,11 +133,14 @@ def test_the_worst_ink_on_tint_is_quoted(derived, text):
     assert f"Worst case {derived['worst_ink_on_tint']:.2f}" in text
 
 
-def test_the_presets_are_read_from_both_pages(derived):
-    """`presets()` raises if the two copies disagree; asserted here so the
-    audit cannot quietly describe one page's picker."""
+def test_the_presets_are_read_from_every_page_that_has_them(derived):
+    """`presets()` raises if the copies disagree; asserted here so the audit
+    cannot quietly describe a page's picker that is not the one shipped. One
+    page has presets since the company Branding page was rebuilt (D-320)."""
     spec = importlib.util.spec_from_file_location("_brand_audit2", DERIVE)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert len(module.PRESET_FILES) == 2
+    assert len(module.PRESET_FILES) == 1
+    company = (REPO / "apps/web/app/app/company/branding/page.tsx").read_text(encoding="utf-8")
+    assert "COLOR_PRESETS" not in company, "the company page has presets again: add it to PRESET_FILES"
     assert len(module.presets()) == 6, module.presets()

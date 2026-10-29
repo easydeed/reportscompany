@@ -1,0 +1,69 @@
+[
+ {
+  "name": "A1 an agent's rep is themselves, not their sponsor",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "                   a.id::text, COALESCE(sp.id, a.id)::text, COALESCE(sp.name, a.name)\n            FROM report_generations rg",
+  "new": "                   a.id::text, a.id::text, a.name\n            FROM report_generations rg",
+  "test": "apps/api/tests/test_company_activity_api.py"
+ },
+ {
+  "name": "A2 report times go out bare again",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "    return (ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts).isoformat()",
+  "new": "    return ts.isoformat()",
+  "test": "apps/api/tests/test_company_activity_api.py"
+ },
+ {
+  "name": "A3 schedules lose their day",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "                \"weekly_dow\": r[18], \"monthly_dom\": r[19],\n",
+  "new": "",
+  "test": "tests/test_company_activity_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "A4 a caller's rep filter can name another company's rep",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "            matched_rep = next((r for r in rep_ids if str(r) == rep_id), None)\n            if matched_rep is None:\n                raise HTTPException(\n                    status_code=404,\n                    detail=\"Rep not found or not under your company.\",\n                )\n            # Keep the row's own value (UUID), not the raw string \u2014 the id lists\n            # are combined and passed to ANY(%s), which rejects mixed types.\n            scoped_rep_ids = [matched_rep]\n            cur.execute(\"\"\"\n                SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid\n            \"\"\", (rep_id,))\n        else:\n            scoped_rep_ids = rep_ids\n            cur.execute(\"\"\"\n                SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)\n            \"\"\", (rep_ids,))\n        agent_ids = [row[0] for row in cur.fetchall()]\n\n        # Scope to the requested rep only \u2014 previously every rep of the company\n        # was appended regardless of the filter, so the filter never narrowed.\n        all_ids = agent_ids + scoped_rep_ids\n        if not all_ids:\n            return {\"reports\": [], \"total\": 0}",
+  "new": "            matched_rep = rep_id\n            scoped_rep_ids = [matched_rep]\n            cur.execute(\"\"\"\n                SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid\n            \"\"\", (rep_id,))\n        else:\n            scoped_rep_ids = rep_ids\n            cur.execute(\"\"\"\n                SELECT id FROM accounts WHERE sponsor_account_id = ANY(%s)\n            \"\"\", (rep_ids,))\n        agent_ids = [str(row[0]) for row in cur.fetchall()]\n\n        # Scope to the requested rep only \u2014 previously every rep of the company\n        # was appended regardless of the filter, so the filter never narrowed.\n        all_ids = agent_ids + [str(x) for x in scoped_rep_ids]\n        if not all_ids:\n            return {\"reports\": [], \"total\": 0}",
+  "test": "apps/api/tests/test_company_activity_api.py"
+ },
+ {
+  "name": "A5 the rail's Activity goes back to the broken reports page",
+  "file": "apps/web/app/app-layout.tsx",
+  "old": "href: \"/app/company/activity\"",
+  "new": "href: \"/app/company/reports\"",
+  "test": "tests/test_company_activity_reads_what_the_api_returns.py"
+ },
+ {
+  "name": "A6 a queued report reads as made",
+  "file": "apps/web/lib/company-activity.ts",
+  "old": "if (status === \"completed\") return",
+  "new": "if (status !== \"failed\") return",
+  "test": "__tests__/CompanyActivity.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "A7 a failed report offers its PDF",
+  "file": "apps/web/lib/company-activity.ts",
+  "old": "return r.status === \"completed\" && r.pdf_url ? r.pdf_url : null",
+  "new": "return r.pdf_url ? r.pdf_url : null",
+  "test": "__tests__/CompanyActivity.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "A8 weekly_dow read as 0 = Monday",
+  "file": "apps/web/lib/company-activity.ts",
+  "old": "const DAYS = [\"Sunday\", \"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\"]",
+  "new": "const DAYS = [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\", \"Sunday\"]",
+  "test": "__tests__/CompanyActivity.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "A9 a paused schedule shows its next date",
+  "file": "apps/web/lib/company-activity.ts",
+  "old": "if (!s.active) return { tone: \"warn\", text: \"Paused\" }",
+  "new": "if (!s.active && !s.next_run_at) return { tone: \"warn\", text: \"Paused\" }",
+  "test": "__tests__/CompanyActivity.test.ts",
+  "runner": "jest"
+ }
+]

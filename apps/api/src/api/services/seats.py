@@ -179,6 +179,31 @@ def seat_history(cur, company_id: str) -> List[Dict[str, Any]]:
     ]
 
 
+#: The plan every agent a rep invites starts on (`invite_service`), and stays
+#: on unless they upgrade themselves. Agents take no seat.
+AGENT_PLAN = "sponsored_free"
+
+
+def agent_plan(cur) -> Optional[Dict[str, Any]]:
+    """`{plan_name, market_reports, schedules, property_reports}` for the
+    agents' plan, read from `plans` (never typed in). A limit that is unset or
+    not a plain number is None, and the page drops it. None when the plan row
+    is missing."""
+    cur.execute(
+        """
+        SELECT plan_name, market_reports_limit, schedules_limit, property_reports_per_month
+          FROM plans WHERE plan_slug = %s
+        """,
+        (AGENT_PLAN,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    ok = lambda v: v if isinstance(v, int) and 0 < v < 10000 else None  # noqa: E731
+    return {"plan_name": row[0], "market_reports": ok(row[1]),
+            "schedules": ok(row[2]), "property_reports": ok(row[3])}
+
+
 # ── writes ───────────────────────────────────────────────────────────────────
 
 def reserve_seat(cur, company_id: str) -> None:

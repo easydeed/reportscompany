@@ -95,6 +95,9 @@ export const queryKeys = {
       ["company", "agents", filters ?? {}] as const,
     branding: ["company", "branding"] as const,
     seats: ["company", "seats"] as const,
+    settings: ["company", "settings"] as const,
+    reports: (rep: string | null, limit: number) => ["company", "reports", rep ?? "all", limit] as const,
+    schedules: (rep: string | null) => ["company", "schedules", rep ?? "all"] as const,
   },
 } as const
 
@@ -281,6 +284,35 @@ export function useCompanyAgents(filters?: Record<string, string>) {
 }
 
 /** Company rep seats: `{ seats: {total, held, open, pending, idle} | null, history }` */
+/** Reports made across the company's reps and their agents, newest first. */
+export function useCompanyReports(rep: string | null, limit: number) {
+  const qs = new URLSearchParams({ limit: String(limit), ...(rep ? { rep_id: rep } : {}) })
+  return useQuery({
+    queryKey: queryKeys.company.reports(rep, limit),
+    queryFn: () => apiFetchRQ(`/v1/company/reports?${qs}`),
+    retry: false,
+    placeholderData: (prev) => prev,
+  })
+}
+
+/** Schedules across the company's reps and their agents. */
+export function useCompanySchedules(rep: string | null) {
+  return useQuery({
+    queryKey: queryKeys.company.schedules(rep),
+    queryFn: () => apiFetchRQ(`/v1/company/schedules?${new URLSearchParams(rep ? { rep_id: rep } : {})}`),
+    retry: false,
+  })
+}
+
+/** The company's details and who is on the account. */
+export function useCompanySettings() {
+  return useQuery({
+    queryKey: queryKeys.company.settings,
+    queryFn: () => apiFetchRQ("/v1/company/settings"),
+    retry: false,
+  })
+}
+
 export function useCompanySeats() {
   return useQuery({
     queryKey: queryKeys.company.seats,
