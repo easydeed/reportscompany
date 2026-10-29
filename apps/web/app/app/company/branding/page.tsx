@@ -19,7 +19,10 @@
 //   * the admin's own name, title and photo moved to Settings: they are the
 //     admin's profile, not the company's brand;
 //   * only the company's admin edits (D-280); everyone else on the account
-//     sees the same page without the controls.
+//     sees the same page without the controls;
+//   * "Email me a sample report" (Jerry, 2026-10-29) sends a real report
+//     email in the brand to the signed-in admin only; Design's email
+//     preview panel stays out.
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
@@ -93,6 +96,7 @@ export default function CompanyBrandingPage() {
   const [brand, setBrand] = useState<Brand>(saved)
   const [saving, setSaving] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [mailBusy, setMailBusy] = useState(false)
   useEffect(() => setBrand(saved), [saved])
 
   const patch = brandPatch(saved, brand)
@@ -137,6 +141,25 @@ export default function CompanyBrandingPage() {
       toast({ title: "No sample PDF", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" })
     } finally {
       setPdfBusy(false)
+    }
+  }
+
+  // Jerry, 2026-10-29: companies want to see their brand in a real email. To
+  // the signed-in admin only — the request names no recipient, the API sends
+  // to the caller's own address.
+  async function testEmail() {
+    setMailBusy(true)
+    try {
+      const res = await fetch("/api/proxy/v1/company/branding/test-email", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ report_type: "market_snapshot" }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(typeof d.detail === "string" ? d.detail : "The test email didn't send.")
+      toast({ title: "Test email sent", description: `To ${d.sent_to}. It uses your saved brand.` })
+    } catch (e) {
+      toast({ title: "No test email", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" })
+    } finally {
+      setMailBusy(false)
     }
   }
 
@@ -218,7 +241,13 @@ export default function CompanyBrandingPage() {
           <button type="button" onClick={samplePdf} disabled={pdfBusy} className="self-start text-[14px] font-semibold text-[var(--link)] hover:text-[var(--link-hover)] disabled:opacity-60">
             {pdfBusy ? "Making the PDF…" : "Download a sample PDF"}
           </button>
-          {dirty && <span className="text-[13px] text-muted-foreground">The sample PDF uses your saved brand.</span>}
+          {canManage && (
+            <button type="button" onClick={testEmail} disabled={mailBusy} className="self-start text-[14px] font-semibold text-[var(--link)] hover:text-[var(--link-hover)] disabled:opacity-60">
+              {mailBusy ? "Sending…" : "Email me a sample report"}
+            </button>
+          )}
+          {canManage && <span className="text-[13px] text-muted-foreground">The sample email goes to you only{dirty ? ", and both samples use your saved brand" : ""}.</span>}
+          {!canManage && dirty && <span className="text-[13px] text-muted-foreground">The sample PDF uses your saved brand.</span>}
         </div>
       </div>
     </div>

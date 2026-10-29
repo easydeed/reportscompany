@@ -1285,6 +1285,82 @@ def update_branding(
     }
 
 
+# ── 7b. POST /branding/test-email ────────────────────────────────────────────
+
+class CompanyTestEmailRequest(BaseModel):
+    report_type: str = "market_snapshot"
+
+
+@router.post("/branding/test-email")
+async def send_company_test_email(
+    body: CompanyTestEmailRequest,
+    company: dict = Depends(get_company_admin),
+):
+    """A sample report email in the company's brand, to the signed-in admin.
+
+    To the caller's own address and nobody else's — there is no recipient in
+    the request. The same rules as a real send: the brand as the reps' emails
+    resolve it, the footer's postal line (the company's, else the platform's),
+    and a working unsubscribe link and one-click header signed for this
+    company and this address, with the `email_log` row the unsubscribe route
+    looks for.
+    """
+    from .branding_tools import SENDGRID_API_KEY, build_test_email, get_branding_for_account, sendgrid_send
+    from .unsubscribe import generate_unsubscribe_token
+    from ..settings import settings
+    from urllib.parse import quote
+
+    if not SENDGRID_API_KEY:
+        raise HTTPException(status_code=503, detail="Email service not configured. Please contact support.")
+    company_id = company["company_account_id"]
+    with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
+        cur.execute("SELECT email FROM users WHERE id = %s::uuid", (company.get("id"),))
+        row = cur.fetchone()
+        if not row or not row[0]:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        to = row[0]
+        block_unverified_send(cur, company_id, action="send a test email", to_emails=[to])
+        branding = get_branding_for_account(cur, company_id)
+        # The colours as stored, not as `resolve_brand` fills them: the
+        # worker's real email brand (`_resolve_email_brand`) leaves an unset
+        # colour unset and the template supplies its default, so the sample
+        # must too or it shows a colour no real email carries.
+        cur.execute("SELECT primary_color, accent_color, postal_address FROM affiliate_branding "
+                    "WHERE account_id = %s::uuid", (company_id,))
+        primary, accent, postal = cur.fetchone() or (None, None, None)
+        branding = {**branding, "primary_color": primary, "accent_color": accent}
+
+        token = generate_unsubscribe_token(company_id, to)
+        q = f"token={token}&email={quote(to, safe='')}"
+        base = settings.APP_BASE.rstrip("/")
+        subject, html = build_test_email(
+            branding, body.report_type,
+            unsubscribe_url=f"{base}/api/v1/email/unsubscribe?{q}", postal_address=postal)
+        # Logged BEFORE the send, as the worker does: the unsubscribe route
+        # finds the account to verify the token against in email_log.
+        cur.execute(
+            """INSERT INTO email_log (account_id, provider, to_emails, subject, status)
+               VALUES (%s::uuid, 'sendgrid', %s, %s, 'queued') RETURNING id""",
+            (company_id, [to], subject))
+        log_id = cur.fetchone()[0]
+        conn.commit()
+
+    status_code = await sendgrid_send(
+        to=to, subject=subject, html=html,
+        from_name=branding.get("brand_display_name") or "TrendyReports",
+        headers={"List-Unsubscribe": f"<{base}/api/v1/email/unsubscribe/one-click?{q}>",
+                 "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"})
+    with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
+        cur.execute("UPDATE email_log SET response_code = %s, status = %s WHERE id = %s",
+                    (status_code, "sent" if status_code == 202 else "failed", log_id))
+        conn.commit()
+    if status_code != 202:
+        raise HTTPException(status_code=502, detail="The test email didn't send. Please try again.")
+    return {"ok": True, "sent_to": to}
+
+
 # ── 8. GET /metrics ─────────────────────────────────────────────────────────
 
 @router.get("/metrics")

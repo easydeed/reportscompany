@@ -102,3 +102,19 @@ def test_the_contrast_sentence_is_what_the_report_does():
     fn = next(n for n in ast.walk(ast.parse(BUILDER.read_text(encoding="utf-8")))
               if isinstance(n, ast.FunctionDef) and n.name == "_masthead_band")
     assert "darken_until_readable" in ast.unparse(fn)
+
+
+def test_the_test_email_is_the_admins_and_names_no_recipient():
+    """Jerry, 2026-10-29: re-add the test email — to the signed-in admin only.
+    The page sends no address; the API takes the caller's own."""
+    code = _code(PAGE)
+    assert '"/api/proxy/v1/company/branding/test-email"' in code
+    assert re.search(r"\{canManage && \(\s*<button type=\"button\" onClick=\{testEmail\}", code), "offered to a non-admin"
+    call = code[code.index("company/branding/test-email"):]
+    call = call[:call.index("})")]
+    assert "email" not in call.split("body:", 1)[1], "the page sends a recipient"
+    fn = next(n for n in ast.walk(_tree()) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+              and n.name == "send_company_test_email")
+    assert "get_company_admin" in ast.unparse(fn.args)
+    cls = next(n for n in ast.walk(_tree()) if isinstance(n, ast.ClassDef) and n.name == "CompanyTestEmailRequest")
+    assert {s.target.id for s in cls.body if isinstance(s, ast.AnnAssign)} == {"report_type"}, "the request carries a recipient"

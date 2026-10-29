@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 57 | Observed, not yet triaged |
+| `recorded` | 59 | Observed, not yet triaged |
 | `open` | 79 | Real, unfixed |
 | `fixed` | 178 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **321** | D-001 … D-321, contiguous, no duplicates |
+| **Total** | **323** | D-001 … D-323, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
 
@@ -15818,7 +15818,7 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-320 — the company Branding page offered two controls that saved nothing: a theme picker whose choice was never sent, and a logo Remove the API keeps
 
 **Severity:** WRONG · found 2026-10-29 rebuilding the page. `app/app/company/branding/page.tsx` held `default_theme_id` in state and drew three theme cards, but its PATCH body never carried it, and `PATCH /v1/company/branding` has no theme field — every pick reverted on reload. Its two `ImageUpload`s carry a Remove (×) that sets the logo to `null`; the PATCH upserts with `COALESCE(EXCLUDED.x, existing)`, so a null is kept as the old logo and the page said "Branding Saved". Design's copy for the replacement also said the brand colour "is never changed to fix contrast"; the market report's `_masthead_band` darkens it under white text (D-112).
-**Status:** `fixed` — feat/company-pages. The page is rebuilt on Design's rule list: name, logo on the colour, logo on white, two colours, with a live report page beside them. Replace, never Remove; no theme; only the changed fields are sent, never a rep's photo, contact lines or website; only the admin gets controls (D-280); the contrast sentence says what the report does. The admin's own name, title and photo, which the old page also saved, move to Settings; the test-email and email-preview panels are not carried over. `tests/test_company_brand_reads_what_the_api_returns.py` (7, all red on main — the sentence check also fails if the builder stops darkening) and `__tests__/CompanyBrand.test.ts`; `scripts/regressions/company_brand.json`: 9/9.
+**Status:** `fixed` — feat/company-pages. The page is rebuilt on Design's rule list: name, logo on the colour, logo on white, two colours, with a live report page beside them. Replace, never Remove; no theme; only the changed fields are sent, never a rep's photo, contact lines or website; only the admin gets controls (D-280); the contrast sentence says what the report does. The admin's own name, title and photo, which the old page also saved, move to Settings. The email-preview panel is not carried over; the test email is (Jerry, 2026-10-29) as "Email me a sample report": `POST /v1/company/branding/test-email`, to the signed-in admin only, with a working unsubscribe link and one-click header, its `email_log` row, the real footer address and the colours as stored (`apps/api/tests/test_company_test_email.py`, 6, all red without it; `scripts/regressions/company_test_email.json` 8/8). `tests/test_company_brand_reads_what_the_api_returns.py` (7, all red on main — the sentence check also fails if the builder stops darkening) and `__tests__/CompanyBrand.test.ts`; `scripts/regressions/company_brand.json`: 9/9.
 
 ---
 
@@ -15826,6 +15826,20 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** ROUGH · found 2026-10-29 rendering the company pages as a MEMBER (D-280). `app-layout.tsx` sets the footer's role label from `tier.isCompanyAdmin`, which follows the account type, not the user's role on it; since D-280 a MEMBER is read-only. The pages themselves gate on `can_manage` and say so; only the label is wrong.
 **Status:** `recorded` — the fix reads `can_manage` (or the role) into the layout's tier; no company user other than the owner exists in production today, because no code path adds one.
+
+---
+
+### D-322 — the agent "send test email" links its unsubscribe to "#", and could paint a brand colour no real email carries
+
+**Severity:** WRONG · found 2026-10-29 building the company's test email. `POST /v1/branding/test-email` renders the real template with `unsubscribe_url="#"`, writes no `email_log` row and sends no one-click header, to any address the caller types — so the one email the product sends to a stranger with no way out. It also filled an unset brand colour with `#7C3AED`, where the real send leaves it unset and the template uses `#4f46e5`.
+**Status:** `recorded` — the colour half is fixed in feat/company-pages (the shared `build_test_email` now passes the stored colour, and the company test email is covered by `test_an_unset_colour_is_the_real_emails_default_not_an_invented_one`). The unsubscribe half remains: the agent endpoint should take the company endpoint's shape (the caller's own address, a signed link, the log row).
+
+---
+
+### D-323 — the sample-image route's timeout handler names a variable that does not exist
+
+**Severity:** ROUGH · found 2026-10-29 by pyflakes in `routes/branding_tools.py` (present on main). The `/v1/branding/sample-jpg` handler's `except httpx.TimeoutException` logs `{preview_url}`, which is never defined, so a timeout raises `NameError` and the caller gets a 500 instead of the intended 504 "timed out".
+**Status:** `recorded`.
 
 ---
 
