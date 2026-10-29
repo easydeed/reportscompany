@@ -10,6 +10,8 @@ from ..auth import sign_jwt, check_password, hash_password, verify_jwt
 import hashlib
 from ..services.email import (
     send_password_reset_email,
+    VERIFY_LINK_TTL,
+    RESET_LINK_TTL,
     send_verification_email,
     send_affiliate_welcome_email,
     send_sponsored_agent_welcome_email,
@@ -293,7 +295,7 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
             
             # Generate email verification token
             verification_token = secrets.token_urlsafe(32)
-            verification_expires = datetime.utcnow() + timedelta(hours=24)
+            verification_expires = datetime.utcnow() + VERIFY_LINK_TTL
             
             cur.execute("""
                 INSERT INTO email_verification_tokens (user_id, email, token, expires_at)
@@ -554,7 +556,12 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                            a.name AS own_account_name,
                            COALESCE(ab.brand_display_name, sa.name) AS sponsor_name,
                            COALESCE(pab.brand_display_name, pa.name) AS parent_name,
-                           u.first_name
+                           u.first_name,
+                           a.plan_slug,
+                           (SELECT NULLIF(TRIM(COALESCE(su.first_name, '') || ' ' || COALESCE(su.last_name, '')), '')
+                              FROM account_users sau JOIN users su ON su.id = sau.user_id
+                             WHERE sau.account_id = a.sponsor_account_id AND sau.role = 'OWNER'
+                             LIMIT 1) AS sponsor_owner_name
                     FROM accounts a
                     JOIN account_users au ON au.account_id = a.id
                     LEFT JOIN accounts sa ON sa.id = a.sponsor_account_id
@@ -567,7 +574,8 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                 """, (user_id,))
                 acct_row = cur.fetchone()
                 if acct_row:
-                    acct_type, sponsor_id, parent_id, own_name, sponsor_name, parent_name, first_name = acct_row
+                    (acct_type, sponsor_id, parent_id, own_name, sponsor_name, parent_name,
+                     first_name, plan_slug, sponsor_owner_name) = acct_row
                     if acct_type == "TITLE_COMPANY":
                         background_tasks.add_task(
                             send_company_admin_welcome_email,
@@ -585,7 +593,9 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                     elif sponsor_id:
                         background_tasks.add_task(
                             send_sponsored_agent_welcome_email,
-                            email, first_name, sponsor_name or "your sponsor",
+                            email, first_name, sponsor_name or "your title company",
+                            rep_name=sponsor_owner_name or "",
+                            plan_slug=plan_slug or "sponsored_free",
                         )
                     else:
                         background_tasks.add_task(
@@ -652,7 +662,7 @@ def forgot_password(body: ForgotPasswordRequest, background_tasks: BackgroundTas
                 
                 # Generate secure token
                 reset_token = secrets.token_urlsafe(32)
-                expires_at = datetime.utcnow() + timedelta(hours=1)
+                expires_at = datetime.utcnow() + RESET_LINK_TTL
                 
                 # Store token
                 cur.execute("""
@@ -954,7 +964,7 @@ def resend_verification(body: ResendVerificationRequest, background_tasks: Backg
             
             # Generate new token
             verification_token = secrets.token_urlsafe(32)
-            verification_expires = datetime.utcnow() + timedelta(hours=24)
+            verification_expires = datetime.utcnow() + VERIFY_LINK_TTL
             
             cur.execute("""
                 INSERT INTO email_verification_tokens (user_id, email, token, expires_at)

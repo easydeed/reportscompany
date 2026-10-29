@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 59 | Observed, not yet triaged |
+| `recorded` | 56 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 165 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 173 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **309** | D-001 … D-309, contiguous, no duplicates |
+| **Total** | **314** | D-001 … D-314, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
@@ -15498,7 +15498,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-276 — the company agents page filters by `rep_id`, which `/v1/company/agents` does not return, so every "View agents" link from the reps table lands on an empty list
 
 **Severity:** WRONG · filed during the sponsor-views inventory: `app/app/company/agents/page.tsx:150` against `company.py` list_agents (returns `rep_name` only).
-**Status:** `recorded`
+**Status:** `fixed` — feat/company-people. `GET /v1/company/agents` returns `rep_id`; People joins agents to reps by it, and the rebuilt agents page filters `?rep=` on it (`apps/api/tests/test_company_people_api.py::test_each_agent_carries_its_reps_id`, `apps/web/__tests__/CompanyPeople.test.ts` — two reps with one name keep their own agents).
 
 ---
 
@@ -15683,7 +15683,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-302 — the company reps and agents tables offer "Deactivate", "Remove", "Remove from Company" and the agents table's "Resend Invite" with no handler: the items do nothing
 
 **Severity:** WRONG · filed during the board filing: `app/app/company/reps/page.tsx:500`, `app/app/company/agents/page.tsx:398` and `:404` render `DropdownMenuItem`s with no `onClick`. Design's handoff note 7 recorded the reps half. The seat model's reassign and cancel-invite endpoints (#224) are what "a rep leaves" should reach. **Queued for the company UI work** (2026-10-28).
-**Status:** `recorded`
+**Status:** `fixed` — feat/company-people. The reps table and the agents table are replaced: People's row menu is the seat API ("Cancel the invite" → `POST /reps/{id}/cancel-invite`, "Replace this rep" → `POST /reps/{id}/reassign`), each item stating what the server does, offered only when the server accepts it (`lib/company-people.repActions`); the agents page offers no action the company has no endpoint for. `tests/test_company_people_reads_what_the_api_returns.py::test_every_menu_item_in_the_company_pages_does_something` fails on main. Both actions run through the UI against a real API and database in the review render.
 
 ---
 
@@ -15732,7 +15732,51 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-309 — the public lead-page search returns the assessor's owner name, tax and last-sale data for any address
 
 **Severity:** WRONG · found reviewing #238 (the home value funnel). `POST /v1/cma/{code}/search` needs no login (`/v1/cma/` is exempt in `middleware/authn.py`) and, for whatever address a visitor types, returns `owner_name` plus assessed value, land and improvement value, tax amount, and last sale price and date (`lead_pages.py:262-289`). The funnel shows none of it, but every visitor's browser receives it and the lead posts `owner_name` back. Nothing on the server reads it as the requester's name — the lead record, the delivery email, the agent SMS and the CRM view all use `requester_name` / `payload.name` (checked 2026-10-29) — so this is exposure, not misattribution: the D-116 data leaving through the lookup instead of the report. The consumer path has no use for the owner name since D-304. **Proposed fix:** drop `owner_name` and the tax and sale fields from the public search response and from what the funnel posts; the authenticated agent path (`/v1/property/search`) keeps them.
-**Status:** `recorded`
+**Status:** `fixed` — fix/public-search-strips-owner-data. Owner decision (2026-10-29): the public search returns none of `owner_name`, `assessed_value`, `land_value`, `improvement_value`, `tax_amount`, `tax_year`, `last_sale_price`, `last_sale_date`, `last_sale_price_per_sqft`; the agent's signed-in `/v1/property/search` keeps them. `PropertySearchResult` no longer declares them (Pydantic drops anything undeclared, so the model is the boundary), and the funnel no longer posts `owner_name`. `apps/api/tests/test_public_search_strips_owner_data.py` posts to the real route with every field filled in the record and asserts neither the keys nor their values come back — red on main — and that the house facts and the agent path are unchanged. `scripts/regressions/public_search.json`, 5/5 fire.
+
+---
+
+### D-310 — production ran a day behind its schema: #224/#226 shipped needing 0060/0061, and unsubscribes, rep invites and the company dashboard returned 500
+
+**Severity:** BROKEN · found 2026-10-29 when the owner noticed production at migration 0055 with 0056–0061 merged and deployed. **Deploys do not run migrations**, and nothing checked that the database had what the code needed. From about 12:20 PT on 2026-10-28 (when #224 and #226 went live) to **17:03 UTC on 2026-10-29** (0056–0061 applied, runbook `docs/runbooks/2026-10-29-apply-0056-0061.md`):
+
+- **every valid unsubscribe returned 500 and recorded nothing**, both the footer link and the Gmail/Yahoo one-click: `routes/unsubscribe.py` follows a reassigned rep's book through `rep_seat_assignments` (0060/0061), which did not exist, so the people who clicked kept being mailed;
+- rep invites returned 500, from the company page and from the admin's "add rep under a company" (`seats.reserve_seat` reads `accounts.rep_seats`);
+- the company dashboard and Reps page returned 500 (`seats.idle_rep_ids`, `seat_summary`);
+- seat counts, reassignment and cancel-invite were unusable.
+
+Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code. New signups got a white accent (0059, D-243/D-256), 43 accounts and every new signup sat on retired theme 4 and showed no theme selected (0058), and 977 old reports linked to the legacy print page (0057). Reproduced against a database built to production's state before applying: both unsubscribe routes 500 with no suppression written, and `reserve_seat` / `idle_rep_ids` raise UndefinedColumn / UndefinedTable. After applying, all of it works. The runner's one hazard was checked first: `seed_demo_account.sql` was already recorded, so it did not insert the demo account.
+
+**Still owed:** the opt-outs that failed in the window. Each left its address and token in a URL (Vercel request logs for the footer page, Render logs for one-click); they are to be resubmitted once the owner exports them.
+**Status:** `fixed` — the migrations applied 2026-10-29 17:03 UTC, and `fix/schema-guard` makes it unrepeatable: the API, the Celery worker, the schedules ticker and the bridge each refuse to start unless `schema_migrations` records the newest migration their code needs (`schema_guard.REQUIRED_MIGRATION`, held to the newest file in `db/migrations` by `tests/test_schema_guard.py`, so a PR that adds a migration and does not move it fails CI). A failed start fails the deploy, and the version already running keeps serving. `scripts/regressions/schema_guard.json`, 8/8 fire.
+
+---
+
+### D-311 — the company "All agents" page crashes once there is an agent: it reads `agent.name`, which `/v1/company/agents` does not return
+
+**Severity:** BROKEN · found 2026-10-29 reading the page for the People build. `app/app/company/agents/page.tsx` types its rows as `{id, name, brokerage, rep_id, last_active, joined_date, …}` and reads `data.reps`; the API returns `{agent_id, agent_name, email, rep_name, status, plan, reports_this_month, last_activity, created_at}` and no `reps` (`routes/company.py` `list_agents`). `getInitials(agent.name)` calls `.split` on `undefined`, so the page throws on the first row. D-276 is the `rep_id` half of the same mismatch. **Queued for the People build**, which links to this page as the "All N agents" overflow.
+**Status:** `fixed` — feat/company-people. Rebuilt as a rule list typed from `lib/company-people.Agent`, which `tests/test_company_people_reads_what_the_api_returns.py` holds to `list_agents`' keys. Render before: "Something went wrong"; after: the list.
+
+---
+
+### D-312 — every admin-sent password reset greeted the user by the token and linked to `/reset-password?token=<their first name>`
+
+**Severity:** BROKEN · found 2026-10-29 checking the reset copy's "expires in" against the code. `routes/admin.py` (force password reset) called `send_password_reset_email(email, token, first_name)`; the signature is `(email, user_name, reset_token)`. So the user name was the token and the token was the first name: the email said "Hi <token>" and its link could not work. Every reset a platform admin sent was dead on arrival.
+**Status:** `fixed` — #243. Keywords and `by_admin=True`; the admin email says the 24-hour lifetime the route gives the token, from the same `ADMIN_RESET_LINK_TTL`. `apps/api/tests/test_account_email_copy.py::test_an_admin_sent_reset_links_to_the_token` evaluates the route's own call and checks the link carries the token — red on main; `scripts/regressions/account_email_copy.json` C5 puts the positional call back and it fires.
+
+---
+
+### D-313 — in dark mode the emails' main button nearly vanished: ink on the dark card, and a navy brand's button the same
+
+**Severity:** WRONG · found 2026-10-29 rendering the new account-email copy in both schemes. The text gates read the label against the button (white on navy, 17:1) and passed; nothing measured the button against the card. Dark mode left the fill alone, so the account emails' ink button (#0F172A) and step discs sat on the dark card (#1F2937) at about 1.3:1, and the market and home-value emails' brand button did the same for any dark brand — the default navy included. The light-mode measurement found the mirror case: a pale brand (amber, lime) at about 2:1 on the white card.
+**Status:** `fixed` — fix/email-dark-buttons. Account emails: in dark mode the button and step discs turn light with an ink label (`tr-fill`, `tr-fill-ink`). Market and home-value emails: the brand fill stays (Gmail's own inversion needs a brand to invert) and dark mode adds a 2px edge in the brand's dark ink (`tr-edge`); in light mode a pale brand's button gets a 2px edge in its ink (`_cta_edge`), and any other brand is unchanged. The home-value Call / Text outline buttons get a lighter dark-mode border. `tests/test_email_buttons_are_visible.py` measures every filled button against the card in Chromium, both schemes, every account email and every audit brand, found by shape rather than class: 3:1 (WCAG 1.4.11). Its positive controls strip the classes (dark fails on ink and navy) and the edge (light fails on amber and lime).
+
+---
+
+### D-314 — four calls in the web app reach no proxy route, so the browser gets a 404 page: admin lead delete, admin lead export, admin property-report retry, and the mobile report's PDF status poll
+
+**Severity:** BROKEN · found 2026-10-29 building the company People page, whose seat calls had the same gap. The `/api/proxy` layer is one route file per endpoint, not a catch-all, and nothing checked that a path the web app calls has one. `app/app/admin/leads/actions.tsx` (`DELETE /v1/admin/leads/{id}`), `admin/leads/filters.tsx` (`GET /v1/admin/leads/export`), `admin/property-reports/actions.tsx` (`POST …/{id}/retry`) and `components/mobile-report/MobileReportViewer.tsx` (`GET /v1/r/{id}/pdf/status`) all had working API endpoints and no route between them and the browser: the admin buttons did nothing, and a consumer's "Download PDF" spun forever whenever the PDF was not ready on the first try (its poll called `.json()` on Next's 404 page and stopped). #224's seat endpoints (`/v1/company/seats`, `/reps/{id}/reassign`, `/reps/{id}/cancel-invite`) were in the same state, unused until now.
+**Status:** `fixed` — feat/company-people. Proxy routes for the three admin calls and the three seat calls; the mobile viewer polls the existing `r/[id]/pdf` GET, which is the status check. `tests/test_every_proxied_call_has_a_route.py` reads every literal `/v1/…` path the web app passes to fetch / apiFetch / apiFetchRQ / post and requires a matching route directory — red on main with these seven.
 
 ---
 

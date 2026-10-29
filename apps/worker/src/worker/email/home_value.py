@@ -81,6 +81,7 @@ def home_value_email_html(
     as_of = _today().strftime("%B %-d, %Y")
     return _ENV.get_template("home_value.jinja2").render(
         primary=tk["primary"], on_primary=tk["on_primary"], dark_ink=tk["dark_ink"],
+        cta_edge=tk["cta_edge"],
         brand_name=brand_name, logo_url=safe_url(logo_url) or None,
         date_label=as_of,
         address=address, address_line=f"{address}, {city}" if city else address,

@@ -9,8 +9,8 @@
   {
     "name": "P2 the plan lookup reads the legacy column",
     "file": "apps/api/src/api/services/email.py",
-    "old": "cur.execute(\"SELECT market_reports_limit FROM plans WHERE plan_slug = %s\", (plan_slug,))",
-    "new": "cur.execute(\"SELECT monthly_report_limit FROM plans WHERE plan_slug = %s\", (plan_slug,))",
+    "old": "\"SELECT market_reports_limit, schedules_limit FROM plans WHERE plan_slug = %s\",",
+    "new": "\"SELECT monthly_report_limit, schedules_limit FROM plans WHERE plan_slug = %s\",",
     "test": "apps/api/tests/test_plan_numbers_in_email_come_from_the_plan.py"
   },
   {

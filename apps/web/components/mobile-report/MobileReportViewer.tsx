@@ -126,7 +126,8 @@ export function MobileReportViewer({ report, reportId }: Props) {
       } else {
         // Poll for completion
         const checkPdf = async () => {
-          const check = await fetch(`/api/proxy/v1/r/${reportId}/pdf/status`);
+          // GET on the pdf proxy is the status check (D-314: /pdf/status had no route).
+          const check = await fetch(`/api/proxy/v1/r/${reportId}/pdf`);
           const status = await check.json();
           if (status.status === 'ready') {
             setPdfUrl(status.pdf_url);

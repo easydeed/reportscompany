@@ -40,7 +40,7 @@ CALLS = [
                                invite_token="t", invitee_first_name="Dana")),
     ("send_password_reset_email", dict(email="a@x.test", user_name="Dana Ortiz", reset_token="t")),
     ("send_limit_warning_email", dict(email="a@x.test", first_name="Dana", count=4, limit=5)),
-    ("send_limit_reached_email", dict(email="a@x.test", first_name="Dana", limit=5)),
+    ("send_limit_reached_email", dict(email="a@x.test", first_name="Dana", limit=5, count=5)),
     ("send_affiliate_welcome_email", dict(to_email="a@x.test", first_name="Dana")),
     ("send_sponsored_agent_welcome_email", dict(to_email="a@x.test", first_name="Dana",
                                                 affiliate_company_name="Pacific Title")),
@@ -101,7 +101,7 @@ def test_the_platform_address_is_the_workers():
 # ── the worker's mirror ────────────────────────────────────────────────────
 
 SHARED = ("_FONT", "_e", "_row", "_h1", "_p", "_note", "_link", "_checklist", "_TONES",
-          "_callout", "_cta_button", "_email_base")
+          "_callout", "_cta_button", "_email_base", "_plain")
 
 
 def _defs(path):
@@ -128,7 +128,9 @@ def test_the_failure_notice_is_built_from_the_shell():
     i = tasks.index("def _send_failure_notification(")
     body = tasks[i:tasks.index("\ndef ", i + 10)]
     assert "_email_base(" in body and "light only" not in body
-    assert "_e(brief_error)" in body, "the raw error text is not escaped"
+    j = tasks.index("def _failure_notice(")
+    notice = tasks[j:tasks.index("\ndef ", j + 10)]
+    assert "_e(brief_error)" in notice, "the raw error text is not escaped"
 
 
 # ── contrast, both schemes, by pixel ───────────────────────────────────────

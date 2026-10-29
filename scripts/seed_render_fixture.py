@@ -137,6 +137,24 @@ def _result_json(city, kind):
 BARE_ACCOUNT = "aaaaaaaa-0000-4000-8000-000000000003"
 BARE_PLAN = "team"
 
+#: THE COMPANY NETWORK, for the company People page (Test Company A, the
+#: manifest's `company` login). seed_test_accounts gives A two joined reps and
+#: one sponsored agent and no seats, so People would render two quiet rows. This
+#: adds what the page has to show: a seat count, a rep who has not joined (it
+#: holds a seat and offers Cancel), and a few agents with reports under the
+#: second rep. Fictional names; addresses on example.com.
+COMPANY_A = "aaaaaaaa-0000-4000-8000-000000000001"
+COMPANY_A_REPS = ("aaaaaaaa-0000-4000-8000-000000000002", "aaaaaaaa-0000-4000-8000-000000000004")
+PENDING_REP = ("aaaaaaaa-0000-4000-8000-0000000000c1", "Rowan Hale", "rowan.hale.fixture@example.com")
+NETWORK_AGENTS = [
+    ("aaaaaaaa-0000-4000-8000-0000000000a1", "Priya", "Shah", 4, 2),
+    ("aaaaaaaa-0000-4000-8000-0000000000a2", "Marcus", "Lee", 1, 9),
+    ("aaaaaaaa-0000-4000-8000-0000000000a3", "Elena", "Ruiz", 0, None),
+]
+#: Seat rows this script opens carry this start date, so `down` removes its own
+#: and leaves any the 0060 backfill made.
+SEAT_SENTINEL = "2001-01-01T00:00:00+00:00"
+
 #: Every account the render manifest logs in as. The rate limit has to be
 #: raised on all of them, not just the one carrying the content.
 HARNESS_ACCOUNTS = (
@@ -329,6 +347,65 @@ def up(cur):
         )
 
 
+def network_up(cur):
+    cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+    cur.execute("UPDATE accounts SET rep_seats = 4 WHERE id = %s::uuid", (COMPANY_A,))
+    rid, name, email = PENDING_REP
+    cur.execute(
+        """INSERT INTO accounts (id, name, slug, account_type, plan_slug, status, is_active,
+                                 parent_account_id, created_at, updated_at)
+           VALUES (%s, %s, 'fixture-rowan-hale', 'INDUSTRY_AFFILIATE', 'affiliate', 'active', true,
+                   %s, now() - interval '3 days', now())""", (rid, name, COMPANY_A))
+    cur.execute(
+        """INSERT INTO users (id, account_id, email, password_hash, role, email_verified, is_active,
+                              first_name, last_name, created_at, updated_at)
+           VALUES (%s, %s, %s, NULL, 'OWNER', false, true, 'Rowan', 'Hale', now(), now())""",
+        (rid, rid, email))
+    cur.execute("INSERT INTO account_users (account_id, user_id, role, created_at) VALUES (%s, %s, 'OWNER', now())",
+                (rid, rid))
+    for rep in (*COMPANY_A_REPS, rid):
+        cur.execute(
+            """INSERT INTO rep_seat_assignments (company_account_id, rep_account_id, started_at)
+               SELECT %s::uuid, %s::uuid, %s
+                WHERE NOT EXISTS (SELECT 1 FROM rep_seat_assignments
+                                   WHERE rep_account_id = %s::uuid AND ended_at IS NULL)""",
+            (COMPANY_A, rep, SEAT_SENTINEL, rep))
+    for aid, first, last, reports, days_ago in NETWORK_AGENTS:
+        cur.execute(
+            """INSERT INTO accounts (id, name, slug, account_type, plan_slug, status, is_active,
+                                     sponsor_account_id, created_at, updated_at)
+               VALUES (%s, %s, %s, 'REGULAR', 'sponsored_free', 'active', true, %s,
+                       now() - interval '40 days', now())""",
+            (aid, f"{first} {last}", f"fixture-{first.lower()}-{last.lower()}", COMPANY_A_REPS[1]))
+        joined = reports > 0 or days_ago is not None
+        cur.execute(
+            """INSERT INTO users (id, account_id, email, password_hash, role, email_verified, is_active,
+                                  first_name, last_name, created_at, updated_at)
+               VALUES (%s, %s, %s, CASE WHEN %s THEN crypt('fixture', gen_salt('bf')) END, 'OWNER',
+                       %s, true, %s, %s, now(), now())""",
+            (aid, aid, f"{first.lower()}.{last.lower()}.fixture@example.com", joined, joined, first, last))
+        cur.execute("INSERT INTO account_users (account_id, user_id, role, created_at) VALUES (%s, %s, 'OWNER', now())",
+                    (aid, aid))
+        for i in range(reports):
+            cur.execute(
+                """INSERT INTO report_generations (id, account_id, report_type, cities, status, generated_at,
+                                                    result_json, lookback_days, billable)
+                   VALUES (gen_random_uuid(), %s, 'market_snapshot', %s, 'completed', %s, %s::jsonb, 30, true)""",
+                (aid, [CITIES[i % len(CITIES)]], NOW - timedelta(days=(days_ago or 0) + i),
+                 psycopg.types.json.Json({"_fixture": TAG})))
+
+
+def network_down(cur):
+    ids = [a[0] for a in NETWORK_AGENTS] + [PENDING_REP[0]]
+    cur.execute("DELETE FROM report_generations WHERE account_id = ANY(%s::uuid[])", (ids,))
+    cur.execute("DELETE FROM rep_seat_assignments WHERE rep_account_id = ANY(%s::uuid[]) OR started_at = %s",
+                (ids, SEAT_SENTINEL))
+    cur.execute("DELETE FROM account_users WHERE account_id = ANY(%s::uuid[])", (ids,))
+    cur.execute("DELETE FROM users WHERE account_id = ANY(%s::uuid[])", (ids,))
+    cur.execute("DELETE FROM accounts WHERE id = ANY(%s::uuid[])", (ids,))
+    cur.execute("UPDATE accounts SET rep_seats = NULL WHERE id = %s::uuid", (COMPANY_A,))
+
+
 def down(cur):
     cur.execute("DELETE FROM usage_tracking WHERE request_id LIKE %s", (f"{TAG}%",))
     cur.execute("DELETE FROM report_generations WHERE account_id=%s::uuid "
@@ -392,9 +469,12 @@ def main():
                 return
             if action == "up":
                 down(cur)       # idempotent: clear our own rows, then re-add
+                network_down(cur)
                 up(cur)
+                network_up(cur)
             else:
                 down(cur)
+                network_down(cur)
             conn.commit()
             print(f"[{action}] done for account {ACCOUNT}")
             status(cur)

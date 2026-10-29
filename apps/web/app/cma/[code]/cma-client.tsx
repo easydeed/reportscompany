@@ -36,7 +36,6 @@ function demoProperty(address: string): StoredProperty {
     city: "San Diego",
     state: "CA",
     zip: "92101",
-    owner_name: "Sample Homeowner",
     bedrooms: 4,
     bathrooms: 2.5,
     sqft: 2150,
