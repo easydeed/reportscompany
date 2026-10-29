@@ -12,9 +12,21 @@ import { ArrowRight, Check, Download, House, MapPin, MessageCircle, Phone } from
 import { cn } from "@/lib/utils"
 
 // ── Consent copy ─────────────────────────────────────────────────────────────
-// Required before launch. Provided by the brokerage (TCPA). The slot holds up
-// to three lines at 14px; the checkbox is required regardless of wording.
-export const CONSENT_COPY = "" // TODO(legal): e.g. "Send me my report and let {agent} follow up about my home."
+// TWO PIECES, AND ONLY ONE IS EMPTY. CONSENT_COPY is the sentence the live page
+// has always shown beside the checkbox (owner decision: keep it). TCPA_COPY is
+// the brokerage's TCPA wording, written by their legal copy; it is empty until
+// they supply it, and the page should not go in front of their homeowners
+// before then. An empty CONSENT_COPY would put a checkbox with no agreement
+// beside it on every agent's live page while the server records consent.
+// The slot holds up to three lines at 14px; the checkbox is required.
+export const CONSENT_COPY = "I agree to receive my report and to be contacted by {agent} about my property."
+export const TCPA_COPY = "" // TODO(legal): the brokerage's TCPA wording. Never written here.
+
+/** The exact wording beside the checkbox — what the lead records as agreed to. */
+export function consentText(agentName: string): string {
+  return [CONSENT_COPY.replace("{agent}", agentName || "this agent"), TCPA_COPY]
+    .filter(Boolean).join(" ")
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +53,7 @@ export type Lead = {
   contact: string          // digits only for sms
   firstName?: string
   consent: true
-  consentText: string      // CONSENT_COPY as shown — store it with the lead
+  consentText: string      // consentText() as shown — store it with the lead
 }
 
 export type Api = {
@@ -135,7 +147,7 @@ export default function CmaFunnel({ agent, api, cover, initialAddress = "" }: {
   const submit = async () => {
     if (!canSubmit || !record) return
     setError(null); setStep("processing")
-    const lead: Lead = { record, method, contact: method === "sms" ? digits : contact.trim(), firstName: name.trim() || undefined, consent: true, consentText: CONSENT_COPY }
+    const lead: Lead = { record, method, contact: method === "sms" ? digits : contact.trim(), firstName: name.trim() || undefined, consent: true, consentText: consentText(agent.name) }
     const [res] = await Promise.all([api.submit(lead).catch(() => null), tick(build.length)])
     if (!res) { setStep("contact"); setError("Something went wrong sending your report. Try again."); return }
     setReportUrl(res.reportUrl); setStep("success")
@@ -286,7 +298,7 @@ export default function CmaFunnel({ agent, api, cover, initialAddress = "" }: {
                 <span aria-hidden className={cn("mt-[1px] flex size-[22px] shrink-0 items-center justify-center rounded-md border-[1.5px] peer-focus-visible:ring-2 peer-focus-visible:ring-[#0F172A]/40", consent ? "border-[#0F172A] bg-[#0F172A]" : "border-[#CBD5E1] bg-white")}>
                   {consent && <Check size={13} className="text-white" />}
                 </span>
-                <span className={cn(!CONSENT_COPY && "italic text-[#94A3B8]")}>{CONSENT_COPY || `[Consent wording — ${first} can contact me about my home]`}</span>
+                <span>{consentText(agent.name)}</span>
               </label>
               {error && <p role="alert" className="text-[14px] text-[#B91C1C]">{error}</p>}
               <Cta hex={hex} disabled={!canSubmit} onClick={submit}>{method === "sms" ? "Text me my report" : "Email me my report"}</Cta>
