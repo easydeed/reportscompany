@@ -721,9 +721,30 @@ def send_sponsored_agent_welcome_email(to_email: str, first_name: str, affiliate
     )
 
 
+def _plan_market_limit(plan_slug: str) -> Optional[int]:
+    """
+    A plan's monthly market-report limit, read from `plans` when the email is
+    built (D-308). The welcome email said "5" — the legacy `monthly_report_limit`
+    — while the gate enforces `market_reports_limit`, which is 3 for Free. A
+    number in email copy is read from the table the gate reads, or not printed:
+    None on any failure, and the caller drops the number rather than guess.
+    """
+    try:
+        from ..db import db_conn
+        with db_conn() as (conn, cur):
+            cur.execute("SELECT market_reports_limit FROM plans WHERE plan_slug = %s", (plan_slug,))
+            row = cur.fetchone()
+        value = row[0] if row else None
+        return value if isinstance(value, int) and 0 < value < 10000 else None
+    except Exception as exc:  # noqa: BLE001 — a welcome email must not fail on this
+        logger.warning("could not read the %s plan's market limit: %s", plan_slug, exc)
+        return None
+
+
 def send_regular_agent_welcome_email(to_email: str, first_name: str) -> Dict[str, Any]:
     """Welcome email for self-registered agents after email verification."""
     name = _e(first_name or "there")
+    free_limit = _plan_market_limit("free")   # D-308: from the plan, never typed
     content = (
         _h1(f"Welcome to TrendyReports, {name}!")
         + _p("Your account is verified and ready to go. Here&rsquo;s how to get your first branded report in under 30 seconds.")
@@ -738,10 +759,8 @@ def send_regular_agent_welcome_email(to_email: str, first_name: str) -> Dict[str
                       "Import your contact list and set up automated schedules to deliver fresh market reports weekly or monthly.",
                       "/app/people", "Manage Contacts", last=True),
         ])
-        # TODO(D-308): "5 reports per month" is the legacy `monthly_report_limit`;
-        # the enforced `market_reports_limit` for Free is 3. Kept as written
-        # until the copy is corrected — the owner asked for the current wording.
-        + _callout("<strong>Your Free plan</strong> includes 5 reports per month. Need more? "
+        + _callout((f"<strong>Your Free plan</strong> includes {free_limit} reports per month. Need more? "
+                    if free_limit else "Need more reports than the Free plan includes? ")
                    + f'<a href="{_e(email_service.app_base)}/app/settings/billing" style="color:#166534;font-weight:600;text-decoration:underline;">Upgrade anytime</a>.', "green")
         + _questions()
     )

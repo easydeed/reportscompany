@@ -1,0 +1,23 @@
+[
+  {
+    "name": "P1 the welcome email types the Free limit again",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "    free_limit = _plan_market_limit(\"free\")   # D-308: from the plan, never typed",
+    "new": "    free_limit = 5",
+    "test": "apps/api/tests/test_plan_numbers_in_email_come_from_the_plan.py"
+  },
+  {
+    "name": "P2 the plan lookup reads the legacy column",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "cur.execute(\"SELECT market_reports_limit FROM plans WHERE plan_slug = %s\", (plan_slug,))",
+    "new": "cur.execute(\"SELECT monthly_report_limit FROM plans WHERE plan_slug = %s\", (plan_slug,))",
+    "test": "apps/api/tests/test_plan_numbers_in_email_come_from_the_plan.py"
+  },
+  {
+    "name": "P3 the link preview prints the estimate again",
+    "file": "apps/web/app/r/[id]/page.tsx",
+    "old": "  const description = 'Home value report: nearby sales, property details and the local market.';",
+    "new": "  const description = `Estimated value: $${report.value_estimate.low.toLocaleString()}`;",
+    "test": "tests/test_report_link_preview_has_no_estimate.py"
+  }
+]
