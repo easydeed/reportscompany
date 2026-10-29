@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 62 | Observed, not yet triaged |
+| `recorded` | 61 | Observed, not yet triaged |
 | `open` | 79 | Real, unfixed |
-| `fixed` | 160 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 161 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **308** | D-001 … D-308, contiguous, no duplicates |
