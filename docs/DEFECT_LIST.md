@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 61 | Observed, not yet triaged |
-| `open` | 79 | Real, unfixed |
-| `fixed` | 161 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 78 | Real, unfixed |
+| `fixed` | 162 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **308** | D-001 … D-308, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -15701,7 +15701,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-306 — the consumer report's agent block could belong to another user on the account
 
 **Severity:** WRONG · found building the home-value email. `process_consumer_report` loaded the agent's photo, email, job title and licence number with `JOIN users u ON u.account_id = a.id ... LIMIT 1`, with no filter on the report's own `agent_id` and no ORDER BY. On an account with more than one user, the PDF and the delivery email could carry another user's identity. Scoped to `u.id = agent_id` by feat/home-value-email; pinned by `test_the_brand_lookup_is_the_reports_own_agent`, and mutation HV4 makes it fire.
-**Status:** `open` — fixed by feat/home-value-email when it merges.
+**Status:** `fixed` — feat/home-value-email (#234): the brand query is scoped to `u.id = agent_id`.
 
 ---
 
