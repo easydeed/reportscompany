@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 58 | Observed, not yet triaged |
+| `recorded` | 59 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 166 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 167 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **309** | D-001 … D-309, contiguous, no duplicates |
+| **Total** | **311** | D-001 … D-311, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
@@ -15733,6 +15733,29 @@ as a duplicate, the file goes with it rather than being ported.
 
 **Severity:** WRONG · found reviewing #238 (the home value funnel). `POST /v1/cma/{code}/search` needs no login (`/v1/cma/` is exempt in `middleware/authn.py`) and, for whatever address a visitor types, returns `owner_name` plus assessed value, land and improvement value, tax amount, and last sale price and date (`lead_pages.py:262-289`). The funnel shows none of it, but every visitor's browser receives it and the lead posts `owner_name` back. Nothing on the server reads it as the requester's name — the lead record, the delivery email, the agent SMS and the CRM view all use `requester_name` / `payload.name` (checked 2026-10-29) — so this is exposure, not misattribution: the D-116 data leaving through the lookup instead of the report. The consumer path has no use for the owner name since D-304. **Proposed fix:** drop `owner_name` and the tax and sale fields from the public search response and from what the funnel posts; the authenticated agent path (`/v1/property/search`) keeps them.
 **Status:** `fixed` — fix/public-search-strips-owner-data. Owner decision (2026-10-29): the public search returns none of `owner_name`, `assessed_value`, `land_value`, `improvement_value`, `tax_amount`, `tax_year`, `last_sale_price`, `last_sale_date`, `last_sale_price_per_sqft`; the agent's signed-in `/v1/property/search` keeps them. `PropertySearchResult` no longer declares them (Pydantic drops anything undeclared, so the model is the boundary), and the funnel no longer posts `owner_name`. `apps/api/tests/test_public_search_strips_owner_data.py` posts to the real route with every field filled in the record and asserts neither the keys nor their values come back — red on main — and that the house facts and the agent path are unchanged. `scripts/regressions/public_search.json`, 5/5 fire.
+
+---
+
+### D-310 — production ran a day behind its schema: #224/#226 shipped needing 0060/0061, and unsubscribes, rep invites and the company dashboard returned 500
+
+**Severity:** BROKEN · found 2026-10-29 when the owner noticed production at migration 0055 with 0056–0061 merged and deployed. **Deploys do not run migrations**, and nothing checked that the database had what the code needed. From about 12:20 PT on 2026-10-28 (when #224 and #226 went live) to **17:03 UTC on 2026-10-29** (0056–0061 applied, runbook `docs/runbooks/2026-10-29-apply-0056-0061.md`):
+
+- **every valid unsubscribe returned 500 and recorded nothing**, both the footer link and the Gmail/Yahoo one-click: `routes/unsubscribe.py` follows a reassigned rep's book through `rep_seat_assignments` (0060/0061), which did not exist, so the people who clicked kept being mailed;
+- rep invites returned 500, from the company page and from the admin's "add rep under a company" (`seats.reserve_seat` reads `accounts.rep_seats`);
+- the company dashboard and Reps page returned 500 (`seats.idle_rep_ids`, `seat_summary`);
+- seat counts, reassignment and cancel-invite were unusable.
+
+Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code. New signups got a white accent (0059, D-243/D-256), 43 accounts and every new signup sat on retired theme 4 and showed no theme selected (0058), and 977 old reports linked to the legacy print page (0057). Reproduced against a database built to production's state before applying: both unsubscribe routes 500 with no suppression written, and `reserve_seat` / `idle_rep_ids` raise UndefinedColumn / UndefinedTable. After applying, all of it works. The runner's one hazard was checked first: `seed_demo_account.sql` was already recorded, so it did not insert the demo account.
+
+**Still owed:** the opt-outs that failed in the window. Each left its address and token in a URL (Vercel request logs for the footer page, Render logs for one-click); they are to be resubmitted once the owner exports them.
+**Status:** `fixed` — the migrations applied 2026-10-29 17:03 UTC, and `fix/schema-guard` makes it unrepeatable: the API, the Celery worker, the schedules ticker and the bridge each refuse to start unless `schema_migrations` records the newest migration their code needs (`schema_guard.REQUIRED_MIGRATION`, held to the newest file in `db/migrations` by `tests/test_schema_guard.py`, so a PR that adds a migration and does not move it fails CI). A failed start fails the deploy, and the version already running keeps serving. `scripts/regressions/schema_guard.json`, 8/8 fire.
+
+---
+
+### D-311 — the company "All agents" page crashes once there is an agent: it reads `agent.name`, which `/v1/company/agents` does not return
+
+**Severity:** BROKEN · found 2026-10-29 reading the page for the People build. `app/app/company/agents/page.tsx` types its rows as `{id, name, brokerage, rep_id, last_active, joined_date, …}` and reads `data.reps`; the API returns `{agent_id, agent_name, email, rep_name, status, plan, reports_this_month, last_activity, created_at}` and no `reps` (`routes/company.py` `list_agents`). `getInitials(agent.name)` calls `.split` on `undefined`, so the page throws on the first row. D-276 is the `rep_id` half of the same mismatch. **Queued for the People build**, which links to this page as the "All N agents" overflow.
+**Status:** `recorded`
 
 ---
 

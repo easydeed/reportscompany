@@ -1,6 +1,6 @@
 import os
 import ssl
-from celery import Celery
+from celery import Celery, signals
 from celery.schedules import crontab
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -30,6 +30,16 @@ celery = Celery(
     broker=BROKER,
     backend=BACKEND,
 )
+
+
+@signals.worker_init.connect
+def _require_schema(**_):
+    """Refuse to start when the database is behind the code (schema_guard.py;
+    board D-310). Runs in the main process before any task is taken."""
+    from .schema_guard import enforce
+    enforce(os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/market_reports"),
+            "worker")
+
 
 # Base configuration
 config_updates = {

@@ -775,6 +775,10 @@ def run_forever():
     Main ticker loop: process due schedules every TICK_INTERVAL seconds.
     Also pings the API periodically to prevent cold starts.
     """
+    # Refuse to start when the database is behind the code (board D-310).
+    from .schema_guard import enforce
+    enforce(DATABASE_URL, "schedules ticker")
+
     logger.info(f"Schedules ticker started (interval: {TICK_INTERVAL}s)")
     logger.info(f"Database: {DATABASE_URL.split('@')[-1]}")  # Log host without credentials
     logger.info(f"API keep-alive target: {API_BASE_URL} (every {KEEP_ALIVE_INTERVAL}s)")

@@ -121,6 +121,16 @@ app.include_router(admin_metrics_router)
 app.include_router(lead_pages_router)
 app.include_router(company_router, prefix="/v1/company", tags=["company"])
 
+# ── Schema check ─────────────────────────────────────────────────────────────
+# Refuse to start when the database has not applied the newest migration this
+# code needs (schema_guard.py; board D-310). A failed start fails the deploy,
+# and the version already running keeps serving.
+@app.on_event("startup")
+def _require_schema():
+    from .schema_guard import enforce
+    enforce(settings.DATABASE_URL, "api")
+
+
 # ── Pool shutdown ────────────────────────────────────────────────────────────
 # Phase 1.4: Close connection pool cleanly when the Uvicorn worker shuts down.
 # Prevents "connection already closed" errors in logs during deployment roll.
