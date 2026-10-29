@@ -48,7 +48,11 @@ of `09c8b71` failed and Render kept `229ee8b` live.
 So a refused start never takes a service down. **The cost is that it is
 silent**: a service whose deploy failed keeps serving the older code, and
 nothing tells you. On 2026-10-29 the worker and ticker ran `09c8b71` while the
-bridge sat on `229ee8b`.
+bridge sat on `229ee8b`. Closed the same day: "Deploy latest commit" on the
+bridge went Live, so the failure was a one-off in the deploy, not the code
+(the bridge's start path was unchanged between the two commits, and
+`09c8b71`'s bridge started cleanly against a database at 0061 locally). After
+it, all four services read Live on the same commit — the check below, passed.
 
 After every merge to `main`, and after every "Deploy latest commit":
 
