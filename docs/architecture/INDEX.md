@@ -157,7 +157,7 @@ scripts/                         # Dev/QA scripts (not production)
   test_sitex.py                  # ← SiteX smoke test [new]
   test_property_report_flow.py   # ← Property flow integration test [new]
   generate_all_property_pdfs.py  # Batch PDF generation
-  generate_theme_previews.py     # Theme preview PNGs
+  render_property_previews.py    # Property-report preview JPGs (fixed fixture)
 
 qa_deliver_reports.py            # ← End-to-end QA delivery tool [new]
 ```
