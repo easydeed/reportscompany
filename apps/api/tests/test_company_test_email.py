@@ -104,3 +104,19 @@ def test_an_unset_colour_is_the_real_emails_default_not_an_invented_one(client, 
     html = outbox[0]["html"].lower()
     assert "#7c3aed" not in html, "the test email painted a colour no real email uses"
     assert "#4f46e5" in html
+
+
+def test_it_says_it_is_a_test_on_sample_figures(client, world, outbox):
+    """The banner's old insertion points do not exist in Design's template, so
+    it was never added. It must be at the top, before anything else."""
+    from api.routes.branding_tools import TEST_EMAIL_NOTICE, TEST_EMAIL_NOTICE_SUB
+    assert _send(client, world.email("co-a")).status_code == 200
+    html = outbox[0]["html"]
+    body = html[html.index("<body"):]
+    assert TEST_EMAIL_NOTICE in body[:2000], "the test banner is missing or not at the top"
+    assert "sample data" in TEST_EMAIL_NOTICE_SUB
+    assert outbox[0]["subject"].startswith("[Test]")
+    text = unescape(html)
+    assert "Data from the MLS" not in text, "a test on canned figures says they are the MLS's"
+    assert "contacts." not in text.split("Unsubscribe")[0][-200:], "a test says the reader is in someone's contacts"
+    assert "Sample figures for a test email" in text and "you asked for a test email" in text

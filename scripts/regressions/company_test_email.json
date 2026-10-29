@@ -54,5 +54,19 @@
   "old": "        headers={\"List-Unsubscribe\": f\"<{base}/api/v1/email/unsubscribe/one-click?{q}>\",\n                 \"List-Unsubscribe-Post\": \"List-Unsubscribe=One-Click\"})",
   "new": "        headers={})",
   "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E9 the test banner is not added (as on Design's template before)",
+  "file": "apps/api/src/api/routes/branding_tools.py",
+  "old": "        email_html, inserted = re.subn(r\"(<body\\b[^>]*>)\", lambda m: m.group(1) + test_notice, email_html, count=1)\n        if not inserted:\n            email_html = test_notice + email_html\n",
+  "new": "",
+  "test": "apps/api/tests/test_company_test_email.py"
+ },
+ {
+  "name": "E10 the test says its canned figures are the MLS's",
+  "file": "apps/api/src/api/routes/branding_tools.py",
+  "old": "        email_html = re.sub(r\"Data from the MLS, [^<]*\", TEST_EMAIL_DATA_LINE, email_html)\n",
+  "new": "",
+  "test": "apps/api/tests/test_company_test_email.py"
  }
 ]
