@@ -1,7 +1,9 @@
 /**
  * The body the live home-value page already posts. Design's funnel speaks in
  * a different shape; page.tsx translates, and this is the translation.
- * Keys and omissions match apps/web/app/cma/[code] as it stood on d1b48bcc.
+ * Keys and omissions match apps/web/app/cma/[code] as it stood on d1b48bcc,
+ * less `owner_name`: the public search no longer returns it (D-309), and the
+ * person asking is named by `name`, never by the assessor roll.
  */
 
 export type StoredProperty = {
@@ -11,7 +13,6 @@ export type StoredProperty = {
   city: string
   state: string
   zip: string
-  owner_name?: string | null
   bedrooms?: number | null
   bathrooms?: number | null
   sqft?: number | null
@@ -54,7 +55,6 @@ export function cmaRequestBody(property: StoredProperty, lead: LeadFacts) {
     property_state: property.state,
     property_zip: property.zip,
     consent_given: true,
-    owner_name: property.owner_name,
     bedrooms: fact(lead.beds, property.bedrooms),
     bathrooms: fact(lead.baths, property.bathrooms),
     sqft: fact(lead.sqft, property.sqft),
@@ -74,7 +74,6 @@ export function storedProperty(raw: StoredProperty): StoredProperty {
     city: raw.city,
     state: raw.state,
     zip: raw.zip,
-    owner_name: raw.owner_name,
     bedrooms: raw.bedrooms,
     bathrooms: raw.bathrooms,
     sqft: raw.sqft,

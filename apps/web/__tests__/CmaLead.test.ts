@@ -7,7 +7,6 @@ const property: StoredProperty = {
   city: "Irvine",
   state: "CA",
   zip: "92618",
-  owner_name: "Previous Owner",
   bedrooms: 4,
   bathrooms: 2.5,
   sqft: 2100,
@@ -29,7 +28,6 @@ const captured = JSON.stringify({
   property_state: "CA",
   property_zip: "92618",
   consent_given: true,
-  owner_name: "Previous Owner",
   bedrooms: 4,
   bathrooms: 2.5,
   sqft: 2100,
@@ -44,7 +42,7 @@ describe("the home-value request matches the page it replaces", () => {
     expect(JSON.stringify(cmaSearchBody("14 Cartwheel"))).toBe(JSON.stringify({ address: "14 Cartwheel" }))
   })
 
-  it("posts the same lead body, including the owner name the page must not show", () => {
+  it("posts the same lead body, less the owner name (D-309)", () => {
     const body = cmaRequestBody(property, {
       method: "sms",
       contact: "(555) 123-4567",
@@ -57,8 +55,11 @@ describe("the home-value request matches the page it replaces", () => {
     expect(JSON.stringify(body)).toBe(captured)
   })
 
-  it("sends an edited bed count and leaves the owner name on the wire", () => {
-    const body = cmaRequestBody(property, {
+  it("sends an edited bed count and no owner name, even if one is handed in (D-309)", () => {
+    // A stale session or an old cached search may still hold an owner name;
+    // the request must not forward it. The person is named by `name` alone.
+    const stale = { ...property, owner_name: "Previous Owner" } as StoredProperty
+    const body = cmaRequestBody(stale, {
       method: "sms",
       contact: "5551234567",
       name: "Jane",
@@ -68,6 +69,7 @@ describe("the home-value request matches the page it replaces", () => {
       yearBuilt: 1998,
     })
     expect(body.bedrooms).toBe(3)
-    expect(body.owner_name).toBe("Previous Owner")
+    expect("owner_name" in body).toBe(false)
+    expect(JSON.stringify(body)).not.toContain("Previous Owner")
   })
 })
