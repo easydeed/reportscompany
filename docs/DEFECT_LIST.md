@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 59 | Observed, not yet triaged |
+| `recorded` | 56 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 169 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 173 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **313** | D-001 … D-313, contiguous, no duplicates |
+| **Total** | **314** | D-001 … D-314, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
@@ -15498,7 +15498,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-276 — the company agents page filters by `rep_id`, which `/v1/company/agents` does not return, so every "View agents" link from the reps table lands on an empty list
 
 **Severity:** WRONG · filed during the sponsor-views inventory: `app/app/company/agents/page.tsx:150` against `company.py` list_agents (returns `rep_name` only).
-**Status:** `recorded`
+**Status:** `fixed` — feat/company-people. `GET /v1/company/agents` returns `rep_id`; People joins agents to reps by it, and the rebuilt agents page filters `?rep=` on it (`apps/api/tests/test_company_people_api.py::test_each_agent_carries_its_reps_id`, `apps/web/__tests__/CompanyPeople.test.ts` — two reps with one name keep their own agents).
 
 ---
 
@@ -15683,7 +15683,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-302 — the company reps and agents tables offer "Deactivate", "Remove", "Remove from Company" and the agents table's "Resend Invite" with no handler: the items do nothing
 
 **Severity:** WRONG · filed during the board filing: `app/app/company/reps/page.tsx:500`, `app/app/company/agents/page.tsx:398` and `:404` render `DropdownMenuItem`s with no `onClick`. Design's handoff note 7 recorded the reps half. The seat model's reassign and cancel-invite endpoints (#224) are what "a rep leaves" should reach. **Queued for the company UI work** (2026-10-28).
-**Status:** `recorded`
+**Status:** `fixed` — feat/company-people. The reps table and the agents table are replaced: People's row menu is the seat API ("Cancel the invite" → `POST /reps/{id}/cancel-invite`, "Replace this rep" → `POST /reps/{id}/reassign`), each item stating what the server does, offered only when the server accepts it (`lib/company-people.repActions`); the agents page offers no action the company has no endpoint for. `tests/test_company_people_reads_what_the_api_returns.py::test_every_menu_item_in_the_company_pages_does_something` fails on main. Both actions run through the UI against a real API and database in the review render.
 
 ---
 
@@ -15755,7 +15755,7 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-311 — the company "All agents" page crashes once there is an agent: it reads `agent.name`, which `/v1/company/agents` does not return
 
 **Severity:** BROKEN · found 2026-10-29 reading the page for the People build. `app/app/company/agents/page.tsx` types its rows as `{id, name, brokerage, rep_id, last_active, joined_date, …}` and reads `data.reps`; the API returns `{agent_id, agent_name, email, rep_name, status, plan, reports_this_month, last_activity, created_at}` and no `reps` (`routes/company.py` `list_agents`). `getInitials(agent.name)` calls `.split` on `undefined`, so the page throws on the first row. D-276 is the `rep_id` half of the same mismatch. **Queued for the People build**, which links to this page as the "All N agents" overflow.
-**Status:** `recorded`
+**Status:** `fixed` — feat/company-people. Rebuilt as a rule list typed from `lib/company-people.Agent`, which `tests/test_company_people_reads_what_the_api_returns.py` holds to `list_agents`' keys. Render before: "Something went wrong"; after: the list.
 
 ---
 
@@ -15770,6 +15770,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** WRONG · found 2026-10-29 rendering the new account-email copy in both schemes. The text gates read the label against the button (white on navy, 17:1) and passed; nothing measured the button against the card. Dark mode left the fill alone, so the account emails' ink button (#0F172A) and step discs sat on the dark card (#1F2937) at about 1.3:1, and the market and home-value emails' brand button did the same for any dark brand — the default navy included. The light-mode measurement found the mirror case: a pale brand (amber, lime) at about 2:1 on the white card.
 **Status:** `fixed` — fix/email-dark-buttons. Account emails: in dark mode the button and step discs turn light with an ink label (`tr-fill`, `tr-fill-ink`). Market and home-value emails: the brand fill stays (Gmail's own inversion needs a brand to invert) and dark mode adds a 2px edge in the brand's dark ink (`tr-edge`); in light mode a pale brand's button gets a 2px edge in its ink (`_cta_edge`), and any other brand is unchanged. The home-value Call / Text outline buttons get a lighter dark-mode border. `tests/test_email_buttons_are_visible.py` measures every filled button against the card in Chromium, both schemes, every account email and every audit brand, found by shape rather than class: 3:1 (WCAG 1.4.11). Its positive controls strip the classes (dark fails on ink and navy) and the edge (light fails on amber and lime).
+
+---
+
+### D-314 — four calls in the web app reach no proxy route, so the browser gets a 404 page: admin lead delete, admin lead export, admin property-report retry, and the mobile report's PDF status poll
+
+**Severity:** BROKEN · found 2026-10-29 building the company People page, whose seat calls had the same gap. The `/api/proxy` layer is one route file per endpoint, not a catch-all, and nothing checked that a path the web app calls has one. `app/app/admin/leads/actions.tsx` (`DELETE /v1/admin/leads/{id}`), `admin/leads/filters.tsx` (`GET /v1/admin/leads/export`), `admin/property-reports/actions.tsx` (`POST …/{id}/retry`) and `components/mobile-report/MobileReportViewer.tsx` (`GET /v1/r/{id}/pdf/status`) all had working API endpoints and no route between them and the browser: the admin buttons did nothing, and a consumer's "Download PDF" spun forever whenever the PDF was not ready on the first try (its poll called `.json()` on Next's 404 page and stopped). #224's seat endpoints (`/v1/company/seats`, `/reps/{id}/reassign`, `/reps/{id}/cancel-invite`) were in the same state, unused until now.
+**Status:** `fixed` — feat/company-people. Proxy routes for the three admin calls and the three seat calls; the mobile viewer polls the existing `r/[id]/pdf` GET, which is the status check. `tests/test_every_proxied_call_has_a_route.py` reads every literal `/v1/…` path the web app passes to fetch / apiFetch / apiFetchRQ / post and requires a matching route directory — red on main with these seven.
 
 ---
 

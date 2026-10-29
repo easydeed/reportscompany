@@ -26,7 +26,9 @@ import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 type Icon = ComponentType<{ className?: string }>
-type NavItem = { name: string; href: string; icon: Icon; exact?: boolean }
+/** `also`: other route prefixes this item owns, so the rail stays on it there
+ *  (People on the "All agents" overflow, Activity on the schedules feed). */
+type NavItem = { name: string; href: string; icon: Icon; exact?: boolean; also?: string[] }
 type NavGroup = { label: string; items: NavItem[] }
 
 interface TierProps { isAdmin: boolean; isCompanyAdmin: boolean; isAffiliate: boolean; isSponsored: boolean }
@@ -42,7 +44,7 @@ export function isBuilderRoute(pathname: string | null): boolean {
 // (/app/settings) in the design; until profile+security merge, Account links
 // to Profile and the Settings page owns the rest. Branding and Plan & billing
 // are top-level items, not a collapsible.
-function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: TierProps): NavGroup[] {
+export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: TierProps): NavGroup[] {
   const settings: NavItem = { name: "Settings", href: "/app/settings/profile", icon: Settings }
   if (isAdmin) {
     return [
@@ -69,17 +71,16 @@ function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Tie
     ]
   }
   if (isCompanyAdmin) {
+    // The rail Jerry approved (2026-10-28): Dashboard · People · Activity ·
+    // Branding · Plan & Seats · Settings. Activity and Plan & Seats point at
+    // the existing reports and billing pages until their own builds land.
     return [
       { label: "Company", items: [
         { name: "Dashboard", href: "/app/company", icon: Building, exact: true },
-        { name: "Title reps", href: "/app/company/reps", icon: Users },
-        { name: "All agents", href: "/app/company/agents", icon: UserCheck },
-        { name: "All reports", href: "/app/company/reports", icon: FileText },
-        { name: "All schedules", href: "/app/company/schedules", icon: Calendar },
-      ] },
-      { label: "Account", items: [
+        { name: "People", href: "/app/company/reps", icon: Users, also: ["/app/company/agents"] },
+        { name: "Activity", href: "/app/company/reports", icon: FileText, also: ["/app/company/schedules"] },
         { name: "Branding", href: "/app/company/branding", icon: Palette },
-        { name: "Plan & billing", href: "/app/settings/billing", icon: CreditCard },
+        { name: "Plan & Seats", href: "/app/settings/billing", icon: CreditCard },
         settings,
       ] },
     ]
@@ -119,9 +120,10 @@ function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored }: Tie
   ]
 }
 
-function isActivePath(pathname: string | null, item: NavItem) {
+export function isActivePath(pathname: string | null, item: NavItem) {
   if (!pathname) return false
   if (item.exact) return pathname === item.href
+  if (item.also?.some((p) => pathname === p || pathname.startsWith(p + "/"))) return true
   // /app/settings/profile owns the whole settings tree except billing/branding
   if (item.href === "/app/settings/profile") return pathname.startsWith("/app/settings") && !pathname.startsWith("/app/settings/billing") && !pathname.startsWith("/app/settings/branding")
   return pathname === item.href || pathname.startsWith(item.href + "/")

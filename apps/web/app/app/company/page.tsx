@@ -22,7 +22,8 @@ import Link from "next/link"
 import { Send, UserPlus } from "lucide-react"
 import { useCompanyOverview, useCompanyBranding } from "@/hooks/use-api"
 import { RuleList } from "@/components/ui/list"
-import { Avatar, Sentence, StatCell, ActivityRow, H2, whenLabel, sinceLabel, reportTypeLabel, QUIET_DAYS, type Tone } from "@/components/sponsor/shared"
+import { Avatar, Sentence, StatCell, ActivityRow, H2, whenLabel, reportTypeLabel } from "@/components/sponsor/shared"
+import { repSentence, seatSub } from "@/lib/company-people"
 
 type Rep = { id: string; name: string; email: string; office: string; agent_count: number; reports_this_month: number; last_active: string | null; status: "active" | "pending" | "deactivated" }
 type Overview = {
@@ -32,29 +33,6 @@ type Overview = {
   seats: { total: number; held: number; open: number; pending: number; idle: number } | null
   reps: Rep[]
   activity: { id: string; description: string; timestamp: string | null }[]
-}
-
-/** One sentence per rep, derived from the row. A rep with no active agents is a seat cooling. */
-export function repSentence(r: Rep): { tone: Tone; text: string } {
-  if (r.status === "pending") return { tone: "off", text: "Invited, hasn't joined yet" }
-  if (r.status === "deactivated") return { tone: "off", text: `Deactivated${r.agent_count ? ` · ${r.agent_count} agent${r.agent_count === 1 ? "" : "s"} still in their book` : ""}` }
-  if (r.agent_count === 0) return { tone: "warn", text: "No agents yet" }
-  const quietDays = r.last_active ? (Date.now() - new Date(r.last_active).getTime()) / 86_400_000 : Infinity
-  const head = `${r.agent_count} agent${r.agent_count === 1 ? "" : "s"} · ${r.reports_this_month} report${r.reports_this_month === 1 ? "" : "s"} this month`
-  if (!r.last_active) return { tone: "warn", text: `${head} · nothing sent yet` }
-  if (quietDays > QUIET_DAYS) return { tone: "warn", text: `${head} · quiet for ${sinceLabel(r.last_active)}` }
-  return { tone: "good", text: `${head} · active ${whenLabel(r.last_active).toLowerCase()}` }
-}
-
-/** "1 open · 2 invited, not joined · 1 idle for a month". Idle: a joined rep
- *  whose agents finished no market or property report in 30 days. */
-export function seatSub(s: NonNullable<Overview["seats"]>): string {
-  const parts = [
-    s.open ? `${s.open} open` : "None open",
-    s.pending ? `${s.pending} invited, not joined` : null,
-    s.idle ? `${s.idle} idle for a month` : null,
-  ].filter(Boolean)
-  return parts.join(" · ")
 }
 
 export default function CompanyDashboard() {
@@ -120,7 +98,7 @@ export default function CompanyDashboard() {
       )}
 
       <div className="flex flex-col gap-[14px]">
-        <H2 linkLabel="Manage reps & agents →" href="/app/company/reps">Your reps</H2>
+        <H2 linkLabel="People →" href="/app/company/reps">Your reps</H2>
         <RuleList>
           {reps.map((r) => { const s = repSentence(r); return (
             <div key={r.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-center gap-5 border-b border-[var(--border-subtle)] py-[14px]">

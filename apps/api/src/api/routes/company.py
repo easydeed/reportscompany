@@ -429,7 +429,12 @@ def list_reps(company: dict = Depends(get_company_admin)):
                  WHERE rg2.account_id IN (
                      SELECT id FROM accounts WHERE sponsor_account_id = a.id
                  )
-                 AND rg2.status IN ('completed', 'processing'))         AS last_activity
+                 AND rg2.status IN ('completed', 'processing'))         AS last_activity,
+                EXISTS (
+                    SELECT 1 FROM rep_seat_assignments s
+                     WHERE s.rep_account_id = a.id
+                       AND s.company_account_id = a.parent_account_id
+                       AND s.ended_at IS NULL)                          AS holds_seat
             FROM accounts a
             LEFT JOIN LATERAL (
                 SELECT u2.id, u2.email, u2.is_active, u2.email_verified, u2.password_hash
@@ -469,6 +474,10 @@ def list_reps(company: dict = Depends(get_company_admin)):
             # A joined rep holding a seat whose agents finished no market or
             # property report in 30 days (`seats.idle_rep_ids`).
             "idle": r["rep_id"] in idle_reps,
+            # An open seat row. The seat actions — reassign, and for a rep who
+            # has not joined, cancel the invite — act on it; a rep without
+            # one (switched off, or reassigned away) has neither.
+            "holds_seat": bool(r["holds_seat"]),
         })
 
     return {"reps": reps}
@@ -487,6 +496,7 @@ def list_agents(company: dict = Depends(get_company_admin)):
                 agent_acct.id::text     AS agent_id,
                 COALESCE(u.first_name || ' ' || u.last_name, u.email) AS agent_name,
                 u.email,
+                rep_acct.id::text       AS rep_id,
                 rep_acct.name           AS rep_name,
                 u.is_active,
                 u.email_verified,
@@ -531,6 +541,9 @@ def list_agents(company: dict = Depends(get_company_admin)):
             "agent_id": r["agent_id"],
             "agent_name": r.get("agent_name") or r.get("email") or "",
             "email": r.get("email") or "",
+            # D-276: keyed by id as well as name. Two reps can share a name;
+            # the People page and the ?rep= filter join on this.
+            "rep_id": r["rep_id"],
             "rep_name": r["rep_name"],
             "status": status,
             "plan": r["plan_slug"],
