@@ -43,22 +43,22 @@ def free_plan():
 
 def test_the_welcome_states_the_limit_the_gate_enforces(free_plan):
     html = _welcome_html()
-    assert f"includes {free_plan} reports per month" in html
-    assert "includes 5 reports per month" not in html or free_plan == 5
+    assert f"includes {free_plan} market reports a month" in html
+    assert "includes 5 market reports a month" not in html or free_plan == 5
 
 
 def test_a_change_to_the_plan_reaches_the_next_email(free_plan):
     """The number is read at send time, not frozen into the copy."""
     with psycopg.connect(DB_URL) as conn:
         conn.execute("UPDATE plans SET market_reports_limit = 7 WHERE plan_slug = 'free'")
-    assert "includes 7 reports per month" in _welcome_html()
+    assert "includes 7 market reports a month" in _welcome_html()
 
 
 def test_no_number_rather_than_a_guess_when_the_plan_cannot_be_read():
     with patch.object(em, "_plan_market_limit", lambda slug: None):
         html = _welcome_html()
-    assert not re.search(r"includes \d+ reports", html)
-    assert "Upgrade anytime" in html
+    assert not re.search(r"includes \d+ (market )?reports", html)
+    assert "See plans" in html
 
 
 def test_no_plan_number_is_typed_into_email_copy():

@@ -16,7 +16,7 @@ from ..db import db_conn, set_rls
 from ..deps.admin import get_admin_user
 from ..services import get_monthly_usage, resolve_plan_for_account, evaluate_report_limit
 from ..services.schedule_utils import compute_next_run
-from ..services.email import send_role_invite_email
+from ..services.email import ADMIN_RESET_LINK_TTL, send_password_reset_email, send_role_invite_email
 from ..services.invite_service import (
     create_invited_user,
     find_owner_pending_for_account,
@@ -2896,15 +2896,18 @@ def force_password_reset(
         # Create new token
         cur.execute("""
             INSERT INTO password_reset_tokens (user_id, token, expires_at)
-            VALUES (%s::uuid, %s, NOW() + INTERVAL '24 hours')
-        """, (user_id, token))
+            VALUES (%s::uuid, %s, NOW() + %s)
+        """, (user_id, token, ADMIN_RESET_LINK_TTL))
         
         conn.commit()
         
         # Send reset email
-        from ..services.email import send_password_reset_email
         try:
-            background_tasks.add_task(send_password_reset_email, email, token, first_name)
+            # D-312: keywords. This passed (email, token, first_name) to
+            # (email, user_name, reset_token): the email greeted the user by the
+            # token and linked to /reset-password?token=<first name>.
+            background_tasks.add_task(send_password_reset_email, email,
+                                      user_name=first_name or "", reset_token=token, by_admin=True)
             logger.info(f"Admin {_admin.get('email')} force sent password reset to {email}")
         except Exception as e:
             logger.error(f"Failed to queue password reset email: {e}")

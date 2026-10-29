@@ -12,6 +12,7 @@ import secrets
 from typing import Any, Dict, Optional
 
 from ..settings import settings
+from .email import INVITE_LINK_TTL  # the email says this lifetime; the token has it
 
 logger = logging.getLogger(__name__)
 
@@ -147,9 +148,9 @@ def create_invited_user(
     cur.execute(
         """
         INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-        VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+        VALUES (%s, %s::uuid, %s::uuid, NOW() + %s)
         """,
-        (token, user_id, account_id),
+        (token, user_id, account_id, INVITE_LINK_TTL),
     )
 
     return {
@@ -247,9 +248,9 @@ def regenerate_invite_token(cur: Any, *, user_id: str, account_id: str) -> str:
     cur.execute(
         """
         INSERT INTO signup_tokens (token, user_id, account_id, expires_at)
-        VALUES (%s, %s::uuid, %s::uuid, NOW() + INTERVAL '7 days')
+        VALUES (%s, %s::uuid, %s::uuid, NOW() + %s)
         """,
-        (token, user_id, account_id),
+        (token, user_id, account_id, INVITE_LINK_TTL),
     )
     return token
 

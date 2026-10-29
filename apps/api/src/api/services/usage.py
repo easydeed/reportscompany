@@ -270,6 +270,15 @@ def get_usage_counts(cur, account_id: str) -> Dict[str, Any]:
 
 # ─── SINGLE-PRODUCT EVALUATOR ─────────────────────────────────────────────────
 
+def grace_ceiling(limit: int) -> int:
+    """How many monthly-count reports the 10% grace allows in all: the first
+    `used` that `evaluate_product_limit(strict=False)` refuses. Integer form of
+    `used / limit < 1.1`, so a float cannot round it. For the emails that tell
+    someone how many more they can make; tests/test_account_email_copy.py holds
+    it to the check below."""
+    return (11 * limit + 9) // 10
+
+
 def evaluate_product_limit(used: int, limit: int, strict: bool = False) -> Dict[str, Any]:
     """Evaluate a single product's limit status.
 
