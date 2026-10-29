@@ -77,7 +77,7 @@ export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored
       { label: "Company", items: [
         { name: "Dashboard", href: "/app/company", icon: Building, exact: true },
         { name: "People", href: "/app/company/reps", icon: Users, also: ["/app/company/agents"] },
-        { name: "Activity", href: "/app/company/reports", icon: FileText, also: ["/app/company/schedules"] },
+        { name: "Activity", href: "/app/company/activity", icon: FileText, also: ["/app/company/reports", "/app/company/schedules"] },
         { name: "Branding", href: "/app/company/branding", icon: Palette },
         { name: "Plan & Seats", href: "/app/company/plan", icon: CreditCard },
         settings,

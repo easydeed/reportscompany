@@ -151,6 +151,13 @@ NETWORK_AGENTS = [
     ("aaaaaaaa-0000-4000-8000-0000000000a2", "Marcus", "Lee", 1, 9),
     ("aaaaaaaa-0000-4000-8000-0000000000a3", "Elena", "Ruiz", 0, None),
 ]
+#: The network's schedules, for the company Activity page: agent index, name,
+#: report type, city, cadence, weekly day / monthly date, hour, active, has a next send.
+NETWORK_SCHEDULES = [
+    (0, "Irvine weekly", "market_snapshot", "Irvine", "weekly", 1, 8, True, True),
+    (1, "Tustin monthly", "new_listings", "Tustin", "monthly", 1, 9, True, True),
+    (0, "Costa Mesa closed", "closed", "Costa Mesa", "weekly", 4, 7, False, None),
+]
 #: Seat rows this script opens carry this start date, so `down` removes its own
 #: and leaves any the 0060 backfill made.
 SEAT_SENTINEL = "2001-01-01T00:00:00+00:00"
@@ -347,6 +354,17 @@ def up(cur):
         )
 
 
+def _next_send(cadence, day, hour):
+    """The next send a schedule with this day and hour would have (UTC, near
+    enough for a fixture): weekly `day` is 0 = Sunday, monthly is the date."""
+    d = NOW.replace(hour=hour, minute=0, second=0, microsecond=0)
+    for _ in range(40):
+        d += timedelta(days=1)
+        if (cadence == "weekly" and (d.weekday() + 1) % 7 == day) or (cadence == "monthly" and d.day == day):
+            return d
+    return None
+
+
 def network_up(cur):
     cur.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
     cur.execute("UPDATE accounts SET rep_seats = 4 WHERE id = %s::uuid", (COMPANY_A,))
@@ -393,11 +411,22 @@ def network_up(cur):
                    VALUES (gen_random_uuid(), %s, 'market_snapshot', %s, 'completed', %s, %s::jsonb, 30, true)""",
                 (aid, [CITIES[i % len(CITIES)]], NOW - timedelta(days=(days_ago or 0) + i),
                  psycopg.types.json.Json({"_fixture": TAG})))
+    for idx, name, kind, city, cadence, day, hour, active, due_in in NETWORK_SCHEDULES:
+        cur.execute(
+            """INSERT INTO schedules (id, account_id, name, report_type, city, cadence, weekly_dow, monthly_dom,
+                                      send_hour, send_minute, recipients, active, created_at, next_run_at,
+                                      timezone)
+               VALUES (gen_random_uuid(), %s, %s, %s, %s, %s, %s, %s, %s, 0, %s, %s, now() - interval '20 days',
+                       %s, 'America/Los_Angeles')""",
+            (NETWORK_AGENTS[idx][0], name, kind, city, cadence,
+             day if cadence == "weekly" else None, day if cadence == "monthly" else None, hour,
+             ["homeowner.fixture@example.com"], active, _next_send(cadence, day, hour) if due_in else None))
 
 
 def network_down(cur):
     ids = [a[0] for a in NETWORK_AGENTS] + [PENDING_REP[0]]
     cur.execute("DELETE FROM report_generations WHERE account_id = ANY(%s::uuid[])", (ids,))
+    cur.execute("DELETE FROM schedules WHERE account_id = ANY(%s::uuid[])", (ids,))
     cur.execute("DELETE FROM rep_seat_assignments WHERE rep_account_id = ANY(%s::uuid[]) OR started_at = %s",
                 (ids, SEAT_SENTINEL))
     cur.execute("DELETE FROM account_users WHERE account_id = ANY(%s::uuid[])", (ids,))

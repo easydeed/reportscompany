@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 56 | Observed, not yet triaged |
-| `open` | 78 | Real, unfixed |
-| `fixed` | 175 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 79 | Real, unfixed |
+| `fixed` | 177 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **316** | D-001 … D-316, contiguous, no duplicates |
+| **Total** | **319** | D-001 … D-319, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -15791,6 +15791,27 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** FRAGILE · found 2026-10-29 alongside D-315. `apps/web/app/app/settings/billing/page.tsx` declares three plans by hand — name, `$` price and a features list with each limit as text. The limits match the table today (Starter 25 / 3 / 5, Pro unlimited / unlimited / 25), but the names already disagree with it ("Growth" for `starter`, "Growth Plus" for `pro`; the table says Starter and Pro), the prices are not read from Stripe, and "CMA Lead Page" is listed on every plan while `plans.lead_capture_enabled` is false on all of them. A change to the table or to Stripe changes what an agent is charged and allowed without changing what this page promises.
 **Status:** `recorded` — not changed in this branch. The fix is to read names and limits from `plans` (as the account emails do since #243) and prices from the Stripe price ids; whether "CMA Lead Page" is gated by `lead_capture_enabled` needs checking first.
+
+---
+
+### D-317 — the company Reports and Schedules pages read fields the API never returns: every report read "Generating" with no name, date or PDF, and schedules counted nothing
+
+**Severity:** BROKEN · found 2026-10-29 building the company Activity page. `app/app/company/reports/page.tsx` typed its rows as `{user_name, user_type: "rep" | "agent", status: "complete" | …, created_at, rep_id, rep_name, zip_codes, is_scheduled}` against `GET /v1/company/reports`, which returns `generated_at`, `user_type: "Rep" | "Agent"`, `status: "completed"` and none of the rest. Rendered against the local fixture: blank names, every row "Generating", no date, no PDF link, "By reps 0 · By agents 0". `schedules/page.tsx` did the same against `/v1/company/schedules` (`run_count`, `city`, a `metrics` block) and showed "0" everywhere. The same class as D-311: `tsc` passes, because a hand-written type is a claim about the API, not a check of it.
+**Status:** `fixed` — feat/company-pages. One Activity page (`/app/company/activity`, Reports · Schedules) typed from `lib/company-activity.ts`; both endpoints now also return each row's rep (`rep_id`, `rep_name` — an agent's sponsor, a rep's own) and the schedule's `weekly_dow` / `monthly_dom`; the old paths redirect. `tests/test_company_activity_reads_what_the_api_returns.py` holds the types to the routes' row keys and `apps/api/tests/test_company_activity_api.py` checks the rows against a real database, cross-tenant included — 9 of 11 red on main (the two cross-tenant checks pass on main and guard it). `scripts/regressions/company_activity.json`: 9/9.
+
+---
+
+### D-318 — the company's report times went out without a time zone, so a browser west of Greenwich put them hours late
+
+**Severity:** WRONG · found alongside D-317. `report_generations.generated_at` is `timestamp without time zone`, written by `NOW()` on a UTC database. `/v1/company/overview` (the Dashboard's Recent) and `/v1/company/reports` sent it as a bare ISO string; a browser reads a bare string as its own local time, so in California every time landed seven or eight hours late — a report made at 10 pm Pacific on Tuesday (05:00 UTC Wednesday) showed as made Wednesday at 5 am, "Today" on Wednesday instead of "Yesterday".
+**Status:** `fixed` — feat/company-pages. `_utc_iso` in `routes/company.py` marks the value `+00:00`; `test_report_times_are_marked_utc` covers both endpoints. The same bare value leaves four other places — D-319.
+
+---
+
+### D-319 — agent, admin and rep report lists send `generated_at` without a time zone (the D-318 defect outside the company pages)
+
+**Severity:** WRONG · found 2026-10-29 by grep after D-318. `routes/usage.py:102-103` (an agent's report list), `routes/reports.py` (`generated_at::text`), `routes/admin.py:399` and `routes/affiliates.py:991,1079` (the rep's feeds) each send `generated_at` with no zone. Not verified in a browser for each page; the API side is the same as D-318's.
+**Status:** `open` — the rep feeds (`affiliates.py`) are fixed with the rep-side build; the agent and admin lists need the same one-line change and a test.
 
 ---
 

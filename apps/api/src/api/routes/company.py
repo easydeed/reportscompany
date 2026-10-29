@@ -7,6 +7,7 @@ and metrics for Title Company administrators.
 
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel, EmailStr, constr, field_validator
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 import logging
@@ -92,6 +93,16 @@ class UpdateBrandingRequest(BaseModel):
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _utc_iso(ts: Optional[datetime]) -> Optional[str]:
+    """`report_generations.generated_at` is `timestamp without time zone`,
+    written by NOW() on a UTC database. Sent bare, a browser reads it as its
+    own local time — seven or eight hours late in California, so a report
+    made last night reads "Today". Say it is UTC."""
+    if ts is None:
+        return None
+    return (ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts).isoformat()
+
 
 def _get_company_rep_ids(cur, company_id: str) -> list[str]:
     """Return account IDs of all INDUSTRY_AFFILIATE reps under this company."""
@@ -346,7 +357,7 @@ def get_overview(company: dict = Depends(get_company_member)):
             activity.append({
                 "id": row[4],
                 "description": f"{name} generated {rtype} for {city}",
-                "timestamp": row[3].isoformat() if row[3] else None,
+                "timestamp": _utc_iso(row[3]),
             })
 
     return {
@@ -622,9 +633,12 @@ def get_company_reports(
                    rg.pdf_url, a.name AS account_name,
                    CASE WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 'Rep'
                         ELSE 'Agent' END AS user_type,
-                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name
+                   u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
+                   a.id::text, COALESCE(sp.id, a.id)::text, COALESCE(sp.name, a.name)
             FROM report_generations rg
             JOIN accounts a ON a.id = rg.account_id
+            -- An agent's rep is their sponsor; a rep is their own.
+            LEFT JOIN accounts sp ON sp.id = a.sponsor_account_id
             LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
             LEFT JOIN users u ON u.id = au.user_id
             WHERE rg.account_id = ANY(%s)
@@ -634,10 +648,11 @@ def get_company_reports(
         reports = [
             {
                 "id": r[0], "report_type": r[1], "status": r[2],
-                "generated_at": r[3].isoformat() if r[3] else None,
+                "generated_at": _utc_iso(r[3]),
                 "city": r[4], "pdf_url": r[5],
                 "account_name": r[6], "user_type": r[7],
                 "user_name": (r[8] or "").strip(),
+                "account_id": r[9], "rep_id": r[10], "rep_name": r[11],
             }
             for r in cur.fetchall()
         ]
@@ -703,9 +718,12 @@ def get_company_schedules(
                         ELSE 'Agent' END AS user_type,
                    u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
                    s.send_hour, s.send_minute, s.timezone,
-                   (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs
+                   (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs,
+                   a.id::text, COALESCE(sp.id, a.id)::text, COALESCE(sp.name, a.name),
+                   s.weekly_dow, s.monthly_dom
             FROM schedules s
             JOIN accounts a ON a.id = s.account_id
+            LEFT JOIN accounts sp ON sp.id = a.sponsor_account_id
             LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
             LEFT JOIN users u ON u.id = au.user_id
             WHERE s.account_id = ANY(%s)
@@ -721,6 +739,8 @@ def get_company_schedules(
                 "user_name": (r[10] or "").strip(),
                 "send_hour": r[11], "send_minute": r[12], "timezone": r[13],
                 "total_runs": r[14],
+                "account_id": r[15], "rep_id": r[16], "rep_name": r[17],
+                "weekly_dow": r[18], "monthly_dom": r[19],
             }
             for r in cur.fetchall()
         ]
