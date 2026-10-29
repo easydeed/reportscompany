@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 61 | Observed, not yet triaged |
+| `recorded` | 60 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 162 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 164 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **308** | D-001 … D-308, contiguous, no duplicates |
+| **Total** | **309** | D-001 … D-309, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
@@ -15577,6 +15577,7 @@ as a duplicate, the file goes with it rather than being ported.
 **Severity:** BROKEN · filed while scoping the schedule hand-over: `routes/unsubscribe.py` `_suppress` did `with db_conn() as conn: conn.cursor()`; `db_conn()` yields `(conn, cur)`. Beneath it the account was found by `%s = ANY(schedules.recipients)`, and the API stores every recipient as JSON, so a fixed tuple would have answered "unsubscribed" and recorded nothing. The link and RFC 8058 one-click both. Opt-outs clicked while this was live were not recorded: the web route logs `[Unsubscribe] API returned 500 for {email}`, which is where they can be recovered from.
 
 **It never regressed; it never worked.** `_suppress` was written that way in `f1510014` (2025-11-11, *Phase 24B: Schedules CRUD API + Unsubscribe Endpoint*), and `db_conn()` yielded `(conn, cur)` in that same commit. `b82d0124` (2025-11-20, typed recipients) then made the lookup unable to match. The 2026-08-18 work (U1–U5, `c5086f1a`…`928b2d47`) verified signing, per-recipient links, encoding, the landing page and the RFC 8058 headers; `test_unsubscribe_token_roundtrip.py` stubs the database, and nothing called the route. Every part was verified except the one that records the opt-out.
+**Owner answer, 2026-10-29:** Pacific Coast's reps never mailed real recipients, so there are no lost opt-outs to recover and the Render log check for `API returned 500` is not needed.
 **Status:** `fixed` — #225: the candidates come from `email_log` (written for every scheduled send with the resolved addresses), the token picks the account, the suppression lands where the worker's send filter reads it. `apps/api/tests/test_unsubscribe_records_a_suppression.py` (5, red on main). **Gate: #229** — `apps/api/tests/test_unsubscribe_end_to_end.py` sends a real scheduled email through the worker's path, follows its footer link and its List-Unsubscribe header the way the web routes do, and requires the next send to skip both addresses; it fails rather than skips on GitHub Actions without a database. `scripts/regressions/unsubscribe.json` 7/7.
 
 ---
@@ -15703,7 +15704,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-305 — the consumer report's link preview prints the estimate
 
 **Severity:** WRONG · found with D-304. `app/r/[id]/page.tsx` `generateMetadata` writes "Estimated value: $X - $Y" into the page's description and Open Graph tags, so the SMS, iMessage, Slack or email link preview shows the range before anyone opens the report. On 2026-10-28 the owner decided the home-value email carries no estimate, because a number without the sales beside it reads like an appraisal. The preview is that number without the sales. **Decision for Jerry:** drop the range from the metadata (the page still shows it in context), or keep it in previews.
-**Status:** `recorded`
+**Status:** `fixed` — fix/plan-numbers-and-preview. Owner decision (2026-10-29): take it out; a preview is public wherever the link is forwarded, and the estimate belongs in the report beside how it was worked out. The metadata now names the report and nothing more (`tests/test_report_link_preview_has_no_estimate.py`).
 
 ---
 
@@ -15724,6 +15725,13 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-308 — the self-signup welcome email promises 5 reports a month; Free allows 3
 
 **Severity:** WRONG · found keeping the account emails' wording inside Design's shell. `send_regular_agent_welcome_email` says "Your Free plan includes 5 reports per month." That 5 is `plans.monthly_report_limit`, the legacy column. The market-report gate reads `market_reports_limit`, which is **3** for `free` (and 3 for `sponsored_free`, whose legacy value is the 10 in Design's mocks). Kept as written in the shell PR because the owner asked for the current wording until Design's copy is fixed; marked with a TODO at the line. **Decision for Jerry:** say 3, or read the number from the plan at send time.
+**Status:** `fixed` — fix/plan-numbers-and-preview. Owner decision (2026-10-29): plan numbers in email copy are read from the plans table. The welcome email reads `market_reports_limit` for `free` at send time and drops the number rather than guess when it cannot (`apps/api/tests/test_plan_numbers_in_email_come_from_the_plan.py`, including a change to the plan reaching the next email). No other plan number is typed into email copy; the limit notices take the enforced limit from their caller. D-293 is the same drift on the admin page, still open.
+
+---
+
+### D-309 — the public lead-page search returns the assessor's owner name, tax and last-sale data for any address
+
+**Severity:** WRONG · found reviewing #238 (the home value funnel). `POST /v1/cma/{code}/search` needs no login (`/v1/cma/` is exempt in `middleware/authn.py`) and, for whatever address a visitor types, returns `owner_name` plus assessed value, land and improvement value, tax amount, and last sale price and date (`lead_pages.py:262-289`). The funnel shows none of it, but every visitor's browser receives it and the lead posts `owner_name` back. Nothing on the server reads it as the requester's name — the lead record, the delivery email, the agent SMS and the CRM view all use `requester_name` / `payload.name` (checked 2026-10-29) — so this is exposure, not misattribution: the D-116 data leaving through the lookup instead of the report. The consumer path has no use for the owner name since D-304. **Proposed fix:** drop `owner_name` and the tax and sale fields from the public search response and from what the funnel posts; the authenticated agent path (`/v1/property/search`) keeps them.
 **Status:** `recorded`
 
 ---
