@@ -1,751 +1,225 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
-import { useMe } from "@/hooks/use-api"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Palette,
-  FileText,
-  Mail,
-  Save,
-  Loader2,
-  Download,
-  Send,
-  Check,
-  Sparkles,
-  Eye,
-  Upload,
-  User,
-  Type,
-  ArrowLeft,
-  Info,
-} from "lucide-react"
+// /app/company/branding — Branding. Design's company Branding (Sponsor v4): a
+// rule list of what the company sets, a live report page beside it, and what
+// each rep adds.
+//
+// Adopted with these changes, each to what the code does:
+//   * two logos, not one: the reports and emails use a logo on the brand
+//     colour (`logo_url`) and one on white (`footer_logo_url`, which falls back
+//     to the first) — dropping the second would leave an old logo in every
+//     footer after a Replace;
+//   * the second colour stays: the market report reads `accent_color`;
+//   * Design's "your colour is never changed to fix contrast" is not what the
+//     report does — `MarketReportBuilder._masthead_band` darkens a colour
+//     until white text on it reads (D-112) — so the page says that instead;
+//   * Replace, never Remove: the PATCH keeps a field sent as null, so a
+//     removal could not be saved. The old page's Remove and theme picker
+//     both did nothing (D-320);
+//   * the admin's own name, title and photo moved to Settings: they are the
+//     admin's profile, not the company's brand;
+//   * only the company's admin edits (D-280); everyone else on the account
+//     sees the same page without the controls.
+
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { PageHeader } from "@/components/page-header"
+import { RuleList } from "@/components/ui/list"
 import { useToast } from "@/components/ui/use-toast"
-import { ImageUpload } from "@/components/ui/image-upload"
-import { cn } from "@/lib/utils"
-import { REPORT_TYPE_OPTIONS, type ReportType } from "@/lib/sample-report-data"
-import {
-  SharedEmailPreview,
-  type PreviewReportType,
-} from "@/components/shared/email-preview"
-import { DEFAULT_THEME_ID, resolveThemeId } from "@/lib/themes.generated"
+import { useCompanyBranding, useCompanyOverview, useCompanyReps, queryKeys } from "@/hooks/use-api"
+import { Avatar, H2, RowButton } from "@/components/sponsor/shared"
+import { ReportThumb } from "@/components/shared/report-thumb"
+import type { Rep } from "@/lib/company-people"
+import { HEX, SAVE_NOTE, brandFromApi, brandPatch, type Brand, type CompanyBranding } from "@/lib/company-brand"
 
-const THEMES = [
-  { id: 2, name: "Harbor", style: "Clean & Contemporary", font: "DM Sans", gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", previewImage: "/previews/2.jpg" },
-  { id: 3, name: "Linen", style: "Sophisticated & Refined", font: "Playfair Display", gradient: "linear-gradient(135deg, #1a1a1a 0%, #C9A962 100%)", previewImage: "/previews/3.jpg" },
-  { id: 5, name: "Atlas", style: "Impactful & Striking", font: "Clash Display + DM Sans", gradient: "linear-gradient(135deg, #15216E 0%, #D69649 100%)", previewImage: "/previews/5.jpg" },
-]
+const field = "h-10 rounded-[9px] border-[1.5px] border-[var(--border-strong)] bg-white px-3 text-[15px] text-foreground outline-none focus:border-[var(--link)] focus:ring-[3px] focus:ring-[var(--link)]/20"
 
-const COLOR_PRESETS = [
-  { name: "Indigo", primary: "#4F46E5", accent: "#F59E0B" },
-  { name: "Ocean", primary: "#0EA5E9", accent: "#10B981" },
-  { name: "Crimson", primary: "#DC2626", accent: "#1D4ED8" },
-  { name: "Forest", primary: "#059669", accent: "#D97706" },
-  { name: "Midnight", primary: "#1E293B", accent: "#818CF8" },
-  { name: "Royal", primary: "#7C3AED", accent: "#EC4899" },
-]
+function Row({ label, sub, children, action }: { label: string; sub?: string; children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[160px_minmax(0,1fr)_auto] items-center gap-5 border-b border-[var(--border-subtle)] py-[14px]">
+      <span className="flex flex-col leading-[1.3]"><span className="text-[15px] font-semibold text-foreground">{label}</span>{sub && <span className="text-[13px] text-muted-foreground">{sub}</span>}</span>
+      <span className="flex min-w-0 items-center gap-3">{children}</span>
+      <span>{action}</span>
+    </div>
+  )
+}
 
-const PREVIEW_REPORT_TYPES: { value: PreviewReportType; label: string }[] = [
-  { value: "market_snapshot", label: "Market Update" },
-  { value: "new_listings_gallery", label: "New Listings" },
-  { value: "closed", label: "Closed Sales" },
-  { value: "inventory", label: "Inventory" },
-  { value: "featured_listings", label: "Featured" },
-]
+/** Replace a logo: upload the file, hand back its URL. */
+function ReplaceLogo({ onDone, label = "Replace" }: { onDone: (url: string) => void; label?: string }) {
+  const input = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const { toast } = useToast()
+  async function upload(file: File) {
+    setBusy(true)
+    try {
+      const form = new FormData()
+      form.append("file", file)
+      const res = await fetch("/api/proxy/v1/upload/branding/logo", { method: "POST", body: form, credentials: "include" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || "Upload failed")
+      onDone(data.url)
+    } catch (e) {
+      toast({ title: "That logo didn't upload", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" })
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <>
+      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = "" }} />
+      <RowButton onClick={() => input.current?.click()}>{busy ? "Uploading…" : label}</RowButton>
+    </>
+  )
+}
 
-type BrandingData = {
-  display_name: string
-  tagline: string
-  primary_color: string
-  accent_color: string
-  default_theme_id: number
-  header_logo_url: string | null
-  footer_logo_url: string | null
-  agent_name: string
-  agent_title: string
-  agent_phone: string
-  agent_email: string
-  agent_photo_url: string | null
+function LogoChip({ src, on }: { src: string | null; on: string }) {
+  return (
+    <span className="flex h-12 w-28 items-center justify-center rounded-[9px] border border-[var(--border)] p-1.5" style={{ background: on }}>
+      {src ? <img src={src} alt="" className="max-h-full max-w-full object-contain" /> : <span className="text-[12px] text-muted-foreground">None yet</span>}
+    </span>
+  )
 }
 
 export default function CompanyBrandingPage() {
-  // READ from the same source the save WRITES to: /v1/company/branding
-  // (backed by the affiliate_branding table). The previous implementation
-  // read from useAccount(), which points at the `accounts` table — so
-  // after save + reload the stale accounts row overwrote the form and
-  // made it look like nothing had been saved.
-  const { data: companyBranding, isLoading: brandingLoading } = useQuery<{
-    branding: Record<string, any> | null
-  }>({
-    queryKey: ["company", "branding"],
-    queryFn: async () => {
-      const r = await fetch("/api/proxy/v1/company/branding", { credentials: "include" })
-      if (!r.ok) throw new Error("Failed to load branding")
-      return r.json()
-    },
-  })
-  const { data: meData, isLoading: meLoading } = useMe()
-  const queryClient = useQueryClient()
-  const isLoading = brandingLoading || meLoading
-
-  const [formInitialized, setFormInitialized] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const qc = useQueryClient()
   const { toast } = useToast()
+  const { data, isLoading, error } = useCompanyBranding()
+  const { data: overview } = useCompanyOverview()
+  const { data: repsData } = useCompanyReps()
+  const canManage: boolean = data?.can_manage === true
+  const accountName: string = overview?.company?.name ?? ""
+  const saved = useMemo(() => brandFromApi(data?.branding as CompanyBranding | null, accountName), [data, accountName])
+  const [brand, setBrand] = useState<Brand>(saved)
+  const [saving, setSaving] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState(false)
+  useEffect(() => setBrand(saved), [saved])
 
-  const [branding, setBranding] = useState<BrandingData>({
-    display_name: "",
-    tagline: "",
-    primary_color: "#818CF8",
-    accent_color: "#F59E0B",
-    default_theme_id: DEFAULT_THEME_ID,
-    header_logo_url: null,
-    footer_logo_url: null,
-    agent_name: "",
-    agent_title: "",
-    agent_phone: "",
-    agent_email: "",
-    agent_photo_url: null,
-  })
+  const patch = brandPatch(saved, brand)
+  const dirty = Object.keys(patch).length > 0
+  const reps: Rep[] = repsData?.reps ?? []
+  const exampleRep = reps.find((r) => r.status === "active") ?? reps[0]
+  const set = (p: Partial<Brand>) => setBrand((b) => ({ ...b, ...p }))
+  const primaryShown = HEX.test(brand.primary) ? brand.primary : undefined
+  const accentShown = HEX.test(brand.accent) ? brand.accent : undefined
 
-  const [previewMode, setPreviewMode] = useState<"email" | "property">("email")
-  const [previewReportType, setPreviewReportType] = useState<PreviewReportType>("market_snapshot")
-  const [reportType, setReportType] = useState<ReportType>("market_snapshot")
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false)
-  const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null)
-  const [testEmail, setTestEmail] = useState("")
-  const [isSending, setIsSending] = useState(false)
-  const [sendSuccess, setSendSuccess] = useState(false)
-
-  useEffect(() => {
-    if (formInitialized) return
-    // Wait until both queries have resolved — branding must win over any
-    // accounts-table defaults, and meData supplies the admin profile side.
-    if (!companyBranding || !meData) return
-    const b = (companyBranding.branding || {}) as Record<string, any>
-    const profile = meData as Record<string, any>
-    const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ")
-    setBranding({
-      display_name: b.brand_display_name || "",
-      tagline: "",
-      primary_color: b.primary_color || "#818CF8",
-      accent_color: b.accent_color || "#F59E0B",
-      default_theme_id: resolveThemeId(b.default_theme_id),
-      header_logo_url: b.logo_url || b.email_logo_url || null,
-      footer_logo_url: b.footer_logo_url || b.email_footer_logo_url || null,
-      agent_name: fullName || "",
-      agent_title: profile.job_title || "",
-      agent_phone: profile.phone || "",
-      agent_email: profile.email || "",
-      agent_photo_url: profile.avatar_url || null,
-    })
-    setTestEmail(profile.email || "")
-    setFormInitialized(true)
-  }, [companyBranding, meData, formInitialized])
+  if (error) return <p className="text-[16px] text-muted-foreground">{String(error).includes("403") ? "This account isn't on a title company." : "Couldn't load your brand right now."}</p>
 
   async function save() {
     setSaving(true)
     try {
-      const [brandingRes, profileRes] = await Promise.all([
-        fetch("/api/proxy/v1/company/branding", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            brand_display_name: branding.display_name || undefined,
-            primary_color: branding.primary_color,
-            accent_color: branding.accent_color,
-            logo_url: branding.header_logo_url,
-            email_logo_url: branding.header_logo_url,
-            footer_logo_url: branding.footer_logo_url,
-            email_footer_logo_url: branding.footer_logo_url,
-          }),
-        }),
-        fetch("/api/proxy/v1/users/me", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...(branding.agent_name ? {
-              first_name: branding.agent_name.split(" ")[0],
-              last_name: branding.agent_name.split(" ").slice(1).join(" ") || undefined,
-            } : {}),
-            ...(branding.agent_title ? { job_title: branding.agent_title } : {}),
-            ...(branding.agent_phone ? { phone: branding.agent_phone } : {}),
-            ...(branding.agent_photo_url !== null ? { avatar_url: branding.agent_photo_url } : {}),
-          }),
-        }),
-      ])
-      if (!brandingRes.ok) throw new Error("Failed to save branding")
-      if (!profileRes.ok) console.warn("Failed to save agent profile — branding saved OK")
-      // Invalidate the source this page reads from — plus the adjacent
-      // caches other pages depend on — then let the form re-populate
-      // from the freshly refetched server state.
-      queryClient.invalidateQueries({ queryKey: ["company", "branding"] })
-      queryClient.invalidateQueries({ queryKey: ["account"] })
-      queryClient.invalidateQueries({ queryKey: ["me"] })
-      queryClient.invalidateQueries({ queryKey: ["branding"] })
-      setFormInitialized(false)
-      toast({ title: "Branding Saved", description: "Company branding has been updated. Changes will cascade to all reps." })
-    } catch {
-      toast({ title: "Error", description: "Failed to save branding", variant: "destructive" })
+      const res = await fetch("/api/proxy/v1/company/branding", {
+        method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : "That didn't save.")
+      await qc.invalidateQueries({ queryKey: queryKeys.company.branding })
+      toast({ title: "Brand saved", description: "Your reps' next reports and emails carry it." })
+    } catch (e) {
+      toast({ title: "Not saved", description: e instanceof Error ? e.message : "That didn't save.", variant: "destructive" })
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleDownloadPdf() {
-    setIsDownloadingPdf(true)
-    setDownloadSuccess(null)
+  async function samplePdf() {
+    setPdfBusy(true)
     try {
-      const response = await fetch("/api/proxy/v1/branding/sample-pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ report_type: reportType }),
+      const res = await fetch("/api/proxy/v1/branding/sample-pdf", {
+        method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ report_type: "market_snapshot" }),
       })
-      if (!response.ok) throw new Error("Failed to generate PDF")
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `sample-${reportType.replace(/_/g, "-")}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-      setDownloadSuccess("pdf")
-      setTimeout(() => setDownloadSuccess(null), 3000)
-    } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Download failed", variant: "destructive" })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail || "The sample PDF didn't generate.")
+      const url = URL.createObjectURL(await res.blob())
+      const a = document.createElement("a")
+      a.href = url; a.download = "sample-market-snapshot.pdf"; a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      toast({ title: "No sample PDF", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" })
     } finally {
-      setIsDownloadingPdf(false)
+      setPdfBusy(false)
     }
   }
 
-  async function handleSendTestEmail() {
-    if (!testEmail || !testEmail.includes("@")) {
-      toast({ title: "Error", description: "Please enter a valid email", variant: "destructive" })
-      return
-    }
-    setIsSending(true)
-    setSendSuccess(false)
-    try {
-      const response = await fetch("/api/proxy/v1/branding/test-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: testEmail, report_type: reportType }),
-      })
-      if (!response.ok) throw new Error("Failed to send email")
-      setSendSuccess(true)
-      setTimeout(() => setSendSuccess(false), 5000)
-    } catch (err) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Send failed", variant: "destructive" })
-    } finally {
-      setIsSending(false)
-    }
-  }
-
-  const update = (patch: Partial<BrandingData>) => setBranding((prev) => ({ ...prev, ...patch }))
-  // `|| THEMES[3]` was teal by position. After the cut, index 3 does not
-  // exist — three themes — so this read `undefined` and the page rendered
-  // the preview with no theme at all. Resolved through the registry.
-  const selectedTheme =
-    THEMES.find((t) => t.id === resolveThemeId(branding.default_theme_id)) ||
-    THEMES.find((t) => t.id === DEFAULT_THEME_ID)!
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[var(--body)] mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">Loading branding settings...</p>
-        </div>
-      </div>
-    )
-  }
+  const colourRow = (key: "primary" | "accent", label: string, sub: string) => (
+    <Row label={label} sub={sub} action={null}>
+      {/* The swatch is the picker: an unset colour shows empty, not black. */}
+      <label className={`relative size-10 shrink-0 rounded-[9px] border border-[var(--border)] ${canManage ? "cursor-pointer" : ""}`} style={{ background: HEX.test(brand[key]) ? brand[key] : "repeating-linear-gradient(45deg, #fff 0 6px, #f1f0ec 6px 12px)" }}>
+        {canManage && <input type="color" aria-label={`${label} picker`} value={HEX.test(brand[key]) ? brand[key] : "#ffffff"} onChange={(e) => set({ [key]: e.target.value } as Partial<Brand>)} className="absolute inset-0 size-full cursor-pointer opacity-0" />}
+      </label>
+      {canManage ? (
+        <>
+          <input aria-label={label} value={brand[key]} onChange={(e) => set({ [key]: e.target.value.trim() } as Partial<Brand>)} placeholder="#rrggbb" className={`${field} w-32 font-mono`} />
+          {brand[key] && !HEX.test(brand[key]) && <span className="text-[13px] text-[var(--warning-foreground)]">Six hex digits after #</span>}
+          {!brand[key] && <span className="text-[13px] text-muted-foreground">Not set</span>}
+        </>
+      ) : (
+        <span className="font-mono text-[15px] text-[var(--body)]">{brand[key] || "Not set"}</span>
+      )}
+    </Row>
+  )
 
   return (
-    <div className="max-w-[1400px] mx-auto">
-      {/* Back link */}
-      <div className="mb-6">
-        <Link
-          href="/app/company"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="mr-1 h-4 w-4" />
-          Back to Dashboard
-        </Link>
-      </div>
+    <div className="flex flex-col gap-9">
+      <PageHeader
+        title="Branding"
+        description="Your brand is on every report and email your reps send. Your agents' reports carry their own."
+      />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Company Branding</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Control how reports and emails look for your entire company
-          </p>
-        </div>
-        <Button size="sm" onClick={save} disabled={saving}>
-          {saving ? (
-            <><Loader2 className="w-4 h-4 animate-spin mr-2" />Saving...</>
-          ) : (
-            <><Save className="w-4 h-4 mr-2" />Save Changes</>
-          )}
-        </Button>
-      </div>
-
-      {/* Cascade Notice */}
-      <div className="mb-6 flex items-start gap-3 rounded-xl border border-[#93C5FD] bg-[#EFF6FF] p-4">
-        <Info className="h-5 w-5 text-[#2563EB] mt-0.5 shrink-0" />
-        <div>
-          <p className="text-sm font-medium text-[#1E40AF]">Company-wide settings</p>
-          <p className="text-sm text-[#3B82F6] mt-0.5">
-            These branding settings apply to all your title reps and their agents by default.
-            Individual reps can override these settings from their own branding page.
-          </p>
-        </div>
-      </div>
-
-      {/* Two-column layout */}
-      <div className="grid lg:grid-cols-[1fr_420px] gap-6">
-        {/* Left: Controls */}
-        <div className="space-y-5">
-
-          {/* Brand Identity */}
-          <Section icon={<Sparkles className="w-4 h-4 text-[var(--body)]" />} iconBg="" title="Brand Identity" subtitle="Your company display name and tagline">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Company Name</Label>
-                <Input
-                  value={branding.display_name}
-                  onChange={(e) => update({ display_name: e.target.value })}
-                  placeholder="Pacific Coast Title"
-                  className="h-10"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Tagline <span className="text-muted-foreground">(optional)</span></Label>
-                <Input
-                  value={branding.tagline}
-                  onChange={(e) => update({ tagline: e.target.value })}
-                  placeholder="Your Trusted Title Partner"
-                  className="h-10"
-                />
-              </div>
-            </div>
-          </Section>
-
-          {/* Colors */}
-          <Section icon={<Palette className="w-4 h-4 text-violet-600" />} iconBg="bg-violet-50" title="Brand Colors" subtitle="Primary and accent colors for all reports and emails">
-            <div className="grid sm:grid-cols-2 gap-5">
-              <ColorPicker label="Primary Color" help="Headers, gradients, text accents" value={branding.primary_color} onChange={(v) => update({ primary_color: v })} />
-              <ColorPicker label="Accent Color" help="Buttons, highlights, CTAs" value={branding.accent_color} onChange={(v) => update({ accent_color: v })} />
-            </div>
-            <div className="mt-4">
-              <Label className="text-xs text-muted-foreground mb-1.5 block">Gradient Preview</Label>
-              <div
-                className="h-12 rounded-lg shadow-inner"
-                style={{ background: `linear-gradient(135deg, ${branding.primary_color} 0%, ${branding.accent_color} 100%)` }}
-              />
-            </div>
-            <div className="mt-4">
-              <Label className="text-xs text-muted-foreground mb-2 block">Quick Presets</Label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                {COLOR_PRESETS.map((preset) => {
-                  const active = branding.primary_color === preset.primary && branding.accent_color === preset.accent
-                  return (
-                    <button
-                      key={preset.name}
-                      onClick={() => update({ primary_color: preset.primary, accent_color: preset.accent })}
-                      className={cn(
-                        "group relative rounded-lg border-2 p-2.5 transition-all hover:scale-[1.03]",
-                        active ? "border-[1.5px] border-[var(--border-selected)] bg-[var(--surface-selected)]" : "border-border hover:border-[var(--border-strong)]"
-                      )}
-                    >
-                      <div className="flex gap-1.5 mb-1.5">
-                        <div className="w-5 h-5 rounded" style={{ backgroundColor: preset.primary }} />
-                        <div className="w-5 h-5 rounded" style={{ backgroundColor: preset.accent }} />
-                      </div>
-                      <p className="text-[10px] font-medium text-foreground">{preset.name}</p>
-                      {active && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-foreground" />}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </Section>
-
-          {/* Default Property Theme */}
-          <Section icon={<Type className="w-4 h-4 text-teal-600" />} iconBg="bg-teal-50" title="Default Property Theme" subtitle="New property reports will start with this theme">
-            <div className="grid grid-cols-5 gap-2">
-              {THEMES.map((theme) => {
-                const active = branding.default_theme_id === theme.id
-                return (
-                  <button
-                    key={theme.id}
-                    onClick={() => update({ default_theme_id: theme.id })}
-                    className={cn(
-                      "group relative rounded-lg border-2 overflow-hidden transition-all hover:scale-[1.02]",
-                      active ? "border-[1.5px] border-[var(--border-selected)]" : "border-border hover:border-[var(--border-strong)]"
-                    )}
-                  >
-                    <div className="aspect-[3/4] overflow-hidden">
-                      {theme.previewImage ? (
-                        <img src={theme.previewImage} alt={theme.name} className="w-full h-full object-cover object-top" />
-                      ) : (
-                        <div className="w-full h-full" style={{ background: theme.gradient }} />
-                      )}
-                    </div>
-                    <div className="p-1.5 bg-white">
-                      <p className="text-[10px] font-semibold text-center">{theme.name}</p>
-                    </div>
-                    {active && (
-                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-foreground flex items-center justify-center">
-                        <Check className="w-3 h-3 text-white" />
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-              <Type className="w-3.5 h-3.5" />
-              <span><strong>{selectedTheme.name}</strong> — {selectedTheme.font}</span>
-            </div>
-          </Section>
-
-          {/* Logos */}
-          <Section icon={<FileText className="w-4 h-4 text-rose-600" />} iconBg="bg-rose-50" title="Company Logos" subtitle="Used in PDF reports and emails for all reps">
-            <div className="grid sm:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Header Logo <span className="text-muted-foreground">(light version)</span></Label>
-                <p className="text-[11px] text-muted-foreground -mt-1">For gradient backgrounds. PNG/SVG with transparent bg.</p>
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-20 h-14 rounded-lg flex items-center justify-center p-1.5"
-                    style={{ background: `linear-gradient(135deg, ${branding.primary_color} 0%, ${branding.accent_color} 100%)` }}
-                  >
-                    {branding.header_logo_url ? (
-                      <img src={branding.header_logo_url} className="max-h-full max-w-full object-contain" alt="Header logo" />
-                    ) : (
-                      <Upload className="w-5 h-5 text-white/40" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <ImageUpload
-                      label=""
-                      value={branding.header_logo_url}
-                      onChange={(url) => update({ header_logo_url: url })}
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText=""
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">Footer Logo <span className="text-muted-foreground">(dark version)</span></Label>
-                <p className="text-[11px] text-muted-foreground -mt-1">For light backgrounds. PNG/SVG with transparent bg.</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-20 h-14 rounded-lg bg-stone-50 border border-border flex items-center justify-center p-1.5">
-                    {branding.footer_logo_url ? (
-                      <img src={branding.footer_logo_url} className="max-h-full max-w-full object-contain" alt="Footer logo" />
-                    ) : (
-                      <Upload className="w-5 h-5 text-muted-foreground/30" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <ImageUpload
-                      label=""
-                      value={branding.footer_logo_url}
-                      onChange={(url) => update({ footer_logo_url: url })}
-                      assetType="logo"
-                      aspectRatio="wide"
-                      helpText=""
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Section>
-
-          {/* Admin Info (replaces Agent Info for company context) */}
-          <Section icon={<User className="w-4 h-4 text-amber-600" />} iconBg="bg-amber-50" title="Admin Contact Info" subtitle="Your info appears in company-level emails and communications">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Full Name</Label>
-                <Input value={branding.agent_name} onChange={(e) => update({ agent_name: e.target.value })} placeholder="Jerry Thompson" className="h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Title</Label>
-                <Input value={branding.agent_title} onChange={(e) => update({ agent_title: e.target.value })} placeholder="Company Admin" className="h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Phone</Label>
-                <Input value={branding.agent_phone} onChange={(e) => update({ agent_phone: e.target.value })} placeholder="(310) 555-1234" className="h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Email</Label>
-                <Input value={branding.agent_email} onChange={(e) => update({ agent_email: e.target.value })} placeholder="admin@example.com" className="h-10" />
-              </div>
-            </div>
-            <div className="mt-3 space-y-1.5">
-              <Label className="text-xs font-medium">Photo</Label>
-              <ImageUpload
-                label=""
-                value={branding.agent_photo_url}
-                onChange={(url) => update({ agent_photo_url: url })}
-                assetType="headshot"
-                aspectRatio="square"
-                helpText="Square photo, at least 200x200px"
-              />
-            </div>
-          </Section>
-        </div>
-
-        {/* Right: Live Preview + Actions */}
-        <div className="lg:sticky lg:top-6 lg:self-start space-y-4">
-          {/* Preview Card */}
-          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
-              <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Live Preview</h3>
-              </div>
-              <div className="flex gap-1 bg-muted rounded-md p-0.5">
-                <button
-                  onClick={() => setPreviewMode("email")}
-                  className={cn("px-2.5 py-1 rounded text-[10px] font-medium transition-colors", previewMode === "email" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
-                >
-                  <Mail className="w-3 h-3 inline mr-1" />Email
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="flex flex-col gap-9">
+          <div className="flex flex-col gap-4">
+            <RuleList>
+              <Row label="Name" sub="On reports and in emails">
+                {canManage
+                  ? <input aria-label="Name" value={brand.name} onChange={(e) => set({ name: e.target.value })} className={`${field} w-full max-w-[360px]`} />
+                  : <span className="text-[15px] text-foreground">{brand.name}</span>}
+              </Row>
+              <Row label="Logo" sub="On your colour" action={canManage && <ReplaceLogo onDone={(url) => set({ logo: url })} label={brand.logo ? "Replace" : "Add"} />}>
+                <LogoChip src={brand.logo} on={primaryShown ?? "var(--muted)"} />
+              </Row>
+              <Row label="Logo on white" sub={brand.logoOnWhite ? "Footers and light pages" : "Uses your logo until you add one"} action={canManage && <ReplaceLogo onDone={(url) => set({ logoOnWhite: url })} label={brand.logoOnWhite ? "Replace" : "Add"} />}>
+                <LogoChip src={brand.logoOnWhite ?? brand.logo} on="#ffffff" />
+              </Row>
+              {colourRow("primary", "Colour", "Headers and buttons")}
+              {colourRow("accent", "Second colour", "Highlights on the report")}
+            </RuleList>
+            {canManage ? (
+              <div className="flex flex-wrap items-center gap-4">
+                <button type="button" onClick={save} disabled={!dirty || saving} className="h-[46px] rounded-[10px] bg-primary px-[20px] text-[15px] font-semibold text-primary-foreground transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50">
+                  {saving ? "Saving…" : "Save changes"}
                 </button>
-                <button
-                  onClick={() => setPreviewMode("property")}
-                  className={cn("px-2.5 py-1 rounded text-[10px] font-medium transition-colors", previewMode === "property" ? "bg-white shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
-                >
-                  <FileText className="w-3 h-3 inline mr-1" />PDF
-                </button>
+                {dirty && <button type="button" onClick={() => setBrand(saved)} className="text-[14px] font-semibold text-[var(--link)]">Undo changes</button>}
+                <span className="text-[14px] text-muted-foreground">{SAVE_NOTE}</span>
               </div>
-            </div>
-
-            {previewMode === "email" && (
-              <div className="flex gap-1 px-4 py-2 border-b border-border bg-muted/10 overflow-x-auto">
-                {PREVIEW_REPORT_TYPES.map((rt) => (
-                  <button
-                    key={rt.value}
-                    onClick={() => setPreviewReportType(rt.value)}
-                    className={cn(
-                      "whitespace-nowrap px-2 py-1 rounded text-[10px] font-medium transition-colors",
-                      previewReportType === rt.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                    )}
-                  >
-                    {rt.label}
-                  </button>
-                ))}
-              </div>
+            ) : (
+              !isLoading && <p className="text-[14px] text-muted-foreground">Only your company&apos;s admin can change the brand.</p>
             )}
-
-            <div className="p-4 bg-stone-100/50">
-              {previewMode === "email" ? (
-                <SharedEmailPreview
-                  primaryColor={branding.primary_color}
-                  accentColor={branding.accent_color}
-                  headerLogoUrl={branding.header_logo_url}
-                  displayName={branding.display_name}
-                  agentName={branding.agent_name || "Admin Name"}
-                  agentTitle={branding.agent_title || null}
-                  agentPhone={branding.agent_phone || null}
-                  agentEmail={branding.agent_email || null}
-                  agentPhotoUrl={branding.agent_photo_url}
-                  reportType={previewReportType}
-                  areaName="Los Angeles, CA"
-                  lookbackDays={30}
-                  scale={0.95}
-                />
-              ) : (
-                <PropertyPreviewMini
-                  theme={selectedTheme}
-                  headerLogoUrl={branding.header_logo_url}
-                  footerLogoUrl={branding.footer_logo_url}
-                  agentName={branding.agent_name}
-                  companyName={branding.display_name}
-                  primaryColor={branding.primary_color}
-                  accentColor={branding.accent_color}
-                />
-              )}
-            </div>
           </div>
 
-          {/* Actions Card */}
-          <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
-            <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
-              <Eye className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Test Your Branding</h3>
+          <div className="flex flex-col gap-[14px]">
+            <H2>What each rep adds</H2>
+            <div className="flex max-w-[520px] items-center gap-4 rounded-xl border border-[var(--border)] px-5 py-4">
+              <Avatar name={exampleRep?.name ?? "Rep"} size={44} color={primaryShown} />
+              <span className="flex min-w-0 flex-col gap-1 leading-[1.3]">
+                <span className="text-[15px] font-semibold text-foreground">{exampleRep ? exampleRep.name : "Your rep"} · Title rep</span>
+                <span className="text-[13px] text-muted-foreground">Their photo and two contact lines</span>
+              </span>
             </div>
-            <div className="p-4 space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-medium text-muted-foreground">Report Type</Label>
-                <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {REPORT_TYPE_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf} variant="outline" className="w-full h-9 text-xs">
-                {isDownloadingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" /> : downloadSuccess === "pdf" ? <Check className="w-3.5 h-3.5 mr-2" /> : <Download className="w-3.5 h-3.5 mr-2" />}
-                {downloadSuccess === "pdf" ? "Downloaded!" : "Download Sample PDF"}
-              </Button>
-
-              <div className="relative py-1">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-                <div className="relative flex justify-center"><span className="bg-card px-2 text-[10px] text-muted-foreground">or</span></div>
-              </div>
-
-              <div className="flex gap-2">
-                <Input
-                  type="email"
-                  value={testEmail}
-                  onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="flex-1 h-9 text-xs"
-                />
-                <Button onClick={handleSendTestEmail} disabled={isSending} className={cn("h-9 w-9 p-0", sendSuccess && "bg-emerald-600 hover:bg-emerald-700")}>
-                  {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : sendSuccess ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-                </Button>
-              </div>
-              {sendSuccess && (
-                <p className="text-[11px] text-emerald-600 flex items-center gap-1"><Check className="w-3 h-3" />Test email sent!</p>
-              )}
-            </div>
+            <p className="max-w-[640px] text-[15px] leading-[1.55] text-[var(--body)]">
+              Each rep adds only their photo and contact line; they set those themselves. Your colours are used as you set
+              them — where white text sits on one, at the top of a report, the report darkens it just enough to read.
+            </p>
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
 
-function Section({
-  icon,
-  iconBg,
-  title,
-  subtitle,
-  children,
-}: {
-  icon: React.ReactNode
-  iconBg: string
-  title: string
-  subtitle: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-border bg-muted/30 flex items-center gap-3">
-        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", iconBg)}>
-          {icon}
+        <div className="flex flex-col gap-3 lg:sticky lg:top-6 lg:self-start">
+          <span className="text-[13px] text-muted-foreground">Live · your colours on a report&apos;s first page</span>
+          <ReportThumb reportType="market_snapshot" width={300} primaryColor={primaryShown} accentColor={accentShown} shadow="thumb" />
+          <button type="button" onClick={samplePdf} disabled={pdfBusy} className="self-start text-[14px] font-semibold text-[var(--link)] hover:text-[var(--link-hover)] disabled:opacity-60">
+            {pdfBusy ? "Making the PDF…" : "Download a sample PDF"}
+          </button>
+          {dirty && <span className="text-[13px] text-muted-foreground">The sample PDF uses your saved brand.</span>}
         </div>
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
-        </div>
-      </div>
-      <div className="p-5">{children}</div>
-    </div>
-  )
-}
-
-function ColorPicker({
-  label,
-  help,
-  value,
-  onChange,
-}: {
-  label: string
-  help: string
-  value: string
-  onChange: (v: string) => void
-}) {
-  return (
-    <div className="space-y-2">
-      <Label className="text-xs font-medium">{label}</Label>
-      <p className="text-[11px] text-muted-foreground -mt-1">{help}</p>
-      <div className="flex gap-2.5">
-        <div
-          className="w-14 h-10 rounded-lg border-2 border-border cursor-pointer relative shadow-inner flex-shrink-0 transition-all hover:scale-105"
-          style={{ backgroundColor: value }}
-        >
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
-        </div>
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="font-mono text-xs uppercase h-10 flex-1"
-          maxLength={7}
-        />
-      </div>
-    </div>
-  )
-}
-
-function PropertyPreviewMini({
-  theme,
-  headerLogoUrl,
-  footerLogoUrl,
-  agentName,
-  companyName,
-  primaryColor,
-  accentColor,
-}: {
-  theme: (typeof THEMES)[number]
-  headerLogoUrl: string | null
-  footerLogoUrl: string | null
-  agentName: string
-  companyName: string
-  primaryColor: string
-  accentColor: string
-}) {
-  return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-stone-200 max-w-sm mx-auto">
-      <div className="aspect-[3/4] relative overflow-hidden">
-        {theme.previewImage ? (
-          <img src={theme.previewImage} alt={theme.name} className="w-full h-full object-cover object-top" />
-        ) : (
-          <div className="w-full h-full" style={{ background: theme.gradient }}>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4">
-              {headerLogoUrl && (
-                <img src={headerLogoUrl} alt="" className="h-8 w-auto mb-3 object-contain" />
-              )}
-              <div className="text-lg font-bold text-center">Property Report</div>
-              <div className="text-xs opacity-70 mt-1">123 Main Street</div>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="px-4 py-3 bg-stone-50 border-t border-stone-100 flex items-center justify-between">
-        <div className="text-xs text-stone-600">{agentName || "Admin Name"}</div>
-        {footerLogoUrl ? (
-          <img src={footerLogoUrl} alt="" className="h-5 w-auto max-w-[70px] object-contain" />
-        ) : (
-          <div className="text-[10px] font-semibold" style={{ color: primaryColor }}>
-            {companyName || "Your Company"}
-          </div>
-        )}
       </div>
     </div>
   )
