@@ -3072,6 +3072,10 @@ def run_redis_consumer_forever():
     max_backoff = 60  # Maximum backoff
     consecutive_errors = 0
     
+    # Refuse to start when the database is behind the code (board D-310).
+    from .schema_guard import enforce
+    enforce(DATABASE_URL, "bridge")
+
     print(f"🔄 Redis consumer started, polling queue: {QUEUE_KEY}")
     
     while True:

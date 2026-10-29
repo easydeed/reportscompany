@@ -1,0 +1,58 @@
+[
+  {
+    "name": "G1 a new migration lands and the required one is not moved",
+    "file": "apps/api/src/api/schema_guard.py",
+    "old": "REQUIRED_MIGRATION = \"0061_seat_book_handover.sql\"",
+    "new": "REQUIRED_MIGRATION = \"0060_rep_seats.sql\"",
+    "test": "tests/test_schema_guard.py"
+  },
+  {
+    "name": "G2 the check stops asking for the row",
+    "file": "apps/api/src/api/schema_guard.py",
+    "old": "    cur.execute(\"SELECT 1 FROM schema_migrations WHERE filename = %s\", (REQUIRED_MIGRATION,))\n    if cur.fetchone():\n        return",
+    "new": "    return",
+    "test": "tests/test_schema_guard.py"
+  },
+  {
+    "name": "G3 the API stops checking at startup",
+    "file": "apps/api/src/api/main.py",
+    "old": "@app.on_event(\"startup\")\ndef _require_schema():",
+    "new": "def _require_schema():",
+    "test": "tests/test_schema_guard.py"
+  },
+  {
+    "name": "G4 the Celery worker stops checking",
+    "file": "apps/worker/src/worker/app.py",
+    "old": "@signals.worker_init.connect\ndef _require_schema(**_):",
+    "new": "def _require_schema(**_):",
+    "test": "tests/test_schema_guard.py"
+  },
+  {
+    "name": "G5 the bypass becomes a switch",
+    "file": "apps/api/src/api/schema_guard.py",
+    "old": "        if os.environ.get(\"SCHEMA_BEHIND_ACKNOWLEDGED\") == REQUIRED_MIGRATION:",
+    "new": "        if os.environ.get(\"SCHEMA_BEHIND_ACKNOWLEDGED\"):",
+    "test": "tests/test_schema_guard.py"
+  },
+  {
+    "name": "G6 an unreachable database stops the start",
+    "file": "apps/api/src/api/schema_guard.py",
+    "old": "            \"%s: could not check the database schema at startup (%s); starting anyway\",\n            service, unreachable)",
+    "new": "            \"%s: could not check the database schema at startup (%s); starting anyway\",\n            service, unreachable)\n        sys.exit(1)",
+    "test": "tests/test_schema_guard.py"
+  },
+  {
+    "name": "G7 the worker's copy drifts from the API's",
+    "file": "apps/worker/src/worker/schema_guard.py",
+    "old": "            \"(scripts/run_migrations.py), then deploy again.\", service, behind)",
+    "new": "            \"(scripts/run_migrations.py).\", service, behind)",
+    "test": "tests/test_schema_guard.py"
+  },
+  {
+    "name": "G8 the ticker starts without checking",
+    "file": "apps/worker/src/worker/schedules_tick.py",
+    "old": "    from .schema_guard import enforce\n    enforce(DATABASE_URL, \"schedules ticker\")\n",
+    "new": "",
+    "test": "tests/test_schema_guard.py"
+  }
+]
