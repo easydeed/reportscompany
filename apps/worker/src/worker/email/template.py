@@ -500,7 +500,23 @@ def _tokens(primary_color: str) -> Dict[str, str]:
         "ink": t["primary_ink"],
         "tint": t["tint"],
         "dark_ink": _dark_ink(primary_color),
+        "cta_edge": _cta_edge(t),
     }
+
+
+#: WCAG 1.4.11: a control's visual boundary needs 3:1 against what is behind it.
+NON_TEXT_CONTRAST = 3.0
+
+
+def _cta_edge(t: Dict[str, str]) -> str:
+    """Inline style for the brand button's edge in LIGHT mode: none when the
+    fill already stands out from the white card, a 2px edge in the brand's ink
+    (which `derive_theme` holds at 4.5:1 on white) when it does not — an amber
+    or lime button is otherwise a pale shape on white (D-313). Dark mode's edge
+    is `.tr-edge` in the shell."""
+    if _contrast(t["primary"], "#FFFFFF") >= NON_TEXT_CONTRAST:
+        return ""
+    return f"border:2px solid {t['primary_ink']};"
 
 
 def _split_insight(text: str) -> Tuple[str, str]:
@@ -941,7 +957,7 @@ def _build_pdf_cta(pdf_url: Optional[str], tk: Dict[str, str], sub: str = "") ->
     if not pdf_url:
         return ""
     return render_block("cta", pdf_url=pdf_url, primary=tk["primary"],
-                        on_primary=tk["on_primary"], sub=sub)
+                        on_primary=tk["on_primary"], edge=tk["cta_edge"], sub=sub)
 
 
 def _today() -> date:
@@ -2315,6 +2331,7 @@ def schedule_email_html(
     .tr-cell{{background:{DARK_TINT} !important;border-color:#374151 !important;}}
     .tr-ph{{background:#374151 !important;}}
     .tr-brand{{color:{tk["dark_ink"]} !important;}}
+    .tr-edge{{border:2px solid {tk["dark_ink"]} !important;}}
   }}
   @media only screen and (max-width:620px){{
     .tr-wrap{{width:100% !important;}}

@@ -50,6 +50,8 @@
     .tr-muted{color:#9CA3AF !important;}
     .tr-rule{border-color:#374151 !important;}
     .tr-brand{color:{{ dark_ink }} !important;}
+    .tr-edge{border:2px solid {{ dark_ink }} !important;}
+    .tr-edge-quiet{border-color:#9CA3AF !important;}
   }
   @media only screen and (max-width:620px){
     .tr-wrap{width:100% !important;}
@@ -73,7 +75,7 @@
     <h1 class="tr-ink" style="margin:0 0 10px;font-size:25px;line-height:1.2;font-weight:800;letter-spacing:-.025em;color:#0F172A;">{% if first_name %}{{ first_name }}, your report is ready.{% else %}Your report is ready.{% endif %}</h1>
     <p class="tr-body" style="margin:0;font-size:15px;line-height:1.55;color:#334155;">You asked what {{ address }} is worth today. Your report has the nearby sales that answer it, what they suggest, and how your local market is moving. It opens in your browser.</p>
   </td></tr>
-  <tr><td align="center" class="tr-pad" style="padding:28px 28px 8px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:separate;"><tr><td bgcolor="{{ primary }}" style="background:{{ primary }};border-radius:10px;"><a href="{{ report_url }}" style="display:block;padding:15px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:{{ on_primary }};text-decoration:none;border-radius:10px;">Open your report</a></td></tr></table></td></tr>
+  <tr><td align="center" class="tr-pad" style="padding:28px 28px 8px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:separate;"><tr><td bgcolor="{{ primary }}" class="tr-edge" style="background:{{ primary }};border-radius:10px;{{ cta_edge }}"><a href="{{ report_url }}" style="display:block;padding:15px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:{{ on_primary }};text-decoration:none;border-radius:10px;">Open your report</a></td></tr></table></td></tr>
   <tr><td class="tr-pad" style="padding:26px 28px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
     <div class="tr-muted" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B;">What’s inside</div>
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
@@ -88,7 +90,7 @@
       <div class="tr-ink" style="font-size:15px;font-weight:700;color:#0F172A;">{{ agent_name }}</div>
       {% if title_line %}<div class="tr-muted" style="margin-top:2px;font-size:13px;color:#64748B;">{{ title_line }}</div>{% endif %}
       <p class="tr-body" style="margin:10px 0 0;font-size:14px;line-height:1.5;color:#334155;">Questions about your report? {{ agent_first }} can walk you through it.</p>
-      {% if buttons %}<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin-top:14px;"><tr>{% for href, label in buttons %}{% if not loop.first %}<td width="10" style="width:10px;"></td>{% endif %}<td class="tr-rule" style="border:1px solid #E4E2DA;border-radius:10px;"><a href="{{ href }}" class="tr-ink" style="display:block;padding:10px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0F172A;text-decoration:none;">{{ label }}</a></td>{% endfor %}</tr></table>{% endif %}
+      {% if buttons %}<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;margin-top:14px;"><tr>{% for href, label in buttons %}{% if not loop.first %}<td width="10" style="width:10px;"></td>{% endif %}<td class="tr-rule tr-edge-quiet" style="border:1px solid #E4E2DA;border-radius:10px;"><a href="{{ href }}" class="tr-ink" style="display:block;padding:10px 18px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;color:#0F172A;text-decoration:none;">{{ label }}</a></td>{% endfor %}</tr></table>{% endif %}
       {% if phone and not phone_href %}<div class="tr-muted" style="margin-top:10px;font-size:13px;color:#64748B;">{{ phone }}</div>{% endif %}
     </td>
   </tr></table></td></tr>

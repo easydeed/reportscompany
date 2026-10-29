@@ -88,10 +88,13 @@ def _callout(text_html: str, tone: str) -> str:
 
 
 def _cta_button(url: str, label: str) -> str:
-    """Design's button: an ink fill holding a padded block link."""
+    """Design's button: an ink fill holding a padded block link. In dark mode
+    the fill turns light and the label ink (`tr-fill`, `tr-fill-ink`): an ink
+    button on the dark card was nearly invisible (D-313), and it is the one
+    thing in the email meant to be pressed."""
     return _row(f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
-                f'style="border-collapse:separate;"><tr><td bgcolor="#0F172A" '
-                f'style="background:#0F172A;border-radius:10px;"><a href="{_e(url)}" '
+                f'style="border-collapse:separate;"><tr><td bgcolor="#0F172A" class="tr-fill" '
+                f'style="background:#0F172A;border-radius:10px;"><a href="{_e(url)}" class="tr-fill-ink" '
                 f'style="display:block;padding:14px 26px;font-family:{_FONT};font-size:15px;'
                 f'font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">'
                 f'{_e(label)}</a></td></tr></table>', pad="24px 28px 0")
@@ -137,6 +140,8 @@ def _email_base(content_html: str, preheader: str = "", reason: str = "") -> str
     .tr-rule{{border-color:#374151 !important;}}
     .tr-logo-l{{display:none !important;}}
     .tr-logo-d{{display:block !important;max-height:none !important;}}
+    .tr-fill{{background:#F3F4F6 !important;}}
+    .tr-fill-ink{{color:#0F172A !important;}}
   }}
   @media only screen and (max-width:620px){{
     .tr-wrap{{width:100% !important;}}
