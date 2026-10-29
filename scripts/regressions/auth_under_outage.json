@@ -1,0 +1,30 @@
+[
+  {
+    "name": "R1 the bearer outage message changes, so the diagnosis on D-013 stops matching production",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "content={\"detail\": \"Token has been invalidated\"},",
+    "new": "content={\"detail\": \"Unauthorized\"},",
+    "test": "apps/api/tests/test_auth_under_outage.py"
+  },
+  {
+    "name": "R2 the cookie outage message changes — the string a real browser session sees",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "content={\"detail\": \"Session has expired\"},",
+    "new": "content={\"detail\": \"Unauthorized\"},",
+    "test": "apps/api/tests/test_auth_under_outage.py"
+  },
+  {
+    "name": "R3 the blacklist check fails OPEN, so a revoked token is accepted during any DB hiccup",
+    "file": "apps/api/src/api/middleware/authn.py",
+    "old": "        return True  # Fail CLOSED — deny on error",
+    "new": "        return False  # fail open",
+    "test": "apps/api/tests/test_auth_under_outage.py"
+  },
+  {
+    "name": "R4 the pool stops waiting, so the ten-second hang this entry records is gone",
+    "file": "apps/api/src/api/db.py",
+    "old": "            timeout=10,          # Max 10s wait for available connection",
+    "new": "            timeout=0,           # no wait",
+    "test": "apps/api/tests/test_auth_under_outage.py"
+  }
+]

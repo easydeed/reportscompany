@@ -3,18 +3,18 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, ChevronLeft, ChevronRight, Sparkles, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, ArrowUpCircle, ArrowLeft } from "lucide-react"
+import { Loader2, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, ArrowUpCircle, ArrowLeft, ArrowRight } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { SharedEmailPreview, PREVIEW_DEFAULT_PRIMARY, PREVIEW_DEFAULT_ACCENT } from "@/components/shared/email-preview"
-import { SharedPDFPreview } from "@/components/shared/pdf-preview"
+import { ReportThumb } from "@/components/shared/report-thumb"
 import { VerificationRequired } from "@/components/shared/verification-required"
 import { readVerificationRefusal, type VerificationRefusal } from "@/lib/verification"
 import { StepStory } from "./step-story"
 import { StepAudience } from "./step-audience"
 import { StepWhereWhen } from "./step-where-when"
 import { StepDeliver } from "./step-deliver"
+import { StepHeader } from "./wizard-ui"
 import {
   type WizardState,
   type DeliveryMode,
@@ -60,8 +60,6 @@ interface UnifiedWizardProps {
   defaultMode?: DeliveryMode
   scheduleId?: string
 }
-
-const STEP_LABELS = ["Story", "Audience", "Where & When", "Deliver"]
 
 export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: UnifiedWizardProps) {
   const router = useRouter()
@@ -411,387 +409,455 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const areaName = getAreaDisplay(state)
   const reportLabel = state.reportType ? (REPORT_TYPE_LABELS[state.reportType] || null) : null
 
+  // ── Design's sentence summary ────────────────────────────────────────────
+  // "A Closed Sales for Irvine over 30 days, as a PDF." Each slot jumps back to
+  // the step that set it, for steps already reached — the same as pressing
+  // Back that many times.
+  const kindTitle = state.reportType
+    ? REPORT_TYPES.find((r) => r.id === state.reportType)?.title ?? null
+    : null
+  const areaSet = state.areaType === "city" ? !!state.city : state.zipCodes.length > 0
+  type Word = { t: string; step?: number }
+  const summary: Word[] = kindTitle
+    ? [
+        { t: "A" },
+        { t: kindTitle, step: 0 },
+        ...(needsAudience && audienceLabel
+          ? [{ t: "for" }, { t: audienceLabel.toLowerCase(), step: 1 }]
+          : []),
+        { t: "for" },
+        { t: areaSet ? areaName : "…", step: 2 },
+        ...(state.lookbackDays ? [{ t: "over" }, { t: `${state.lookbackDays} days`, step: 2 }] : []),
+        { t: "," },
+        state.deliveryMode === "schedule"
+          ? { t: `sent ${state.cadence}`, step: 3 }
+          : state.sendViaEmail
+          ? { t: "emailed with the PDF", step: 3 }
+          : { t: "as a PDF", step: 3 },
+        { t: "." },
+      ]
+    : []
+
+  const goTo = (s: number) => {
+    if (generationState !== "idle") return
+    if (effectiveSteps.indexOf(s) <= currentStepIndex) setStep(s)
+  }
+
+  // Design's labels for the rail. The step ids are unchanged.
+  const RAIL_LABELS: Record<number, string> = {
+    0: "Report",
+    1: "Audience",
+    2: "Area & window",
+    3: defaultMode === "schedule" ? "Schedule" : "Deliver",
+  }
+
+  const primaryAction = isSubmitting
+    ? "Processing..."
+    : state.deliveryMode === "schedule"
+    ? "Create Schedule"
+    : state.sendViaEmail && state.recipients.length > 0
+    ? "Generate & Send"
+    : "Generate Report"
+
+  const resetForNew = () => {
+    setState({ ...INITIAL_STATE })
+    setStep(0)
+    setGenerationState("idle")
+    setGeneratedReportId(null)
+    setPdfUrl(null)
+    setGenerationError(null)
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center justify-between max-w-[1400px] mx-auto">
-          <div className="flex items-center gap-3">
-            <Link href={defaultMode === "schedule" ? "/app/schedules" : "/app/reports"} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ChevronLeft className="w-4 h-4" />
-              <span>{defaultMode === "schedule" ? "Schedules" : "Reports"}</span>
-            </Link>
-            <div>
-              <h1 className="text-sm font-semibold text-gray-900">
-                {defaultMode === "schedule" ? "New Schedule" : "New Report"}
-              </h1>
-              <p className="text-[11px] text-gray-500">
-                Step {currentStepIndex + 1} of {effectiveSteps.length}: {STEP_LABELS[step]}
-              </p>
-            </div>
-          </div>
+    <div className="flex min-h-screen flex-col bg-white text-[#0F172A]">
+      {/* Header — back link, the step rail, exit */}
+      <header className="sticky top-0 z-10 flex h-[62px] items-center justify-between gap-6 border-b border-[#ECEAE3] bg-white px-4 md:px-7">
+        <h1 className="sr-only">{defaultMode === "schedule" ? "New Schedule" : "New Report"}</h1>
+        <Link
+          href={defaultMode === "schedule" ? "/app/schedules" : "/app/reports"}
+          className="flex items-center gap-2 text-sm font-semibold text-[#334155] hover:text-[#0F172A]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {defaultMode === "schedule" ? "Schedules" : "Market reports"}
+        </Link>
 
-          <div className="flex items-center gap-4">
-            {/* Step indicators */}
-            <div className="hidden md:flex items-center gap-1.5">
-              {effectiveSteps.map((s, i) => {
-                const done = effectiveSteps.indexOf(step) > i
-                const current = s === step
-                return (
-                  <div key={s} className="flex items-center gap-1.5">
-                    <div className={cn(
-                      "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold transition-colors",
-                      done ? "bg-emerald-500 text-white" : current ? "bg-primary text-white" : "bg-gray-200 text-gray-500"
-                    )}>
-                      {done ? <Check className="w-3 h-3" /> : i + 1}
-                    </div>
-                    <span className={cn("text-[11px]", current ? "text-gray-900 font-medium" : "text-gray-400")}>
-                      {STEP_LABELS[s]}
-                    </span>
-                    {i < effectiveSteps.length - 1 && <div className="w-6 h-px bg-gray-300" />}
-                  </div>
-                )
-              })}
-            </div>
+        <nav aria-label="Steps" className="hidden items-center gap-1.5 md:flex">
+          {effectiveSteps.map((s, i) => {
+            const done = currentStepIndex > i
+            const current = s === step
+            const reachable = i <= currentStepIndex && generationState === "idle"
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => goTo(s)}
+                disabled={!reachable}
+                aria-current={current ? "step" : undefined}
+                className={cn(
+                  "flex items-center gap-2 rounded-full px-2.5 py-1.5 text-[13px]",
+                  current ? "font-bold text-[#0F172A]" : done ? "font-medium text-[#334155]" : "font-medium text-[#94A3B8]",
+                  reachable && !current ? "cursor-pointer hover:text-[#0F172A]" : "cursor-default",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold",
+                    current ? "bg-[#0F172A] text-white" : done ? "bg-[#D1FAE5] text-[#047857]" : "bg-[#ECEAE3] text-[#64748B]",
+                  )}
+                >
+                  {done ? <Check className="h-3 w-3" /> : i + 1}
+                </span>
+                {RAIL_LABELS[s]}
+              </button>
+            )
+          })}
+        </nav>
+        <span className="text-[13px] font-medium text-[#64748B] md:hidden">
+          Step {currentStepIndex + 1} of {effectiveSteps.length}: {RAIL_LABELS[step]}
+        </span>
 
-            {generationState === "complete" ? (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setState({ ...INITIAL_STATE })
-                  setStep(0)
-                  setGenerationState("idle")
-                  setGeneratedReportId(null)
-                  setPdfUrl(null)
-                  setGenerationError(null)
-                }}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                {defaultMode === "schedule" ? "New Schedule" : "New Report"}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(defaultMode === "schedule" ? "/app/schedules" : "/app/reports")}
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
-        </div>
+        {generationState === "complete" ? (
+          <button
+            type="button"
+            onClick={resetForNew}
+            className="flex items-center gap-1 text-sm font-semibold text-[#64748B] hover:text-[#0F172A]"
+          >
+            <Plus className="h-4 w-4" />
+            {defaultMode === "schedule" ? "New Schedule" : "New Report"}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => router.push(defaultMode === "schedule" ? "/app/schedules" : "/app/reports")}
+            className="text-sm font-semibold text-[#64748B] hover:text-[#0F172A]"
+          >
+            Cancel
+          </button>
+        )}
       </header>
 
-      {/* Main content */}
-      <main className="max-w-[1400px] mx-auto px-6 py-6">
-        <div className="grid lg:grid-cols-[1fr_460px] gap-6">
-          {/* Left: Step content or generation state */}
-          <div>
-            {generationState !== "idle" ? (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 min-h-[480px] flex items-center justify-center">
-                <div className="text-center max-w-sm mx-auto space-y-4">
-                  {generationState === "creating" && (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900">
-                          Creating your report...
-                        </h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Setting things up...
-                        </p>
-                      </div>
-                    </>
-                  )}
+      <div className="grid flex-1 lg:grid-cols-[minmax(0,480px)_minmax(0,1fr)]">
+        {/* Left — the form, or what is happening with it */}
+        <section className="flex min-h-[calc(100vh-62px)] flex-col gap-7 border-[#ECEAE3] px-4 py-8 md:px-10 md:pb-8 md:pt-10 lg:border-r">
+          {generationState === "idle" && summary.length > 0 && (
+            <p className="m-0 flex flex-wrap items-baseline gap-x-1.5 gap-y-1 border-b border-[#ECEAE3] pb-[22px] text-[17px] leading-[1.7] text-[#475569]">
+              {summary.map((w, i) =>
+                w.step === undefined ? (
+                  // Punctuation sits against the word before it, not a gap away.
+                  <span key={i} className={w.t === "," || w.t === "." ? "-ml-1.5" : undefined}>
+                    {w.t}
+                  </span>
+                ) : (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => goTo(w.step!)}
+                    disabled={effectiveSteps.indexOf(w.step) > currentStepIndex}
+                    className="border-b-2 pb-px font-bold text-[#0F172A] disabled:cursor-default"
+                    style={{ borderColor: w.step === step ? "#4F46E5" : "#D6D3CB" }}
+                  >
+                    {w.t}
+                  </button>
+                ),
+              )}
+            </p>
+          )}
 
-                  {generationState === "polling" && (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900">
-                          Generating your report...
-                        </h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                          This usually takes 30&ndash;60 seconds. Please don&rsquo;t close this page.
-                        </p>
-                      </div>
+          {generationState === "idle" ? (
+            <>
+              <div className="flex flex-col gap-7">
+                {step === 0 && (
+                  <StepStory
+                    selected={state.reportType}
+                    onSelect={(rt) => update({ reportType: rt, audience: "all" })}
+                    primaryColor={branding.primaryColor}
+                    accentColor={branding.accentColor}
+                  />
+                )}
+                {step === 1 && <StepAudience selected={state.audience} onSelect={(a) => update({ audience: a })} />}
+                {step === 2 && <StepWhereWhen state={state} onChange={update} />}
+                {step === 3 && <StepDeliver state={state} onChange={update} defaultMode={defaultMode} />}
+              </div>
 
-                      {/* Progress bar — width transitions over the active stage's duration */}
-                      <div className="w-full max-w-xs mx-auto pt-2">
-                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all ease-linear"
-                            style={{
-                              width: `${((pollingStage + 1) / POLLING_STAGES.length) * 100}%`,
-                              transitionDuration: `${POLLING_STAGES[pollingStage]?.durationMs || 0}ms`,
-                            }}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Stage list — done/active/pending */}
-                      <ul className="space-y-2 text-left max-w-xs mx-auto pt-1">
-                        {POLLING_STAGES.map((stage, idx) => {
-                          const isDone = idx < pollingStage
-                          const isActive = idx === pollingStage
-                          const isPending = idx > pollingStage
-                          return (
-                            <li
-                              key={stage.label}
-                              className={cn(
-                                "flex items-center gap-2 text-sm transition-colors",
-                                isDone && "text-gray-400",
-                                isActive && "text-gray-900 font-medium",
-                                isPending && "text-gray-300"
-                              )}
-                            >
-                              {isDone && (
-                                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                              )}
-                              {isActive && (
-                                <Loader2 className="w-4 h-4 text-primary animate-spin flex-shrink-0" />
-                              )}
-                              {isPending && (
-                                <div className="w-4 h-4 rounded-full border-2 border-gray-200 flex-shrink-0" />
-                              )}
-                              <span>{stage.label}</span>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </>
-                  )}
-
-                  {generationState === "complete" && (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
-                        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Your report is ready!</h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {pdfUrl ? "Your themed PDF has been generated." : "Your report has been generated."}
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2 pt-2">
-                        {pdfUrl && (
-                          <>
-                            <Button onClick={() => window.open(pdfUrl!, "_blank")} className="gap-2">
-                              <Globe className="w-4 h-4" /> View in Browser
-                            </Button>
-                            <Button variant="outline" onClick={() => triggerDownload(pdfUrl!)} className="gap-2">
-                              <FileDown className="w-4 h-4" /> Download PDF
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="ghost"
-                          onClick={() => router.push(`/app/reports/${generatedReportId}`)}
-                          className="gap-2"
+              {/* Footer nav */}
+              <div className="mt-auto flex items-center justify-between gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={goBack}
+                  disabled={currentStepIndex === 0}
+                  className="text-sm font-semibold text-[#64748B] hover:text-[#0F172A] disabled:invisible"
+                >
+                  ← Back
+                </button>
+                {isLastStep ? (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={!canContinue || isSubmitting}
+                    className="inline-flex h-12 items-center gap-2 rounded-[10px] bg-[#0F172A] px-[22px] text-[15px] font-semibold text-white disabled:bg-[#ECEAE3] disabled:text-[#94A3B8]"
+                  >
+                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    {primaryAction}
+                    {!isSubmitting && <ArrowRight className="h-4 w-4" />}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    disabled={!canContinue}
+                    className="inline-flex h-12 items-center gap-2 rounded-[10px] bg-[#0F172A] px-[22px] text-[15px] font-semibold text-white disabled:bg-[#ECEAE3] disabled:text-[#94A3B8]"
+                  >
+                    Continue
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-1 flex-col gap-7">
+              {(generationState === "creating" || generationState === "polling") && (
+                <>
+                  <StepHeader
+                    title={state.sendViaEmail ? "Building and sending…" : "Building your report…"}
+                    sub="This usually takes 30–60 seconds. Please don't close this page."
+                  />
+                  <ol className="m-0 flex list-none flex-col border-t-[1.5px] border-[#0F172A] p-0">
+                    {POLLING_STAGES.map((stage, idx) => {
+                      const at = generationState === "creating" ? -1 : pollingStage
+                      const isDone = idx < at
+                      const isActive = idx === at || (at === -1 && idx === 0)
+                      return (
+                        <li
+                          key={stage.label}
+                          className={cn(
+                            "flex items-center gap-3.5 border-b border-[#ECEAE3] py-3.5 text-[15px]",
+                            isDone || isActive ? "text-[#0F172A]" : "text-[#94A3B8]",
+                            isActive ? "font-semibold" : "font-medium",
+                          )}
                         >
-                          View Report Details
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            queryClient.invalidateQueries({ queryKey: ["reports"] })
-                            router.push("/app/reports")
-                          }}
-                          className="gap-2"
-                        >
-                          <ArrowLeft className="w-4 h-4" /> Back to Reports
-                        </Button>
-                      </div>
-                    </>
-                  )}
+                          <span
+                            className={cn(
+                              "flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full",
+                              isDone && "bg-[#047857]",
+                              isActive && "border-2 border-dashed border-[#0F172A] animate-[spin_1.4s_linear_infinite]",
+                              !isDone && !isActive && "border-[1.5px] border-[#CBD5E1]",
+                            )}
+                          >
+                            {isDone && <Check className="h-3 w-3 text-white" />}
+                          </span>
+                          {stage.label}
+                        </li>
+                      )
+                    })}
+                  </ol>
+                </>
+              )}
 
-                  {generationState === "limit_reached" && (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
-                        <ArrowUpCircle className="w-8 h-8 text-amber-500" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900">
-                          {generationError?.split(" — ")[0] || "Limit Reached"}
-                        </h2>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {generationError?.split(" — ")[1] || generationError || "You've used all your reports for this billing period."}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-2">
-                          Upgrade your plan to continue, or wait until your limit resets next month.
-                        </p>
-                      </div>
-                      <div className="flex flex-col gap-2 pt-2">
-                        <Button onClick={() => router.push("/app/settings/billing")} className="gap-2">
-                          <ArrowUpCircle className="w-4 h-4" /> Upgrade Plan
-                        </Button>
-                        <Button variant="outline" onClick={() => {
-                          setGenerationState("idle")
-                          setGenerationError(null)
-                          setIsSubmitting(false)
-                        }}>
-                          Go Back
-                        </Button>
-                      </div>
-                    </>
-                  )}
+              {generationState === "complete" && (
+                <>
+                  <div className="flex flex-col gap-3">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#D1FAE5]">
+                      <Check className="h-[22px] w-[22px] text-[#047857]" />
+                    </span>
+                    <h2 className="m-0 text-[30px] font-extrabold leading-[1.08] tracking-[-0.03em]">
+                      Your report is ready.
+                    </h2>
+                    <p className="m-0 text-base text-[#475569]">
+                      {pdfUrl ? "Your themed PDF has been generated." : "Your report has been generated."}
+                    </p>
+                  </div>
+                  <div className="flex flex-col border-t-[1.5px] border-[#0F172A]">
+                    {pdfUrl && (
+                      <DoneRow icon={<Globe className="h-4 w-4" />} title="View in browser" sub="Opens the PDF in a new tab" onClick={() => window.open(pdfUrl!, "_blank")} />
+                    )}
+                    {pdfUrl && (
+                      <DoneRow icon={<FileDown className="h-4 w-4" />} title="Download PDF" sub="Save it to send or print" onClick={() => triggerDownload(pdfUrl!)} />
+                    )}
+                    <DoneRow
+                      icon={<CheckCircle2 className="h-4 w-4" />}
+                      title="View report details"
+                      sub="Settings, recipients and history"
+                      onClick={() => router.push(`/app/reports/${generatedReportId}`)}
+                    />
+                  </div>
+                  <div className="mt-auto flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={resetForNew}
+                      className="h-[46px] rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold"
+                    >
+                      Make another
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        queryClient.invalidateQueries({ queryKey: ["reports"] })
+                        router.push("/app/reports")
+                      }}
+                      className="inline-flex h-[46px] items-center rounded-[9px] bg-[#0F172A] px-5 text-sm font-semibold text-white"
+                    >
+                      Back to Reports
+                    </button>
+                  </div>
+                </>
+              )}
 
-                  {generationState === "verification_required" && verificationRefusal && (
-                    <VerificationRequired
-                      refusal={verificationRefusal}
-                      onBack={() => {
+              {generationState === "limit_reached" && (
+                <>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FEF3C7]">
+                    <ArrowUpCircle className="h-[22px] w-[22px] text-[#B45309]" />
+                  </span>
+                  <StepHeader
+                    title={generationError?.split(" — ")[0] || "Limit Reached"}
+                    sub={generationError?.split(" — ")[1] || generationError || "You've used all your reports for this billing period."}
+                  />
+                  <p className="m-0 text-[15px] text-[#475569]">
+                    Upgrade your plan to continue, or wait until your limit resets next month.
+                  </p>
+                  <div className="mt-auto flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
                         setGenerationState("idle")
-                        setVerificationRefusal(null)
                         setGenerationError(null)
                         setIsSubmitting(false)
                       }}
-                    />
-                  )}
-
-                  {generationState === "error" && (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-                        <AlertCircle className="w-8 h-8 text-red-500" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Generation failed</h2>
-                        <p className="text-sm text-red-600 mt-1">{generationError || "Something went wrong."}</p>
-                      </div>
-                      <div className="flex gap-2 justify-center pt-2">
-                        <Button variant="outline" onClick={() => {
-                          setGenerationState("idle")
-                          setGenerationError(null)
-                          setIsSubmitting(false)
-                        }}>
-                          Go Back
-                        </Button>
-                        <Button onClick={handleSubmit}>Try Again</Button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                  {step === 0 && <StepStory selected={state.reportType} onSelect={(rt) => update({ reportType: rt, audience: "all" })} />}
-                  {step === 1 && <StepAudience selected={state.audience} onSelect={(a) => update({ audience: a })} />}
-                  {step === 2 && <StepWhereWhen state={state} onChange={update} />}
-                  {step === 3 && <StepDeliver state={state} onChange={update} defaultMode={defaultMode} />}
-                </div>
-
-                {/* Navigation */}
-                <div className="flex items-center justify-between mt-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={goBack}
-                    disabled={currentStepIndex === 0}
-                    className="gap-1.5"
-                  >
-                    <ChevronLeft className="w-4 h-4" /> Back
-                  </Button>
-
-                  {isLastStep ? (
-                    <Button
-                      onClick={handleSubmit}
-                      disabled={!canContinue || isSubmitting}
-                      className="gap-1.5"
+                      className="h-[46px] rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold"
                     >
-                      {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
-                      ) : state.deliveryMode === "schedule" ? (
-                        <><Sparkles className="w-4 h-4" />Create Schedule</>
-                      ) : state.sendViaEmail && state.recipients.length > 0 ? (
-                        <><Sparkles className="w-4 h-4" />Generate &amp; Send</>
-                      ) : (
-                        <><Sparkles className="w-4 h-4" />Generate Report</>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button onClick={goNext} disabled={!canContinue} className="gap-1.5">
-                      Continue <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </>
+                      Go Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push("/app/settings/billing")}
+                      className="inline-flex h-[46px] items-center gap-2 rounded-[9px] bg-[#0F172A] px-5 text-sm font-semibold text-white"
+                    >
+                      <ArrowUpCircle className="h-4 w-4" /> Upgrade Plan
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {generationState === "verification_required" && verificationRefusal && (
+                <VerificationRequired
+                  refusal={verificationRefusal}
+                  onBack={() => {
+                    setGenerationState("idle")
+                    setVerificationRefusal(null)
+                    setGenerationError(null)
+                    setIsSubmitting(false)
+                  }}
+                />
+              )}
+
+              {generationState === "error" && (
+                <>
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FEE2E2]">
+                    <AlertCircle className="h-[22px] w-[22px] text-[#B91C1C]" />
+                  </span>
+                  <StepHeader title="Generation failed" sub={generationError || "Something went wrong."} />
+                  <div className="mt-auto flex gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGenerationState("idle")
+                        setGenerationError(null)
+                        setIsSubmitting(false)
+                      }}
+                      className="h-[46px] rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold"
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="inline-flex h-[46px] items-center rounded-[9px] bg-[#0F172A] px-5 text-sm font-semibold text-white"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* Right — the live preview */}
+        <section
+          aria-label={defaultMode === "schedule" ? "Email preview" : "Report preview"}
+          className="sticky top-[62px] hidden h-[calc(100vh-62px)] min-w-0 flex-col items-center justify-center gap-4 overflow-hidden bg-[#F4F3EE] px-8 py-10 lg:flex"
+        >
+          <div
+            className={cn(
+              "w-full max-w-[480px] shrink-0 overflow-hidden rounded-md",
+              defaultMode === "schedule" && "max-h-full overflow-y-auto",
+            )}
+            style={{ boxShadow: "0 40px 80px -28px rgba(15,23,42,0.4), 0 0 0 1px rgba(15,23,42,0.06)" }}
+          >
+            {defaultMode === "schedule" ? (
+              <SharedEmailPreview
+                primaryColor={branding.primaryColor}
+                accentColor={branding.accentColor}
+                headerLogoUrl={branding.headerLogoUrl}
+                displayName={branding.displayName}
+                agentName={profile.name}
+                agentTitle={profile.title}
+                agentPhone={profile.phone}
+                agentEmail={profile.email}
+                agentPhotoUrl={profile.photoUrl}
+                reportType={previewReportType}
+                audienceLabel={audienceLabel}
+                areaName={areaName}
+                lookbackDays={state.lookbackDays || 30}
+              />
+            ) : (
+              <ReportThumb
+                width={480}
+                shadow="none"
+                primaryColor={branding.primaryColor}
+                accentColor={branding.accentColor}
+                reportType={previewReportType}
+                // The page writes the area into its heading and its prose, so
+                // it gets the city or the ZIPs themselves, not "Your Area".
+                areaName={state.city || state.zipCodes.join(", ")}
+                lookbackDays={state.lookbackDays || 30}
+              />
             )}
           </div>
-
-          {/* Right: Live preview */}
-          <div className="hidden lg:block">
-            <div className="sticky top-20 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                  {defaultMode === "schedule" ? "Email Preview" : "Report Preview"}
-                </h3>
-                <span className="ml-auto text-[10px] text-gray-400">Updates as you build</span>
-              </div>
-
-              {/* Summary pills */}
-              <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap gap-1.5">
-                {reportLabel && <Pill>{reportLabel}</Pill>}
-                {audienceLabel && <Pill>{audienceLabel}</Pill>}
-                {state.city && <Pill>{state.city}</Pill>}
-                {state.zipCodes.length > 0 && <Pill>{state.zipCodes.length} ZIPs</Pill>}
-                {state.lookbackDays && <Pill>{state.lookbackDays}d</Pill>}
-                {!reportLabel && <span className="text-[10px] text-gray-400 py-0.5">Select a report type to preview</span>}
-              </div>
-
-              <div className="p-4 bg-stone-100/50 max-h-[calc(100vh-220px)] overflow-y-auto">
-                {defaultMode === "schedule" ? (
-                  <SharedEmailPreview
-                    primaryColor={branding.primaryColor}
-                    accentColor={branding.accentColor}
-                    headerLogoUrl={branding.headerLogoUrl}
-                    displayName={branding.displayName}
-                    agentName={profile.name}
-                    agentTitle={profile.title}
-                    agentPhone={profile.phone}
-                    agentEmail={profile.email}
-                    agentPhotoUrl={profile.photoUrl}
-                    reportType={previewReportType}
-                    audienceLabel={audienceLabel}
-                    areaName={areaName}
-                    lookbackDays={state.lookbackDays || 30}
-                    scale={0.92}
-                  />
-                ) : (
-                  <SharedPDFPreview
-                    primaryColor={branding.primaryColor}
-                    accentColor={branding.accentColor}
-                    headerLogoUrl={branding.headerLogoUrl}
-                    displayName={branding.displayName}
-                    agentName={profile.name}
-                    agentTitle={profile.title}
-                    agentPhone={profile.phone}
-                    agentEmail={profile.email}
-                    agentPhotoUrl={profile.photoUrl}
-                    reportType={previewReportType}
-                    audienceLabel={audienceLabel}
-                    areaName={areaName}
-                    lookbackDays={state.lookbackDays || 30}
-                    scale={0.92}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
+          <span className="text-[13px] text-[#64748B]">
+            {reportLabel ? "Live preview · sample numbers until generated" : "Pick a report to preview it here"}
+          </span>
+        </section>
+      </div>
     </div>
   )
 }
 
-function Pill({ children }: { children: React.ReactNode }) {
+function DoneRow({
+  icon,
+  title,
+  sub,
+  onClick,
+}: {
+  icon: React.ReactNode
+  title: string
+  sub: string
+  onClick: () => void
+}) {
   return (
-    <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-      {children}
-    </span>
+    <button
+      type="button"
+      onClick={onClick}
+      className="grid items-center gap-3.5 border-b border-[#ECEAE3] py-3.5 text-left text-[#0F172A] hover:text-[#4F46E5]"
+      style={{ gridTemplateColumns: "auto minmax(0,1fr) auto" }}
+    >
+      <span className="flex h-9 w-9 items-center justify-center rounded-[9px] border border-[#ECEAE3] bg-[#FAFAF7]">
+        {icon}
+      </span>
+      <span className="flex flex-col">
+        <span className="text-[15px] font-semibold">{title}</span>
+        <span className="text-[13px] text-[#64748B]">{sub}</span>
+      </span>
+      <ArrowRight className="h-4 w-4 text-[#94A3B8]" />
+    </button>
   )
 }

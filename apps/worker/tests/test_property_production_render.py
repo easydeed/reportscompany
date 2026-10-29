@@ -41,20 +41,17 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 from worker.property_builder import PropertyReportBuilder, THEME_TEMPLATES  # noqa: E402
 from worker.theme_registry import DEFAULT_THEME_NAME  # noqa: E402
 
-from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES  # noqa: E402
+from _template_chain import SHARED_THEMES  # noqa: E402
 
 #: EVERY theme, for the floor — `test_all_five_themes_render_through_the
 #: _production_path` is the assertion the rest of this file stands on and it
 #: must cover all of them.
 ALL_THEMES = sorted(THEME_TEMPLATES)
 
-#: SELF-CONTAINED THEMES, for everything keyed on the nine-page document's
-#: own markup: the contents page, the Area Sales Analysis table, the
-#: `.analysis-row` cells. Design's architecture has none of those, and the
-#: properties they carry are re-asserted on the new surfaces in
-#: `test_analysis_table_columns.py` and
-#: `test_contents_matches_the_document.py`.
-THEMES = SELF_CONTAINED_THEMES
+#: Every theme. This was the self-contained themes only, for the tests keyed
+#: on the nine-page markup (contents page, Area Sales Analysis table); those
+#: retired with that architecture, and what remains holds on all three.
+THEMES = sorted(THEME_TEMPLATES)
 
 # `sitex_data` as SiteX returns it, including the two details that matter:
 # `pool` is the STRING "None" for a house without one, and there is no
@@ -160,61 +157,15 @@ def test_every_theme_renders_through_the_production_path(renders):
         assert len(renders[theme]) > 10_000, f"{theme} rendered {len(renders[theme])} chars"
 
 
-def test_the_default_page_set_is_the_seven_pages_the_rest_of_this_file_assumes(builders):
-    """`overview` and `market_trends` are NOT in it — the premise of D-121."""
-    for theme in SELF_CONTAINED_THEMES:
-        assert builders[theme].page_set == [
-            "cover", "contents", "aerial", "property",
-            "analysis", "comparables", "range",
-        ]
-    # The six-page set, stated here too rather than only in the builder, so
-    # that the two architectures' page sets are both written down in one
-    # place a reader of this file will find. D-121's premise holds for both:
-    # neither default set contains a page whose data can fail.
-    for theme in SHARED_THEMES:
+def test_the_default_page_set_is_the_six_pages(builders):
+    """Stated here as well as in the builder, so a reader of this file sees
+    the page set it renders. `market_trends` is the one page whose data can
+    fail, and the render drops it then (`test_renders_exactly_six_in_order`)."""
+    for theme in THEMES:
         assert builders[theme].page_set == [
             "cover", "property", "comparables", "range",
             "market_trends", "notes",
         ]
-
-
-# ── D-121 · the contents page is a literal block with no page_set guard ─────
-
-CONTENTS_ENTRIES = {
-    # Every theme's contents page named these, whatever the page set said.
-    "Executive Summary": "overview",
-    "Market Trends": "market_trends",
-}
-
-#: A contents row, in either markup dialect — NOT the bare label.
-_CONTENTS_LABEL = re.compile(
-    r'class="(?:contents-text|name)">\s*([^<]*?)\s*<')
-
-
-@pytest.mark.parametrize("theme", THEMES)
-def test_the_contents_page_lists_only_pages_the_report_contains(theme, renders, builders):
-    """FIXED 2026-10-01 — `feat/d121-contents-page`. Was a strict xfail.
-
-    AND THE FIX EXPOSED THE TEST. This read `label in html`, which also
-    matches the CSS comment `/* ── Overview / Executive Summary Page ── */`
-    present in all five stylesheets — so after the defect was fixed it went on
-    failing, for a reason with nothing to do with the contents page. §0.6's
-    substring rule, met inside the fix for the defect this test was guarding.
-    It now matches the contents ROW, which is the construct.
-
-    The relation this is a corner of — every row points at a page whose own
-    heading is that row's label — is asserted in
-    `test_contents_matches_the_document.py`. This one is kept because it names
-    the two specific labels the defect produced.
-    """
-    html, pages = renders[theme], builders[theme].page_set
-    labels = {m.strip() for m in _CONTENTS_LABEL.findall(html)}
-    listed = sorted(label for label, page in CONTENTS_ENTRIES.items()
-                    if label in labels and page not in pages)
-    assert not listed, (
-        f"{theme}'s contents advertises {listed}, which the {len(pages)}-page "
-        f"default set does not contain"
-    )
 
 
 # ── D-118 · the subject's "Sale Price" is its tax assessment ────────────────
@@ -274,40 +225,6 @@ def test_with_no_recorded_sale_the_cell_is_empty_not_zero(theme):
 
 
 @pytest.mark.parametrize("theme", THEMES)
-def test_the_sale_is_shown_with_its_date(theme, renders):
-    """A 2015 sale presented bare reads as a current valuation sitting 25%
-    below four recent comps — the same anchoring harm the assessment did, with
-    a true number. D-118."""
-    html = renders[theme]
-    assert "$369,000" in html
-    assert "Dec 2015" in html, f"{theme} prints the figure without its date"
-    row = [l for l in analysis_table(html).split("</tr>") if "369,000" in l]
-    assert row and "Dec 2015" in row[0], (
-        f"{theme} has the date somewhere, but not in the price row"
-    )
-
-
-@pytest.mark.parametrize("theme", THEMES)
-def test_the_comps_cells_carry_no_date(theme, renders):
-    """Their dates are already a column on the Sales Comparables page, and
-    four more in this row would crowd out the price spread it exists to show."""
-    row = [l for l in analysis_table(renders[theme]).split("</tr>")
-           if "369,000" in l][0]
-    assert row.count("\u00b7") <= 1 and row.count("&middot;") == 0
-
-
-@pytest.mark.parametrize("theme", THEMES)
-def test_the_assessment_appears_only_under_its_own_label(theme, renders):
-    """Jerry kept the Tax & Assessment block. What went is the assessment
-    standing in for a sale price."""
-    html = renders[theme]
-    assert "428,248" in html, f"{theme} lost the Tax & Assessment block entirely"
-    assert "428,248" not in analysis_table(html), (
-        f"{theme}'s analysis table still carries the assessed value"
-    )
-
-
-@pytest.mark.parametrize("theme", THEMES)
 def test_a_computed_estimate_outranks_a_ten_year_old_sale(theme):
     """`estimated_value` is written by nothing today and D-134 will decide
     what computes it. When it does, a current estimate should beat a 2015
@@ -323,32 +240,7 @@ def test_a_computed_estimate_outranks_a_ten_year_old_sale(theme):
     )
 
 
-@pytest.mark.parametrize("theme", THEMES)
-def test_the_price_row_says_which_kind_of_price_it_shows(theme):
-    """Over active listings `_extract_price` returns list_price, so a row
-    headed "Sale Price" shows what sellers are asking. Same defect as the
-    subtitle, one row lower."""
-    assert "Sale Price" in _with_status(theme, "Closed")
-    active = _with_status(theme, "Active")
-    assert "List Price" in active
-    assert "Sale Price" not in analysis_table(active), (
-        f"{theme}'s analysis table calls asking prices sale prices"
-    )
-
-
 # ── D-119 · the analysis table drops every comp but three ───────────────────
-
-@pytest.mark.xfail(strict=True, reason="D-119 — low/medium/high is three slots for n comps")
-@pytest.mark.parametrize("theme", THEMES)
-def test_every_comparable_reaches_the_area_sales_analysis(theme, builders):
-    stats = builders[theme]._build_stats_context()
-    shown = {stats[k]["price"] for k in ("low", "medium", "high")}
-    missing = {float(c["price"]) for c in COMPS} - shown
-    assert not missing, (
-        f"{len(missing)} of {len(COMPS)} comps appear in the chart and the "
-        f"comparables page but in no column of the analysis table: {sorted(missing)}"
-    )
-
 
 # ── D-120 · `pools` is computed from a truthy string ────────────────────────
 
@@ -370,56 +262,6 @@ def test_the_analysis_table_agrees_with_the_property_page_about_the_pool(theme, 
     assert not (says_no_pool and has_pool), (
         f"the property page prints Pool/Spa: {page!r} and the analysis table "
         f"one page later prints Pools: {table!r}"
-    )
-
-
-# ── D-124 · the field set changes with the theme ────────────────────────────
-
-# Row labels as each template spells them, matched case-insensitively INSIDE
-# the analysis table only. Scoping matters: "Lot Size" and "Bathrooms" also
-# appear on the property page, so a document-wide grep reports modern as
-# carrying rows it does not have — §0.6, *a selector that is unique by accident*.
-ROW_LABELS = {
-    "distance":     ("Distance",),
-    "living area":  ("Living Area",),
-    "price/sqft":   ("Price/Sq.Ft.", "Price Per Sqft"),
-    "year built":   ("Year Built",),
-    "lot size":     ("Lot Size",),
-    "bedrooms":     ("Bedrooms",),
-    "bathrooms":    ("Bathrooms", "Baths"),
-    "stories":      ("Stories",),
-    "pools":        ("Pools",),
-    "sale price":   ("Sale Price", "Sales Price"),
-}
-
-
-def analysis_table(html: str) -> str:
-    """The one table carrying both `Year Built` and `Distance`.
-
-    Asserted unique rather than taken with `[0]`: teal has eight tables and
-    elegant seven, and picking the first that matches is the accidental-selector
-    trap. If a template ever grows a second comparison table this fails loudly
-    instead of silently measuring the wrong one.
-    """
-    tables = re.findall(r"<table\b.*?</table>", html, re.S)
-    hits = [t for t in tables if "Year Built" in t and "Distance" in t]
-    assert len(hits) == 1, f"expected one analysis table, found {len(hits)} of {len(tables)}"
-    return hits[0]
-
-
-@pytest.mark.xfail(strict=True, reason="D-124 — each template hand-picks its own rows")
-def test_the_analysis_table_shows_the_same_fields_in_every_theme(renders):
-    def rows_in(html):
-        lower = analysis_table(html).lower()
-        return {datum for datum, spellings in ROW_LABELS.items()
-                if any(s.lower() in lower for s in spellings)}
-
-    sets = {theme: rows_in(renders[theme]) for theme in THEMES}
-    reference = sets[THEMES[0]]
-    differing = {t: sorted(s ^ reference) for t, s in sets.items() if s != reference}
-    assert not differing, (
-        f"the analysis table's fields differ by theme (vs {THEMES[0]}): {differing}. "
-        "An agent switching themes changes what analysis their client receives."
     )
 
 
@@ -531,3 +373,16 @@ def test_the_window_comes_from_the_comps_and_not_from_the_constant():
     assert "close_date" in src and "COMP_WINDOW_BUCKETS_MONTHS" in src
     assert PropertyReportBuilder.COMP_WINDOW_BUCKETS_MONTHS[0] == \
         PropertyReportBuilder.COMP_CLOSE_WINDOW_DAYS // 30
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_with_no_comps_the_report_says_so_and_grades_nothing(theme):
+    """A grade is a statement about a set. The nine-page themes said "No
+    comparable sales"; the shared page said "A · Strict match" over nothing
+    and "compares 0 nearby sales" on the cover, until this."""
+    data = report_data(theme)
+    data["comparables"] = []
+    html = PropertyReportBuilder(data).render_html()
+    assert "No comparable sales were found" in html, theme
+    assert 'class="conf-pill"' not in html, f"{theme} grades an empty set"
+    assert "compares 0" not in html, theme

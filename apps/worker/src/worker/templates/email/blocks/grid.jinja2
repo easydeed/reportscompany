@@ -1,31 +1,18 @@
 {#-
-  BLOCK: grid — the wrappers that arrange gallery cards on the page.
+  BLOCK: grid — the wrappers that place gallery listings on the page.
 
-  Not one of §06's eight named blocks: it is what remained in Python once the
-  cards themselves became blocks, and leaving it there would have meant the last
-  five functions in this module still held HTML. A `<table>` deciding that two
-  cards sit side by side is markup.
+  `rows`: a single column of `gallery:row` listings, each already a `<tr>`.
+  `cards`: Design's two-across gallery, 264px cards with a 16px gutter. A short
+  last row keeps its empty cell: a `<tr>` with fewer `<td>`s than its siblings
+  collapses the column widths in Outlook.
 
-  `.mobile-stack` on the cells is B4 and is load-bearing. That rule stacks the
-  columns at 320px and was defined in the document's <style> block while being
-  attached to zero elements, so a two-across grid stayed two-across on a phone.
-
-  Cards arrive rendered. This block places them and knows nothing about what a
-  card contains, which is why the same wrapper serves the 2-across and 3-across
-  layouts with only `per_row` differing.
+  `tr-stack` on the card cells is B4 and is load-bearing: it stacks the two
+  columns on a phone, and the gutter cell carries `tr-hide` so it goes too.
 -#}
 {% if shape == 'rows' -%}
-              <div style="margin-bottom: 32px;">
-                {{ cards | join('') }}
-              </div>
-{%- else -%}
-              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 32px;">
-                {% for row in rows %}
-                <tr>
-                  {%- for cell in row %}
-                  <td width="{{ cell_width }}" class="mobile-stack" style="{{ cell.pad }} vertical-align: top;">{{ cell.html }}</td>
-                  {%- endfor %}
-                </tr>
-                {%- endfor %}
-              </table>
+          <tr><td class="tr-pad" style="padding:0 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">{{ cards | join('') }}</table></td></tr>
+{%- elif shape == 'cards' -%}
+          <tr><td class="tr-pad" style="padding:0 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
+            {%- for row in rows %}<tr><td class="tr-stack" width="50%" valign="top" style="padding:14px 0;">{{ row[0] }}</td><td class="tr-hide" width="16" style="width:16px;"></td><td class="tr-stack" width="50%" valign="top" style="padding:14px 0;">{{ row[1] }}</td></tr>{% endfor %}
+          </table></td></tr>
 {%- endif %}

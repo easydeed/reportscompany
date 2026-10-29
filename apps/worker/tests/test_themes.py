@@ -758,3 +758,58 @@ def test_distinct_colours_stay_distinct():
         palettes.setdefault(key, set()).add(normalize_hex(hexv))
     collisions = {k: v for k, v in palettes.items() if len(v) > 1}
     assert not collisions, f"distinct colours produced identical palettes: {list(collisions.items())[:3]}"
+
+
+def test_the_golden_file_holds_every_token_and_not_a_list_of_six():
+    """`test_golden_file_lock` iterates `TOKENS`; the regen script used to
+    iterate a hard-coded tuple of six names.
+
+    So when `display_ink` became a seventh token the reader looked for it, the
+    writer never emitted it, and **regenerating the golden file produced no
+    diff and did not fix the failing test** — which is the worst shape a regen
+    script can have, because the instruction on the failure says to run it.
+
+    This asserts the data, which is what a future reader can check without
+    reading the script: every theme in the golden file carries every token.
+    """
+    for name, row in golden().items():
+        missing = [t for t in TOKENS if t not in row]
+        assert not missing, (
+            f"golden theme {name} is missing {missing}. Regenerate with "
+            f"scripts/regen_theme_golden.py — and if that produces no diff, "
+            f"the script is enumerating token names instead of deriving them "
+            f"from `themes.TOKENS`, which is the defect this test exists for."
+        )
+
+
+def test_the_regen_script_derives_the_token_list():
+    """And the script, which is where the divergence actually lives.
+
+    A writer and a reader that disagree about a set is D-163's finding (five
+    copies of the theme map) in the one script whose output is a lock on what
+    every affiliate sees.
+    """
+    src = (Path(__file__).resolve().parents[3]
+           / "scripts/regen_theme_golden.py").read_text(encoding="utf-8")
+    assert "for k in TOKENS" in src, (
+        "regen_theme_golden.py no longer derives its key list from "
+        "`themes.TOKENS`. A literal list there cannot emit a token added "
+        "later, and the symptom is a regen that changes nothing."
+    )
+    # NOT "no token name appears as a literal" — the first version of this
+    # assertion said that and failed immediately on `contrast(t["primary"],
+    # WHITE)`, which is a single legitimate lookup for one measurement, not an
+    # enumeration of the set. Over-broad pattern, in a gate written about an
+    # over-broad list, inside the same change.
+    #
+    # What an enumeration actually looks like is three or more quoted token
+    # names in a row, so that is what this matches.
+    import re
+    name = "|".join(re.escape(t) for t in TOKENS)
+    run_of_names = re.compile(rf'"(?:{name})"\s*,\s*"(?:{name})"\s*,\s*"(?:{name})"')
+    found = run_of_names.findall(src)
+    assert not found, (
+        f"regen_theme_golden.py enumerates token names: {found}. Three in a "
+        f"row is a copy of `themes.TOKENS`, and a copy cannot emit a token "
+        f"added later."
+    )

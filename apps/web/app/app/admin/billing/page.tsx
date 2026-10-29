@@ -326,7 +326,7 @@ export default function AdminBillingPage() {
                     </div>
                     <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-indigo-500 transition-all"
+                        className="h-full rounded-full bg-primary transition-all"
                         style={{ width: `${Math.max(pct, 2)}%` }}
                       />
                     </div>
@@ -428,7 +428,7 @@ export default function AdminBillingPage() {
                             variant={isPaid ? "default" : "secondary"}
                             className={
                               isPaid
-                                ? "bg-indigo-100 text-indigo-700 border-indigo-200"
+                                ? "bg-accent text-accent-foreground border-transparent"
                                 : ""
                             }
                           >

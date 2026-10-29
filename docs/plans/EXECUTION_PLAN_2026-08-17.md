@@ -124,6 +124,52 @@ code rather than the file. **Treat each of these as evidence the rule is live ra
 historical: the pattern that produced the defect is the one you are working in while you remove
 it.**
 
+**EIGHT IN ONE WEEK, ALL BY THE AUTHOR OF THE RULE, ALL IN TESTS WRITTEN TO CATCH THIS FAMILY.**
+2026-10-14 to 2026-10-20:
+
+| | the test | what the substring matched instead |
+|---|---|---|
+| 1 | the CI reporter's failure count | `"failed" in counts` matched `xfailed` |
+| 2 | the CI table's workflow check | `"ci_annotate_failures.py" in wf` and `"if: failure()" in wf` matched the **comments explaining the step** |
+| 3 | the tint sweep's grep target | `bg-indigo-(50\|100\|200)` with no `\b` matched `bg-indigo-500`, and reported three surviving hits that did not exist |
+| 4 | D-201's fail-open gate sweep | a regex over the source matched a `logger.critical(...)` argument and **two comments quoting the bad form in order to warn about it** — one written two days earlier |
+| 5 | the render harness's own property gate | looped over the word `"degraded"`; a regression replaced the entire health decision with `health = 'ok'` and the word survived in a docstring. **DID NOT FIRE** |
+| 6 | the local stack's rate-limit gate | asserted `"HARNESS_ACCOUNTS" in src`; a regression narrowed the `UPDATE` to one account and left the constant defined above it. **DID NOT FIRE** |
+| 7 | the dashboard's absence-copy gate | asserted `"Nothing scheduled" in src`; a regression replaced the RENDERED phrase with `0 scheduled` and the phrase survived **in the comment directly above it, which quotes it to explain the rule**. **DID NOT FIRE** |
+| 8 | the fixture's onboarding gate | asserted each step name appeared somewhere in the file. Adding a SECOND seeding loop for the bare account meant deleting the first one no longer removed the strings. **DID NOT FIRE** |
+
+Five of the eight were caught only because `scripts/apply_regressions.py` reported `DID NOT FIRE`;
+one was caught by the test failing on its own documentation; the other two by re-reading the
+pattern with the boundary in mind. **Without the regression harness, more than half of them would
+have shipped as green.**
+
+**Number 8 adds a second mechanism to watch for.** It was correct when written and became wrong
+when a SECOND source of the same string was added elsewhere in the file — the test did not drift,
+the file around it did. A substring assertion is not only wrong about comments; it is wrong about
+any future duplicate, which is why the repaired version counts occurrences rather than looking for
+one.
+
+**And note what 2, 4 and 7 have in common**: the test searched a region that the FIX had just
+written documentation into. A defect explained in place puts its own symptom string inside the
+area the test looks at — so the better the comment, the likelier the substring test passes for the
+wrong reason. That is not a coincidence to be careful about; it is a property of fixing things
+well.
+
+**This is the argument for the remedy over the resolve.** Eight instances in six days, by the
+person who wrote the rule, in tests whose entire purpose was this family, is not a vigilance
+problem that more care fixes — it is evidence that a substring is the *default* thing a hand writes and the
+construct has to be reached for deliberately. So the rule's operative form is mechanical, not
+attitudinal:
+
+> **Parse it.** `ast.walk` for Python, `\b`-anchored patterns at minimum for text, and for anything
+> structural — an `if` test, a decorator, a route, a JSON entry — walk the tree and compare the
+> node. A comment is not in an AST and a logging argument is not a condition, which is exactly why
+> five of the eight above could not have happened against a parser.
+
+Where a parser genuinely is not available (JavaScript source read from Python, for instance), assert
+the **exact decision line** rather than any word in it, so that a mutation to the decision is a
+mutation to the assertion.
+
 - **No finding derived from a sample render counts until it is reproduced through the
   production path.** Three instances in this project — the property report aerial, the
   email placeholder links, and the inventory report's months-of-supply figure — where a
@@ -214,10 +260,30 @@ it.**
   all. When a real parser is available — an AST, a CSS parser, an HTML parser, the config
   loader — use it; text search is the fallback, and its needle has to carry its own boundaries.
 
-  **AND THE HONEST PART: THIS RULE HAS NOW BEEN BROKEN FOUR TIMES BY THE PERSON WHO FILED IT, AND
-  CAUGHT FOUR TIMES BY A REGRESSION RATHER THAN BY RECALL.** A fourth instance landed three days
+  **AND THE HONEST PART: THIS RULE HAS NOW BEEN BROKEN SEVEN TIMES BY THE PERSON WHO FILED IT, AND
+  CAUGHT SEVEN TIMES BY A REGRESSION RATHER THAN BY RECALL.** A fourth instance landed three days
   after the rule was written — `force-new-page`, matched in the stylesheet instead of the markup —
   in a test written by someone who had the rule in mind that week.
+
+  **Instances five, six and seven landed in one sitting, 2026-10-15, in the script and test written
+  to make a red CI check say which test failed** (D-191) — and they are the sharpest evidence for
+  the paragraph below:
+
+  | the needle | what it matched instead |
+  |---|---|
+  | `"failed" not in counts` | **`xfailed`.** This suite's GREEN counts line reads `2901 passed, 67 skipped, 20 xfailed`, so every passing run reported itself red |
+  | `"ci_annotate_failures.py" in workflow` | **the comment explaining the step** — so the assertion passed with the step deleted |
+  | `"if: failure()" in workflow` | **the comment explaining the `if`** — same, and the step could run on every build |
+
+  The first was caught by the file's own green-run test. **The second and third were caught by two
+  applied regressions that DID NOT FIRE**, which is the harness doing the one job it was built for:
+  a mutation that deletes the step and leaves the gate green is the only way either of those was
+  ever going to be visible. Both are now asserted against the PARSED YAML, as
+  `test_ci_table_matches_workflows.py` had already done for the same reason.
+
+  Note what instances six and seven were: **the comment describing the assertion satisfied the
+  assertion.** The row about the masthead comment above is the same shape, and it did not stop
+  either — which is the point of the next paragraph rather than an argument against it.
 
   Read as a scorecard that looks like a dead rule. It is not, and the distinction matters for
   anyone deciding whether to keep it: **this class is not preventable prospectively.** At the
@@ -379,6 +445,28 @@ it.**
   form, which is why it belongs here: **a negative result from a verification tool is a claim about
   the tool until the tool is shown to have run.** Same class as "a number in a tool's output is a
   property of the tool" — one rule up, one layer down.
+
+  **WIDENED 2026-10-19: A BROWSER IS A CACHE LIKE ANY OTHER, AND SO IS A DEV SERVER.** The `.pyc`
+  above is one instance of a shape that has now fired **three times in a browser** while measuring
+  the `apps/web` redesign. Next's dev server did not recompile `app/globals.css` after an edit, so:
+
+  * a token swap measured **0.00% of pixels changed on two routes** — screenshots byte-identical,
+    entirely convincing, and reporting that the change did nothing;
+  * an `h1` rule measured **identical computed type in both states**, which reads as "the rule has
+    no effect" and meant "the rule was never loaded";
+  * and in between, a server that looked restarted was the old process still holding the port, so a
+    third measurement was taken against a stylesheet two edits stale.
+
+  The remedy is the same one rung lower: **read the value back out of the running thing, not off
+  the disk.** `getComputedStyle(document.documentElement).getPropertyValue('--primary')` returning
+  `#4f46e5` against a file on disk that says `#0F172A` is the whole check, it costs one evaluate
+  call, and it caught every instance. Pair it with the process check — `ps -o etimes` on the server
+  you think you restarted — because "I restarted it" is a claim about a command's exit code, not
+  about the process listening on the port.
+
+  Every state in the authenticated-route table on D-193 was verified that way **before** capture,
+  not only the one that failed. That is the difference between catching it once and not being
+  caught by it again.
 
 - **A check that cannot be fixed yet belongs in `xfail(strict=True)` with its defect named — not
   in a permanently red build, and never in a `skip`.** Unfixable red is not honesty, it is the
@@ -1365,6 +1453,402 @@ it.**
 
   The one document that got it right, `00-SHARED.md`, did so structurally rather than by care: its
   table has **one row per surface**, so there was nowhere to write an unqualified `_base/`.
+
+- **A GATE ON A DOCUMENT MUST ASSERT ITS CLAIMS, NOT ITS TEXT — AND THE GATES WHOSE SUBJECT IS
+  STALENESS ARE THE ONES THAT GET THIS WRONG.** *Added 2026-10-07. Two instances in one day, both
+  in gates written to stop a document going stale.*
+
+  Two documents now leave this building for Design, and both are gated because three bounds have
+  arrived from them derived from a sample and stated as a property. Both gates were written against
+  the **words** rather than against what the words say, and both let a real change through:
+
+  * `test_the_overlap_is_what_the_document_says` matched the heading string `"Only two of the six
+    brands are shared"`. **Reordering the document broke it** — the lead was moved from the
+    correction to the finding, every number unchanged, and the gate failed. A gate that fails on a
+    rewrite teaches you to stop rewriting.
+  * `test_the_document_quotes_the_pinned_capacity` checked `str(rows) in text`. Moving a measured
+    capacity from 15 to **17 passed**, because the document contains `D-173` and `"17" in "D-173"`.
+    Substring-is-not-a-construct, instance fourteen, inside a staleness gate — which is the irony
+    that makes it worth a rule.
+
+  **The fix is the same in both directions: put the claim in a form the document and the gate can
+  both parse, then compare the parsed values.** §5 of the capacity document is now a fenced
+  ```capacity block of `kind.state = rows` lines, and the assertion is dict equality against
+  `PAGE_1_CAPACITY` — which catches a figure that moved, a figure that was dropped, and a figure
+  that was added, none of which a substring scan can distinguish from prose. The brand audit asserts
+  each hex **by value** and the lead's own count, not the sentence that carries them.
+
+  The general form: **a document's prose is for the reader and its data is for the gate, and they
+  have to be different regions of the file.** A gate reaching into prose is either brittle about
+  wording or blind about values, and there is no setting of it that is neither.
+
+- **BEFORE BUILDING A TOOL, GREP FOR ONE.** *Added 2026-10-07. Cost: one file overwritten.*
+
+  §0.6 already says a defect list needs a read path, because D-009 was a record nothing consumed.
+  **This is the same shape about the repository rather than the board**, and it is a separate rule
+  because the remedy is different: a board needs a reader, and a repo needs you to look.
+
+  A generalised regression harness was written to fix three hand-run misfires. `scripts/regress.py`
+  had existed since **PR #103** — the same idea for `themes.py`, with eleven recorded mutations and
+  **already carrying the two checks that mattered**: an anchor-count check (`if n != 1: MUTATION DID
+  NOT APPLY`) and an unchanged-on-disk assert. Two thirds of the remedy was in the repository for a
+  hundred PRs. It was overwritten without being read, and the only thing that caught the collision
+  was `git status` printing `M` where `??` was expected.
+
+  What the predecessor lacked was real — a bytecode clear, a verified restore, and an exit code
+  rather than printing `*** NOTHING CAUGHT IT ***` and exiting 0 — so the new tool was worth
+  writing. **Reading the old one first would have produced the same tool and a better one**, because
+  its eleven mutations are knowledge that had to be ported back in afterwards.
+
+  **The harness built that day does not and cannot catch this.** It guards mutations; it has nothing
+  to say about the decision to create a file. There is no gate for "did you look", which is exactly
+  why it is written down here instead: *the habit is the remedy, and `git status` is not it.* A file
+  that reports `M` when you expect `??` has already been overwritten — the check has to come before
+  the write, not after.
+
+  Operationally: `grep -rl` the concept, not the filename. "regression harness" would not have found
+  `regress.py`; `grep -rn "MUTATION DID NOT APPLY"` or a look in `scripts/` would have.
+
+- **A PREDICTION AND A MEASUREMENT CANNOT SHARE A GATE.** *Added 2026-10-08.*
+
+  `docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md` §2a forecast what Design's row counts would cost
+  per kind, against our capacity at the time. Its gate recomputed the "ours" column from
+  `PAGE_1_CAPACITY` — correct for a document that must stay current, and **it broke the moment the
+  first kind was built**, because the pin moved to the built figure and the forecast did not.
+
+  The tempting fix is to update the forecast. That destroys the only thing it was for: §2a is worth
+  reading *because* it can be compared with what happened, and a forecast edited to match the result
+  predicts nothing. The same edit would also have hidden the interesting part — both built kinds
+  landed on **5 pages** where the formula said **6**, so the forecast was wrong in a direction worth
+  knowing.
+
+  **So the two were split, and the split is the rule.** A forecast records **the inputs it was taken
+  with** and its gate checks that its arithmetic is internally consistent against *those*; a
+  measurement section carries the built figures and its gate checks them against the live pin. One
+  is checkable forever, the other is checkable now, and neither can be made to do the other's job.
+
+  The general form: **a gate enforces either currency or fidelity to a past state, and a document
+  that holds both needs one gate per region.** The giveaway is a gate that starts failing because
+  something it describes *succeeded* — which is what happened here, and which reads as a broken test
+  rather than as a category error.
+
+- **A GATE ON A PRODUCER IS NOT A GATE ON THE DOCUMENT.** *Added 2026-10-08, from D-181.*
+
+  §0.6 already says *a gate on a document must assert its claims, not its text*. This is that rule
+  one level further out, and it needed its own line because the failure mode is the opposite of
+  loud: the gate does not get weaker, it gets **pointed at the wrong object**, and then it is as
+  strong as ever about something nobody reads.
+
+  D-111's price-band rebuild puts a disclosure on the page — *"bands may shift between reports"* —
+  whenever the boundaries came from this period's results instead of from twelve months of closings.
+  It is the sentence that makes the fallback honest. Its gate was:
+
+      note = builder._band_chart_note()
+      assert "may shift between reports" in note
+
+  `_band_chart_note`'s only consumer was a macro reached only from `pricebands_layout`, whose only
+  report type was `price_bands` — and `price_bands` left the macro dispatch when it joined the `_v2`
+  seam. **One kind moving made a four-link chain dead from the far end.** The method kept returning
+  the string, the assertion kept passing, and the document stopped carrying it.
+
+  **A producer with no consumer still produces.** This is the repository's *read-with-no-producer*
+  family (nine instances) pointed the other way, and it is harder to see: a consumer reading a key
+  nothing writes at least renders something empty, while a producer writing a value nothing reads
+  renders nothing at all and looks like a page that never had the line.
+
+  Operationally: when a claim has to appear in an artefact, **assert it on the artefact**. Keep the
+  producer assertion if it is cheap — it localises a failure — but it is never the one that matters.
+  And when a seam moves a kind, surface or path off one code path onto another, the question is not
+  only "does the new path work" but **"what did the old path produce that nobody else produces"**.
+
+- **A GATE THAT LEARNS ITS EXPECTATIONS FROM THE CURRENT RENDER RATIFIES THE GAP IT WAS BUILT TO
+  CATCH.** *Added 2026-10-13, building the specified-output gate; the correction is the product
+  owner's.*
+
+  The first design for that gate held a registry of §7.3's charts where an output that does not
+  render carries an `absent_because` string. It would have passed on the day it was written, and
+  **D-183's missing pace chart would have become its baseline** — the gate's own record would then
+  say the absence was expected, which is precisely the claim the gate exists to disprove.
+
+  A gate holds a **specification**; a baseline records a **measurement**. The two are
+  indistinguishable on the day they are written and opposite a month later, because the
+  specification is what should be true and the measurement is what happened to be. Whenever a check
+  is seeded from a render, ask which one it is — and if it is holding a spec, every departure is a
+  **finding it reports**, never a row it stores. Here that is a strict `xfail` citing the defect: it
+  is counted on every run, and it breaks the build the day the output comes back.
+
+  **The corollary, which is where the ratification actually happens.** The cheap repair for a gate
+  that goes red is to tell it the absence is fine. So an absence must cite either a defect that is
+  **on the board** or a sentence that is **verbatim in the plan**, and the gate checks the file it
+  names. "We decided not to" is not writable from inside the gate.
+
+  **And a third face of the same thing: a fixture that does not feed the producer makes "absent"
+  ambiguous.** The trend chart renders only with `closed_history` in the report data, and the
+  fixture most of this surface's tests use carries none — so a gate built on it reports §7.3's first
+  chart as missing on day one, and the obvious repair is to declare it absent. The inputs are
+  therefore asserted by a test that **never xfails**, which leaves the render assertion exactly one
+  way to fail. **A positive control that cannot distinguish "lost" from "never fed" is not a
+  control.**
+
+- **A PULL REQUEST'S CONTENTS ARE ITS BRANCH MINUS ITS BASE, AND NEITHER IS WHAT YOU INTENDED.**
+  *Added 2026-10-13, from merging four PRs under one title.*
+
+  `chore/theme-rename-...` was cut from `feat/market-galleries-v2` — whatever happened to be checked
+  out — and its PR base was set to `main`. Both choices were individually reasonable and together
+  they made the PR's diff *everything since main*: **65 files, 5,925 insertions**, squashed into one
+  commit titled after the rename. Three other open PRs were merged by it without being named, and
+  their history was collapsed.
+
+  **Nothing broke.** The code was the same code, tested green on the merge commit. What was destroyed
+  was **provenance**: four reviewable units became one, and three PRs stayed open describing work
+  already on `main`, which the next person would have tried to merge into a wide conflict.
+
+  **The free check that would have caught it**, before opening any PR:
+
+      git log --oneline <base>..HEAD
+
+  It prints what the PR will contain. One commit was written; twelve were listed. **That gap is the
+  whole signal** and it costs one command.
+
+  **A tool is not worth building here, and the reason is worth stating.** A pre-push hook lives in
+  `.git/hooks` and is not shared, so it protects whoever installs it and nobody else. A CI test
+  asserting `merge-base == origin/main` would fail every deliberately stacked branch — and stacking
+  is a legitimate pattern this project used for four consecutive kinds — so it needs an opt-out, and
+  an opt-out on a guard against carelessness is a switch that gets flipped by the carelessness. The
+  check is free and unconditional; the enforcement is neither.
+
+  **Two habits, not one.** Cut the branch from what the PR will target, *and* read the commit list
+  before opening it. The first prevents it; the second catches it when the first is forgotten, which
+  is the case that actually happened.
+
+- **THE DEFECT BOARD IS A CODEBASE, AND "GREP FOR ONE FIRST" GOVERNS IT TOO.**
+  *Added 2026-10-12, from filing D-187 on top of D-167.*
+
+  §0.6 already says: before building a tool, grep for one — a rule that cost a file when
+  `scripts/regress.py` was overwritten by a reimplementation of itself. **The same rule applies to
+  entries**, and it was not being applied: an audit of §07's unbuilt work grepped `apps/` for four
+  function names, found them missing, and filed it — without grepping `DEFECT_LIST.md` for the same
+  names. Two of the four were already **D-167**, filed seven days earlier.
+
+  The duplicate was not harmless. It would have **double-counted the open board** and split one
+  situation across two entries that do not reference each other, which is precisely the condition
+  that lets a defect be "known" and unfixed indefinitely: each entry looks like a partial view of
+  something someone else is handling.
+
+  Operationally: **the last step of filing an entry is `grep -n "<the symbol>" docs/DEFECT_LIST.md`,
+  for every symbol the entry names.** Not the title, not the description — the symbols. D-187's title
+  shares no words with D-167's and a prose search would have missed it; `compute_dom_distribution`
+  appears in both.
+
+  The board has 188 entries and nobody can hold them. That is not a reason to skip the check — it is
+  the reason the check exists.
+
+- **A VALUE FORMATTED FOR DISPLAY AND CONSUMED AS DATA FAILS TWICE, AND THE SECOND FAILURE IS THE
+  WORSE ONE.** *Added 2026-10-11.*
+
+  A number that has been through a display formatter is a **string**. Hand it to something that wants
+  a number and it fails in two directions, in this order:
+
+  1. **As a crash, or as nothing.** The consumer raises, or silently renders empty — loud enough to
+     notice, or at least obviously wrong.
+  2. **As a plausible value**, once somebody adds a guard. `| default(0, true) | float` turns
+     `"$412"` into `0.0`, and a chart of zeros is a chart. It paginates, it passes a smoke test, and
+     it says the market is at zero.
+
+  **The second is worse and it is caused by fixing the first.** The guard converts a visible failure
+  into an invisible one, which is why the remedy is **the boundary, not the guard**: a value crosses
+  from data to presentation exactly once, and nothing downstream of that crossing may be read as
+  data. Format at the edge, keep the number until then.
+
+  The live instance in this repository is **D-178** — `close_to_list_ratio` arrives as `0.982` from
+  one producer and `98.2` from another, and two template sites reconciled them with
+  `ratio * 100 if ratio < 2 else ratio`. Not a formatted string, but the same shape one step earlier:
+  a value whose scale is a presentation decision, consumed as data, with a guard standing in for a
+  boundary. It is fixed by normalising once in Python, which is the boundary.
+
+  The *exact* shape — `| default(0, true) | float` over a currency-formatted value — exists at
+  `templates/property/_base/_macros.jinja2:469`, and that file is **dead** (no `get_template` literal
+  reaches it; 5,570 dead lines by `derive_template_reachability.py`). Recorded with its reachability
+  rather than fixed, because editing dead code produces a diff that looks like a fix and changes no
+  rendered page — the same disposition as D-107's surviving `[:4]`.
+
+  *Checked and absent:* a `volume_label` carrying dollars, a count and dollars under one name is
+  **not in this repository** — the symbol does not exist in any `.py` or `.jinja2`. Recorded so it is
+  not re-filed.
+
+- **AN ASSERTION SCOPED TO ONE INSTANCE, NAMED AS IF SCOPED TO THE CLASS.** *Added 2026-10-10.*
+
+  §0.6 already says a gate on a document must assert its claims, not its text, and that a gate on a
+  producer is not a gate on the document. This is the third face of it: the gate is pointed at the
+  right object, asserts the right thing, and **covers one member of a set whose name it borrows.**
+
+  `TestPrintCSS::test_has_page_size_rule` reads as *"the market templates set a page size"*. Its
+  fixture sets one `report_type`, so it meant *"`new_listings_gallery` does"*. **Four `_v2` kinds
+  shipped with no `@page` rule for three days and it was unobserved** — the test could not see them,
+  and it failed only when the one kind it did see moved, which is the last moment it could have.
+
+  The tell is in the **fixture, not the assertion**: a single-instance fixture under a class-scoped
+  name. `full_data` with one `report_type`, a partial render standing for a page, one theme standing
+  for six. The assertion reads as coverage and is a sample of one.
+
+  **This is also the direction D-107 failed in**, a day earlier and in a document rather than a test:
+  the entry's claim was class-scoped (*"the price-band stat cards show the first four bands"*) and
+  its fix was instance-scoped (one macro of two). Same mismatch, and nothing noticed for ten days.
+
+  Two remedies, and which one depends on whether the members differ:
+
+  * **They do not differ** → parametrise over the set. `ALL_REPORT_TYPES`, every theme, every kind.
+  * **They do differ** → pin the expectation per member and make an unrecorded member an error, the
+    way `HAS_AT_PAGE_RULE` now records that the legacy page has an `@page` rule and the `_v2` page
+    deliberately has none.
+
+  What is NOT a remedy is renaming the test to match its scope. `test_new_listings_gallery_has_a_
+  page_size_rule` would be honest and would still leave seven kinds unasserted. **The name should
+  carry the scope, and the scope should be the class.**
+
+  *Checked and absent:* a test asserting exactly one `<table` in a document that has two, passing
+  because its fixture was a partial render, is **not in this repository** — there is no such
+  assertion and no `test_html` fixture. Recorded so it is not re-filed; the real instance is the
+  `@page` one above.
+
+- **A POSITIVE CONTROL DRAWN FROM THE SET BEING MIGRATED IS CONSUMED BY THE MIGRATION.**
+  *Added 2026-10-08.*
+
+  §0.6 already requires a positive control: a checker whose normal output is "match" is
+  indistinguishable from one that has stopped matching anything. The trap is **where the control
+  comes from.** Four tests named a report type as "the kind that has NOT moved", and each stopped
+  being a control the moment that kind moved:
+
+  | test | named | consumed when |
+  |---|---|---|
+  | `test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout` | `closed`, then `inventory` | twice |
+  | `test_a_kind_without_a_band_spec_raises_rather_than_rendering_empty` | `inventory` | 2026-10-08 |
+  | `test_a_v2_render_does_not_pay_for_a_narrative_it_discards` | `inventory` | 2026-10-08 |
+  | `test_the_comparison_is_against_the_no_narrative_column` | `inventory` | 2026-10-08 |
+
+  **None of them failed in a way that said "your control is gone."** Three failed with the control's
+  own assertion inverted, which reads as the feature breaking; one would have passed while proving
+  nothing, because a kind inside the seam satisfies "calls no layout macro" trivially. One of them
+  even carried the comment *"`inventory`, not `closed`: closed renders the `_v2` page now"* — the
+  same substitution, one kind earlier, by someone who had just watched it happen.
+
+  **The remedy is to compute the control and assert the remainder is non-empty.**
+  `sorted(set(ALL_REPORT_TYPES) - V2_KINDS)` with an assertion that it is not empty, so when the
+  last member moves the test says *"there is no kind left to act as the control; these tests are no
+  longer proving what they say"* instead of quietly passing.
+
+  And when the control genuinely has no replacement, **say that rather than patch it.** The 15/11
+  page-1 swing existed only on the two kinds whose layout put a narrative box above a long table,
+  and both moved — so "one kind still shows the swing" became "no kind's capacity depends on prose
+  length", asserted over all eight. A weaker-looking assertion over the whole set beats a strong one
+  over a sample of zero.
+
+- **A CONSTANT THAT IS RIGHT FOR EVERY MEMBER OF A SET IS INDISTINGUISHABLE FROM A CONSTANT THAT IS
+  RIGHT FOR THE SET — UNTIL THE SET GROWS.** *Added 2026-10-08.*
+
+  Four gates written while the `_v2` seam held only table kinds encoded a table kind's property as
+  the seam's property, and all four broke on the first kind that was not a table:
+
+  | gate | what it said | what it meant |
+  |---|---|---|
+  | `test_a_v2_kind_calls_no_layout_macro` | `class="trow thead"` is on the page | *a table kind's* body rendered |
+  | `test_the_built_figures_match_the_live_pin` | `ceil((120 - page_1) / 26) + 1` | 26 is *the table body's* continuation capacity |
+  | `test_the_cap_is_what_limits_the_listings` | rendered rows == `PDF_CONFIG` cap | the kind *has* a listings table |
+  | the §2a forecast gate | live `PAGE_1_CAPACITY` is the forecast's input | the kind *has not been built yet* |
+
+  None was wrong when written and each was wrong one kind later. The remedy in all four was the
+  same and it is the general one: **pin the varying thing per member, and make an unrecorded member
+  an error rather than a default.** `V2_BODY_MARKER`, `V2_CONTINUATION` and `RENDERED_DESPITE_CAP`
+  each raise on a kind they do not know, so the next kind to join the seam is told what to record
+  instead of inheriting the third kind's geometry.
+
+  This is `V2_KINDS`-subtraction's counterpart. Subtracting the seam from a parametrisation stops a
+  moved kind from being silently excluded; pinning per member stops the kinds that remain from
+  sharing one member's properties.
+
+- **A GUARD THAT COUNTS INSTANCES STAYS CORRECT WHILE THE INSTANCE IT COVERS CHANGES IDENTITY.**
+  *Added 2026-10-20, from D-206.*
+
+  `test_pdf_contrast.py` excludes from the gate any text whose glyphs are painted by a gradient
+  clipped to them, because the measurement blanks glyphs with the very property such a template
+  uses and so reads the element's own gradient as its backdrop. The exclusion is sound, it was
+  **enumerated rather than guessed**, and it is guarded:
+
+      EXPECTED_DECLINED = 1
+
+  with a failure message telling the next person to *"work out its real contrast by hand"* when a
+  second element appears. That guard is a good one. It has been green and correct for twenty days.
+
+  What authorised the exclusion was a hand calculation on the one element: *"4.47:1 at the worst
+  pair of stops, 9.28:1 at the best"* against a 3.0 threshold. Both figures still reproduce to the
+  digit. They are `#FF6B5B on #2D3348` and `#FFB199 on #1A1F36` — and **`#FF6B5B` is the
+  template's default accent, the value used only when no brand is set.** The gradient's first stop
+  is `{{ theme_color }}`, the customer's colour. Recomputed per brand, **four of the six fail**:
+  violet 2.07, coastal 2.16, demo_title 2.49, luxury_estates 2.99.
+
+  In between, the element changed **template** (`modern` → `harbor`), **page architecture** (rewired
+  onto Design's shared page) and **colour model** (a fixed coral became a brand-derived gradient).
+  The count never moved, because there was still exactly one such element. **A cardinality
+  assertion cannot express "and it is still the element the reasoning was about."**
+
+  The general form, and the reason it sits here rather than in that file: **a guard whose subject is
+  a count has no way to notice a substitution.** `EXPECTED_DECLINED = 1`, `EXPECTED_SKIPS = 3`,
+  `assert len(exemptions) == 7` — each is right about the number while the members are replaced one
+  by one underneath it. The remedy is the same as the rule above it, one level up: **pin what
+  justified the number, not only the number.** For an exclusion that rests on a measurement, record
+  the measurement and what it was computed against, so a change to either is an error rather than
+  an inheritance.
+
+  Related, and the reason this is a family rather than an incident:
+
+  | instance | the number was right about | what it was computed on |
+  |---|---|---|
+  | `numeric_leaf_names()` | every numeric the builder names | **one** input, `PropertyReportBuilder({})` |
+  | the colour tolerance's first value, 48 | the gap between two populations | **ten** single-brand renders, applied to ninety across six |
+  | `EXPECTED_DECLINED = 1` | the number of unmeasurable elements | **the default accent**, which no customer has |
+
+  All three are the derived-set rule with a different noun, and all three were green while covering
+  less than their name claimed. **A measurement that reports less reads exactly like a system with
+  less wrong with it** — which is already written four hundred lines up, and is why the check that
+  found this one was "does the justification still hold?" rather than "is the gate green?"
+
+- **CLEAR THE WORST CASE AND THE REST FOLLOW — an argument beats a wider enumeration.**
+  *Added 2026-10-21, after three instances in two days.*
+
+  A derived value is only correct against the thing it was derived against. The property themes put
+  brand-coloured text on five different grounds, and every attempt to fix it picked the ground from
+  **the name of the token** rather than from the measurement:
+
+  | | the ink | the ground it was derived for | the ground it was actually on |
+  |---|---|---|---|
+  | the brand plate | `on_primary` | `primary` | `rgba(0,0,0,0.2)` over a gradient — `0.677 × brand` |
+  | `--silver` | one grey, redefined | the page footer, on white | *also* `.cover-city`, on the dark panel |
+  | the footer number | `--burgundy-on-cream` | `#FAF7F2` | `#FEF4F4` on some pages — **4.48:1**, short by 0.02 |
+
+  Each fix was measured, each was correct for the ground it named, and each missed a ground nobody
+  had enumerated. The third one missed by **two hundredths**, which is the tell: the method was
+  exhausting the list of grounds somebody could think of, and the list was never complete.
+
+  **The remedy is not a longer list.** `ink_on` returns a *darkened* ink, and for a dark ink
+  contrast rises monotonically as the ground lightens — so an ink that clears the **darkest** paper
+  tone a template declares clears every lighter one, including the ones nobody enumerated and the
+  ones a future page introduces. One derivation against `--cream-dark` replaced an enumeration of
+  `#FAF7F2`, `#FEF4F4` and `#FFFFFF`, and it cannot be incomplete.
+
+  The general form: **when a guarantee has to hold across a family of cases, find the extreme case
+  and an argument that the rest follow from it.** A list of cases is a claim about the list; an
+  argument about the extreme is a claim about the family.
+
+  **And it only holds while nobody reverts to listing.** The monotonicity is in the comment at the
+  declaration and the reason is on D-208, because the next person to add a paper tone will be
+  tempted to give it its own ink — which is correct, costs nothing, and quietly re-establishes the
+  enumeration this replaced. The two grounds that genuinely need their own derivation are the ones
+  **outside** the family: `--gold-light`, darker than any paper tone, and `#2b3045`, which is dark
+  and needs the other direction entirely.
+
+  Related: the derived-set rule four hundred lines up is this one's sibling — *a derived set is only
+  as complete as the input it was derived from*. That rule says derive from more than one input;
+  this one says that when the inputs form an ordered family, the worst one is enough.
 
 ---
 

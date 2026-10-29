@@ -193,12 +193,22 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
   }
 
   const actionLabels: Record<string, { title: string; description: string; confirm: string; variant: 'default' | 'destructive' }> = {
-    deactivate: {
-      title: 'Deactivate Account',
-      description: 'This will suspend the agent\'s account. They will lose access until reactivated.',
-      confirm: 'Deactivate',
-      variant: 'destructive',
-    },
+    // The same endpoint behind both items; what it does is what each says
+    // (D-273): a pending agent's invite link stops working, an active agent
+    // is signed out, can't sign in, and their schedules stop sending.
+    deactivate: confirmModal.agent?.status === 'pending'
+      ? {
+          title: 'Cancel Invitation',
+          description: 'Their invite link stops working. They stay in your book, and you can reactivate and resend later.',
+          confirm: 'Cancel invitation',
+          variant: 'destructive',
+        }
+      : {
+          title: 'Deactivate Account',
+          description: 'This will suspend the agent\'s account: they are signed out, can\'t sign in, and their scheduled reports stop sending until you reactivate them.',
+          confirm: 'Deactivate',
+          variant: 'destructive',
+        },
     reactivate: {
       title: 'Reactivate Account',
       description: 'This will restore the agent\'s account access.',
@@ -230,7 +240,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
           }
         />
 
-        <Card className="border-indigo-200/60 bg-gradient-to-br from-indigo-50/50 to-white shadow-sm">
+        <Card className="border-border bg-card">
           <div className="p-5 space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -239,8 +249,8 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                   {isCompanyRep ? 'Title Rep Dashboard' : 'Affiliate Dashboard'}
                 </p>
               </div>
-              <div className="rounded-xl bg-indigo-100 p-2.5">
-                <TrendingUp className="h-5 w-5 text-indigo-600" />
+              <div className="p-2.5">
+                <TrendingUp className="h-5 w-5 text-[var(--body)]" />
               </div>
             </div>
 
@@ -274,9 +284,15 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
             <div className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold">Your Reports</p>
-                <span className="text-xs bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 px-2 py-0.5 rounded-full">
-                  {planUsage.plan?.plan_name || 'Affiliate'} Plan
-                </span>
+                {/* D-203: the name the `plans` row carries, or the slug, or no
+                    pill at all. `|| 'Affiliate'` told an account whose plan row
+                    was missing that it was on Affiliate — the same guess the
+                    deleted `_PLAN_DISPLAY_NAMES` map made, one layer up. */}
+                {(planUsage.plan?.plan_name || planUsage.plan?.plan_slug) && (
+                  <span className="text-xs bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400 px-2 py-0.5 rounded-full">
+                    {planUsage.plan.plan_name || planUsage.plan.plan_slug} Plan
+                  </span>
+                )}
               </div>
               <div className="space-y-2">
                 <UsageBar
@@ -381,7 +397,7 @@ export function AffiliateDashboardShell(props: AffiliateDashboardShellProps) {
                           </div>
                         </td>
                         <td className="py-4 px-6">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent text-accent-foreground border border-transparent">
                             {account.plan_slug}
                           </span>
                         </td>

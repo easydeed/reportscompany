@@ -4,7 +4,7 @@
 
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
+import { Logo } from "@/components/logo"
 import {
   LayoutDashboard,
   Users,
@@ -80,14 +80,7 @@ export default async function AdminLayout({
         {/* Logo/Brand */}
         <div className="p-6 border-b border-slate-200">
           <Link href="/admin" className="flex items-center gap-3">
-            <Image
-              src="/logo.svg"
-              alt="TrendyReports"
-              width={140}
-              height={40}
-              className="h-8 w-auto"
-              priority
-            />
+            <Logo className="h-8" />
           </Link>
           <p className="text-xs text-slate-500 mt-1 ml-1">Admin Console</p>
         </div>

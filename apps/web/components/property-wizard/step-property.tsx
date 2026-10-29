@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home,
   Search,
   RotateCcw,
   Loader2,
@@ -12,7 +11,6 @@ import {
   ChevronUp,
   AlertCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -23,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { useGooglePlaces, type PlaceResult } from "@/hooks/useGooglePlaces";
 import type { PropertyData } from "./types";
+import { FieldLabel, StepHeader } from "@/components/unified-wizard/wizard-ui";
 
 type UnitMatch = {
   fips: string;
@@ -280,38 +279,41 @@ export function StepProperty({
     .filter(Boolean)
     .join(", ");
 
-  return (
-    <div className="space-y-6 max-w-2xl">
-      {/* Address Search Card */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#EEF2FF]">
-            <Home className="h-5 w-5 text-[#6366F1]" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Find Your Property
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Enter the property address to get started.
-            </p>
-          </div>
-        </div>
+  const facts: { k: string; v: string | null }[] = property
+    ? [
+        { k: "Beds", v: property.bedrooms ? String(property.bedrooms) : null },
+        { k: "Baths", v: property.bathrooms ? String(property.bathrooms) : null },
+        { k: "Sq ft", v: property.sqft ? property.sqft.toLocaleString() : null },
+        { k: "Lot", v: property.lot_size > 0 ? `${property.lot_size.toLocaleString()} sf` : null },
+        { k: "Built", v: property.year_built ? String(property.year_built) : null },
+        {
+          k: "Last sale",
+          v: property.last_sale_price
+            ? `$${Math.round(property.last_sale_price / 1000).toLocaleString()}K${
+                property.last_sale_date ? ` · ${property.last_sale_date.slice(0, 4)}` : ""
+              }`
+            : null,
+        },
+      ]
+    : [];
 
-        <div className="mt-5 space-y-3">
+  return (
+    <div className="flex flex-col gap-[26px]">
+      <StepHeader
+        title="Which home?"
+        sub="We pull the public record so you don't type it."
+      />
+
+      {!property && (
+        <div className="flex flex-col gap-2.5">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-[#94A3B8]" />
             <Input
               ref={addressInputRef}
-              placeholder={
-                googleLoaded
-                  ? "Start typing an address..."
-                  : "Enter property address..."
-              }
-              className="pl-10 h-12 text-base rounded-lg"
+              placeholder={googleLoaded ? "Start typing an address..." : "Enter property address..."}
+              className="h-[52px] rounded-[10px] border-[1.5px] border-[#D6D3CB] pl-[46px] text-[17px]"
               value={streetAddress}
               onChange={(e) => onStreetAddressChange(e.target.value)}
-              disabled={!!property}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -320,33 +322,39 @@ export function StepProperty({
               }}
             />
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex gap-2">
             <Input
               placeholder="City, State ZIP"
-              className="rounded-lg"
+              className="h-[52px] flex-1 rounded-[10px] border-[1.5px] border-[#D6D3CB] text-[17px]"
               value={cityStateZip}
               onChange={(e) => onCityStateZipChange(e.target.value)}
-              disabled={!!property}
             />
-            <div className="text-xs text-muted-foreground flex items-center">
-              {googleError && (
-                <span className="text-amber-600">{googleError}</span>
-              )}
-              {!googleError &&
-                cityStateZip &&
-                !property &&
-                "Auto-populated or edit manually"}
-            </div>
+            <button
+              type="button"
+              disabled={!streetAddress.trim() || searchLoading}
+              onClick={handleSearch}
+              className="inline-flex h-[52px] items-center gap-2 rounded-[10px] bg-[#0F172A] px-[18px] text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {searchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {searchLoading ? "Looking up…" : "Look up"}
+            </button>
           </div>
+          <span className="text-[13px] text-[#64748B]">
+            {googleError
+              ? <span className="text-[#B45309]">{googleError}</span>
+              : cityStateZip
+              ? "Auto-populated or edit manually"
+              : "Street first, then city, state and ZIP."}
+          </span>
 
-          {/* Error Message */}
           {searchError && (
-            <div className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="flex items-center gap-2 rounded-[10px] bg-[#FEF2F2] px-4 py-3 text-sm text-[#B91C1C]">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{searchError}</span>
             </div>
           )}
+        </div>
+      )}
 
           <Dialog
             open={!!unitMatches && unitMatches.length > 0 && !property}
@@ -399,178 +407,82 @@ export function StepProperty({
             </DialogContent>
           </Dialog>
 
-          {!property && (
-            <Button
-              className="w-full bg-[#6366F1] text-white hover:bg-[#4F46E5] h-11"
-              disabled={!streetAddress.trim() || searchLoading}
-              onClick={handleSearch}
-            >
-              {searchLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Searching...
-                </>
-              ) : (
-                <>
-                  <Search className="h-4 w-4 mr-2" />
-                  Search Property
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Property Result Card */}
+      {/* The public record, once found */}
       <AnimatePresence>
         {property && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="rounded-2xl border border-border bg-card overflow-hidden"
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="flex flex-col gap-4"
           >
-            {/* Gradient top border */}
-            <div className="h-0.5 bg-gradient-to-r from-[#6366F1] to-[#818CF8]" />
-
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <svg
-                    className="w-3.5 h-3.5 text-emerald-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={3}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-base font-semibold text-foreground">
-                  Property Found
-                </h3>
-              </div>
-
-              <div className="rounded-xl border border-border p-5">
-                <h4 className="text-xl font-bold text-foreground">
-                  {property.street_address}
-                </h4>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {property.city}, {property.state} {property.zip_code}
-                </p>
-
-                {/* Stats */}
-                <div className="flex flex-wrap gap-3 mt-4">
-                  {[
-                    { value: property.bedrooms, label: "beds" },
-                    { value: property.bathrooms, label: "bath" },
-                    {
-                      value: property.sqft.toLocaleString(),
-                      label: "sqft",
-                    },
-                    { value: property.year_built, label: "built" },
-                  ].map((stat) => (
-                    <div
-                      key={stat.label}
-                      className="rounded-lg bg-muted px-4 py-2.5 text-center min-w-[72px]"
-                    >
-                      <p className="text-lg font-bold text-foreground">
-                        {stat.value}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {stat.label}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Collapsible Details */}
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setDetailsOpen(!detailsOpen)}
-                  >
-                    {detailsOpen ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                    Additional Details
-                  </button>
-                  <AnimatePresence>
-                    {detailsOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden"
-                      >
-                        <div className="mt-3 space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Owner</span>
-                            <span className="font-medium text-foreground">
-                              {property.owner_name}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">APN</span>
-                            <span className="font-medium text-foreground">
-                              {property.apn || "N/A"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Lot Size
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {property.lot_size > 0
-                                ? `${property.lot_size.toLocaleString()} sqft`
-                                : "N/A"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Assessed Value
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {property.assessed_value > 0
-                                ? `$${property.assessed_value.toLocaleString()}`
-                                : "N/A"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">
-                              Annual Taxes
-                            </span>
-                            <span className="font-medium text-foreground">
-                              {property.tax_amount > 0
-                                ? `$${property.tax_amount.toLocaleString()}`
-                                : "N/A"}
-                            </span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              <Button
-                variant="ghost"
-                className="mt-4 text-muted-foreground"
-                onClick={onClear}
-              >
-                <RotateCcw className="h-4 w-4 mr-1.5" />
-                Clear & Search Again
-              </Button>
+            <div className="flex flex-col gap-1">
+              <FieldLabel>
+                Public record{property.county ? ` · ${property.county} County` : ""}
+                {property.apn ? ` · APN ${property.apn}` : ""}
+              </FieldLabel>
+              <span className="text-[22px] font-extrabold leading-tight tracking-[-0.02em] text-[#0F172A]">
+                {property.street_address}
+              </span>
+              <span className="text-[15px] text-[#64748B]">
+                {property.city}, {property.state} {property.zip_code}
+              </span>
             </div>
+
+            <div className="grid grid-cols-3 border-t-[1.5px] border-[#0F172A]">
+              {facts.map((f) => (
+                <div key={f.k} className="flex flex-col gap-0.5 border-b border-[#ECEAE3] py-3 pr-2">
+                  <span className="text-xs text-[#64748B]">{f.k}</span>
+                  <span className={`text-[17px] font-bold ${f.v ? "text-[#0F172A]" : "text-[#5E636B]"}`}>
+                    {f.v ?? "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <button
+                type="button"
+                className="flex items-center gap-1.5 text-sm font-semibold text-[#475569] hover:text-[#0F172A]"
+                onClick={() => setDetailsOpen(!detailsOpen)}
+              >
+                {detailsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                Assessment and taxes
+              </button>
+              <AnimatePresence>
+                {detailsOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 flex flex-col text-sm">
+                      {[
+                        ["Assessed value", property.assessed_value > 0 ? `$${property.assessed_value.toLocaleString()}` : "N/A"],
+                        ["Annual taxes", property.tax_amount > 0 ? `$${property.tax_amount.toLocaleString()}` : "N/A"],
+                      ].map(([k, v]) => (
+                        <div key={k} className="flex justify-between border-b border-[#ECEAE3] py-2">
+                          <span className="text-[#64748B]">{k}</span>
+                          <span className="font-semibold text-[#0F172A]">{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button
+              type="button"
+              className="flex items-center gap-1.5 self-start text-sm font-semibold text-[#64748B] hover:text-[#0F172A]"
+              onClick={onClear}
+            >
+              <RotateCcw className="h-4 w-4" />
+              Look up a different home
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

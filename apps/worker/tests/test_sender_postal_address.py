@@ -122,10 +122,10 @@ def test_the_platform_address_never_wears_the_accounts_brand(report_type):
     and looks entirely reasonable in review.
     """
     html = _render(report_type, {"display_name": ACCOUNT_BRAND})
-    assert f"{ACCOUNT_BRAND} &bull; {PLATFORM_POSTAL_ADDRESS}" not in html, (
+    assert f"{ACCOUNT_BRAND} · {PLATFORM_POSTAL_ADDRESS}" not in html, (
         f"{report_type}: the platform's address is attributed to {ACCOUNT_BRAND}"
     )
-    assert f"{PLATFORM_SENDER_LABEL} &bull; {PLATFORM_POSTAL_ADDRESS}" in html, (
+    assert f"{PLATFORM_SENDER_LABEL} · {PLATFORM_POSTAL_ADDRESS}" in html, (
         f"{report_type}: the fallback does not say whose address it is"
     )
 
@@ -140,7 +140,7 @@ def test_an_override_does_not_also_print_the_platform_address(report_type):
     assert PLATFORM_POSTAL_ADDRESS not in html, (
         f"{report_type}: both the account's address and the platform's rendered"
     )
-    assert f"{ACCOUNT_BRAND} &bull; {OWN_ADDRESS}" in html
+    assert f"{ACCOUNT_BRAND} · {OWN_ADDRESS}" in html
 
 
 @pytest.mark.parametrize("blank", ["", "   ", None])
@@ -152,7 +152,7 @@ def test_a_blank_stored_address_falls_back_rather_than_rendering_an_empty_line(b
     """
     html = _render("market_snapshot", {"display_name": ACCOUNT_BRAND, "postal_address": blank})
     assert PLATFORM_POSTAL_ADDRESS in html
-    assert f"{ACCOUNT_BRAND} &bull; </p>" not in html
+    assert f"{ACCOUNT_BRAND} · </p>" not in html
 
 
 # ── the value itself ────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ def test_the_postal_line_meets_wcag_aa_against_the_footer():
     colour = re.search(r"color:\s*(#[0-9a-fA-F]{6})", line).group(1)
     size = int(re.search(r"font-size:\s*(\d+)px", line).group(1))
 
-    FOOTER_BACKGROUND = "#f8f9fa"
+    FOOTER_BACKGROUND = "#ffffff"   # the card; the footer is no longer a grey band
     ratio = _contrast_ratio(colour, FOOTER_BACKGROUND)
     assert ratio >= 4.5, (
         f"the postal address renders at {colour} on {FOOTER_BACKGROUND} — "
@@ -254,21 +254,18 @@ def test_the_postal_line_meets_wcag_aa_against_the_footer():
     assert size >= 11, f"the postal address renders at {size}px"
 
 
-def test_the_postal_line_is_not_styled_identically_to_the_unsubscribe_link():
+def test_the_footer_holds_no_decoration_for_the_compliance_lines_to_hide_in():
     """
-    The specific failure: it was visually indistinguishable from the two
-    decorative lines it sits between. Different weight of statement, different
-    treatment — otherwise nothing marks it as the one line that is there for a
-    legal reason.
+    This used to check that the postal line was not styled like the unsubscribe
+    link, because both sat beside "Powered by TrendyReports" in the same 10px
+    grey and read as decoration. Design's 5th package removes the decoration
+    (owner call 2026-10-28: follow Design), so the footer is three lines and all
+    three are there for a legal reason: why you got this, how to stop it, and
+    where the sender is. Each is measured at AA by the contrast gates. What is
+    left to pin is that the decoration does not come back.
     """
     html = _render("market_snapshot", {"display_name": ACCOUNT_BRAND})
-    postal = next(ln for ln in html.splitlines() if PLATFORM_POSTAL_ADDRESS in ln)
-    unsubscribe = next(ln for ln in html.splitlines() if "Unsubscribe</a>" in ln or "unsubscribe" in ln.lower() and "font-size" in ln)
-    postal_style = re.search(r"font-size:\s*\d+px;\s*color:\s*#[0-9a-fA-F]{6}", postal)
-    assert postal_style, "could not read the postal line's styling"
-    assert postal_style.group(0) not in unsubscribe, (
-        "the postal address is styled identically to the unsubscribe link"
-    )
+    assert "Powered by" not in html
 
 
 # ── one address, three surfaces ─────────────────────────────────────────────

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ComparableCard } from "./comparable-card";
 import { MapModal } from "./map-modal";
+import { Pill, StepHeader } from "@/components/unified-wizard/wizard-ui";
 import type { Comparable, PropertyData } from "./types";
 import { autoSelectComps } from "./types";
 
@@ -120,7 +121,7 @@ export function StepComparables({
   if (compsLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-[#6366F1]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#0F172A]" />
         <p className="mt-3 text-sm text-muted-foreground">
           Searching for comparables...
         </p>
@@ -141,51 +142,21 @@ export function StepComparables({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-3 mb-1">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#EEF2FF]">
-            <BarChart3 className="h-5 w-5 text-[#6366F1]" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              Select Comparables
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Choose 4–8 comparable{" "}
-              {compsStatus === "Active" ? "active listings" : "sold properties"}{" "}
-              for the report.
-            </p>
-          </div>
-        </div>
-      </div>
+      <StepHeader
+        title="Which sales count?"
+        sub={`Pick four to eight ${compsStatus === "Active" ? "active listings" : "sold homes"}. Auto-select picks for you.`}
+      />
 
       {/* Controls Bar */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Active / Sold toggle */}
-        <div className="inline-flex items-center rounded-lg border border-border p-0.5 bg-muted/50">
-          <button
-            type="button"
-            onClick={() => onStatusChange("Active")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              compsStatus === "Active"
-                ? "bg-[#6366F1] text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Active Listings
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatusChange("Closed")}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-              compsStatus === "Closed"
-                ? "bg-[#6366F1] text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
+        <div className="flex gap-1.5">
+          <Pill on={compsStatus === "Active"} onClick={() => onStatusChange("Active")}>
+            Active listings
+          </Pill>
+          <Pill on={compsStatus === "Closed"} onClick={() => onStatusChange("Closed")}>
             Sold
-          </button>
+          </Pill>
         </div>
 
         <Button
@@ -193,7 +164,7 @@ export function StepComparables({
           size="sm"
           onClick={handleAutoSelect}
           disabled={autoSelectLoading || comps.length === 0}
-          className="gap-1.5 bg-transparent"
+          className="gap-1.5 rounded-full bg-transparent"
         >
           {autoSelectLoading ? (
             <>
@@ -212,7 +183,7 @@ export function StepComparables({
           variant="outline"
           size="sm"
           onClick={() => setMapOpen(true)}
-          className="gap-1.5"
+          className="gap-1.5 rounded-full"
         >
           <Map className="h-4 w-4" />
           Map View
@@ -223,7 +194,7 @@ export function StepComparables({
           variant={filtersModified ? "default" : "outline"}
           size="sm"
           onClick={() => setFiltersOpen((o) => !o)}
-          className={`gap-1.5 ${filtersModified ? "bg-[#6366F1] text-white hover:bg-[#4F46E5]" : ""}`}
+          className={`gap-1.5 rounded-full ${filtersModified ? "bg-[#0F172A] text-white hover:bg-[#1E293B]" : ""}`}
         >
           <SlidersHorizontal className="h-4 w-4" />
           Search Filters
@@ -241,8 +212,8 @@ export function StepComparables({
         <div
           className={`ml-auto px-3 py-1 rounded-full text-sm font-semibold ${
             isValid
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-[#EEF2FF] text-[#4338CA]"
+              ? "bg-[#D1FAE5] text-[#065F46]"
+              : "bg-[#F1F5F9] text-[#475569]"
           }`}
         >
           {selectedCompIds.length} of 8 selected
@@ -278,8 +249,8 @@ export function StepComparables({
                       onClick={() => onFiltersChange(opt.value, radiusMiles)}
                       className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all ${
                         sqftTolerance === opt.value
-                          ? "bg-[#6366F1] text-white border-[#6366F1]"
-                          : "bg-background text-muted-foreground border-border hover:border-[#6366F1] hover:text-[#6366F1]"
+                          ? "bg-[#0F172A] text-white border-[#0F172A]"
+                          : "bg-background text-[#475569] border-[#E4E2DA] hover:border-[#0F172A] hover:text-[#0F172A]"
                       }`}
                     >
                       {opt.label}
@@ -306,8 +277,8 @@ export function StepComparables({
                       onClick={() => onFiltersChange(sqftTolerance, opt.value)}
                       className={`px-3 py-1 text-xs font-semibold rounded-full border transition-all ${
                         radiusMiles === opt.value
-                          ? "bg-[#6366F1] text-white border-[#6366F1]"
-                          : "bg-background text-muted-foreground border-border hover:border-[#6366F1] hover:text-[#6366F1]"
+                          ? "bg-[#0F172A] text-white border-[#0F172A]"
+                          : "bg-background text-[#475569] border-[#E4E2DA] hover:border-[#0F172A] hover:text-[#0F172A]"
                       }`}
                     >
                       {opt.label}
@@ -348,16 +319,57 @@ export function StepComparables({
         )}
       </AnimatePresence>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* In the report first, then what is available — one column, as Design draws it */}
+      <div className="flex flex-col gap-6">
+        {/* Selected */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            {isValid && (
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            )}
+            <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-[#64748B]">
+              In the report · {selectedComps.length}
+            </h3>
+          </div>
+          <div>
+            <div className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {selectedComps.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-12 text-center rounded-xl border-2 border-dashed border-border"
+                  >
+                    <BarChart3 className="h-8 w-8 text-muted-foreground/40 mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No comparables selected yet
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Tap a home below to add it
+                    </p>
+                  </motion.div>
+                ) : (
+                  selectedComps.map((comp) => (
+                    <ComparableCard
+                      key={comp.id}
+                      comp={comp}
+                      isSelected={true}
+                      onToggle={toggleComp}
+                    />
+                  ))
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
         {/* Available */}
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              Available ({availableComps.length})
+            <h3 className="text-xs font-bold uppercase tracking-[0.1em] text-[#64748B]">
+              Available · {availableComps.length}
             </h3>
           </div>
-          <ScrollArea className="h-[500px] pr-2">
+          <ScrollArea className="max-h-[560px] pr-2">
             <div className="space-y-3">
               <AnimatePresence mode="popLayout">
                 {availableComps.map((comp) => (
@@ -424,47 +436,6 @@ export function StepComparables({
           </ScrollArea>
         </div>
 
-        {/* Selected */}
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            {isValid && (
-              <div className="w-2 h-2 rounded-full bg-emerald-500" />
-            )}
-            <h3 className="text-sm font-semibold text-foreground">
-              In Report ({selectedComps.length})
-            </h3>
-          </div>
-          <ScrollArea className="h-[500px] pr-2">
-            <div className="space-y-3">
-              <AnimatePresence mode="popLayout">
-                {selectedComps.length === 0 ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-12 text-center rounded-xl border-2 border-dashed border-border"
-                  >
-                    <BarChart3 className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No comparables selected yet
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Click cards on the left to add them
-                    </p>
-                  </motion.div>
-                ) : (
-                  selectedComps.map((comp) => (
-                    <ComparableCard
-                      key={comp.id}
-                      comp={comp}
-                      isSelected={true}
-                      onToggle={toggleComp}
-                    />
-                  ))
-                )}
-              </AnimatePresence>
-            </div>
-          </ScrollArea>
-        </div>
       </div>
 
       {/* Validation bar */}
@@ -472,8 +443,8 @@ export function StepComparables({
         layout
         className={`flex items-center gap-2 text-sm px-4 py-3 rounded-lg ${
           isValid
-            ? "bg-emerald-50 text-emerald-700"
-            : "bg-muted text-muted-foreground"
+            ? "bg-[#D1FAE5] text-[#065F46]"
+            : "bg-[#F6F5F1] text-[#475569]"
         }`}
       >
         {isValid ? (

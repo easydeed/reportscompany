@@ -40,7 +40,7 @@ type BillingData = PlanUsage & {
 function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
   const isUnlimited = limit >= 99999
   const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
-  const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-indigo-500"
+  const color = pct >= 100 ? "bg-red-500" : pct >= 80 ? "bg-amber-500" : "bg-primary"
 
   return (
     <div className="space-y-1">
@@ -197,7 +197,7 @@ export default function BillingPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--body)] mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">Loading billing information...</p>
         </div>
       </div>
@@ -321,12 +321,12 @@ export default function BillingPage() {
                       key={plan.slug}
                       className={cn(
                         "border rounded-xl p-4 relative transition-all",
-                        plan.popular && !isCurrent && "border-indigo-300 ring-1 ring-indigo-100",
+                        plan.popular && !isCurrent && "border-[1.5px] border-[var(--border-selected)]",
                         isCurrent && "bg-muted/30 border-border"
                       )}
                     >
                       {plan.popular && !isCurrent && (
-                        <Badge className="absolute -top-2 right-3 bg-indigo-600 text-white border-0 text-[10px]">
+                        <Badge className="absolute -top-2 right-3 bg-primary text-primary-foreground border-0 text-[10px]">
                           <Sparkles className="w-3 h-3 mr-0.5" />
                           Popular
                         </Badge>
@@ -399,7 +399,7 @@ export default function BillingPage() {
               </div>
               <div className="p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                     <CreditCard className="w-5 h-5 text-slate-600" />
                   </div>
                   <div>
@@ -421,7 +421,7 @@ export default function BillingPage() {
               </div>
               <div className="p-5">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                     <Receipt className="w-5 h-5 text-slate-600" />
                   </div>
                   <div>

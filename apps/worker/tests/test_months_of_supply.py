@@ -42,7 +42,6 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
-from jinja2 import Environment, DictLoader, select_autoescape
 
 WORKER_SRC = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(WORKER_SRC))
@@ -292,30 +291,10 @@ def test_no_estimate_renders_words_rather_than_a_blank_or_a_zero():
     assert shown["formatted_current"] not in ("0", "0.0", "N/A", "")
 
 
-@pytest.mark.parametrize("label_block", [
-    "stats-bar-label", "mini-stat-label", "stat-block-label", "stat-card-label",
-])
-def test_every_market_surface_that_prints_the_number_prints_the_pace(label_block):
-    """
-    Rendered, not grepped. Each macro is checked by putting the pace label in
-    the context and looking for it in the output — a `{% if %}` in the wrong
-    block would pass a text search and fail here.
-    """
-    macros = (WORKER / "templates" / "market" / "_base" / "macros.jinja2").read_text()
-    blocks = [
-        line for line in macros.splitlines()
-        if label_block in line and "months_of_inventory_pace" in line
-    ]
-    assert len(blocks) == 1, (
-        f"expected exactly one {label_block} carrying the pace label, found "
-        f"{len(blocks)}"
-    )
-    env = Environment(loader=DictLoader({"t": blocks[0]}),
-                      autoescape=select_autoescape(["html", "xml", "jinja2"]))
-    with_pace = env.get_template("t").render(
-        stats={"months_of_inventory": 5.2, "months_of_inventory_pace": PACE_LABEL}
-    )
-    assert PACE_LABEL in with_pace, f"{label_block} does not render the pace label"
-
-    without = env.get_template("t").render(stats={"months_of_inventory": 5.2})
-    assert "None" not in without, f"{label_block} leaks 'None' when the pace is absent"
+# `test_every_market_surface_that_prints_the_number_prints_the_pace` WAS HERE. It
+# rendered each legacy layout's MOI cell (`mini-stat-label`, `stat-block-label`,
+# `stat-card-label`, then only `stats-bar-label`) and checked it printed the pace
+# label. The first three were deleted on 2026-10-26; `stats-bar-label` was the
+# snapshot's legacy page, deleted on 2026-10-28 after D-255 moved the snapshot to
+# Design's page, where MOI is `compute.moi.headline`'s sentence and bar
+# (`test_market_snapshot_v2.py`).

@@ -285,7 +285,7 @@ export default function NewCompanyPage() {
                   id="admin_email"
                   name="admin_email"
                   type="email"
-                  placeholder="admin@pacificcoasttitle.com"
+                  placeholder="admin@example.com"
                   required={inviteAdmin}
                   disabled={loading}
                 />

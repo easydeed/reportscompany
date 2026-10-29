@@ -43,7 +43,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from api.services.sitex import PropertyData  # noqa: E402
-from worker.property_builder import PropertyReportBuilder  # noqa: E402
+from worker.property_builder import THEME_TEMPLATES, PropertyReportBuilder  # noqa: E402
 
 #: One SiteX lookup, every field populated, so a dropped one shows as a gap
 #: rather than as two matching blanks — the coincidence class, §0.6.
@@ -123,22 +123,7 @@ def consumer_property_data():
     return {k: LOOKUP[k] for k in keys}
 
 
-from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES  # noqa: E402
-
-#: The theme the tests in this file that read the NINE-PAGE document's own
-#: markup must use.
-#:
-#: `build_consumer_report_data` sets the theme to the registry default, which
-#: is bold — and bold is on Design's six-page architecture, which has no
-#: contents page and no Area Sales Analysis table. So four tests here stopped
-#: finding surfaces they were written against, on the LIVE consumer path.
-#:
-#: They are pinned to a self-contained theme rather than deleted, because the
-#: properties they assert are still true of those two themes and are still
-#: worth asserting while they render. The same properties on the shared
-#: architecture are asserted at the end of this file, against the surfaces
-#: that replaced them.
-NINE_PAGE_THEME = SELF_CONTAINED_THEMES[0]
+from _template_chain import SHARED_THEMES  # noqa: E402
 
 
 def consumer_report_data(theme=None):
@@ -282,121 +267,14 @@ def test_the_consumer_path_still_carries_no_identity():
 
 import re  # noqa: E402
 
-from worker.consumer_report_data import CONSUMER_PAGES  # noqa: E402
+# The nine-page versions of these — the Area Sales Analysis table on the
+# consumer report, the subject's last sale in it, the contents page and the
+# nine-page maximum — retired with that architecture. The properties are
+# asserted on the six-page surfaces below.
 
 
 def _render(report_data):
     return PropertyReportBuilder(report_data).render_html()
-
-
-def _analysis_table(html):
-    """The one table carrying both `Year Built` and `Distance`, or None."""
-    hits = [t for t in re.findall(r"<table\b.*?</table>", html, re.S)
-            if "Year Built" in t and "Distance" in t]
-    assert len(hits) <= 1, f"expected at most one analysis table, found {len(hits)}"
-    return hits[0] if hits else None
-
-
-def test_the_consumer_report_carries_the_area_sales_analysis():
-    """The page that places the subject against its comps.
-
-    Without it the reader gets four cards showing OTHER houses' prices and a
-    range, and nothing that says "and here is yours" — in a document they
-    requested by typing their address into a form asking what it is worth.
-    """
-    assert "analysis" in CONSUMER_PAGES
-    assert _analysis_table(_render(consumer_report_data(NINE_PAGE_THEME))) is not None
-
-
-def test_the_subject_s_last_sale_reaches_the_consumer_report():
-    """D-118's figure was wired through the projection, the payload, the row
-    and the builder across three PRs — and landed on a page this path did not
-    print. "The page renders" is not "the figure is on it", so this asserts
-    the value, in the row, in the table.
-    """
-    table = _analysis_table(_render(consumer_report_data(NINE_PAGE_THEME)))
-    price_row = [r for r in table.split("</tr>") if "369,000" in r]
-    assert price_row, "the last-sale figure is not in the analysis table"
-    cells = [re.sub("<[^>]+>", "", c).strip()
-             for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", price_row[0], re.S)]
-    assert "Dec 2015" in cells[1], cells
-    # $590,000, not $631,500, since D-119. The Medium column used to be
-    # `sorted_by_price[len // 2]` — the THIRD-cheapest of four — and is now
-    # the lower median. The four comps are 470,000 / 590,000 / 631,500 /
-    # 635,000, so the table's three columns are the cheapest, the lower
-    # median and the dearest, and 631,500 is the one of the four the
-    # three-column summary does not carry.
-    assert cells[2:5] == ["$470,000", "$590,000", "$635,000"], cells
-
-
-def test_both_paths_render_the_same_analysis_table():
-    """Not just present — the same. A consumer table built from a thinner
-    context would pass the test above and still differ."""
-    agent = _analysis_table(_render({**agent_report_data(),
-                                     "theme": NINE_PAGE_THEME}))
-    consumer = _analysis_table(_render(consumer_report_data(NINE_PAGE_THEME)))
-    def rows(t):
-        return [[re.sub("<[^>]+>", "", c).strip()
-                 for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", r, re.S)]
-                for r in t.split("</tr>") if "<td" in r or "<th" in r]
-    assert rows(agent) == rows(consumer)
-
-
-def test_contents_is_back_and_describes_a_consumer_report():
-    """D-121 landed 2026-10-01; this asserted its absence until then.
-
-    The consumer set is where a hardcoded contents page shows worst — it
-    differs from the default on four pages, so every literal row would have
-    been wrong. Now that the rows come from the page set, the check is that
-    the contents of a consumer report describes THIS report: no `property`
-    row in a set that has one, no `Area Sales Analysis` row pointing at the
-    comparables page.
-    """
-    assert "contents" in CONSUMER_PAGES
-    html = _render(consumer_report_data(NINE_PAGE_THEME))
-    labels = re.findall(r'class="(?:contents-text|name)">\s*([^<]*?)\s*<', html)
-    assert labels, "the contents page rendered no rows"
-    # Every label must be a heading that exists in this document.
-    headings = {h.strip().upper() for h in re.findall(
-        r'class="(?:page-header-title|property-title|section-title|aerial-title|h)"'
-        r'[^>]*>\s*([^<]*?)\s*<', html)}
-    missing = [l for l in labels if l.upper() not in headings]
-    assert not missing, (
-        f"the consumer contents advertises {missing}; this document is headed "
-        f"{sorted(headings)}"
-    )
-
-
-#: SEVEN / EIGHT / NINE since D-121 restored `contents` to the consumer set
-#: (2026-10-01). It was six / seven / eight while the contents page was held
-#: out because its rows were hardcoded.
-@pytest.mark.parametrize("supply_trends,supply_overview,expected_sections", [
-    (False, False, 7),
-    (True,  False, 8),
-    (True,  True,  9),
-])
-def test_the_page_set_is_a_maximum_not_a_guarantee(
-        supply_trends, supply_overview, expected_sections):
-    """D-142. `market_trends` needs a live SimplyRETS fetch and `overview` an
-    OpenAI key; `render_html` drops either without a word. So the consumer
-    report is seven pages when neither answers and nine when both do — and
-    `analysis` renders unconditionally, which is half of why it belongs in
-    the set.
-
-    Counted from the RENDER, not from `builder.page_set`: `render_html`
-    prunes a local copy and writes it to the context, leaving `self.page_set`
-    at its original value. An assertion on the attribute would have reported
-    eight pages for a six-page document — measuring the intent instead of the
-    output, which is the whole error this defect is made of.
-    """
-    from worker.compute.market_trends import SAMPLE_MARKET_TRENDS
-    data = consumer_report_data(NINE_PAGE_THEME)
-    if supply_trends:
-        data["market_trends_data"] = SAMPLE_MARKET_TRENDS
-    if supply_overview:
-        data["overview_text"] = "A short executive summary."
-    html = PropertyReportBuilder(data).render_html()
-    assert len(re.findall(r'<section class="', html)) == expected_sections
 
 
 # ── the same properties on the shared architecture ────────────────────────
@@ -474,8 +352,7 @@ def test_both_paths_compare_the_same_figures(theme):
         )
 
 
-@pytest.mark.parametrize("theme", SHARED_THEMES)
-def test_the_six_page_set_is_a_maximum_not_a_guarantee(theme):
+def test_the_six_page_set_is_a_maximum_not_a_guarantee():
     """D-142, on the new page set.
 
     `market_trends` is the one conditional page left — `notes` and `range`
@@ -492,10 +369,10 @@ def test_the_six_page_set_is_a_maximum_not_a_guarantee(theme):
     # of the nine-page list — the fixture was supplying the very value the
     # test exists to check. A regression run is the only thing that says so:
     # the gate was green against the defect it was written for.
-    assert theme == DEFAULT_THEME_NAME, (
-        "this test reads the consumer path's OWN page set, so it only means "
-        "anything for the theme that path actually uses"
-    )
+    # The consumer path's own theme, once. It was parametrized over the
+    # shared-architecture themes with an assert that the theme was the
+    # default — true only while atlas was the one theme on that architecture.
+    theme = DEFAULT_THEME_NAME
     for supply, expected in ((False, 5), (True, 6)):
         data = {**consumer_report_data(), "audience": "consumer"}
         if supply:

@@ -17,7 +17,6 @@ interface ReportData {
     city: string;
     state: string;
     zip: string;
-    owner_name?: string;
     bedrooms?: number;
     bathrooms?: number;
     sqft?: number;
@@ -304,11 +303,6 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
             <p className="text-gray-600">
               {report.property.city}, {report.property.state} {report.property.zip}
             </p>
-            {report.property.owner_name && (
-              <p className="text-sm text-gray-500 mt-1">
-                Owner: {report.property.owner_name}
-              </p>
-            )}
           </div>
         </div>
       </div>
@@ -352,7 +346,6 @@ function DetailsTab({ report }: { report: ReportData }) {
     { label: 'City', value: report.property.city },
     { label: 'State', value: report.property.state },
     { label: 'ZIP', value: report.property.zip },
-    { label: 'Owner', value: report.property.owner_name || '--' },
     { label: 'Bedrooms', value: report.property.bedrooms || '--' },
     { label: 'Bathrooms', value: report.property.bathrooms || '--' },
     { label: 'Square Feet', value: report.property.sqft?.toLocaleString() || '--' },

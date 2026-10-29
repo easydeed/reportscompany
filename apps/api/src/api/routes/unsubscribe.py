@@ -65,46 +65,77 @@ def verify_unsubscribe_token(account_id: str, email: str, token: str) -> bool:
     return hmac.compare_digest(expected_token, token)
 
 
+def _candidate_accounts(cur, email: str) -> list:
+    """Every account that has sent a scheduled email to `email`.
+
+    FROM `email_log`, which the worker writes — committed BEFORE the provider
+    is called — for every scheduled send, with the account and the RESOLVED
+    addresses. This used to read `schedules.recipients` alone, which cannot
+    answer the question: the API stores every recipient as JSON
+    (`{"type":"manual_email","email":…}`, or a contact, group or agent id that
+    holds no address at all), so `%s = ANY(recipients)` matched no schedule
+    created through the API and every opt-out returned "unsubscribed" while
+    recording nothing. The plain-string match is kept for legacy rows.
+
+    Several candidates is normal (two agents can mail the same client). The
+    token decides which: it is an HMAC over `account_id:email`, so trying each
+    candidate does not weaken it — a forged token verifies against none.
+    """
+    cur.execute(
+        """
+        SELECT account_id::text FROM email_log
+         WHERE %s = ANY(to_emails) AND account_id IS NOT NULL
+        UNION
+        SELECT account_id::text FROM schedules
+         WHERE %s = ANY(recipients)
+        """,
+        (email, email),
+    )
+    return sorted({r[0] for r in cur.fetchall()})
+
+
 def _suppress(email: str, token: str, reason: str) -> str:
     """
-    Resolve the account for `email`, verify `token` against it, and record a
+    Find the account the token was signed for, verify it, and record a
     suppression. Shared by the link endpoint and the RFC 8058 one-click
     endpoint so there is exactly ONE implementation of the security check.
 
     Returns a short human-readable outcome. Raises HTTPException(400) when the
-    token does not verify.
+    token verifies against no account that has mailed this address.
+
+    `db_conn()` yields `(conn, cur)`. This was written `with db_conn() as conn:
+    conn.cursor()`, which raised on the tuple, so both endpoints returned 500
+    to every recipient and nobody could opt out.
     """
-    with db_conn() as conn:
-        cur = conn.cursor()
-
-        # Find account_id from schedules that contain this email
-        cur.execute("""
-            SELECT DISTINCT account_id::text
-            FROM schedules
-            WHERE %s = ANY(recipients)
-            LIMIT 1
-        """, (email,))
-
-        row = cur.fetchone()
-        if not row:
-            # Email not found in any schedules - still return success (idempotent)
+    with db_conn() as (conn, cur):
+        candidates = _candidate_accounts(cur, email)
+        if not candidates:
+            # Nothing we sent went to this address, so there is nothing to stop.
+            # Same answer as a success: the response must not say whether an
+            # address is on anyone's list.
             return "Email unsubscribed"
 
-        account_id = row[0]
-
-        # Verify token
-        if not verify_unsubscribe_token(account_id, email, token):
+        matched = [a for a in candidates if verify_unsubscribe_token(a, email, token)]
+        if not matched:
             raise HTTPException(
                 status_code=400,
                 detail="Invalid unsubscribe token"
             )
 
-        # Insert into suppressions (idempotent due to UNIQUE constraint)
-        cur.execute("""
-            INSERT INTO email_suppressions (account_id, email, reason)
-            VALUES (%s::uuid, %s, %s)
-            ON CONFLICT (account_id, email) DO NOTHING
-        """, (account_id, email, reason))
+        # A link signed for a rep whose seat was reassigned: their scheduled
+        # sends now belong to the account that took over their book, and the
+        # opt-out has to stop those too (services/seats.hand_over_book).
+        from ..services.seats import book_successors
+        matched += book_successors(cur, matched)
+
+        # Idempotent on the UNIQUE (account_id, email). This is the row the
+        # worker's send filter reads (worker/email/send.py).
+        for account_id in matched:
+            cur.execute("""
+                INSERT INTO email_suppressions (account_id, email, reason)
+                VALUES (%s::uuid, %s, %s)
+                ON CONFLICT (account_id, email) DO NOTHING
+            """, (account_id, email, reason))
 
         conn.commit()
 
@@ -169,23 +200,29 @@ def unsubscribe_one_click(email: EmailStr, token: str):
     return {"message": "Email unsubscribed"}
 
 
-@router.get("/email/unsubscribe/token")
-def get_unsubscribe_token(email: str, account_id: str):
-    """
-    Generate an unsubscribe token for testing.
-    
-    WARNING: This endpoint should be disabled in production or require admin auth.
-    It's provided for development/testing purposes only.
-    """
-    if os.getenv("ENVIRONMENT", "dev") == "production":
-        raise HTTPException(status_code=404, detail="Not found")
-    
-    token = generate_unsubscribe_token(account_id, email)
-    
-    return {
-        "email": email,
-        "account_id": account_id,
-        "token": token,
-        "unsubscribe_url": f"/v1/email/unsubscribe?email={email}&token={token}"
-    }
+# ── DELETED 2026-10-20: GET /v1/email/unsubscribe/token (D-201) ─────────────
+#
+# It generated a valid unsubscribe token for ANY (email, account_id) a caller
+# named, plus the ready-made URL. With that token, POST /v1/email/unsubscribe
+# suppresses delivery for that address on that account — the exact harm the
+# comment on EMAIL_UNSUB_SECRET above describes and defends against for the
+# signing secret.
+#
+# Its guard was `os.getenv("ENVIRONMENT", "dev") == "production"`, the one
+# environment gate in this service written with a non-production default. An
+# unset variable resolved to "dev", so the route EXISTED. The other gates in
+# this codebase — routes/auth.py and routes/devfiles.py — read
+# `settings.ENVIRONMENT`, which defaults to "production" (settings.py:12) and
+# therefore fails closed. And `/v1/email/unsubscribe` is in authn.py's
+# _PUBLIC_PREFIXES, so an open guard here was open to the internet.
+#
+# DELETED rather than re-gated. It had NO caller: not a test, not a script,
+# not the web app, not the worker — a repo-wide grep for the path returns this
+# comment and the defect entry. Anything that needs a token calls
+# `generate_unsubscribe_token` directly, which is what the worker does
+# (`worker/email/send.py:75,95`) and what this module's own verify path does.
+# The safest version of a test-only door is no door.
+#
+# `tests/test_api_auth_boundary.py` asserts the route is gone and that no gate
+# in apps/api uses the fail-open form.
 

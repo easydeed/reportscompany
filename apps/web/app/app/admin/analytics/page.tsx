@@ -449,7 +449,7 @@ export default function AdminAnalyticsPage() {
                       </div>
                       <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all ${isLast ? "bg-green-500" : "bg-indigo-500"}`}
+                          className={`h-full rounded-full transition-all ${isLast ? "bg-green-500" : "bg-primary"}`}
                           style={{ width: `${barWidth}%` }}
                         />
                       </div>
@@ -483,7 +483,7 @@ export default function AdminAnalyticsPage() {
                       </div>
                       <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-indigo-500"
+                          className="h-full rounded-full bg-primary"
                           style={{ width: `${d.percentage}%` }}
                         />
                       </div>

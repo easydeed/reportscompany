@@ -1,29 +1,13 @@
 {#-
-  BLOCK: cta — §06's `cta`. The "View Full PDF" button, above the signature.
+  BLOCK: cta — §06's `cta`. "Open the full report", above the signature.
 
-  The HTML is byte-for-byte what `_build_pdf_cta` emitted as an f-string; only
-  the interpolation syntax changed. That is the whole intent of the
-  consolidation — a restructure, not a redesign — and
-  tests/test_email_render_diff.py holds it to that.
+  Design's bulletproof button: a table cell filled with the brand (`bgcolor` for
+  Outlook, `background` for the rest) holding a padded block link, text in
+  `on_primary`, radius 10. No VML: a filled cell with a padded link is a button
+  in Outlook too, square-cornered, which is the accepted cost.
 
-  VML first for Outlook, then the anchor for everyone else, both inside
-  conditional comments. Outlook renders no CSS-styled anchor as a button, so the
-  `v:roundrect` is not belt-and-braces; it is the only button Outlook shows.
+  The sub-line says what is behind the button and nothing it cannot know. Design
+  wrote "PDF · one page"; the page count varies by kind (Closed and Inventory run
+  to several), so it is not printed.
 -#}
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin: 24px auto;">
-              <tr>
-                <td style="border-radius: 8px; background-color: {{ primary_color }};">
-                  <!--[if mso]>
-                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ pdf_url }}" style="height:48px;v-text-anchor:middle;width:260px;" arcsize="17%" stroke="f" fillcolor="{{ primary_color }}">
-                    <w:anchorlock/>
-                    <center style="color:{{ on_fill }};font-family:Arial,sans-serif;font-size:14px;font-weight:bold;">📄 View Full PDF</center>
-                  </v:roundrect>
-                  <![endif]-->
-                  <!--[if !mso]><!-->
-                  <a href="{{ pdf_url }}" style="display: inline-block; padding: 14px 28px; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: {{ on_fill }}; text-decoration: none; border-radius: 8px;">
-                    📄 View Full PDF
-                  </a>
-                  <!--<![endif]-->
-                </td>
-              </tr>
-            </table>
+          <tr><td align="center" class="tr-pad" style="padding:30px 28px 8px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="border-collapse:separate;"><tr><td bgcolor="{{ primary }}" style="background:{{ primary }};border-radius:10px;"><a href="{{ pdf_url }}" style="display:block;padding:15px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;color:{{ on_primary }};text-decoration:none;border-radius:10px;">Open the full report</a></td></tr></table><div class="tr-muted" style="margin-top:10px;font-size:12.5px;color:#64748B;">PDF · {{ sub }}</div></td></tr>

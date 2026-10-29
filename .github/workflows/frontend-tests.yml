@@ -49,5 +49,17 @@ jobs:
       # so rootDir becomes the repo and jest collects e2e/*.spec.ts — Playwright
       # specs, which fail immediately as ESM. `--filter web` keeps the working
       # directory correct.
+      # D-193's point (4), and the gap #177 shipped through: 26 files of visual
+      # change landed with no typecheck behind them because nothing in CI ran
+      # one and the container could not install. `pnpm install
+      # --frozen-lockfile` above was itself failing until the lockfile was
+      # regenerated for `pngjs` (added in #109, never locked), so this step
+      # could not have run even if it had existed.
+      #
+      # Before `test`, deliberately: a type error should fail in two minutes
+      # rather than after the jsdom suite.
+      - name: Typecheck
+        run: pnpm --filter web exec tsc --noEmit
+
       - name: Run web tests
         run: pnpm --filter web test

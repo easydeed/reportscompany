@@ -1,0 +1,68 @@
+[
+  {"name": "R1 primary_ink always black",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "    current = normalize_hex(value)\n    for _ in range(_MAX_STEPS):",
+   "new": "    current = normalize_hex(value)\n    return \"#000000\"\n    for _ in range(_MAX_STEPS):",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R2 one constant palette for every brand",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "    p = normalize_hex(primary)\n    return (",
+   "new": "    p = normalize_hex(primary)\n    p = \"#0d9488\"\n    return (",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R3 on_primary always white",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "         WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p) else NEAR_BLACK),\n        (\"tint\"",
+   "new": "         WHITE),\n        (\"tint\"",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R4 coarser darkening step (0.5 not 0.94)",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "_STEP = 0.94", "new": "_STEP = 0.5",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R6 luminance without sRGB linearisation",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4",
+   "new": "    return c",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R7 an unparseable colour falls back to a default instead of raising",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "        raise ValueError(f\"not a hex colour: {value!r}\")\n    h = m.group(1).lower()",
+   "new": "        return \"#0d9488\"\n    h = m.group(1).lower()",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R8 no caching on the derivation",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "@lru_cache(maxsize=512)\ndef _derive", "new": "def _derive",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R11 hand out the cached dict instead of a copy (cross-tenant)",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "    return dict(_derive(primary))",
+   "new": "    return _SHARED.setdefault(primary, dict(_derive(primary)))\n_SHARED = {}",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R9 tint alpha 0.06 -> 0.5",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "_TINT_ALPHA = 0.06", "new": "_TINT_ALPHA = 0.5",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "R10 primary_dark x0.78 -> x0.90",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "_scale(p, 0.78)", "new": "_scale(p, 0.90)",
+   "test": "apps/worker/tests/test_themes.py"},
+
+  {"name": "display_ink collapses to on_primary, so the token is redundant",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "        (\"display_ink\",\n         WHITE if contrast(WHITE, p) >= _DISPLAY_MIN\n         else (WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p)\n               else NEAR_BLACK)),",
+   "new": "        (\"display_ink\",\n         WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p) else NEAR_BLACK),",
+   "test": "apps/worker/tests/test_display_ink.py apps/worker/tests/test_themes.py"},
+
+  {"name": "the display threshold lowered to 2.0, so amber and lime take white",
+   "file": "apps/worker/src/worker/themes.py",
+   "old": "_DISPLAY_MIN = 3.0", "new": "_DISPLAY_MIN = 2.0",
+   "test": "apps/worker/tests/test_display_ink.py"}
+]

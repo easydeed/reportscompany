@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, Building2 } from 'lucide-react';
 import { useAccounts } from '@/hooks/use-api';
 import { Button } from '@/components/ui/button';
@@ -29,11 +29,27 @@ interface AccountsResponse {
 }
 
 export function AccountSwitcher() {
-  const { data, isLoading } = useAccounts();
+  const { data, isLoading, error } = useAccounts();
   const accounts: Account[] = (data as AccountsResponse)?.accounts ?? [];
   const currentAccount: Account | null = accounts[0] ?? null;
   const [isSwitching, setIsSwitching] = useState(false);
   const { toast } = useToast();
+
+  // D-223. `error` was not destructured, so a failed accounts fetch left
+  // `data` undefined, `currentAccount` null, and the early return below
+  // removed the switcher from the sidebar with nothing said. An account
+  // holder with two accounts could not switch and was not told why — the
+  // component that lost the ability to do its job is the one that should say
+  // so. The behaviour was there before the react-query migration; the test
+  // that recorded it has been failing ever since, in a suite nobody reads.
+  useEffect(() => {
+    if (!error) return;
+    toast({
+      title: 'Error',
+      description: 'Failed to load account information',
+      variant: 'destructive',
+    });
+  }, [error, toast]);
 
   async function switchAccount(accountId: string) {
     if (isSwitching) return;

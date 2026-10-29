@@ -27,9 +27,9 @@ WHITE = "#ffffff"
 #: (`PropertyReportBuilder._THEME_DARK_BG`) and the brand colour it defaults to.
 #: `teal` and `classic` left with the theme cut on 2026-10-05.
 PROPERTY_THEMES = (
-    ("modern", "#FF6B5B", "#1A1F36"),
-    ("bold", "#0F1629", "#15216E"),
-    ("elegant", "#1A1A1A", "#1a1a1a"),
+    ("harbor", "#FF6B5B", "#1A1F36"),
+    ("atlas", "#0F1629", "#15216E"),
+    ("linen", "#1A1A1A", "#1a1a1a"),
 )
 
 #: The six the master plan measured, against the default dark.

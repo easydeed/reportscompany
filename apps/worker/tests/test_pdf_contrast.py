@@ -531,7 +531,16 @@ def test_the_reverse_check_still_reports_a_genuinely_fixed_entry():
 #: A COUNT, BECAUSE A BLIND SPOT NOBODY CAN SEE THE SIZE OF IS THE THING THIS
 #: REPO KEEPS FILING. One known element is a footnote on the 215. Several
 #: would be an asterisk on it, and the difference must not arrive silently.
-EXPECTED_DECLINED = 1
+#:
+#: ZERO SINCE 2026-10-21, AND THAT IS THE FIX RATHER THAN A WIDENING. D-206: the
+#: one element here was `harbor`'s cover title, painted by a gradient clipped to
+#: the glyphs. Design ruled that no gradient may carry text in any theme, the
+#: title is now a solid `primary_on_dark`, and solid type is MEASURABLE — so the
+#: surface rejoined this gate instead of being excused from it.
+#:
+#: The count stays asserted. A new declined element means a template has added
+#: gradient text against that rule, and it should arrive as a failure here.
+EXPECTED_DECLINED = 0
 
 
 def test_the_measurer_declines_what_it_cannot_read(measured):
@@ -562,9 +571,19 @@ def test_the_measurer_declines_what_it_cannot_read(measured):
 def test_a_declined_run_is_not_counted_as_a_failure(measured):
     """The point of declining. A number that means nothing is worse than an
     absence, and worse still when it sits on a ratchet as a line nobody can
-    ever clear."""
+    ever clear.
+
+    NOTHING IS DECLINED SINCE 2026-10-21, so this skips rather than passing
+    vacuously — a green assertion over an empty set is the shape this repo keeps
+    filing. `EXPECTED_DECLINED == 0` above is the live guard: if gradient text
+    comes back, that fails first and this test has something to check again.
+    """
     declined = [r for r in measured if r["unmeasurable"]]
-    assert declined, "nothing was declined; this test proves nothing today"
+    if not declined:
+        pytest.skip(
+            "nothing is declined (D-206 closed the one element). "
+            "EXPECTED_DECLINED == 0 is what holds the line now; this test "
+            "re-activates if a template adds gradient text.")
     fails = {key(r) for r in measured
              if r["ratio"] < r["needs"] and not r["unmeasurable"]}
     for r in declined:
@@ -606,3 +625,37 @@ def test_the_corpus_is_the_size_the_documentation_says():
     )
     assert len({k.rsplit("__", 1)[0] for k in market}) == 10, "10 report types"
     assert len({k.rsplit("__", 1)[0] for k in prop}) == len(themes)
+
+
+def test_the_market_surface_has_no_baselined_failure_left():
+    """THE MARKET SURFACE IS AT ZERO, AND THIS IS WHAT KEEPS IT THERE.
+
+    All six `market__*` rows the baseline ever held were one construct — three
+    `listing-tier-badge` on `new_listings`, three `status-badge` on
+    `price_bands`, tinted chips behind semantic text. Design's spec removes it
+    ("no chips, no tinted fills behind semantic text — the live surface's only
+    66 failures are that construct"), so wiring those two kinds closed all six
+    without a colour being chosen.
+
+    WHY A SEPARATE ASSERTION rather than trusting the ratchet. The forward
+    ratchet fails on a NEW pairing and the reverse one fails on a FIXED one,
+    and between them they would let the market surface drift back to one row
+    and then two as long as each was added on a branch that regenerated. A
+    floor of zero cannot be re-raised by a regeneration — it has to be argued.
+
+    And it is worth more than the six rows: every market kind still to be
+    wired regenerates this baseline, and a surface at zero makes each of those
+    diffs PURE PAGE LAYOUT with nothing to disentangle. A surface at three
+    makes every later diff a question about which three.
+    """
+    rows = [line for line in BASELINE.read_text(encoding="utf-8").splitlines()
+            if line.startswith("market__")]
+    assert rows == [], (
+        "the market surface has baselined contrast failures again:\n  "
+        + "\n  ".join(rows)
+        + "\n\nIt reached zero on 2026-10-08 when `new_listings` and "
+          "`price_bands` moved to Design's page. Adding a row back is a "
+          "decision, not a regeneration: say why the construct is needed, or "
+          "fix the colour. Every later kind's baseline diff depends on this "
+          "staying empty."
+    )

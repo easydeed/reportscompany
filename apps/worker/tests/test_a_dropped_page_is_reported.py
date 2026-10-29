@@ -51,16 +51,15 @@ os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
 from worker.property_builder import THEME_TEMPLATES, PropertyReportBuilder  # noqa: E402
 from worker.theme_registry import DEFAULT_THEME_NAME  # noqa: E402
-from _template_chain import SELF_CONTAINED_THEMES  # noqa: E402
-
 from test_property_production_render import report_data  # noqa: E402
 
 THEMES = sorted(THEME_TEMPLATES)
 
-#: The two pages that can vanish, and what each one needs to exist.
-#: `market_trends` needs a live SimplyRETS fetch; `overview` needs an OpenAI
-#: key. Neither is available in a test, which is precisely why both drop.
-DROPPABLE = ("market_trends", "overview")
+#: The page that can vanish: `market_trends` needs a live SimplyRETS fetch,
+#: which no test has. `overview` used to be the second — it is the cover's
+#: "In short" panel on the six-page architecture, and a panel with no
+#: narrative says where the numbers came from rather than disappearing.
+DROPPABLE = ("market_trends",)
 
 
 def render(theme=DEFAULT_THEME_NAME, pages=None):
@@ -76,7 +75,9 @@ def render(theme=DEFAULT_THEME_NAME, pages=None):
 
 
 def test_a_page_that_could_not_be_built_is_named():
-    """Both droppable pages requested, neither service reachable."""
+    """The droppable page requested, its service unreachable. `overview` is
+    asked for too, as old saved reports do: it maps onto the cover, so it is
+    not a page that can be dropped and must not be reported as one."""
     builder = render(pages=["cover", "property", "market_trends", "overview", "range"])
     assert set(builder.pages_dropped) == set(DROPPABLE), (
         f"asked for {DROPPABLE} with no SimplyRETS and no OpenAI key; "
@@ -148,23 +149,3 @@ def test_pages_dropped_is_a_list_before_any_render():
     happened, and `None` is the shape that makes them find out the hard way."""
     assert PropertyReportBuilder({}).pages_dropped == []
 
-
-def test_an_added_page_is_not_reported_as_a_drop():
-    """`comparables_all` is ADDED to the page set, not dropped from it
-    (D-159). A difference taken the wrong way round would report every
-    multi-comp report as having lost a page."""
-    # A SELF-CONTAINED THEME, because the added page this asserts on is the
-    # comparables continuation — and the shared architecture has none: page 4
-    # lists every comp, so there is nothing to continue. Using the default
-    # theme here asked bold for a page Design removed.
-    data = dict(report_data(SELF_CONTAINED_THEMES[0]))
-    data["comparables"] = [
-        {**data["comparables"][0], "address": f"{i} Added Way",
-         "sale_price": 500_000 + i * 1000} for i in range(8)
-    ]
-    builder = PropertyReportBuilder(data)
-    html = builder.render_html()
-    assert "comparables-all" in html, "the fixture did not trigger the added page"
-    assert builder.pages_dropped == [], (
-        f"an added page was counted as dropped: {builder.pages_dropped}"
-    )

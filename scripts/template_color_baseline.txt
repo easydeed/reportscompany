@@ -5,27 +5,37 @@
 # listed here; retiring one means deleting its line. Regenerate with
 #     python3 scripts/lint_template_colors.py --write-baseline
 # and never to make a failing check pass — a new violation is the point.
-#
 # 2026-10-05, THE THEME CUT. The classic and teal entries were DELETED,
 # not regenerated: the four files they named no longer exist. A ratchet
 # may only shrink and this is a shrink; nothing in any surviving file's
 # entries was touched.
+#
+# 2026-10-21, D-205/D-206. Five entries RETIRED and one added by annotation:
+#   * the five `atlas_report.jinja2` rows were already stale — that file was cut
+#     to 34 lines when atlas moved onto `_v2/report.jinja2` and the literals went
+#     with it. They are retired here rather than in their own change because
+#     --write-baseline cannot retire one file's rows and not another's; the shrink
+#     is named so it is not mistaken for part of the cover fix;
+#   * linen's `--burgundy-on-dark` white fallback is annotated in the template
+#     rather than baselined: white is the fallback for TEXT ON DARK, not a brand
+#     value.
+#
+# 2026-10-26, HARBOR AND LINEN ONTO THE SHARED ARCHITECTURE. Thirteen entries
+# RETIRED — nine named `harbor_report.jinja2`, four `linen_report.jinja2`. Both
+# files are now 22 lines of typography that include `_v2/report.jinja2`, and the
+# literals went with the nine-page layouts. Removed by hand rather than by
+# --write-baseline, which also drops this header. Nothing was added.
+#
+# 2026-10-28, THE SOCIAL STORIES (#230). 15 entries RETIRED: the old story
+# templates hard-coded #7C3AED / #F26B2B and their tints; the per-kind stories
+# take every brand colour from injectBrand's derived tokens (lib/brand-tokens.ts)
+# and keep no default, and social-gallery.html is gone. Removed by hand, header
+# kept. Nothing added.
 
-apps/web/templates/social/social-closed.html	BRAND-ADJACENT	#92400e
-apps/web/templates/social/social-closed.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-closed.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-gallery.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-gallery.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-inventory.html	BRAND-ADJACENT	#6d28d9
-apps/web/templates/social/social-inventory.html	BRAND-ADJACENT	#8b5cf6
-apps/web/templates/social/social-inventory.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-inventory.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-market-snapshot.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-market-snapshot.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-new-listings.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-new-listings.html	BRAND-ROLE	#f26b2b
-apps/web/templates/social/social-price-bands.html	BRAND-ROLE	#7c3aed
-apps/web/templates/social/social-price-bands.html	BRAND-ROLE	#f26b2b
+#
+# 2026-10-26, THE DEAD PROPERTY TREE DELETED (D-131). 20 entries RETIRED with
+# `templates/property/_base/` and the three self-contained `<theme>.jinja2`
+# files, which rendered nowhere. Removed by hand, header kept. Nothing added.
 apps/web/templates/trendy-closed.html	BRAND-ROLE	#7c3aed
 apps/web/templates/trendy-closed.html	BRAND-ROLE	#f26b2b
 apps/web/templates/trendy-featured-listings.html	BRAND-ADJACENT	#9333ea
@@ -43,41 +53,3 @@ apps/web/templates/trendy-new-listings.html	BRAND-ROLE	#7c3aed
 apps/web/templates/trendy-new-listings.html	BRAND-ROLE	#f26b2b
 apps/web/templates/trendy-price-bands.html	BRAND-ROLE	#7c3aed
 apps/web/templates/trendy-price-bands.html	BRAND-ROLE	#f26b2b
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#333333
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#666666
-apps/worker/src/worker/templates/property/_base/base.jinja2	BRAND-ROLE	#888888
-apps/worker/src/worker/templates/property/bold/bold.jinja2	BRAND-ADJACENT	#0f1629
-apps/worker/src/worker/templates/property/bold/bold.jinja2	BRAND-ADJACENT	#64748b
-apps/worker/src/worker/templates/property/bold/bold.jinja2	BRAND-ROLE	#0f1629
-apps/worker/src/worker/templates/property/bold/bold.jinja2	BRAND-ROLE	#1a2744
-apps/worker/src/worker/templates/property/bold/bold.jinja2	BRAND-ROLE	#c9a227
-apps/worker/src/worker/templates/property/bold/bold.jinja2	BRAND-ROLE	#dbb94a
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#15216e
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#15216e
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#4a54a0
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#6b73c4
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2	BRAND-ROLE	#ffffff
-apps/worker/src/worker/templates/property/elegant/elegant.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/elegant/elegant.jinja2	BRAND-ROLE	#333333
-apps/worker/src/worker/templates/property/elegant/elegant.jinja2	BRAND-ROLE	#b8977e
-apps/worker/src/worker/templates/property/elegant/elegant.jinja2	BRAND-ROLE	#d4c4b0
-apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2	BRAND-ROLE	#0d0d0d
-apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2	BRAND-ROLE	#1a1a1a
-apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2	BRAND-ROLE	#ffffff
-apps/worker/src/worker/templates/property/modern/modern.jinja2	BRAND-ADJACENT	#1a1f36
-apps/worker/src/worker/templates/property/modern/modern.jinja2	BRAND-ADJACENT	#64748b
-apps/worker/src/worker/templates/property/modern/modern.jinja2	BRAND-ROLE	#1a1f36
-apps/worker/src/worker/templates/property/modern/modern.jinja2	BRAND-ROLE	#2d3348
-apps/worker/src/worker/templates/property/modern/modern.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/modern/modern.jinja2	BRAND-ROLE	#ff8a7d
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#bf5044
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#d94e3f
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ff6b5b
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ff8a7d
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ff9e94
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ffb199
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2	BRAND-ROLE	#ffffff

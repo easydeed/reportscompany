@@ -1,0 +1,34 @@
+{#
+  BOLD — the first theme on Design's one page architecture (2026-10-05).
+
+  This file is the whole of what makes atlas atlas. Everything else — layout,
+  page set, spacing, colour roles, copy — is `_v2/report.jinja2`, shared with
+  every theme, because Design's package says the three themes "differ only in
+  display/body typeface, weight, tracking, case and corner radius".
+
+  WHAT THIS REPLACED
+  1,290 lines of self-contained HTML and CSS, nine pages, its own copy of
+  every layout decision. elegant and modern still carry theirs; they move in
+  the next step, and the measurement of what that costs is this file's
+  length against theirs.
+
+  THE SHARED FILE IS REACHED BY `include`, WHICH A GATE USED TO FORBID.
+  `test_one_comp_set.py::test_the_live_template_set_is_the_five_entry_files`
+  failed on any live template with an `extends`, `import`, `include` or
+  `from`. That gate exists because of D-131 — a SECOND property template tree
+  under `_base/` that renders nowhere, which three separate pieces of work
+  read as if it did. The gate is narrowed rather than dropped: a live template
+  may reach `_v2/` and still may not reach `_base/`. What it protects is "is
+  this file rendered", and `_v2/report.jinja2` is.
+#}
+{% set t_font_link = 'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap' %}
+{% set t_display = "'Barlow Condensed', 'Arial Narrow', sans-serif" %}
+{% set t_body = "'Barlow', system-ui, sans-serif" %}
+{% set t_display_weight = 700 %}
+{% set t_display_tracking = '0' %}
+{# Applies to the cover street line and the h2s, which is where `--display-case`
+   is read. NOT to body copy or labels — those are set in the shared file and
+   never inherit it. #}
+{% set t_display_case = 'uppercase' %}
+{% set t_radius = '4px' %}
+{% include '_v2/report.jinja2' %}

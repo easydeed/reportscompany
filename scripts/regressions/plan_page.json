@@ -1,0 +1,34 @@
+[
+  {
+    "name": "R1 the account override stops winning over the plan limit",
+    "file": "apps/web/components/v0-styling/PlanPageShell.tsx",
+    "old": "  const limit = account.monthly_report_limit_override ?? plan.monthly_report_limit ?? 1;",
+    "new": "  const limit = plan.monthly_report_limit ?? 1;",
+    "test": "__tests__/PlanPage.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "R2 the sponsored badge goes back to keying on the slug alone",
+    "file": "apps/web/components/v0-styling/PlanPageShell.tsx",
+    "old": "  const isSponsored = account.sponsor_account_id !== null && plan.plan_slug === 'sponsored_free';",
+    "new": "  const isSponsored = plan.plan_slug === 'sponsored_free';",
+    "test": "__tests__/PlanPage.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "R3 a client-side ratio threshold is introduced beside the API's decision",
+    "file": "apps/web/components/v0-styling/PlanPageShell.tsx",
+    "old": "                {decision === 'ALLOW' && (",
+    "new": "                {decision === 'ALLOW' && progressPercent < 80 && (",
+    "test": "__tests__/PlanPage.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "R4 the page stops reporting a refused request",
+    "file": "apps/web/app/account/plan/page.tsx",
+    "old": "          setData({ error: 'Failed to load plan information' });\n          return;",
+    "new": "          return;",
+    "test": "__tests__/PlanPage.test.tsx",
+    "runner": "jest"
+  }
+]

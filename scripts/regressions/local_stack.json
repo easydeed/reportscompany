@@ -1,0 +1,37 @@
+[
+  {
+    "name": "R1 the stack stops naming a vendor it cannot stand in for",
+    "file": "scripts/local_stack.sh",
+    "old": "#   PDFShift      No PDF rendering.",
+    "new": "#   (removed)     No PDF rendering.",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R2 the coverage note is trimmed out of the stack script",
+    "file": "scripts/local_stack.sh",
+    "old": "# WHAT IT DOES NOT COVER \u2014 read this before scoping a batch against it",
+    "new": "# Notes",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R3 the rate limit is raised on one account instead of all five",
+    "file": "scripts/seed_render_fixture.py",
+    "old": "        \"UPDATE accounts SET api_rate_limit=100000 WHERE id = ANY(%s::uuid[])\",\n        (list(HARNESS_ACCOUNTS),),",
+    "new": "        \"UPDATE accounts SET api_rate_limit=100000 WHERE id = %s::uuid\",\n        (ACCOUNT,),",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R4 onboarding is no longer seeded, so /app is the wizard rather than the dashboard",
+    "file": "scripts/seed_render_fixture.py",
+    "old": "    # Design's step 4 and the highest-value page in the adoption plan.\n    for step in (\"profile_complete\", \"branding_setup\", \"first_report\",",
+    "new": "    # Design's step 4 and the highest-value page in the adoption plan.\n    for step in ():  # onboarding not seeded",
+    "test": "tests/test_render_manifest_is_current.py"
+  },
+  {
+    "name": "R5 the fixture is cut back to one-of-each, which is an empty page that renders",
+    "file": "scripts/seed_render_fixture.py",
+    "old": "    (\"completed\", 13), (\"completed\", 17), (\"completed\", 21), (\"completed\", 26),\n    (\"completed\", 31), (\"processing\", 0), (\"failed\", 2), (\"failed\", 11),\n    (\"queued\", 0), (\"completed\", 40),",
+    "new": "    (\"queued\", 0),",
+    "test": "tests/test_render_manifest_is_current.py"
+  }
+]

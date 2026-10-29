@@ -214,19 +214,24 @@ def copy_branding_to_child(cur: Any, *, source_account_id: str, target_account_i
         (target_account_id,),
     )
     if not cur.fetchone():
-        try:
-            cur.execute(
-                """
-                INSERT INTO affiliate_branding (account_id, branding_override)
-                VALUES (%s::uuid, false)
-                """,
-                (target_account_id,),
-            )
-        except Exception:
-            cur.execute(
-                "INSERT INTO affiliate_branding (account_id) VALUES (%s::uuid)",
-                (target_account_id,),
-            )
+        # The source has no branding row — a title company that has not opened
+        # its branding page yet, which is every new company on day one. The
+        # child still needs a row, and `brand_display_name` is NOT NULL with
+        # no default. This INSERT used to omit it, so it failed, and the
+        # `except` retried an INSERT that omitted it too — inside the
+        # transaction the first failure had already aborted. Every rep invite
+        # from a company with no branding row was a 500.
+        #
+        # The name is the SOURCE account's own name: what reports would carry
+        # for the company anyway, and what the company's first branding save
+        # cascades over (routes/company.py PATCH /branding).
+        cur.execute(
+            """
+            INSERT INTO affiliate_branding (account_id, brand_display_name, branding_override)
+            SELECT %s::uuid, a.name, false FROM accounts a WHERE a.id = %s::uuid
+            """,
+            (target_account_id, source_account_id),
+        )
 
 
 def regenerate_invite_token(cur: Any, *, user_id: str, account_id: str) -> str:

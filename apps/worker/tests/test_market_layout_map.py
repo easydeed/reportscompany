@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from worker.market_builder import (  # noqa: E402
     ALL_REPORT_TYPES,
     LAYOUT_MAP,
+    V2_KINDS,
     PDF_CONFIG,
     MarketReportBuilder,
 )
@@ -124,13 +125,21 @@ def test_every_report_type_is_covered_by_the_recorded_map():
     assert set(LAYOUT_MACRO) == set(ALL_REPORT_TYPES)
 
 
-@pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
+@pytest.mark.parametrize("report_type", sorted(set(ALL_REPORT_TYPES) - V2_KINDS))
 def test_the_layout_map_matches_the_macro_that_runs(report_type):
     """LAYOUT_MAP[t] + '_layout' must be the macro the render actually calls.
 
     base.jinja2 dispatches on `layout`, so a LAYOUT_MAP edit that does not
     match a branch there falls through to the `{% else %}` and renders the
     gallery — silently, and with output that still looks like a report.
+
+    EXCLUDES `V2_KINDS`, which render Design's `_v2` page and call no layout
+    macro at all. Excluded by SUBTRACTING the seam rather than by listing the
+    kinds that remain: a hand-written remainder is a second copy of
+    `V2_KINDS`, and it would go stale the moment a second kind moves — which
+    is the next thing to happen. `test_a_v2_kind_calls_no_layout_macro` below
+    covers them positively, because a kind dropping out of this test's
+    parameters and being asserted nowhere is how coverage disappears quietly.
     """
     called = macros_for(report_type)
     layout_macros = [m for m in called if m.endswith("_layout")]
@@ -144,21 +153,120 @@ def test_the_layout_map_matches_the_macro_that_runs(report_type):
     )
 
 
-def test_the_dispatch_fallback_is_reachable_only_by_an_unknown_layout():
-    """Positive control: prove the assertion above can fail.
+#: The `_v2` body each kind renders, recorded from a render on 2026-10-08.
+#:
+#: Design's page is a shared band over ONE per-kind body, and the template
+#: dispatches on which body context the builder filled. Pinned here per kind
+#: for the same reason `LAYOUT_MACRO` is: the first version of the test below
+#: asserted `class="trow thead"` for every kind in the seam, which was true
+#: while the seam held only table kinds and became wrong the moment
+#: `price_bands` — whose body is bands, not a table — joined it. A marker that
+#: fits only the kinds already wired asserts "the seam is taken" and means
+#: "the seam is taken by a table kind".
+V2_BODY_MARKER = {
+    "closed": 'class="trow thead"',
+    "new_listings": 'class="trow thead"',
+    "inventory": 'class="trow thead"',
+    "price_bands": 'class="brow bhead"',
+    "new_listings_gallery": 'class="grid"',
+    "open_houses": 'class="grid"',
+    "featured_listings": 'class="grid"',
+    "market_snapshot": 'class="snap"',
+}
 
-    A checker whose normal output is 'match' is indistinguishable from one that
-    has stopped matching anything (§0.6, *a detector's silence*). Point a known
-    report type at a layout base.jinja2 has no branch for and the fallback
-    gallery must run instead.
+
+@pytest.mark.parametrize("report_type", sorted(V2_KINDS))
+def test_a_v2_kind_calls_no_layout_macro_and_renders_the_v2_page(report_type):
+    """The other half of the seam, asserted rather than implied.
+
+    A kind in `V2_KINDS` leaves the macro dispatch entirely. Three ways that
+    can go wrong silently: it renders the old page anyway (the seam not taken),
+    it renders the new page AND a macro (both, which would paginate as
+    neither), or it renders the band over the WRONG body — a bands kind showing
+    a listings table, which is a plausible-looking report of the wrong thing.
+    All three are caught: the macro list must be empty, the kind's own body
+    marker must be present, and every OTHER kind's marker must be absent.
     """
-    data = report_data("closed")
+    assert report_type in V2_BODY_MARKER, (
+        f"{report_type} joined V2_KINDS with no recorded body marker. Record "
+        f"which body it renders here; otherwise this test can only check that "
+        f"it rendered something."
+    )
+    data = report_data(report_type)
+    data["ai_insights"] = None
     builder = MarketReportBuilder(data)
-    builder.layout = "no_such_layout"
     with recording_macros() as seen:
-        builder.render_html()
+        html = builder.render_html()
     layout_macros = [m for m in seen if m.endswith("_layout")]
-    assert layout_macros == ["gallery_layout"], layout_macros
+    assert layout_macros == [], (
+        f"{report_type} is in V2_KINDS and still called {layout_macros}. The "
+        f"seam is not taken, or it is taken twice."
+    )
+    assert 'class="band"' in html, (
+        f"{report_type} called no layout macro and did not render the `_v2` "
+        f"page either — so it rendered neither document."
+    )
+    mine = V2_BODY_MARKER[report_type]
+    assert mine in html, (
+        f"{report_type} rendered the `_v2` band with no {mine!r} body"
+    )
+    for other in set(V2_BODY_MARKER.values()) - {mine}:
+        assert other not in html, (
+            f"{report_type} rendered {other!r} as well as its own {mine!r} — "
+            f"two bodies under one band"
+        )
+
+
+#: Layout macros no report type reaches any more, because every kind that used
+#: them moved to Design's `_v2` page.
+#:
+#: WHY THIS IS WRITTEN DOWN RATHER THAN CLEANED UP. `derive_template_
+#: reachability.py` works at FILE level, and `market/_base/macros.jinja2` stays
+#: live as long as any one macro in it is reached — so a layout going dead inside a
+#: live file is invisible to it, and two of them already had. `analytics_layout`
+#: went dead when `new_listings` moved on 2026-10-08 and nothing recorded it;
+#: `pricebands_layout` went dead the same day. Deleting them is a separate
+#: decision (they are the rollback path for the seam, and `base.jinja2`'s
+#: dispatch still names them), but accumulating them unnoticed is how a
+#: template file comes to be two thirds dead without anyone having decided it —
+#: which is exactly what `property/_base/base.jinja2`'s 5,570 dead lines are.
+#:
+#: `market_narrative_layout` JOINED ON D-255, when `market_snapshot` moved, and
+#: with it every layout is dead: no kind reaches `base.jinja2` at all. They
+#: are not kept as a rollback path. The other four were deleted on 2026-10-26,
+#: and `market_narrative_layout` with `base.jinja2` and `market.jinja2` on
+#: 2026-10-28. This list now records which layouts WENT, against the 2026-09-24
+#: map; `render_html` refuses any kind outside `V2_KINDS`.
+UNREACHABLE_LAYOUT_MACROS = ["analytics_layout", "closed_inventory_layout",
+                             "gallery_layout", "market_narrative_layout",
+                             "pricebands_layout"]
+
+
+def test_the_layouts_no_report_type_reaches_are_recorded():
+    """Dead layouts are named, so going dead is a decision and not a drift.
+
+    Derived from the recorded map rather than from the source: a macro is
+    unreachable when every kind whose layout it is has moved into `V2_KINDS`.
+    """
+    reached = {m for t, m in LAYOUT_MACRO.items() if t not in V2_KINDS}
+    unreachable = sorted(set(LAYOUT_MACRO.values()) - reached)
+    assert unreachable == UNREACHABLE_LAYOUT_MACROS, (
+        f"the set of unreachable layout macros changed to {unreachable}. If a "
+        f"kind just moved to the `_v2` page, record its layout here and say in "
+        f"the commit whether the macro is being kept as the rollback path or "
+        f"removed. If one came back, say why."
+    )
+
+
+# D-107'S `price_bands[:4]` RECORD AND THE DISPATCH-FALLBACK CONTROL WERE HERE.
+# Both were about code in `market/_base/` that no kind reached: the surviving
+# slice lived in `analytics_layout`, and the fallback was `base.jinja2`'s
+# `{% else %}` into `gallery_layout`. The four dead layouts, the fallback and
+# their helper macros were deleted on 2026-10-26 after every market body,
+# header and footer rendered byte-identical without them, so neither record
+# has a subject left. `UNREACHABLE_LAYOUT_MACROS` above still names the layouts
+# that went dead; `test_the_layouts_no_report_type_reaches_are_recorded` holds
+# that record against the dispatch map.
 
 
 #: How many listings each report type puts in the PDF, recorded from a render.
@@ -182,9 +290,47 @@ RENDERED_LISTING_CAP = {
 }
 
 
+#: Kinds whose rendered listing count is deliberately NOT their cap, and what
+#: it is instead.
+#:
+#: `price_bands` moved to Design's `_v2` page on 2026-10-08, and that page's
+#: body for this kind is the band table — five columns of price-band
+#: aggregates, no listings at all. So `PDF_CONFIG["price_bands"]["cap"] = 8`
+#: now governs nothing that renders.
+#:
+#: THE CAP IS LEFT AT 8 AND NOT REMOVED. `cap` is read by `_build_listings_
+#: context`, which still runs for this kind and still feeds `total_count`, and
+#: the entry is also where `pages` and the header/footer offsets live. Deleting
+#: the number because one of its consumers went quiet is the change that breaks
+#: the other four. What is recorded here is that it is inert for rendering —
+#: so if someone gives `price_bands` a listings table, 8 rows appear, and this
+#: gate fires asking whether 8 was ever a decision for that body.
+#:
+#: `market_snapshot` joined on D-255 for the same reason: Design's snapshot
+#: body is inventory, price tiers, the median line and property types — no
+#: listing cards. The legacy page showed nine on page 2; that page is gone.
+RENDERED_DESPITE_CAP = {
+    "price_bands": 0,
+    "market_snapshot": 0,
+}
+
+#: Kinds whose `_v2` body renders CARDS rather than table rows, so the listing
+#: cap still governs but the address-match count below finds them in a grid.
+#: Listed so the cap test's parametrisation covers them explicitly rather than
+#: by happening to match the same strings.
+V2_GALLERY_KINDS = frozenset({"new_listings_gallery", "open_houses",
+                              "featured_listings"})
+
+
 @pytest.mark.parametrize("report_type", ALL_REPORT_TYPES)
 def test_the_cap_is_what_limits_the_listings_that_render(report_type):
-    """The pinned cap must match PDF_CONFIG *and* the rows that actually render."""
+    """The pinned cap must match PDF_CONFIG *and* the rows that actually render.
+
+    For a kind in `RENDERED_DESPITE_CAP` the second half is pinned separately,
+    asserted rather than skipped: a kind that renders zero listings when the
+    config says eight is a fact worth holding still, and skipping it would let
+    a page silently start or stop rendering listings with nothing to say so.
+    """
     cap = RENDERED_LISTING_CAP[report_type]
     assert PDF_CONFIG[report_type]["cap"] == cap, (
         f"{report_type}: PDF_CONFIG says {PDF_CONFIG[report_type]['cap']}, "
@@ -197,6 +343,15 @@ def test_the_cap_is_what_limits_the_listings_that_render(report_type):
         1 for i in range(n)
         if f"{100 + i * 7} {STREETS[i % len(STREETS)]}" in html
     )
+    expected = RENDERED_DESPITE_CAP.get(report_type, cap)
+    if expected != cap:
+        assert rendered == expected, (
+            f"{report_type}: this suite records that the cap ({cap}) governs "
+            f"nothing on this page and {expected} listings render, but "
+            f"{rendered} of {n} did. Either the body changed or the cap "
+            f"started governing again; both are decisions to write down."
+        )
+        return
     assert rendered == cap, (
         f"{report_type}: cap is {cap} but {rendered} of {n} listings rendered"
     )
@@ -214,9 +369,17 @@ def test_the_more_listings_callout_cannot_emit_anything_today():
     """
     assert all(c["more_template"] is None for c in PDF_CONFIG.values())
     for report_type in ALL_REPORT_TYPES:
+        html = MarketReportBuilder(report_data(report_type)).render_html()
+        if report_type in V2_KINDS:
+            # Design's page has no such callout and calls no macros, so the
+            # "the call still happens on every render" half does not apply.
+            # The OUTPUT half still does, and matters more: a `_v2` page that
+            # started emitting the copy would be the same dishonest callout on
+            # a new document.
+            assert 'class="more-listings-note' not in html, report_type
+            continue
         called = macros_for(report_type)
         assert "more_listings_callout" in called, report_type
-        html = MarketReportBuilder(report_data(report_type)).render_html()
         # The bare class name also appears in a `.more-listings-note
         # { break-inside: avoid }` rule in the stylesheet, which is itself
         # unreachable today. Match the attribute so this asserts about MARKUP

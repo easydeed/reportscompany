@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap"></link>
+<style>body{margin:0;background:#E9E8E4;font-family:'Geist',system-ui,sans-serif;color:#14161A}a{color:#18235c}a:hover{color:#0d9488}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Property report · 3 themes × 6 brands · cover + comps</div>
+    <h1 style="margin:0;font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-0.03em">Same architecture, three voices, every brand</h1>
+    <div style="font-size:14px;line-height:1.5;color:#3A3E45;max-width:820px;text-wrap:pretty">Every colour on these pages is one of the six derived tokens or a fixed neutral. No theme hue exists. The dark panel is <span style="font-family:'Geist Mono',monospace">#0f172a</span> everywhere. Full report: <a href="Property Report.dc.html">Property Report.dc.html</a> (switch theme, brand, path and missing-photo state in Tweaks).</div>
+  </div>
+  <sc-for list="{{ rows }}" as="row" hint-placeholder-count="3">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-size:20px;font-weight:600">{{ row.name }}</span><span style="font-size:13px;color:#5E636B">{{ row.note }}</span></div>
+      <div style="display:flex;gap:20px;flex-wrap:wrap">
+        <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="6">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="width:326px;height:422px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 8px 24px rgba(0,0,0,0.08)">
+              <div style="width:816px;height:1056px;transform:scale(0.4);transform-origin:0 0">
+                <dc-import name="Property Report Cover" theme="{{ row.theme }}" brand="{{ c.brand }}" hint-size="816px,1056px"></dc-import>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#5E636B"><span style="width:12px;height:12px;border-radius:3px;background:{{ c.hex }}"></span><span>{{ c.brand }} · {{ c.hex }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-for>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const B = { red: "#DC2626", teal: "#0D9488", cyan: "#0E7490", amber: "#F59E0B", lime: "#84CC16", violet: "#7C3AED" };
+    const cells = Object.entries(B).map(([brand, hex]) => ({ brand, hex }));
+    return { rows: [
+      { theme: "elegant", name: "Elegant", note: "Cormorant display, hairlines, square corners", cells },
+      { theme: "bold", name: "Bold", note: "Barlow Condensed caps, tight radius", cells },
+      { theme: "modern", name: "Modern", note: "Manrope, soft 14px radius", cells }
+    ] };
+  }
+}
+</script>
+</body>
+</html>

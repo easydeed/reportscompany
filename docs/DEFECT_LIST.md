@@ -59,14 +59,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 0 | Observed, not yet triaged |
-| `open` | 59 | Real, unfixed |
-| `fixed` | 109 | Corrected in code, with the branch or PR named on the entry |
-| `closed-not-live` | 4 | Not occurring in production, with the evidence named on the entry |
+| `recorded` | 59 | Observed, not yet triaged |
+| `open` | 78 | Real, unfixed |
+| `fixed` | 165 | Corrected in code, with the branch or PR named on the entry |
+| `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **173** | D-001 … D-173, contiguous, no duplicates |
+| **Total** | **309** | D-001 … D-309, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 4 · WRONG 18 · FRAGILE 13 · ROUGH 24. (Sums to 59, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -91,8 +91,8 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > imports the test's `parse()`, so there is one reader and it is the one CI runs. Two
 > implementations of "how to read this document" is a second answer waiting to be believed.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`).
-`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`); D-178 (`feat/market-closed-v2`).
+`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17); D-179 (**not reproducing** — four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository; each absence named on the entry so the same report cannot re-file it).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
 
@@ -105,6 +105,15 @@ Plus 5 items marked BLOCKED-NEEDS-DEPLOYED-ACCESS and 2 UNVERIFIED. Those are op
 D-001 through D-024 are grouped by severity below. D-025 through D-034 are grouped in the **P2B — Configuration trace** section, D-035 through D-037 in the **Production evidence reconciliation** section, and D-041 through D-054 in the **Phase M — Marketing / UX** section, because each is only readable alongside the trace that produced it.
 
 **Reading note on the P2B entries:** six were written as conditional on environment values I did not have. Production logs have since settled three of them (two BROKEN, one WRONG — all closed, with evidence). The remaining conditionals are listed at the end of the reconciliation section.
+
+## Standing rules
+
+Rules that hold across every change, learned from a defect that nearly shipped. Each names the check that enforces it.
+
+**R1 — Any asset URL an email has ever referenced is permanent.** *(2026-10-28, owner)* A sent email keeps its HTML in every inbox it reached and loads its images by URL each time it is opened. Deleting or renaming one of those files breaks the image in every past email, and nobody can change those emails any more. To stop using an asset, stop referencing it and keep the file.
+- **How it nearly shipped:** #235 (the Ticker logo) deleted `apps/web/public/white.png`. Every account email since 2026-04-10, the schedule-failure notice and the home-value email load their logo from `https://www.trendyreports.io/white.png`. It was caught in review and restored.
+- **How it already happened once:** on 2026-04-10, from 07:08 to 11:40, the account emails loaded `https://trendyreports.io/logo-white.png`, a file that never existed. Those emails have shown a broken logo ever since. A copy of `white.png` now sits at that path, so they heal.
+- **Enforced by:** `tests/test_permanent_email_assets.py`, which reads the list `tests/permanent_email_assets.txt` and does three things. It fails if a listed file is missing. It fails if email code references a public file that isn't listed. And it holds a floor, so an entry can't leave together with its file. `apps/api/tests/test_transactional_shell.py` checks the rendered side: every image an account email loads from the app is on the list and exists.
 
 ## Test environment
 
@@ -450,9 +459,22 @@ The README-documented runner splits each file on `;` and **drops any resulting c
 
 Nothing in `apps/api/src/api/routes/company.py` writes an application-level record of who read what. There is no access-log table, and the `rep_id` filter value is not persisted anywhere. Consequence: the question "was D-005 ever exploited, and against whom?" **cannot be answered from the product's own database** — it has to go to the hosting provider's HTTP request logs, filtered to `/v1/company/reports` and `/v1/company/schedules` carrying a `rep_id` parameter, across the whole window since `db/migrations/0048_title_company_hierarchy.sql` shipped. Any tenant-scoped read path that a caller can parameterise should leave a record.
 
-### D-013 — A database or Redis outage is reported to users as an auth failure
+### D-013 — A database outage hangs every request for ten seconds and then reports it as an auth failure
 **Severity:** FRAGILE · **Affects:** all authenticated users
 **Status:** `open`
+
+> **THE TEN SECONDS IS THE SYMPTOM A USER WOULD ACTUALLY REPORT, AND NOTHING HAD IT.**
+> `db.py:38` hard-codes `timeout=10` on the connection pool, and the blacklist check runs on
+> **every authenticated request**. So a database outage does not log you out — it **freezes the
+> page for ten seconds per call** and *then* logs you out. A page making three calls appears to
+> hang for half a minute before ejecting the user, with `/health` green throughout. For four
+> months this entry described a wrong message and never mentioned the wait, which is the one
+> detail that would have made it findable from a complaint.
+>
+> **And the message it did name is the one no browser user can see.** The entry has said
+> `"Token has been invalidated"` since it was filed; that is the **bearer** path.
+> `apps/web` authenticates with the `mr_token` cookie, and that branch returns
+> **`"Session has expired"`**. Both measured 2026-10-20 — see the reproduction below.
 
 `_is_token_blacklisted` fails **closed**: any exception returns `True` (`apps/api/src/api/middleware/authn.py:189-190`), so the request is rejected with `401 {"detail":"Token has been invalidated"}`. Failing closed is the correct security posture; the reporting is wrong.
 
@@ -465,6 +487,78 @@ paragraph below was written when both halves were live; read it for the reportin
 the 500s.
 
 Combined with D-009 (Redis unreachable ⇒ 500 on every authenticated request), an infrastructure blip presented to a customer as "the product logged me out / is broken" with no corresponding signal on our side.
+
+#### REPRODUCED END TO END — 2026-10-20, and it corrects this entry twice
+
+Run as the candidate cause of a live report of "reports 401ing with a valid token". The API's own
+dependencies were installed for the first time (PyPI is reachable from this container), the app was
+constructed with `DATABASE_URL` pointing at a **closed port**, and a token was minted that
+`api.auth.verify_jwt` confirms is valid. Nothing mocked; real connection failures through the real
+path.
+
+| request | response | time |
+|---|---|---|
+| `/health` | **`200 {"ok":true,…}`** | instant |
+| `/v1/me`, valid **bearer** token | `401 {"detail":"Token has been invalidated"}` | **10.00s** |
+| `/v1/reports`, valid **bearer** token | `401 {"detail":"Token has been invalidated"}` | **10.00s** |
+| `/v1/reports/{id}/data`, valid **bearer** | `401 {"detail":"Token has been invalidated"}` | **10.00s** |
+| `/v1/reports`, valid **cookie** session | **`401 {"detail":"Session has expired"}`** | **10.00s** |
+| no credential at all (control) | `401 {"detail":"Unauthorized"}` | instant |
+
+**Two things this entry had wrong, and both matter to anyone diagnosing a live 401.**
+
+1. **The cookie path says something else.** This entry has named `"Token has been invalidated"`
+   since it was filed. `apps/web` authenticates with the `mr_token` cookie, and that branch of
+   `AuthContextMiddleware` returns **`"Session has expired"`**. So for four months the entry
+   described a symptom **no browser user could see** — the string a real session gets is the other
+   one, and it reads even more like a logout than the one we recorded.
+2. **The refusal is not fast.** `db.py:38` hard-codes `timeout=10` on the connection pool, and the
+   blacklist check runs on **every** authenticated request. Each call therefore hangs for ten
+   seconds and *then* logs the user out. A page making three calls appears to freeze for half a
+   minute before ejecting them. Nothing had recorded that, and it is the most recognisable part of
+   the symptom.
+
+#### So: how to tell this apart from the other ways to get a 401
+
+The body is the whole diagnosis, and it takes one look at a network tab:
+
+| body | meaning |
+|---|---|
+| `{"detail":"Session has expired"}` | **this entry** — cookie session, database unreachable |
+| `{"detail":"Token has been invalidated"}` | **this entry** — bearer/API-key caller, database unreachable (or a genuinely blacklisted token, which is the ambiguity) |
+| `{"detail":"Unauthorized"}` | no credential resolved at all — or, on `/v1/reports/{id}/data` and `/print/[runId]`, a missing or mismatched `INTERNAL_RENDER_TOKEN` between Vercel and the API |
+| `404` | not this; cross-tenant id, or a report whose `result_json` is not written yet |
+
+**`/health` being 200 throughout is now measured rather than reasoned**, which also means a
+"reports are 401ing" report cannot be checked against uptime — the uptime signal is green by
+construction.
+
+#### Pinned by a test that needs no database
+
+`apps/api/tests/test_auth_under_outage.py`, 6 tests, 2.2s: the three bodies asserted character by
+character, `/health` still 200, the refusal still waiting for the pool, and `timeout=10` still being
+the number this entry quotes. The only thing patched is the pool timeout, shortened so the suite
+does not spend ten seconds per request — and that shortening is itself asserted rather than silently
+removed.
+
+#### The fix, scoped and NOT taken
+
+Keep failing closed; stop lying about why. The check has three outcomes and reports two:
+**revoked**, **not revoked**, and **could not be determined** — the third currently borrows the
+first one's message. Returning `503 {"detail":"Service temporarily unavailable"}` for the third
+preserves the posture exactly and makes the cause legible to the user, to support and to a browser
+tab.
+
+Not taken here for one reason worth stating: `apps/web` almost certainly treats 401 as "clear the
+session and bounce to /login", and 503 would need to become "retry or show an outage banner"
+instead. That is a frontend behaviour change on the auth path and it wants its own pass. The
+latency (ten seconds per refused request) is a second, separable question about `timeout=10` on a
+check that runs on every request.
+
+**NOT CONFIRMED AS THE LIVE CAUSE.** This reproduces a mechanism that produces exactly the reported
+symptom. Whether it is what Jerry saw needs the response body from the failing request, which has
+not been supplied. If the body is `"Unauthorized"` the cause is one of the other rows above and this
+is not it.
 
 ### D-020 — `scripts/migrate.sh` cannot be run twice, so no future migration can be applied with it
 **Severity:** BROKEN · **Affects:** all (deployment)
@@ -1603,7 +1697,20 @@ Chrome findings #7 and #8. A nav entry that opens a blank email client is a dead
 
 ### D-050 — `components/v0/` is six files with no importers
 **Severity:** ROUGH · **Affects:** nobody at runtime — this is dead weight and a re-litigation risk
-**Status:** `open`
+**Status:** `fixed` — `chore/phase-1-app-routes-detokenise`. **The condition this entry set has
+lapsed:** it said *"PR #27 is still unmerged — this should go in with it."* #27 merged, took
+`v0-report-builder/` with it, and left these six behind. Waiting for a merged PR is waiting for
+nothing, so they are deleted here, in the branch that would otherwise have had to retokenise 34
+colour literals inside them.
+
+**Proof, to the standard the entry's own neighbours use and the one `/print/[runId]` taught:**
+zero importers by resolved path (the import graph walk from all 264 route entry points);
+zero references to `components/v0` anywhere outside the directory — the only `components/v0*`
+matches are `components/v0-styling/`, a DIFFERENT and live directory whose shells three routes
+import; each of the six basenames grepped as a bare STRING across the whole repository, whose only
+hits are separate copies in `packages/ui/src/components/` and the vendored `_intake/` app (D-052),
+not references to these files; and no dynamic or constructed import exists anywhere in `apps/web`
+(`import(` / `require(` with interpolation or concatenation returns nothing).
 
 `apps/web/components/v0/` contains `Navbar.tsx`, `code-tabs.tsx`, `dashboard-overview.tsx`, `new-report-wizard.tsx`, `segmented-control.tsx`, `tag-input.tsx`. **All six have zero importers.**
 
@@ -5724,6 +5831,35 @@ way, and only the rendering rule is in question.
 A market with six price bands renders four cards. Nothing on the page says the other two exist,
 and nothing in the code says why four.
 
+> **CORRECTION, 2026-10-08 — THE FIX REACHED ONE OF TWO COPIES.** There is a second
+> `{% for band in price_bands[:4] %}`, in **`analytics_layout`** (`macros.jinja2:323`), and this
+> entry's fix did not touch it. Same loop, same slice, same four-of-six truncation, under a
+> different macro. The two-implementations family again (D-163, D-170, D-177), and it was invisible
+> for the usual reason: the entry named `pricebands_layout`, the fix edited `pricebands_layout`, and
+> nothing asked whether the construct existed elsewhere. `grep -n "price_bands\[:4\]"` finds both
+> in one line and was not run.
+>
+> **It is dead, for two independent reasons, and was dead before this entry was filed:**
+>
+> 1. `analytics_layout`'s only report type was `new_listings`, and
+>    **`build_new_listings_result` emits no `price_bands` key** — so `{% if price_bands %}` has never
+>    been true on that path from the real builder. (D-111's entry says this defect "affects the band
+>    cards on `new_listings`". That is overstated in the same direction: `new_listings` has never
+>    carried band data.)
+> 2. `analytics_layout` also has an `{% if report_type == 'price_bands' %}` branch, which has never
+>    been taken either, because `price_bands`' layout was `pricebands_layout`.
+>
+> And as of 2026-10-08 `analytics_layout` is unreachable from any kind at all — `new_listings` moved
+> to Design's `_v2` page — so it is now dead a third way. Recorded rather than edited: **editing a
+> dead slice would produce a diff that looks like a fix and changes no rendered page**, and the
+> decision to remove the two unreachable layouts is D-181's, where the set is pinned.
+>
+> What this costs is only the record: the entry claimed a construct was removed and one instance of
+> it remains. The **severity does not change** and the status stays `fixed`, because the surviving
+> copy cannot render. What *would* have changed is if `new_listings` had ever been given band data —
+> post-D-111 the ladder yields up to six bands, so the slice would truncate two, which is exactly
+> the defect this entry describes, on a page nobody would have re-checked.
+
 **Surfaced by the §7.3 band chart**, which renders every band — so a six-band report now shows four
 cards above six bars. The chart's caption names the discrepancy as a stopgap ("the cards above show
 the first 4; the chart shows all 6"), which is a caption apologising for a layout rather than a fix.
@@ -7829,7 +7965,7 @@ neither reports that the run has two.
 
 **Severity:** FRAGILE · **Affects:** nothing that renders — which is the problem ·
 **Found during:** D-117's copy fix
-**Status:** `open`
+**Status:** `fixed` — #222 (2026-10-26): `templates/property/_base/` and the three self-contained `property/<theme>/<theme>.jinja2` files deleted after every report surface rendered byte-identical without them (65 surfaces, positive control). `tests/test_template_reachability.py` holds the property tree at zero dead files.
 
 `templates/property/<theme>/` holds two files per theme: `<theme>_report.jinja2`, which
 `THEME_TEMPLATES` maps to, and `<theme>.jinja2`, which **nothing references**. Checked by
@@ -8000,6 +8136,65 @@ lines and zero dead**, which is exactly the figure
 **No D-173 was filed, because there was nothing to file.** The near-miss is recorded here instead,
 because it is better evidence for this entry's lesson than the original finding was: the scope of a
 reachability check is part of its claim, and the second time is as easy to get wrong as the first.
+
+#### FOURTH MISREADING — 2026-10-21, and this time it came in from outside
+
+A finding reached us during D-205/D-206 that **`_base/property_base.jinja2` is extended by all five
+current themes**, that it is therefore the live file, and that it is where the cover stopgaps have
+to be applied. **It is wrong on every clause, and checking it is why no stopgap was applied to the
+wrong file.**
+
+| the claim | what is there |
+|---|---|
+| `_base/property_base.jinja2` | **no such file**, anywhere in the repository |
+| "all five current themes" | there are **three** live themes; `classic` and `teal` were cut 2026-10-05 |
+| "extended by the themes" | `_base/base.jinja2` **is** extended — by `atlas/atlas.jinja2`, `linen/linen.jinja2`, `harbor/harbor.jinja2`, **none of which the registry renders.** It renders `<theme>/<theme>_report.jinja2` |
+| "it is the live file" | nothing in Python or Jinja names `_base/` on the property side, and `test_one_comp_set.py` forbids a live template from reaching it, directly or transitively. **68 passed.** |
+
+**And the measurements already in hand settle it without any argument about reachability.** The
+contrast runs on `.cover-agent-name` were measured at **22px** on `linen` and **18px** on `harbor`:
+
+    linen/linen_report.jinja2:66    font-size:22px   <- what was measured
+    harbor/harbor_report.jinja2:63  font-size:18px   <- what was measured
+    _base/base.jinja2:322           font-size:15px   <- no measured run had this size
+
+Three files declare that selector and the dead one declares a size nothing measured. The pixel
+measurer was reading the files the registry names, which is what it is for.
+
+#### The two mechanisms, because this is the fourth time and the entry owes an explanation
+
+1. **THE DEAD TREE DECLARES THE LIVE DEFECTS' SELECTORS.** `property/_base/base.jinja2:322` and
+   `property/_base/_macros.jinja2:69` both carry `.cover-agent-name` — the selector in D-205's failure
+   message. Anyone who greps for a failing selector lands in the dead tree **first**, because it is
+   alphabetically and structurally where a base template should be. The copies have drifted (15px
+   against 22px), so the tree does not merely look live; it looks like the *source* of a
+   near-identical rule.
+
+2. **THERE ARE TWO `_base/base.jinja2`, AND ONE OF THEM IS LIVE.** `market/_base/base.jinja2` is
+   the base of every market report; `property/_base/base.jinja2` renders nowhere. The gate's own
+   docstring has to say so in parentheses. A claim about "`_base/base.jinja2`" is **true or false
+   depending on a directory it does not name**, and the previous misreading in this entry was the
+   same two files in the other direction.
+
+**What follows for the entry.** The classification stands: `property/_base/` is dead, and the
+stopgaps for D-205 and D-206 belong in `linen/linen_report.jinja2` and `harbor/harbor_report.jinja2`
+— the self-contained 720- and 795-line templates. The derivation and the gate both held this time;
+what failed is that a reader outside them reproduced the entry's original mistake.
+
+**And the remedy for mechanism 2 already exists — it caught this very note.** The paragraph above
+originally said `_base/base.jinja2:322`, unqualified, and
+`test_every_claim_about_a_dead_base_says_which_one[docs/DEFECT_LIST.md]` failed on it:
+
+    docs/DEFECT_LIST.md calls `_base/` dead without saying which one:
+        :8157  1. **THE DEAD TREE DECLARES THE LIVE DEFECTS' SELECTORS.** …
+    templates/market/_base/base.jinja2 is extended by market/market.jinja2 and
+    is the base of every market report.
+
+So a gate for exactly this already reads the documentation, and the fifth misreading of this entry
+was made and caught **inside the note recording the fourth**. It is now `property/_base/` in both
+places. The gap worth closing is narrower than it looked: the gate covers this board and the design
+corrections, and what it cannot reach is a document that leaves our repository — which is how the
+claim arrived.
 
 ---
 
@@ -8859,6 +9054,61 @@ reports D-159's deliberately ADDED `comparables_all` page as a loss on every mul
 > production route can fail silently while their rendered form is well covered. The counter or
 > status this entry asks for is what distinguishes *the page was not requested* from *the page
 > was requested and did not arrive*, and injection cannot answer it by construction.
+
+
+> **MEASURED AGAIN 2026-10-14, and the drop is now the DEFAULT THEME's normal case.**
+>
+> Re-rendered all three themes with no `market_trends_data`, which is the production path when the
+> fetch returns nothing:
+>
+> | theme | `market_trends` in its default page set | pages requested → rendered | `"Market Trends"` in the rendered body |
+> |---|---|---|---|
+> | **atlas** (`DEFAULT_THEME_ID = 5`) | **yes** — it is in `V2_PAGE_ORDER` | **6 → 5**, dropped | **0 occurrences** |
+> | linen | no — not in `DEFAULT_PAGE_SET` | 7 → 7 | 0 occurrences |
+> | harbor | no | 7 → 7 | 0 occurrences |
+>
+> **Two things follow, and they point opposite ways.**
+>
+> **The document half of this entry is clean, and that is worth stating because the opposite was
+> claimed.** A dropped page leaves **no trace at all** — no contents row, no footer reference, no
+> heading. D-121's fix holds: `paginate()` derives both the footer numbers and the contents rows
+> from the page set that survived, so there is nothing anywhere promising a page the reader did not
+> get. A report relayed outward on 2026-10-13 said the contents page *"lists it unconditionally"* and
+> that *"three sections promise a page almost nobody receives"* — **that is D-121, and D-121 is
+> fixed.** The measurement above is the check; it was run because the claim had already reached the
+> product owner.
+>
+> **The severity half got worse, and that is new.** `market_trends` is in the default page set of
+> **exactly one theme — `atlas` — and `atlas` is the default theme.** So on the default theme every
+> property report asks for the page and silently gives it up whenever the fetch returns nothing,
+> while on the other two themes no reader ever sees it. The entry's three readers are unchanged, but
+> the recipient half is no longer an edge case: it is what the default theme does by default.
+>
+> **[JERRY] The number that decides this is not in the repository.** How often
+> `fetch_and_compute_market_trends` succeeds in production is a log question, and
+> `pages_dropped=market_trends` at `WARNING` is already the grep for it (the aggregate half, built
+> 2026-10-01). If the success rate is high, this stays FRAGILE and the copy decision can wait. If it
+> is low, the default theme is shipping a six-page report as five on most renders with nothing said,
+> and the copy decision is the next thing to make. **A figure of "one render in three hundred" was
+> relayed with the claim above; nothing in the repository produces it, and it should be read off the
+> logs before it is believed.**
+>
+> **The exact query, so the answer is not paraphrased either.** Worker service logs, longest window
+> retention allows, three counts over the SAME window:
+>
+> | | search string | what it counts |
+> |---|---|---|
+> | numerator | `pages_dropped=` *(report the distinct values)* | renders that lost a conditional page. The field is comma-joined over `PAGE_ORDER`, so a render losing both pages reads `pages_dropped=market_trends,overview` — counting `market_trends` alone needs the values, not the line count |
+> | denominator | `Property report complete:` | property renders that finished. The right denominator for "reports a reader received" |
+> | sanity | `Starting property report generation:` | renders that began. The gap between this and the line above is renders that died before the drop check and must not be counted as successes |
+>
+> Also needed: **the breakdown by `theme=`** from the same lines, and **the window's start and end
+> dates**. The theme split is the whole point — only `atlas` requests the page, so a rate computed
+> across all three themes understates it by however much of the traffic is `linen` and `harbor`.
+>
+> **What the line cannot answer:** it does not say whether a render came from the agent wizard or the
+> consumer path, and those have different page sets. If that split is wanted it is one more field on
+> the log line, which is ours to add — not something to infer from these counts.
 
 
 ---
@@ -10302,7 +10552,7 @@ query is half the answer, and it is the half that looks complete.
 
 **Severity:** WRONG · **Affects:** every property report's market page — three of its four headline
 numbers · **Found during:** wiring Design's page 5, which asks for all three
-**Status:** `open`
+**Status:** `fixed` — #220: the four boxes are the four metrics that have a producer (median sale price, days on market, sale-to-list, price per sq ft), labelled as what they are; a box reads "no data" exactly when its own metric is missing. `apps/worker/tests/test_market_page_shows_the_numbers_it_has.py`.
 
 ```python
 # compute/market_trends.py:347
@@ -10483,7 +10733,8 @@ test: `#000000`, `#ffffff` and `#ffff00` all have tints that behave specially.
 
 **Severity:** WRONG · **Affects:** the redesigned property report's cover, on amber and lime ·
 **Found during:** the pixel contrast gate, first render of the redesigned document
-**Status:** `open` — **[JERRY]**, and the slot is built with the safe value in it
+**Status:** `fixed` (`feat/display-ink-shared-token`) — **the [JERRY] decision was closed by Design
+deriving it**, 2026-10-07. See *"Closed by a third option"* below.
 
 Design's package specifies `#FFFFFF` for the cover's display lines — street, city, the four 30px
 stat values — "**by owner decision**", on the stated grounds that it "passes the 3.0 large-text
@@ -10520,6 +10771,96 @@ exception for it, so it uses `on_primary` outright — measured at 1.98:1 on lim
 before the change. The `opacity: 0.85` / `0.9` / `0.92` values Design sets on text over the band
 are dropped for the related reason: a translucent `on_primary` over `primary` is a colour neither
 token measured, and the gate reports it as a pairing nobody chose.
+
+---
+
+#### Closed by a third option, which neither side had proposed
+
+`RESPONSE_2026-10-06.md`. Design did not defend the claim and did not retreat to a narrower one —
+they replaced the assertion with a derivation:
+
+```
+display_ink = contrast(white, primary) >= 3.0 ? white : on_primary
+```
+
+**Third round for this class of claim, and the first where the method landed rather than the
+number.** `#8A8E95` was stated, then corrected. The inline ratios were stated, then computed. This
+one came back as a rule.
+
+**It is not `on_primary` with extra steps**, which is the question a reader will have, because the
+holding position in the template WAS `on_primary`. `on_primary` picks the strict winner between
+white and near-black, so on `luxury_estates` (#0D9488) it takes white OFF a brand where white is
+3.74 — and 3.74 was the exception the owner had actually accepted. Measured through
+`themes.derive_theme`:
+
+| brand | white | near-black | `on_primary` | `display_ink` |
+|---|---|---|---|---|
+| violet `#7C3AED` | 5.70 | 3.20 | `#ffffff` | `#ffffff` |
+| coastal `#0E7490` | 5.36 | 3.40 | `#ffffff` | `#ffffff` |
+| demo_title `#DC2626` | 4.83 | 3.77 | `#ffffff` | `#ffffff` |
+| luxury_estates `#0D9488` | 3.74 | 4.87 | `#14151a` | **`#ffffff`** |
+| amber `#F59E0B` | 2.15 | 8.49 | `#14151a` | `#14151a` |
+| lime `#84CC16` | 1.98 | 9.23 | `#14151a` | `#14151a` |
+
+One brand of six differs, and it is the one the decision was about. The note in the template had
+said taking Design's value as written would widen the exception from one brand to four, and the
+holding position narrowed it to zero. Neither was the answer.
+
+#### The threshold was right and the set of sites was one too wide
+
+Pointing all four cover display sites at the new token produced **one new pixel-gate failure**:
+`#ffffff on #0d9488` at 3.74 under `span.cover-city`. The city line is **22px at weight 500**,
+which is not large text by either of WCAG 1.4.3's definitions (≥24px, or ≥18.66px at ≥700), so it
+needs 4.5 and `display_ink`'s threshold is 3.0. The street line runs 32-64px and the stat values
+are 30px; those three are large text and take the token. The city line keeps `on_primary`.
+
+Design asked us to re-measure, and that is the measurement: **the rule is correct, and it was
+applied to one site more than the rule covers.** Found by the gate, not by reading.
+
+#### And the honest answer on how many failures it closes: none
+
+Design predicted this "should close the 42 of 45 remaining property failures". On our baseline it
+closes **zero**, and the number is not comparable. `property__bold` has **no baseline entries** —
+the shared-architecture document was already clean — and the 75 property failures that remain are
+`property__elegant` (50) and `property__modern` (25), both still on the old `_base` architecture.
+They close when those two themes move to `_v2`, not from this token.
+
+What `display_ink` does is restore the owner's one accepted exception and make the two brands that
+failed impossible, derived, for any brand including ones nobody has picked yet.
+
+**AND THE COMPARISON THAT MAKES THAT NUMBER MEAN SOMETHING, ADDED 2026-10-07.** D-177 was the same
+shape of ticket — *adopt Design's token* — and it closed **twenty** baseline entries from one
+function with no template change. The difference is not the quality of either fix:
+
+| | token | where it paints | baseline rows closed |
+|---|---|---|---|
+| D-171 | `display_ink` | the cover of `property__bold` | **0** — bold's document already had none |
+| D-177 | `accent_ink` | accent text on tint panels, `elegant` + `modern` | **20** |
+
+`display_ink` closing nothing was **knowable before it was built**, because bold had zero baseline
+rows and the token only reaches bold's cover. So:
+
+> **Before estimating what a token adoption closes, ask where it paints.** A token on a surface with
+> no baseline rows closes nothing by construction, however correct it is; a token on the surface
+> carrying the rows closes them without a template change. The estimate is a property of the
+> selector list, not of the derivation — and it is a grep of the baseline, not a render.
+
+#### Two copies of the token set, found on the way
+
+* **`regen_theme_golden.py` enumerated the six token names** while `test_golden_file_lock` iterates
+  `themes.TOKENS`. So a seventh token made the reader look for something the writer never emitted,
+  and **regenerating the golden file produced no diff and did not fix the failing test** — the
+  worst shape a regen script can have, because the failure message tells you to run it. Now derived
+  from `TOKENS`, with a gate on three-or-more quoted token names in a row.
+* **Three stale counts of the same set**: `derive_theme`'s docstring said "the five tokens", the
+  golden file's header said "the five derived tokens", and `TOKENS` held six. None of them is a
+  number any more.
+
+A footnote worth keeping, because every regression run in this project uses the same restore
+pattern: **restoring `_DISPLAY_MIN = 3.0` over `2.0` left Python running the old bytecode.** Same
+byte length, same second, and `.pyc` validation is (mtime, size) — so the harness reported a
+failure that the source did not have. It happened to fail safe this time. The same collision over a
+*passing* restore would have reported a false pass.
 
 ---
 
@@ -10594,10 +10935,11 @@ and their recipients receive one with a chart nobody looked at.
 same reason. `closed_history_truncated` is absent too, which is harmless: absent reads as "not
 truncated", and a fixture is not truncated.
 
-**Three keys go the other way.** `filters_label`, `period_label` and `report_date` are returned by
-`get_sample_data` and appear in **neither the builder nor any market template**. The
-write-with-no-consumer family (D-009, D-113, D-133, D-135, D-164) in a fixture, which is its
-harmless end: they cost a reader working out whether a preview field is missing or was never wired.
+**~~Three keys go the other way.~~ CORRECTED 2026-10-06 — ALL THREE ARE READ.** The original entry
+said `filters_label`, `period_label` and `report_date` "appear in **neither the builder nor any
+market template**" and filed them as write-with-no-consumer (D-009, D-113, D-133, D-135, D-164).
+That was wrong on all three, and the gate shipped asserting it. See *"The reverse half was wrong in
+two different ways"* below.
 
 #### Why nobody had noticed
 
@@ -10631,12 +10973,1285 @@ treated `(self.report_data.get("branding") or {}).get("agent_name")` as a top-le
 reported `agent_name` and `company_name` as missing — two false positives out of seven, in a script
 written to find a divergence.
 
+#### The reverse half was wrong in two different ways, and the gate shipped asserting both
+
+Found the next day, scoping whether the fixture could be derived from the builder rather than
+maintained beside it. Neither error was found by a test; both were found by asking a different
+question of the same code.
+
+**1. The fix for those false positives bought a false negative.** Narrowing a read to a DIRECT
+receiver makes `market_builder.py:452` invisible: `_build_header_context` does
+`data = self.report_data` at line 435 and then reads `data.get("filters_label", "")` as **the
+masthead subtitle of every market report**. So `filters_label` is read, by the builder, on the
+primary surface — and the entry called it unconsumed while the test pinned it. The builder's read
+set is **16 keys, not 15**.
+
+The pair is the whole lesson: narrowing a scan to kill false positives moves the error to the other
+side of the ledger, and only measuring both directions catches it. Reads now follow local aliases
+of `report_data`, scoped per function, and
+`test_the_alias_rule_still_finds_the_aliased_read` fails by name if the rule is narrowed again —
+because every other test in that file passed while the scan was wrong.
+
+**2. A one-surface scan was published as a repo-wide verdict. This is D-131, nine days later.** The
+reverse half scanned `templates/market/**/*.jinja2` and named its output
+`supplied_read_by_nothing_at_all`. `period_label` and `report_date` are read **seven times** in
+`apps/web/lib/templates.ts` — the legacy print/social surface — and appear in seven
+`apps/web/templates/*.html` documents. That module's own docstring reads *"NOT DEAD CODE — do not
+delete… Two archived documents asserted this route had been removed. Both were wrong."*
+
+D-131 was the same mistake with the surfaces swapped, and it was cited three times as a reason to
+delete something live. The §0.6 rule written **when D-131 was corrected** — *the scope of a
+reachability check is part of its claim* — was then broken by the next reachability check written.
+A rule in a document is not a gate.
+
+So the consumer surfaces are now **enumerated by name** (market Jinja, the legacy print templates,
+the legacy print mapper), `surface_text()` **raises** if any glob matches no files, and the
+derivation reports **which surface reads each key** instead of whether "anything" does. The
+corrected count of keys read by no enumerated surface is **zero**.
+
+A note on what *is* true: `apps/web/**` renders no customer PDF, because `tasks.py:1775` always
+passes `html_content` and `pdf_engine`'s `/print/{run_id}` branch is therefore unreachable from the
+market path (D-101's fix). Unreachable-as-a-PDF-fallback and unread are different claims about the
+same files, and collapsing them is what both of these errors did.
+
+#### And the fixture's docstring was a copy of the builder's numbers
+
+Scoping the derivability question turned up the same shape in prose. `sample_report_data.py` opened
+with a seven-row table of `PDF_CONFIG` caps, explaining that listing counts were "deliberately set
+ABOVE the cap so the 'Showing N of M' and '+ K more' callouts have honest, non-zero numbers":
+
+| type | docstring cap | real cap | fixture listings | over cap? |
+|---|---|---|---|---|
+| `market_snapshot` | 8 | **9** | 50 | yes |
+| `new_listings` | 24 | **200** | 38 | **no** |
+| `closed` | 20 | **200** | 28 | **no** |
+| `inventory` | 20 | **200** | 30 | **no** |
+| `new_listings_gallery` | 24 | **200** | 30 | **no** |
+| `featured_listings` | 12 | 12 | 8 | no |
+| `price_bands` | 8 | 8 | 8 | no |
+| `open_houses` | *absent* | 100 | 18 | no |
+
+Five of seven figures stale, the eighth type never listed, the stated purpose holding for **one of
+eight** — and `more_template` is `None` for all eight, so the `+ N more` callout the table is
+written around does not exist in the builder. The builder moved catalog types to high caps and no
+callout on purpose (`market_builder.py:153`); its description in the fixture was never updated.
+
+The listing counts themselves were all correct. What had drifted was the **copy** of numbers
+another module owns — the same finding as the five copies of the theme map (D-163), in a docstring,
+where there is no reader that fails. The table is gone, the relationship is derived from
+`PDF_CONFIG`, and a live `cap=<n>` reappearing in that file now fails the build.
+
+**Pinned as a relationship, not a snapshot.** A `{type: cap}` dict in the test would be a fifth copy
+needing an update on the next builder change — and whoever updated it would update it to match,
+which is how the table went stale. What is pinned is the only thing the fixture claims: which types
+supply more listings than the builder will render (`market_snapshot`, alone). That is a decision
+about the sample document, so changing it should require one.
+
 #### Not fixed here
 
 Supplying `closed_history` means generating twelve months of plausible closings in the fixture, and
 a preview chart drawn from invented data is a product decision rather than a bug fix — it is the
 same question as the nineteen orphans. The hole is recorded with its measurement so the decision
 can be taken on the number.
+
+---
+
+### D-184 — Design's page-1 photo grids do not fit under Design's page-1 band
+
+**Severity:** ROUGH · **Affects:** `open_houses` and `featured_listings` page 1 — the stated grid
+against the measured fit · **Found during:** re-measuring #156's gallery fit against the `_v2`
+architecture before trusting 3×3
+**Status:** `open` for `open_houses`; **DECIDED for `featured_listings`** — see below. Built to the
+measured fit, with the shortfall reported to Design as a measurement.
+
+> ### DECIDED 2026-10-12 — the bigger featured card stays, and the two pages are accepted
+>
+> Jerry reviewed the full old-beside-new comparison (all eight kinds, one brand) and approved it
+> as-is. **The `featured_listings` question in that pack was explicit** — *"this one got longer, two
+> pages to four. Is the bigger card worth two extra pages, or should it use the smaller shared
+> card?"* — so the approval answers it.
+>
+> **The bigger card stays. The 2 → 4 page cost is accepted, not an oversight.** Recorded here so
+> nobody re-opens it as one: the card is 326.8px against the shared card's 238.3, two fit under the
+> band where six of the smaller fit, and that is the intended document.
+>
+> **The 4.7px question to Design is still worth asking** and is unaffected by this. It is no longer
+> "should the card be smaller" — that is settled — but "your stated 2×2 misses by five pixels, and
+> closing it would give the approved card three pages instead of four." A free page on an approved
+> design, not a redesign.
+>
+> `open_houses`' 80.1px shortfall remains open and remains cost-free; it was never a page question.
+
+Their per-kind table states a page-1 grid for each gallery kind. Their band, measured on the page
+they specified, is **265.4px**, leaving **662.9px** above the footer:
+
+| kind | Design states | measured fit | verdict |
+|---|---|---|---|
+| `new_listings_gallery` | 3×2 = 6 | **6** | fits, 172.2px spare |
+| `open_houses` | 3×3 = 9 | **6** | **80.1px short** |
+| `featured_listings` | 2×2 = 4 | **2** | **4.7px short** |
+
+**`featured_listings` misses by four and a half pixels.** One point of line-height, or five pixels
+off the photo, and 2×2 fits — which takes that kind from 4 pages to 3.
+
+#### THE BIGGER SHORTFALL IS THE FREE ONE, and that inverts the priority
+
+| kind | short by | pages ours | pages if their grid fitted | cost |
+|---|---|---|---|---|
+| `open_houses` (cap 100) | **80.1px** | 12 | 12 | **nothing** |
+| `featured_listings` (cap 12) | **4.7px** | 4 | 3 | **one page per report** |
+
+`open_houses` renders `[6, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 4]` — 100 cards over 12 pages. Design's 3×3
+everywhere would be `ceil(100 / 9)` = also 12, because the three cards page 1 cannot hold are
+absorbed by continuation pages that are not full. **The shortfall moves cards between pages without
+adding one.**
+
+Filed as one entry because it is one class of defect, but it is **two different asks**, and ranking
+them by shortfall size would have put the effort on the wrong one: five pixels on `featured_listings`
+buys a page on every report, and eighty on `open_houses` buys nothing and is purely a page-1 density
+question.
+
+#### Third instance of the same class
+
+After the 13-and-26 row counts (page-1 13 and continuation 26 are not simultaneously satisfiable:
+26 needs a row ≤34.8px, and 13 at that height needs 441–476px of page-1 chrome where their own band
+computes to ~295px and ours measures 265px) and the gradient contradiction. **The pattern is a
+number stated for one part of a page without the rest of the page in it** — and it is the same
+failure mode as this project's own, which is why it is filed rather than just relayed: we shipped
+`ceil((120 - page_1) / 26) + 1` as a built-page formula that was right for four kinds and wrong for
+every capped one.
+
+#### Built to the measurement, not to the spec
+
+`PAGE_1_CAPACITY` records 6 / 6 / 2 because that is what renders. The alternative — honouring the
+stated grid — puts a ninth card 80px below the page edge, where PDFShift breaks it onto page 2 as an
+orphan row. **A spec number that does not fit is not a target to hit by overflowing.**
+
+---
+
+### D-185 — a page-size assertion covered one report type and read as if it covered the market templates
+
+**Severity:** FRAGILE · **Affects:** `tests/test_market_templates.py::TestPrintCSS` — four `_v2`
+kinds unasserted for three days · **Found during:** wiring the gallery kinds, when the one kind the
+test could see finally moved
+**Status:** `fixed` — `feat/market-galleries-v2`
+
+```python
+def test_has_page_size_rule(self, full_data):
+    html = MarketReportBuilder(full_data).render_html()
+    assert "@page" in html, "Missing @page CSS rule"
+```
+
+`full_data` sets one `report_type` — `new_listings_gallery`. So the test reads as *"the market
+templates set a page size"* and means *"`new_listings_gallery` does"*.
+
+**`closed`, `new_listings`, `inventory` and `price_bands` moved to the `_v2` page, which has no
+`@page` rule at all, and shipped that way for three days unobserved.** The test could not see them.
+It failed only when the gallery kind itself moved — the last moment it could have.
+
+#### The tell is the fixture, not the assertion
+
+The assertion is correct, points at the right object and asserts the right thing. What is wrong is
+its **scope**: a single-instance fixture under a class-scoped name. `full_data` with one
+`report_type`, a partial render standing for a page, one theme standing for six. **It reads as
+coverage and is a sample of one.**
+
+This is the direction **D-107** failed in a day earlier, in a document rather than a test: the
+entry's claim was class-scoped ("the price-band stat cards show the first four bands") and its fix
+was instance-scoped (one macro of two), and nothing noticed for ten days. §0.6 now carries the rule.
+
+#### Fixed by pinning per member, not by renaming
+
+`HAS_AT_PAGE_RULE` records the expectation for all eight kinds and the test is parametrised over
+`ALL_REPORT_TYPES`, so an unrecorded kind is an error. Renaming it to
+`test_new_listings_gallery_has_a_page_size_rule` would have been honest and would still have left
+seven kinds unasserted.
+
+**The `_v2` page is left without an `@page` rule, deliberately.** PDFShift sets the page box through
+its API — `format`, `margin`, and the 0.44in/0.89in header and footer reserve — and the measured
+PDFs are correct letter pages without any CSS rule. Adding `@page { margin }` to a document whose box
+is set by the caller risks moving the body, and **every row capacity on this surface is measured
+against that box**, so it would mean re-measuring seven kinds to buy a rule that changes nothing. A
+mutation adding one is recorded and fires.
+
+---
+
+### D-189 — not reproducing: a migration `0062` that re-seeds a themes table on every deploy. Four premises, all absent.
+
+**Severity:** ROUGH — *nominal; `closed-not-live` entries are excluded from the severity sums and a
+defect that does not exist has no severity* · **Affects:** nothing · **Found during:** checking
+whether the theme rename was safe against the migrations, before writing any of it
+**Status:** `closed-not-live` — **the described code does not exist, at four independent levels.**
+Recorded because **a claim about it reached the product owner**, and because the same report will
+otherwise produce it again.
+
+Reported as: migration `0062` does `CREATE TABLE IF NOT EXISTS` then an unconditional
+`INSERT ... ON CONFLICT DO NOTHING`, has been running on every deploy for six days, and would
+resurrect a deleted `bold` theme row as a new id — so the rename is unsafe until it is fixed.
+
+**Every link in that chain is absent, and any one of them alone would be enough:**
+
+| the claim | measured |
+|---|---|
+| migration `0062` exists | **the highest migration is `0058`.** There is no `0059`, `0060`, `0061` or `0062` — `ls db/migrations/` ends at `0058_theme_cut_to_three.sql` |
+| migrations re-run on every deploy | **they do not.** `db/schema_migrations.sql` states the contract both runners implement: *"a file whose basename IS in this table is skipped, never re-executed"* — and *"if a recorded file's checksum no longer matches what was applied, the runner warns and still skips it"* |
+| there is a themes table with rows to delete | **there is no themes table.** `grep -niE "CREATE TABLE[^;]*theme" **/*.sql` returns nothing. Themes live in `apps/worker/src/worker/themes.json` |
+| a deleted row would come back with a new id | **there is no table, so no row and no sequence.** What the database stores is integers: `accounts.default_theme_id INTEGER` (`0043`, `SET DEFAULT 5` by `0058`) and `property_reports.theme INTEGER CHECK (theme >= 1 AND theme <= 5)` |
+
+A fifth claim travelled with it — that this is "the fourth copy of the id→name mapping, in SQL where
+none of the Python-side checks reach." **There is no id→name mapping in SQL.** The mapping lives in
+`themes.json` and is generated into two files by `scripts/gen_theme_registries.py`; `0058` names the
+themes **only in comments**, explaining which ids were retired.
+
+#### The shape is real, and it is closed by the runner rather than by each file
+
+The question that produced this — *"are these literals historical or operative?"* — is the right
+one, and two migrations do carry an unconditional seed with `ON CONFLICT DO NOTHING`:
+`0012_seed_plans.sql` and `0056_seed_free_plan.sql`.
+
+**`ON CONFLICT DO NOTHING` does protect against duplicates and not against re-creation after a
+deliberate delete** — that part of the report is a correct observation about SQL. It does not bite
+here because **the runner never re-executes a recorded file**, so the seed runs once whatever it
+contains. The protection is at the runner, not in the statement, and
+`tests/test_migration_bootstrap_guard.py` gates the runner's half (D-053).
+
+**Worth knowing rather than fixing:** if that contract ever changed — a runner that replayed
+migrations, or a fresh database seeded by replay — those two files would resurrect deleted plan
+rows. The guarantee is one layer away from the statements that depend on it, and neither file says
+so. That is a comment worth adding, not a defect.
+
+#### Why this is recorded rather than dismissed
+
+Nothing was built on it, so there is no code to revert — but **a message describing it as a live
+defect being fixed before the rename reached Jerry.** A non-existent defect has exactly one cost,
+and it is that: a product owner now believes his database has a flaw it does not have, and that work
+is happening which is not. Four named absences are cheaper to check next time than they were to
+check this time.
+
+**The rename's safety was the actual question and it is answered, in the other direction:** a rename
+changes no stored value, because every theme reference in the database is an integer id and ids are
+never reused (`0058`). The only theme *names* in SQL are five column identifiers in
+`0037_property_report_stats.sql` — `theme_classic`, `theme_modern`, `theme_elegant`, `theme_teal`,
+`theme_bold` — which no application code reads, and two of which have already named retired themes
+since the theme cut without consequence.
+
+---
+
+### D-188 — the headline on every market report is the sum of every status count, printed under the report's own title
+
+**Severity:** WRONG · **Affects:** the masthead metric on **all eight** market report types, plus the
+hero on `inventory` and `price_bands` — live on `main` · **Found during:** building the old-beside-new
+review pack, by reading the two documents side by side
+**Status:** `open` — the `_v2` band reads the right field, so seven kinds are fixed *as a side
+effect* of the redesign. **The legacy page is still what `main` renders, and `market_snapshot` still
+renders it even after the redesign lands.**
+
+`_build_header_context`:
+
+```python
+total = sum(counts.values()) if counts else data.get("total_listings", 0)
+```
+
+and `macros.jinja2:697`:
+
+```jinja
+<span class="masthead-metric-value">{{ header.total_count }}</span>
+<span class="masthead-metric-label">{{ header.title }}</span>
+```
+
+**So the number is the sum of every status bucket and the label is the name of the report.** Measured
+from the real builders, not a fixture:
+
+| builder | `counts` | headline shows | correct |
+|---|---|---|---|
+| `build_open_houses_result` | `{OpenHouses: 30, Active: 30}` | **60** | 30 |
+| `build_inventory_result` | `{Active: 10, Pending: 0, Closed: 10}` | **20** | 10 |
+| `build_price_bands_result` | `{Active: 10, Pending: 10, Closed: 10}` | **30** | 10 |
+| `build_closed_result` | `{Active, Pending, Closed}` | all three summed | the Closed count |
+
+**`open_houses` is the clearest: its two counts are the same listings counted twice**, so the
+headline is exactly double. `pricebands_layout` makes it explicit by labelling the hero
+**"Total Active Listings"** over a number that includes pending and closed.
+
+#### Why no gate caught it
+
+Every gate on this surface asks whether a number *renders* and whether it is formatted correctly.
+`total_count` renders, it is an integer, it is never `None` — and D-108's own comment sits directly
+above it defending the right thing for the wrong number: *"0 is a result, not a missing field: the
+report shows the number it matched rather than dropping the block."* The block is shown, the number
+is not the one it matched.
+
+**This is the class §0.6 has no rule for and the structural gates cannot reach**: a value that is
+present, well-typed, correctly formatted and *means something other than its label*. The contrast
+gates measure its colour. The pagination gates measure the space it occupies. Nothing compares it to
+the thing it claims to count.
+
+#### Found by a human-facing artefact, which is the point worth recording
+
+It surfaced because the old and new pages were put on facing pages and the two headlines disagreed —
+117 against 38 on the same data. **Neither document is wrong on its own terms**; only the pair is
+informative. Three weeks of measurement on this surface did not find it, and one render of a
+comparison did.
+
+#### Not fixed here
+
+The fix is one line (`counts.get(<the kind's own bucket>)` rather than `sum`), and it is **not one
+line of decision**: each kind has a different right answer, `market_snapshot`'s headline may
+legitimately be a total of something, and the masthead is shared by eight kinds. It also changes a
+number on a live customer-facing document, which wants Jerry's word rather than a refactor.
+
+**What is urgent is not the redesign** — the `_v2` band reads `closed_count`, `active_count` and the
+rest per kind and is already right. It is that **`main` has this defect on all eight kinds today**,
+and `market_snapshot` keeps it after the redesign lands.
+
+---
+
+### D-187 — thirty-six green tests for four metrics the product does not compute
+
+**Severity:** FRAGILE · **Affects:** `tests/test_new_metrics.py` — and §7.3's unbuilt DOM
+distribution chart, whose computation this is · **Found during:** auditing §07 for unbuilt and
+untracked work at the close of the market surface
+**Status:** `open` — **what to do about it is a decision, not a fix.** Recorded with the measurement.
+
+> ### CORRECTION 2026-10-12 — THIS IS THE TEST-SUITE HALF OF D-167, AND I FILED IT WITHOUT FINDING
+> **D-167 — "three market metric groups have no producer at all, and a bare `except` has been hiding
+> it"** — already records that `compute_price_cut_stats` and `compute_dom_distribution` do not
+> exist, filed on 2026-10-05 while wiring Design's property page 5. **Two of the four functions
+> below are its functions.** This entry was written as though the absence were a new finding; it is
+> not.
+>
+> **What is new here and belongs to this entry:** D-167 is about the **consumer** — `market_trends`
+> imports the three, the import raises every time, and `except (ImportError, Exception)` swallows
+> it, so three of a property report's four headline market numbers have always been `None`. This
+> entry is about the **apparent coverage**: a 36-test suite that reads as a guarantee those
+> computations behave correctly, for computations that have never existed. Neither notices the
+> other, and the pair is why nobody looked: the consumer fails silently, and the tests pass.
+>
+> **The other two** — `comp_confidence` and `parse_options_meta` — are not D-167's and are not
+> imported by anything, so for those the absence genuinely was unfiled.
+>
+> **How the miss happened, because it is the rule this project files most.** "Before building a
+> tool, grep for one" was applied to code and not to the board: the §07 audit grepped `apps/` for
+> the function names and never grepped `DEFECT_LIST.md` for them. One `grep -n
+> "compute_dom_distribution" docs/DEFECT_LIST.md` would have returned D-167. **The board is a
+> codebase and the same rule governs it** — added to §0.6.
+>
+> Severity stays FRAGILE: the WRONG half is D-167's and is already counted there. Counting it twice
+> would overstate the open board.
+
+`tests/test_new_metrics.py` is 36 tests and they all pass. **Every function they test is defined
+inside the test file** — and the first two are the ones D-167 records as having no producer:
+
+| function | in `apps/`? |
+|---|---|
+| function | in `apps/`? | |
+|---|---|---|
+| `compute_price_cut_stats` | **no** | **D-167** — imported by `market_trends`, ImportError swallowed |
+| `compute_dom_distribution` | **no** | **D-167** — same, and §7.3's unbuilt chart needs it |
+| `comp_confidence` | **no** | unfiled before this entry |
+| `parse_options_meta` | **no** | unfiled before this entry |
+
+Its own docstring says so without quite saying so — *"Helpers / pure functions (no project deps)"* —
+and that is accurate about the imports and silent about the consequence: **the file specifies four
+metrics, asserts they behave correctly, and the product computes none of them.**
+
+#### Why this is worse than an empty file
+
+The defect board already carries a note on this suite from the 2026-09-22 sweep: *"`test_new_metrics.py`
+passes completely, which is worth noting: at least one of these suites has been correct and unrun for
+its whole life."* That was about the **runner** — `testpaths` had excluded it. It was then included,
+it went green, and it has been green ever since.
+
+So the suite reads as thirty-six tests' worth of coverage on price-cut rates, DOM buckets, comp
+confidence and OPTIONS parsing. **It is thirty-six tests of a specification.** §0.6: *an assertion
+with no content is worse than none, because it reads as coverage* — this is the largest instance of
+it in the repository, and it survived the sweep that was about exactly this, because the sweep asked
+whether the tests passed rather than what they tested.
+
+#### It is also the unbuilt §7.3 chart, from the other end
+
+`compute_dom_distribution` is the computation `closed`'s DOM distribution histogram needs.
+`DELIVERY_SURFACES_MASTER_PLAN` §7.3 records that chart as open, and for a good reason — the column
+it plots was D-105, every DOM read from the wrong path, and a histogram makes a number authoritative
+so it waits for a live payload. **What nothing records is that the computation is already specified
+and tested.** And `scripts/gen_la_verne_all_themes.py:505` feeds a hand-written
+`"dom_distribution": {"fast": 55, "normal": 30, "slow": 15}` into sample data, so the SHAPE is in a
+fixture with nothing producing it — the read-with-no-producer family, with the test suite standing in
+for the producer.
+
+#### Three dispositions, and this entry does not pick one
+
+1. **Move the four functions into `apps/` and import them.** The tests become real. But two of the
+   four (`comp_confidence`, `parse_options_meta`) describe behaviour the product may already
+   implement differently elsewhere, so this is not a move — it is a reconciliation, and it needs each
+   one checked against what ships.
+2. **Delete the file.** Honest, and it discards a specification of the DOM distribution that §7.3
+   will want when D-105 is confirmed in production.
+3. **Rename it to say what it is** — a specification with executable examples, not a test of the
+   product — and leave it until §7.3's chart is unblocked.
+
+**Not picked here because it is four separate decisions**, one per function, and the one that matters
+(`compute_dom_distribution`) is blocked on the same live payload the chart is. What this entry does is
+stop the suite being counted as coverage.
+
+---
+
+### D-186 — three facts the gallery card dropped on the way to Design's page, each guarded by a gate written because zero is the interesting value
+
+**Severity:** WRONG · **Affects:** the three gallery kinds — a studio's bed count, a same-day
+listing's date, and an empty search · **Found during:** wiring the galleries, by three gates that
+had been written for exactly these values
+**Status:** `fixed` — `feat/market-galleries-v2`. All three found and fixed in the same change.
+
+Design's gallery card is price plate · address · `{hood} · {specs}`. Three things the legacy card
+carried are absent from that spec, and all three were caught by `test_zero_conditionals.py` — a file
+whose whole subject is values an `or` chain eats:
+
+| what was lost | the gate | fixed by |
+|---|---|---|
+| **"Studio"** for 0 bedrooms | `test_zero_bedrooms_renders_as_a_studio` | `_v2_card_specs` names it. `0 bd` is not wrong so much as not what the thing is called, and it reads as missing data to the agent's client |
+| **a same-day listing's date** | `test_zero_days_on_market_renders_as_new` | the card's third line — Design's own slot, which `open_houses` puts its viewing time in — carries `Today` / `n d ago`. Their word, their structure |
+| **the empty state** | `test_an_empty_result_set_says_so_in_the_terms_of_the_search` | an empty grid was a bare `<section>`; it now names the city and `filters_label` |
+
+#### Why the third one matters most
+
+"No listings matched this search" **alone cannot tell an empty market from an over-tight filter**,
+which is the entire point of that gate: the reader has to know whether to widen the filter or believe
+the market. The first version of the fix named the report title instead of `filters_label` and would
+have passed a test asserting only the sentence.
+
+This is the same empty-state shape as `price_bands`' bands body rendering five column headings over
+nothing, two days earlier, on the same page. Standing instruction unchanged: **the report renders and
+says the search returned nothing; it does not change whether the report sends** (D-110).
+
+#### The one judgement call, flagged
+
+The date line is **not in Design's gallery spec.** It is placed in the slot their own card already
+has for per-kind information, because the alternative was losing the most interesting fact on a
+new-listings report to a spec that did not ask for it to go. One `{% elif %}` removes it if they want
+the card bare — but that should be their sentence, not a silent omission.
+
+---
+
+### D-183 — the inventory trend lost its page and nearly kept its vendor fetch
+
+**Severity:** FRAGILE · **Affects:** the `inventory` report — the sales-pace chart, and one SimplyRETS
+query per render · **Found during:** wiring `inventory` onto Design's `_v2` page, by looking for
+D-181's shape before building rather than after
+**Status:** `fixed` — `feat/market-inventory-v2`. **The information loss is not a defect and is not
+fixed; it is Design's call and is flagged for Jerry below.**
+
+Design's `_v2` page for `inventory` is the shared band over the listings table. It specifies **no
+chart**. `inventory` was the only report type drawing the **sales-pace** series — "Homes sold per
+month", with the note saying it is *not* months-of-supply because past inventory levels are not
+recoverable from a feed fetched as Active/Pending/Closed.
+
+So the chart stops rendering. That part is forced by the spec. **What would have gone wrong quietly
+is the fetch:**
+
+```python
+TREND_REPORT_TYPES = frozenset(MarketReportBuilder.TREND_SERIES)
+```
+
+`TREND_SERIES` is both the drawing map and the shopping list — `tasks.py` reads the derived set to
+decide whether to buy twelve months of closings (D-113). Leaving `inventory` in it would have paid
+for a year of rows on every inventory report for a chart that cannot draw.
+
+**That is D-113 exactly inverted.** D-113 was a chart whose data was never bought; this would have
+been data no chart could spend. The comment on `TREND_REPORT_TYPES` names both directions —
+*"two copies fail the quiet way in both directions: a fetch whose answer is never used, or a chart
+whose data was never bought"* — and this is the second one arriving, against a map that was
+deliberately single-sourced to prevent it. **The single source is what made it one line instead of
+two, and the gate is what noticed:**
+`test_only_the_trend_reports_pay_for_a_second_query` pins the count, it went 2 → 1, and the test
+asked why.
+
+#### Found before the fact, which is the only interesting part
+
+D-181 was a producer surviving its only consumer, discovered after the fact by repointing a test.
+One kind later the same shape was *looked for* — "what did the old path produce that nobody else
+produces" is now the question asked when a kind moves — and it was here. The pace series, its note,
+`compute/monthly_trend.count_series` and the chart macro are all untouched and all unreachable.
+
+`apps/worker/tests/test_monthly_trend.py` is repointed rather than deleted, the same way
+`test_band_chart.py` was: the four assertions were about **the series and its marks**, not about
+which report carried them, and every one is live again the moment the chart is restored — a zero
+month dropped as a gap, a count axis floating off zero, a pace line read as supply. They render
+through `pace_report`, which lends `market_snapshot` the count series, and
+`test_no_report_type_draws_the_pace_series_today` asserts the fact so the suite states it rather
+than implying the feature works.
+
+> **The first version of `pace_report` lent the series back to `inventory` and rendered nothing** —
+> because `inventory` is in `V2_KINDS` now and Design's page has no chart slot at all. The series
+> map and the page layout are two separate gates and the kind moved through both. Worth recording:
+> re-enabling a feature by patching the flag that used to enable it is not enough once the surface
+> it drew on has been replaced.
+
+#### [JERRY] What is lost, and it is a decision rather than a cleanup
+
+**The inventory report now carries no trend at all.** §7.3 asked for a months-of-supply trend; that
+is not buildable. The pace is MOI's *denominator*, which is knowable, so that is what shipped —
+**labelled as what it is**, which is what made it honest. Design's page replaces it with nothing.
+
+Restoring it is this one line plus a chart slot on the `_v2` page, and the slot is the part Design
+would have to agree to. Recorded here so the decision is taken on purpose rather than discovered by
+an agent who used to show a client a twelve-month line.
+
+**This absence is now reported rather than assumed.**
+`apps/worker/tests/test_specified_outputs_render.py` holds §7.3's charts against the kinds the plan
+names, and the pace series on `inventory` is a **strict xfail citing this entry** — so it is counted
+as an outstanding specified output on every run, not treated as the baseline. **When it is
+restored, that xfail goes XPASS and the build breaks**: clear the `defect` field in
+`SPECIFIED_OUTPUT["pace trend"]` and the assertion becomes an ordinary one. Named here because the
+other half of §0.6's xfail rule is *entry -> test*, and the person who fixes this should not have to
+discover the gate by breaking it.
+
+---
+
+### D-182 — "seller's market" means under four months on the PDF and under three in the email
+
+**Severity:** WRONG · **Affects:** every surface that classifies a market — property PDFs, market
+PDFs, scheduled emails, and the AI insight prompt · **Found during:** building Design's `inventory`
+pill, which needed the classification and would have been a seventh copy of it
+**Status:** `fixed` for the divergence's cause — `feat/market-inventory-v2`. **The four `moi < 3`
+sites are UNCHANGED and are flagged below**, because moving a threshold under live customer copy is
+a behaviour change and not part of wiring a report kind.
+
+`compute/moi.py` exists because two MOI formulas disagreed (D-056), and its `describe()` says so:
+
+> *"The render-ready shape. One place decides how 'no number' looks, so the surfaces cannot disagree
+> about it the way the two formulas did."*
+
+**The classification was the one piece of MOI interpretation that module did not own**, and it was
+therefore reimplemented **six times at two different thresholds:**
+
+| site | threshold | what it says |
+|---|---|---|
+| `compute/market_trends.py:484` | `moi < 4` | `"Seller's Market"` — docstring cites NAR |
+| `property_builder.py:2680` | `moi < 4` | `"It's a seller's market"` |
+| `ai_insights.py:238` | **`moi < 3`** | `market_vibe = "competitive (seller's market)"` |
+| `email/template.py:1915` | **`moi < 3`** | `"Great news for sellers in {area}"` |
+| `email/template.py:1959` | **`moi < 3`** | `"Inventory is tight in {area}"` |
+| `email/template.py:2087` | **`moi < 3`** | `"Seller's market conditions"` |
+
+**A market at 3.5 months of supply is "a seller's market" on the property PDF and nothing at all in
+the email for the same account on the same day.** The buyer's boundary agrees at `> 6` everywhere,
+so only the seller's side diverges — which is the half an agent forwards.
+
+Nothing in a grep distinguishes them: six sites, two answers, no shared symbol. It is the
+same-name/two-implementations family (D-163, D-170, D-177, and D-086's `_median` three deep) in its
+most diffuse form — **not two implementations under one name, but six under no name at all.**
+
+#### Fixed: the classification moved to where the module's own docstring says it belongs
+
+`compute/moi.py` now holds `SELLERS_MARKET_BELOW = 4`, `BUYERS_MARKET_ABOVE = 6`, the four canonical
+labels, and `condition(moi)`. `market_trends._classify_market_condition` reads them instead of
+repeating the numbers and the strings — **boundaries and wording unchanged**, `moi < 4` was always
+the documented NAR figure and this is simply the module that now holds it.
+
+`condition()` returns **`None`** for no estimate rather than `"Insufficient Data"`, so a caller that
+wants to omit a claim gets a value it cannot accidentally render as a classification. And **zero is
+a real answer**: `active_count = 0` with enough closings gives an MOI of exactly `0.0` — nothing is
+for sale, the most seller-favourable market there can be — so the test is `moi is None` and not
+truthiness. That is D-108's shape on the one input where the wrong answer is the exact opposite of
+the right one.
+
+Design's `inventory` pill reads both halves from that module and nothing else:
+`describe(moi)["formatted_current"]` for *"1.9 months"* and `condition(moi)` for *"seller's
+market"*. **No number means no pill** — not a dash. The pill is a claim about the market, and
+`"— months of inventory · "` is a claim with the evidence taken out of the middle of it.
+
+#### [JERRY] Not fixed: which threshold is right
+
+The four `moi < 3` sites are customer-facing email copy and an LLM prompt. Aligning them on 4 would
+make more markets read as sellers' markets in email, which is a **content change** and wants a
+decision rather than a refactor. What this change buys is that the decision is now a one-line edit
+in one file instead of four edits in three, and that a fifth surface cannot pick a third number.
+
+One smaller divergence noted rather than changed: `describe()` formats `f"{moi} months"` and prints
+a whole number as **`"4.0 months"`**, while `property_builder.py:2683` does
+`f"{moi:.1f}".rstrip("0").rstrip(".")` and prints **`"4"`**. Two formatters for the same number in
+the module whose job is that there is one. Left alone because `describe`'s output is pinned by other
+tests and the fix is cosmetic on a surface this ticket does not touch.
+
+---
+
+### D-181 — a disclosure's only consumer was deleted and its test, which asserted the producer, stayed green
+
+**Severity:** WRONG · **Affects:** the `price_bands` report's statement of where its band boundaries
+came from — D-111's honesty disclosure · **Found during:** repointing `test_price_bands.py` at the
+`_v2` page while wiring `price_bands`
+**Status:** `fixed` — `feat/market-price-bands-v2`. Found and fixed inside the same change; filed
+because the **mechanism** is general and this is its second appearance in two days.
+
+D-111 rebuilt price bands on round boundaries anchored to twelve months of closings, because
+quartiles of this week's result set moved the dividers by a median of $105,500 between runs. When a
+market has under twelve months of history there is no extent to anchor to, so the boundaries fall
+back to this period's results — and the page **says so**:
+
+> *"Bands may shift between reports"*
+
+That sentence is why the fallback is acceptable. Bands that may move look identical to bands that
+will not, and the whole point of round boundaries is that a reader can compare two runs.
+
+**The sentence stopped reaching any page.** It is produced by
+`MarketReportBuilder._band_chart_note`, which was passed to `band_distribution_chart`, which is
+called only from `pricebands_layout`, whose only report type is `price_bands` — and `price_bands`
+left the macro dispatch entirely when it joined `V2_KINDS`. One kind moving made a four-link chain
+dead from the far end.
+
+#### Why nothing failed
+
+The gate was:
+
+```python
+note = MarketReportBuilder({...})._band_chart_note()
+assert "may shift between reports" in note
+```
+
+**A producer with no consumer still produces.** The method kept returning the string, the assertion
+kept passing, and the document stopped carrying it. This is `§0.6`'s *a gate on a document must
+assert its claims, not its text* read one level out: the gate was on the *producer* of the text, not
+on the document, so it could not notice the document losing it.
+
+It is also this project's **read-with-no-producer** family pointed the other way. That family —
+nine instances — is a consumer reading a key nothing writes. This is a producer writing a value
+nothing reads, and it is harder to see, because the read-with-no-producer shape at least renders
+something empty.
+
+#### Fixed
+
+`_v2_bands_body` now carries `note`, the `_v2` page renders it in `.bnote`, and the test renders the
+page:
+
+```python
+assert "may shift between reports" in builder._band_chart_note()   # the producer
+html = builder.render_html()
+assert "may shift between reports" in html                          # the document
+```
+
+Both halves, because the producer assertion is still worth having — it just is not the one that
+matters. The note is **reused, not rewritten**: a second "N listings across M bands" would be a
+second derivation of a figure the table above it already shows, which is this project's most-filed
+defect family in a new template.
+
+`_band_chart_note` returns `None` under two counted bands, where there is no distribution to
+caption; the caveat is carried on its own in that case, because a market thin enough to have one
+band is exactly the market whose history is too thin to anchor to.
+
+#### What is not fixed here
+
+`pricebands_layout` and `band_distribution_chart` are now dead — no report type reaches them — and
+so is `analytics_layout`, which went dead one day earlier when `new_listings` moved and which
+**nothing recorded at the time**. `derive_template_reachability.py` works at file level and
+`market/_base/macros.jinja2` stays live while any one macro in it is reached, so a layout going
+dead inside a live file is invisible to it. `test_market_layout_map.py::test_the_layouts_no_report_type_reaches_are_recorded`
+now pins the set, so the next one is a decision rather than a drift. Removing them is a separate
+call: they are the rollback path for the seam while five kinds are still unwired.
+
+#### The generalisable half: two implementations that share a NAME
+
+Filed against this entry on request, with the instances corrected to the ones that exist.
+
+**The rule.** Two implementations of the same derivation under *different* names are findable by
+grep: you search the concept, you get two hits, you compare them. Two implementations under the
+**same name in different modules** are findable only by tracing the call, because every tool that
+works on text — grep, a symbol index, a reviewer's eye on a diff — shows one name and gives no
+reason to think there are two. **It is worse than the usual case**, and the usual case is already
+this repository's most-filed family (D-163, D-170, D-177).
+
+**The instance that exists here is `_median`, and it is three deep:**
+
+| | returns for `[]` |
+|---|---|
+| `report_builders.py:43` | **`0.0`** |
+| `compute/price_bands.py:240` | `None` |
+| `email/template.py:1798` | `None` — and a *different signature entirely* (`kind, metrics`) |
+
+D-086 is the entry: `report_builders._median` answers an empty list with `0.0`, which reaches
+`median_close_price`, `median_list_price` and four other price fields as "$0". D-111's rebuild gave
+`compute/price_bands.py` its own `_median` that returns `None`, which is the fix D-086 asks for —
+**so the defect is live on the paths it was filed against and fixed on one new one**, and nothing in
+a grep for `_median` distinguishes which of the three a given call reaches. The board already
+records this as D-086 being *partially* superseded; what it did not say is that the name collision is
+the reason the partial fix was invisible.
+
+**This entry's own defect is not an instance of it** and the distinction is worth keeping straight:
+`_band_chart_note` has exactly one definition and had exactly one consumer. Its failure is a chain
+going dead from the far end, not two implementations diverging. The two shapes travel together
+because both survive a grep, but the remedies differ — a name collision needs the call traced, a
+dead chain needs the consumer side checked when a seam moves.
+
+#### Checked and not reproducing: a duplicate `cap` at 8 and 4
+
+Reported alongside this entry and **absent**, recorded so it is not re-filed from the same report:
+
+| the claim | measured |
+|---|---|
+| `_price_band_rows` caps at 8 while `PDF_CONFIG` caps at 4, both named `cap` | **there is no `_price_band_rows`** anywhere in `apps/`, `scripts/` or `tests/`. `PDF_CONFIG["price_bands"]["cap"]` is **8**, and there is **no `cap` of 4** in any Python file in the repository |
+| both reachable, so a sixteen-band test was green on the half that was right | **there is no sixteen-band test**, and `compute/price_bands.MAX_BANDS = 6` caps the band count at six, so sixteen bands cannot be produced |
+| `show_more` survives its only producer — the template honours a key nothing emits | **`show_more` does not appear** in any `.py`, `.jinja2`, `.ts` or `.tsx` file |
+
+**There is a real finding in the vicinity and it is a different one** — D-107's `[:4]` slice reached
+one of two copies. Recorded as a correction on D-107 rather than here, because it is that entry's
+fix that was partial.
+
+
+---
+
+### D-180 — `_v2_bands_body` read an absent listing count as zero, and three more defects the old chart's tests caught on their way out
+
+**Severity:** WRONG · **Affects:** the `price_bands` report's band rows and its page-1 band
+· **Found during:** repointing `apps/worker/tests/test_band_chart.py` at Design's `_v2` page instead
+of deleting it
+**Status:** `fixed` — `feat/market-price-bands-v2`. All four found and fixed inside the same change.
+
+`price_bands` moved to Design's `_v2` page, whose body is a five-column band table with an inline bar
+per row, replacing a hero card, a six-card stat row and an SVG bar chart. **Ten assertions in
+`test_band_chart.py` were about a document that no longer renders.** Deleting the file was the
+obvious move and would have been wrong: six of the ten were about *the distribution* rather than
+about the SVG, and repointing those four found four defects in code written the same day.
+
+| repointed assertion | what it found |
+|---|---|
+| *a band with no `count` key is dropped* | `_v2_bands_body` had `count = band.get("count") or 0`, so an **uncounted** band rendered as a hard `0` — "nothing is for sale above $1.6M", asserted of a band nobody counted. **D-137's shape** (absent is not a default), on a row that reads as fact. The old chart got it right by dropping such bands. |
+| *one band is not a distribution* | `hottest_and_slowest` returns the single band as **both** fastest and slowest, so a lone band was tagged **"Fastest"** against nothing. A comparative tag needs two things to compare. The headline already refused for the same arithmetic — a band is 0 days ahead of an average that is itself — and the body's tag did not. |
+| *no bands renders no chart* | `v2_bands` is a **dict**, so it is truthy for this kind whether or not there are bands: an empty search rendered **five column headings over empty space**, which reads as a broken page rather than as an empty result. |
+| *bars are proportional to their counts* | held — and `max` over a list containing `None` would have raised once an uncounted band reached production, so the first defect's second symptom was a 500 rather than a wrong picture. The one mercy in it. |
+
+And a fifth, from a gate that was not repointed but began covering this kind for the first time:
+
+| gate | what it found |
+|---|---|
+| `tests/test_market_templates.py::test_no_undefined_values[price_bands]` | `_v2_fastest_headline` returns `label=None` **whenever it refuses**, which is most of the time by design. The template's label span was unconditional and `_BLOCK_ENV` has `autoescape=False`, so the band read `{Area} · Price Bands` / **`None`** at 22px. |
+
+#### And a sixth, from reading the render
+
+Not found by a test — found by printing the page and looking at it. The note added beside the label
+guard was written as an **HTML comment** and quoted the expression it was about:
+
+```jinja
+<!-- ... an unguarded `{{ v2_band.label }}` printed the literal string `None` ... -->
+```
+
+**Jinja does not treat `<!-- -->` as a comment.** It substituted the expression, so the rendered page
+carried `None` *inside a comment* — hidden from the very gate that had just been pointed at bare
+`None` on this page, and visible in the template source as apparent evidence that the guard was not
+working. A note about a defect that reintroduced the defect, in the comment explaining the fix.
+
+Two independent reasons the `_v2` page now has none: a template comment must be `{# #}`, which never
+renders; and an HTML comment ships to PDFShift and from there to an agent's customer.
+`test_the_v2_page_ships_no_html_comment` is parametrised over `V2_KINDS` and also rejects an
+unrendered `{{` or `{%`.
+
+#### The argument for repointing rather than deleting
+
+A contrast baseline may not outlive the template it recorded — that is settled policy here, and the
+same reasoning says a test may not outlive its document. But *"the document changed"* and *"the
+concern went away"* are different claims, and only the first was true of six of these ten. The file
+now records both lists explicitly:
+
+* **carried over** — a zero band is drawn not dropped · no-count is not zero · bars proportional ·
+  no text wears the raw brand colour · labels do not wear the series colour · no script and no
+  unrecorded external reference
+* **died with the old chart** — only the largest bar carries a number (Design puts the count beside
+  every bar) · the caption counts the bands drawn (no caption on this page) · the cards and the
+  chart agree, D-107 (no stat cards, so no second place to disagree) · the refusal at n=1 (which
+  moved to the headline, where it is gated)
+
+Writing the second list down is the point. **A concern that stops being asserted and is not recorded
+is how coverage disappears quietly** — the same rule that put `test_a_v2_kind_calls_no_layout_macro`
+there when `closed` dropped out of the layout-map parametrisation.
+
+#### The bar is a fill, and that is why `--primary` is right on it
+
+The old test asserted the bar fills took `primary_ink` and never the raw brand colour. On the `_v2`
+row the bar is a filled rectangle **with nothing on it** — Design moved the count out beside it,
+which is also the only placement that survives a count of zero — so the contrast rules, which govern
+text, do not reach it. The repointed version asserts the inverse pair: the fill **keeps**
+`--primary`, and `.blabel` / `.bcount` / `.bcell` must never take it. Those are 13px, where the raw
+brand colour measures as low as 1.98:1 on a shipped palette (D-170, D-177).
+
+---
+
+### D-179 — not reproducing: four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository
+
+**Severity:** ROUGH — *nominal, and it has to be something: the board's own gate requires every entry
+to carry one, and `closed-not-live` entries are excluded from the severity sums, so the value counts
+nothing. A defect that does not exist has no severity, and the lowest band is the least misleading
+place to park one.* · **Affects:** nothing · **Found during:** checking the ticket's premises against
+the code before acting on them
+**Status:** `closed-not-live` — **the described code does not exist.** Recorded so it is not re-filed
+from the same report.
+
+Filed as "the gate reading its own subject", to be fixed before the second market kind because every
+later capacity number would go through it. Checked first. **All four premises are absent.**
+
+| the claim | measured |
+|---|---|
+| `PDF_CONFIG` holds `pages: 1` for types that render 2-16 | `PDF_CONFIG` has **four keys** — `cap`, `more_template`, `section_label`, `truncation_template`. **There is no `pages` key**, so nothing reads one. |
+| five consumers read `pages`, one of them a capacity gate | there is nothing to read, and therefore no gate reading the thing it validates |
+| `MARKET_PAGE_CONFIG` is measured against rendered content and derived from it | **`MARKET_PAGE_CONFIG` does not exist** anywhere in `apps/`, `scripts/` or `tests/` |
+| `PAGE_1_CAPACITY` holds two unrelated numbers under one name — a property comp count and a market row count — imported by four files | **one definition** (`apps/worker/tests/test_narrative_box.py:79`), **one meaning**: market page-1 row counts. The four other references are **prose in comments and docstrings**, not a second symbol. There is no comp count sharing the name. |
+
+A fifth claim travelled with it and is also absent: that `closed`'s page-1 running head was resolved
+with a 48px spacer on a `.cover-page`. There is no `.cover-page` and no spacer in
+`templates/market/_v2/report.jinja2`. The running head is PDFShift's `header` at `start_at = 1` on
+**every** page and the band is body content below it, so page 1 never had the problem a spacer would
+solve.
+
+And the measurement it travelled with was wrong in the same direction: `closed` renders
+`[17, 26, 26, 26, 25]` — **5 pages, page 1 of 17, continuation of 26** — not 11 and 28 across 6
+pages. Re-measured on the day the ticket arrived.
+
+#### Why this is recorded rather than deleted
+
+Nothing was built on it, so there is no code to revert. What there is to prevent is **the same
+report producing the same ticket again**, which is the only cost a non-existent defect has. Four
+named absences and a measurement are cheaper to check next time than the premises were to check this
+time.
+
+The one real thing in the vicinity: `PAGE_1_CAPACITY` IS referenced from five files, which is more
+coupling than a test constant usually has. Four of the five are prose; the fifth is its definition.
+That is worth knowing and is not a defect.
+
+---
+
+### D-178 — the close-to-list ratio arrives on two scales, and the only thing reconciling them is a `< 2` guess written twice in a template
+
+**Severity:** FRAGILE · **Affects:** the close-to-list ratio on every market report — the stats bar
+and the mini-stat, and the `_v2` band's pill · **Found during:** building the `closed` kind's band,
+which rendered **"1.0% of asking"** on the first try
+**Status:** `fixed` (`feat/market-closed-v2`)
+
+The same key carries two scales depending on which producer filled it:
+
+| producer | what it puts in the key |
+|---|---|
+| `compute/extract.py:79` | `round((cp/lp)*100, 2)` — **percent** (98.5) |
+| `compute/calc.py:54` | the average of those, rounded — **percent** |
+| `compute/market_trends.py:406` | formatted `f"{x}%"` — **percent** |
+| `scripts/measure_market_pagination.report_data` | `0.982` — **a fraction** |
+
+Production is percent. The fixture that `test_market_layout_map`,
+`measure_market_pagination` and several others render through is a fraction.
+
+**And the templates already knew.** `market/_base/macros.jinja2` carried
+
+```jinja
+{{ "%.1f" | format(stats.list_to_sale_ratio * 100 if stats.list_to_sale_ratio < 2 else stats.list_to_sale_ratio) }}%
+```
+
+at **two sites**. The live page renders 98.2% correctly *because of that guess* — which is why
+nobody had to fix the key, and why the next consumer written against it got 1.0%.
+
+Three defects in one expression: a **units ambiguity** tolerated rather than resolved, the
+reconciliation **duplicated**, and both copies in a template where neither can be unit-tested. The
+D-163 family, with the twist that the copies are not stale — they agree, and they are both load-
+bearing.
+
+#### The fix is where it can be tested
+
+`_ratio_as_percent` in `market_builder.py`, once, and `_build_stats_context` exposes
+`list_to_sale_pct` beside the raw key. **Both template copies of the guess are gone.** The raw key
+stays because other consumers read it and redefining it is a wider change than this.
+
+The threshold is unchanged on purpose: a ratio of 2 would be selling at 200% of asking and a
+*fraction* of 2 would be 200×, so the gap between the scales is enormous and 2 sits in the middle of
+it. What changed is that there is one copy of that reasoning and a test reaches it — eight cases,
+including `True` and `"98.2"`, both of which the template expression would have crashed or mangled.
+
+#### The exemption's argument got stronger, not carried over
+
+`list_to_sale_ratio` sat on `_zero_conditionals.EXEMPT` as *"a 0 ratio means every sale closed at
+$0"* — an argument about **plausibility**, the weakest kind on that list. The gate caught the rename
+immediately (both the new name being unexempt and the old exemption being unused), which is the
+right question to be asked. `_ratio_as_percent` returns `None` for zero, so the value reaching the
+template **cannot be 0**: falsy means absent and nothing else. The exemption is now a statement
+about the producer rather than about the world.
+
+#### What converging the fixtures would take, and what it would cost
+
+Asked for deliberately — *to know the price, not to pay it.* A fixture on a different scale from
+what production emits is the shape that produced this defect, so the price is worth knowing before
+the next consumer is written.
+
+**The fixtures do not just differ from production. They differ from each other.**
+
+| scale | where |
+|---|---|
+| **fraction** (`0.982`) | `apps/worker/tests/email_fixtures.py:32` · `test_email_contrast.py:72` · `test_market_layout_map.py:68` · `test_monthly_trend.py:398` · `test_narrative_guards.py:28` · `tests/test_market_templates.py:104` · `scripts/render_all_pdfs_for_review.py:110-111` |
+| **percent** (`99.2`, `99.1`) | `test_insight_paragraph_missing_metrics.py:76` · `test_sender_postal_address.py:57` |
+
+Six fixtures and a script on one scale, two fixtures on the other, and production on percent. So
+"converge the fixture" is eight files, not one, and two of them are already right.
+
+**On the market surface the change is free. Measured, not argued:**
+
+| report type | rendered with `0.982` | rendered with `98.2` | identical? |
+|---|---|---|---|
+| `closed` | `7b722cfd57fc77e9` | `7b722cfd57fc77e9` | **yes** |
+| `market_snapshot` | `385f2c23b2ca248c` | `385f2c23b2ca248c` | **yes** |
+
+Byte-identical HTML, because `_ratio_as_percent` now maps both scales to the same output — which is
+also what the template's `< 2` guess did. **Zero pagination re-measurement, zero baseline churn, no
+page counts move.**
+
+**The cost is on the email surface, and it is not re-measurement — it is a second defect.**
+`email/template._format_percent` is `f"{value:.1f}%"` with **no scale handling at all**:
+
+```
+0.982 -> "1.0%"      98.2 -> "98.2%"
+```
+
+Production is safe: `calc.py:54` emits percent and `tasks.py:595` copies it across unchanged, so
+customers' emails read "98.5%". But **the email fixtures render "1.0%", and the email tests are
+green about it** — including `test_email_contrast.py`, which measures contrast over that rendered
+HTML. D-173's shape on a surface nobody had looked at: a fixture encoding a contract production does
+not use.
+
+So converging the fixtures would **change rendered email output in the tests** from `1.0%` to
+`98.2%`, which is a different string length inside measured HTML and would need the email contrast
+figures re-taken. That is the whole price: **eight files, no market change, and one email
+re-measurement** — plus the decision of whether `_format_percent` should normalise the way
+`_ratio_as_percent` does, which is the actual fix and is a change to the email surface rather than
+to a fixture.
+
+**Not done here**, deliberately: it is the email surface, this branch is the market surface's first
+kind, and the two should not move in one change. Recorded so the next person spends the price
+knowingly.
+
+#### The harness found an untested case while this landed
+
+A mutation removing the `isinstance(lst, ...)` guard from the over-asking count came back
+**`DID NOT FIRE`** — `if not lst: continue` catches a `None`, so the type check looked redundant. It
+is not: a **string** list price (`"500000"`, which a feed can yield) is truthy, reaches
+`close > lst`, and raises `TypeError`. The guard is the only thing between a typed feed value and a
+500 on the render path, and nothing tested it.
+
+So the mutation was badly constructed *and* the case was untested. Both were invisible until the
+harness said the gate did not guard. Third harness result in three days: a gate passing on a
+substring, a mutation on unreachable code, and now a mutation whose target was covered by a second
+guard while the first one's real job went untested.
+
+---
+
+### D-177 — `accent_ink` is guaranteed readable on white and used on a tint, which is half its own definition
+
+**Severity:** WRONG · **Affects:** every accent-coloured text on a tinted panel — 20 measured
+contrast failures across the two live property themes, and the market over-asking column Design's
+spec puts on a tint · **Found during:** mapping Design's market colour roles onto existing tokens
+before wiring the first market kind, by checking a guarantee rather than reading it
+**Status:** `fixed` (`feat/market-closed-kind`)
+
+`compute_color_roles` derived `theme_color_on_light` — the token the market surface uses as Design's
+`accent_ink` — as:
+
+```python
+"theme_color_on_light": _ensure_readable_on_light(hex_color, "#ffffff"),
+```
+
+**One surface, hardcoded to white.** The token is used on white *and* on the brand's own `tint`, and
+Design's market spec puts accent text on the tint panel directly (the over-asking Status column).
+Measured across nine brands — our six picker presets plus the three of Design's samples we do not
+ship:
+
+| brand | `accent_ink` | on white | **on tint** |
+|---|---|---|---|
+| Crimson `#DC2626` | `#DC2626` | 4.83 | **4.41** |
+| Forest `#059669` | `#03845c` | 4.71 | **4.39** |
+| lime `#84CC16` | `#53810c` | 4.65 | **4.47** |
+| teal `#0D9488` | `#0b8277` | 4.69 | **4.38** |
+
+Four of nine below 4.5 on the tint while every one of them cleared white. **Two of the four are
+shipping presets.**
+
+#### THE RECURRENCE MECHANISM: TWO IMPLEMENTATIONS, ONE FIXED, AND THE TELL WAS IN THE PAIR
+
+This is the part worth carrying forward, because it is the reason a defect fixed on 2026-10-06 was
+still live on 2026-10-07 one function away.
+
+There are **two implementations of darken-until-readable**:
+
+| | fixed by D-170? | what flows through it |
+|---|---|---|
+| `themes._ink` | **yes** — cleared white only, corrected to white **and** `tint` | `primary_ink`, the brand colour |
+| `property_builder._ensure_readable_on_light` | **no** | `theme_color_on_light`, i.e. **the accent** |
+
+One function got the fix. The other kept the defect, and the one that kept it is the one the accent
+flows through — so D-170's correction was true of the primary and false of the accent, with nothing
+in either file saying which.
+
+**And the tell was available without measuring anything.** Thirty lines above
+`_ensure_readable_on_light`, in the same file, sits its mirror:
+
+```python
+def _ensure_readable_on_dark(hex_color: str, dark_bg) -> str:
+    # `dark_bg` may name several surfaces when the text sits on a gradient
+```
+
+`_ensure_readable_on_dark` has **always** taken several surfaces. Its light-side twin took one, with
+a default. A reader comparing the pair would have asked why one side of a symmetric pair is plural
+and the other singular; a reader of either one alone sees nothing wrong. **The asymmetry was the
+evidence, and it was one function apart from the defect the whole time.**
+
+So the general form, and the thing to do rather than remember: *when a derivation exists twice, a
+fix applied to one copy is a hypothesis about the other.* And when two functions are each other's
+mirror, **read them together** — the one that is wrong is usually the one whose signature is
+simpler than its twin's.
+
+The D-163 family again — five copies of the theme map, two of the brand picker (D-175), two counts
+of the token set (D-171) — this time as two copies of *darken-until-readable*, where the cost is not
+a stale literal but a guarantee that only holds in one of the two places it is believed.
+
+`_ensure_readable_on_dark` has **always** taken several surfaces (`dark_bg` "may name several
+surfaces when the text sits on a gradient"). Its light-side mirror took one. The asymmetry was in
+the file the whole time.
+
+#### What it fixed, measured
+
+`_ensure_readable_on_light` now takes `*light_bgs` and `compute_color_roles` passes white **and**
+`derive_theme(hex)["tint"]` — read from `derive_theme` rather than recomputed, because a second tint
+derivation is precisely the shape that left this half-built.
+
+Worst of either surface across the nine brands: **4.70**. Four brands move one or two steps.
+
+**And it closed 20 contrast failures on a surface it was not aimed at.** The pixel baseline went
+from **81 rows to 61** with no template change:
+
+| family | before | after |
+|---|---|---|
+| `property__elegant` | 50 | **36** |
+| `property__modern` | 25 | **19** |
+| `market__*` | 6 | 6 |
+
+Those twenty were accent text on tint panels — `div.num`, `h3`, `div.property-label`,
+`div.contents-label`, `div.property-section-title`, `span` — at `#0b8277 on #faf7f2`,
+`#53810c on #faf7f2`, `#dc2626 on #fef4f4` and so on. The ratchet is a shrink, regenerated so the
+diff records it.
+
+#### D-171 closed zero; this closed twenty. Same ticket, different surface.
+
+Both were *"adopt Design's token"*. `display_ink` (D-171) closed **zero** baseline entries, because
+it paints the cover of `property__bold` and bold's document already had none. `accent_ink` closed
+**twenty**, because it paints accent text on tint panels across `property__elegant` and
+`property__modern` — the two themes still on the old architecture, which is where the baseline rows
+live.
+
+The difference is not the quality of either fix. **It is which surface the token lands on**, and
+that was knowable before either was built:
+
+> **Before estimating what a token adoption closes, ask where it paints.** A token on a surface with
+> no baseline rows closes nothing by construction, however correct it is; a token on the surface
+> carrying the rows closes them without a template change. The estimate is a property of the
+> selector list, not of the derivation.
+
+For the remaining adoption work — the band rule, the `on_primary` roles, whatever the market kinds
+need — that is the question to ask first, and it is cheap: grep the baseline for the selectors the
+token reaches.
+
+#### The fallback branch is unreachable, and the harness said so
+
+A regression that broke the fallback's surface selection came back **`DID NOT FIRE`**. Measured: 64
+steps of 6% darkening reaches near-black from anywhere — even `#ffffff` resolves to `#6d6d6d` inside
+the loop — so nothing arrives at the fallback for any hex input. It is kept, because
+`_report_unreachable` is the only thing that would say if the step count stopped being enough and
+D-112's audit counts those log lines at zero per 90 renders. But it is now commented as
+**unexercised**, rather than reading as a tested guarantee.
+
+That is the regression harness earning itself a second time in two days: the first catch was a gate
+that passed on a substring, this one a mutation testing dead code. Both are findings a hand-run
+reports as a pass.
+
+---
+
+### D-176 — `teal` names a retired theme and a sample brand, and no gate can tell which it is looking at
+
+**Severity:** FRAGILE · **Affects:** `test_no_live_code_path_names_a_retired_theme`, and any future
+gate that reasons about theme names as strings · **Found during:** three separate changes in two
+days, each of which tripped the same gate on a value that was not a theme
+**Status:** `open` — the collision is structural; what is fixed is the convention and the reason
+
+Two namespaces share the word.
+
+* **Themes** — `classic`, `modern`, `elegant`, `teal`, `bold`. Ids 1-5; `teal` (4) and `classic` (1)
+  were retired on 2026-10-05, and their Jinja templates were deleted. A retired theme name in live
+  code is a path that can ask the renderer for a template that no longer exists, which is why
+  `test_no_live_code_path_names_a_retired_theme` exists and why it is strict.
+* **Brands** — `red`, `teal`, `cyan`, `violet`, `amber`, `lime`: Design's six sample brand colours,
+  of which `teal` is `#0D9488`. A brand is a *hex an affiliate chose*. The market surface has no
+  themes at all — it takes `primary` + `accent` — and the three surviving property themes carry no
+  hue of their own, so the two namespaces do not overlap in meaning anywhere.
+
+**The gate sees `"teal"` and cannot tell a deleted template from a customer's colour.** It is right
+to be strict and it is right to be wrong here; a string carries no namespace.
+
+#### Three trips in two days, and one of them was not ours
+
+| when | where | what `teal` meant |
+|---|---|---|
+| 2026-10-06 | a design package "listing four themes" | the six-brand **enum** `["red","teal","cyan",…]`, plus `brand: P.brand \|\| "teal"` — a colour default |
+| 2026-10-07 | `tests/test_display_ink.py` | one of the six corpus **brands** under test |
+| 2026-10-07 | `tests/test_brand_audit_numbers_are_current.py` | Design's name for the sample **brand** `#0D9488` |
+
+The first cost most: it is the whole reason a package was read as predating the theme cut. Design's
+`RESPONSE_2026-10-06` had to state *"if a file in your hands says classic or teal, it predates this
+package"* — and the files in our hands said `teal` four times, every one of them a brand.
+
+#### What was done, and what cannot be
+
+The gate **cannot be made smarter without being told which namespace it is in**, and the only honest
+place to put that is the identifier. So the convention is: **outside the theme registry and its
+generated files, a colour is named by the contrast corpus's name for it, never by its hue.**
+`#0D9488` is `luxury_estates`. Both test files now key it that way, which removes the literal and is
+also more accurate — it is one affiliate's brand, not a representative teal (see
+`docs/BRAND_AUDIT_FOR_DESIGN_2026-10-07.md` §3).
+
+`RETIRED_NAME_ALLOWED` was the alternative, and it is the wrong tool here: an allowance says *"this
+file may mention a retired theme"*, which is a claim about the file. The problem is a claim about the
+**word**, and an allowance would have made the next brand named `classic` invisible rather than
+caught.
+
+**Not fixed:** nothing stops a fourth instance. `teal` is a perfectly good name for a colour and
+somebody will reach for it. What is recorded is why the gate fires, so the next person spends a
+minute rather than an hour — and so that an allowance is not reached for instead.
+
+---
+
+### D-175 — the brand picker is two literals, and whichever a customer sees depends on which page they opened
+
+**Severity:** FRAGILE · **Affects:** `/app/settings/branding` and `/app/company/branding` — the six
+colour presets every affiliate chooses their brand from · **Found during:** measuring Design's
+market colour rule against the brands the product actually ships, which required finding out what
+those are
+**Status:** `open` — the divergence is now gated; the copy is not removed
+
+`COLOR_PRESETS` is declared twice, identically, at
+`apps/web/app/app/settings/branding/page.tsx:51` and
+`apps/web/app/app/company/branding/page.tsx:50`:
+
+```ts
+const COLOR_PRESETS = [
+  { name: "Indigo", primary: "#4F46E5", accent: "#F59E0B" },
+  { name: "Ocean", primary: "#0EA5E9", accent: "#10B981" },
+  ...
+]
+```
+
+Two lists, six presets each, twelve hex pairs, no shared source. **They agree today**, which is the
+only reason this is FRAGILE rather than WRONG — and agreeing today is what every instance of this
+family has had in common. D-163 was the theme map in five places and the five did not agree; the
+discrepancy had been live long enough that 41 of 44 accounts were on a theme the wizard did not
+pre-select.
+
+The failure mode here is unusually direct: an affiliate and a company admin pick their brand from
+different files, so a preset added, recoloured or removed on one page is simply absent from the
+other, and which palette a customer is offered depends on which route they took to the same
+setting.
+
+#### Why it was invisible
+
+Nothing read them. The presets are a UI constant consumed only by the component they sit in, so
+there was no consumer that could notice two answers — the read-with-no-producer family's mirror
+image, and the reason the five copies of the theme map survived as long as they did.
+
+`scripts/derive_brand_audit.py` is now a reader. It parses **both** files and **raises** if they
+differ, because an audit that describes one page's picker while the other offers something else is
+exactly the sample-is-not-the-product error the audit was written to point out — made by the audit.
+Seen to fail: changing `Ocean` on the settings page alone takes the whole gate down with the two
+lists printed side by side.
+
+#### Not fixed here
+
+Hoisting the list into a shared module is a frontend change in files this remediation has otherwise
+only read, and the gate removes the risk that matters — a silent divergence. The copy stays until
+someone is in those files for another reason. `accent` is **not** audited: nothing measures accent
+contrast on the market surface yet, and `accent_ink` is derived from whatever value arrives.
+
+---
+
+### D-174 — two property request models default `theme` to a retired theme, and the gate for exactly this was a list of spellings
+
+**Severity:** WRONG · **Affects:** `POST /v1/property/reports` and the live HTML preview — the
+OpenAPI schema every client reads, and the range one of them validates against · **Found during:**
+checking a claim that a removed theme was still reachable, which it is not, by a route nobody had
+looked at
+**Status:** `fixed` (`fix/d174-api-defaults-name-a-retired-theme`)
+
+`routes/property.py` declared both of these:
+
+```python
+theme: Any = Field(default=4, description="Theme ID (1-5) or name (classic, modern, elegant, teal, bold)")
+theme: int = Field(default=4, ge=1, le=5, description="Theme ID (1-5)")
+```
+
+`4` is `teal`, retired by the cut on 2026-10-05 along with `classic` (1). So three weeks after the
+cut, the OpenAPI schema advertised a **retired theme as the default of both endpoints** and listed
+two retired names as valid input. `routes/account.py` had already been corrected — it validates
+against `SELECTABLE_THEME_IDS` with a `field_validator`, and its comment says why a range is the
+wrong shape. These two models were missed.
+
+**The second one is worse than a stale default.** `ge=1, le=5` is a *contiguous* bound over a set
+the cut made non-contiguous: live ids are 2, 3 and 5, and ids are never reused because
+`property_reports.theme` and `property_report_stats.theme_<name>` hold history. The generated
+registry's own docstring states the rule — *"a plain `ge`/`le` range cannot express the gaps the cut
+left"* — and sits two imports away from the code breaking it.
+
+#### Nothing broke, and that is the finding
+
+`theme_registry.resolve` sends every retired and unknown value to the default. Measured:
+
+| input | resolves to |
+|---|---|
+| `4`, `'4'`, `'teal'` | `('bold', 5)` |
+| `1`, `'classic'` | `('bold', 5)` |
+| `None`, `'nonsense'` | `('bold', 5)` |
+
+So **no caller could ever get a teal render**, and the teal-navy fallback in
+`property_builder._THEME_DARK_BG` is unreachable for the reason its own comment already gives. The
+defect is entirely in what the API *says*: a client reading the schema, or a person reading the
+description, is told the default is a theme that cannot render. A contract that is wrong and
+harmless is still wrong, and it is harder to notice precisely because it is harmless.
+
+#### And the gate written for this was a list of four spellings
+
+`test_no_python_fallback_names_a_theme_id_the_registry_does_not` exists to catch exactly this. It
+matches four forms:
+
+```
+theme_id or N     default_theme_id = N     COALESCE(default_theme_id, N)     DEFAULT_THEME_ID = N
+```
+
+— the four that existed when it was written. `theme: Any = Field(default=4)` is a fifth, and
+`theme: int = 4` would be a sixth. Neither is matchable by a pattern enumerating the spellings it
+has already seen, which is **§0.6's own rule about a selector named after one instance**, applied
+to a regex instead of a CSS selector. The same shape as D-172 (the gate did not scan one tree) and
+as the twelve substring-is-not-a-construct instances: a check that looks at text where the
+construct is what matters.
+
+So the new gate **parses**. `test_no_request_model_defaults_a_theme_field_to_a_retired_id` walks
+every class body in every source tree, finds every assignment to a field whose name contains
+`theme`, and reads the value out of the AST — `Field(default=…)`, a bare annotated assignment, or a
+`ge`/`le`/`gt`/`lt` bound, whatever the spelling. Three regressions, each seen to fail:
+
+* `default=4` restored on `PreviewRequest`
+* `ge=1, le=5` restored
+* `fallback_theme_id: int = 4` added — **a spelling the old regex could not match**, which is the
+  point of the rewrite
+
+#### What is now derived rather than restated
+
+Both models take `default=DEFAULT_THEME_ID` and build their descriptions from `THEME_NUMBER_MAP`
+and `SELECTABLE_THEME_IDS`, so the schema cannot disagree with `themes.json`. `PreviewRequest`
+accepts **live + retired** rather than live alone, deliberately: a historical row or a saved
+schedule can still hold 1 or 4, and rejecting those would 422 a preview of a report that exists.
+Behaviour is unchanged — 1-5 accepted, 0 and 6 rejected, as before — but the accepted set is now
+derived, so adding a theme 6 widens it instead of silently excluding it.
+
+Found in passing and fixed with it: `apps/worker/tests/test_reconcile_backfill.py:98`'s docstring
+mentions `\echo` in a non-raw string, so parsing the tree raised `DeprecationWarning: invalid
+escape sequence '\e'`. Invisible to a text-scanning gate, immediate to a parsing one — a small
+instance of the same difference.
 
 ---
 
@@ -10672,6 +12287,3452 @@ sentence is built from the registry's labels, so a future cut cannot leave a ret
 copy. **The function's behaviour is unchanged on purpose.** Deciding whether a compact theme exists
 is a product question about what the three rewired themes do, and Design's packages replace this
 metadata; inventing a `compact` flag now would be asserting a fact to keep a function company.
+
+---
+
+### D-190 — two chart assertions are matched against the stylesheet, so one of them proves nothing
+
+**Severity:** FRAGILE · **Affects:** `test_monthly_trend.py` and `test_market_v2_kinds.py` — the
+tests holding §7.3's trend chart on `market_snapshot` and its absence on `inventory` ·
+**Found during:** scoping the specified-output gate, by checking whether the failure that gate is
+built for was already present in the tests meant to prevent it
+**Status:** `fixed` — `tools/specified-output-gate`
+
+Both are the substring-is-not-a-construct family (§0.6), in its specific chart form: **`.trend-chart`
+is a CSS rule as well as an element**, and a bare substring match cannot tell them apart.
+
+**1 · The vacuous one.** `test_market_snapshot_page_1_carries_the_chart_and_the_listings_start_after_it`
+asserted the ordering as:
+
+    assert html.index("trend-chart") < html.index('class="gallery-section')
+
+Measured on a rendered `market_snapshot`: the first `trend-chart` is at offset **21,948**, inside a
+`<style>` block that ends at **40,771**; the chart ELEMENT is at **42,324** and the listings section
+at **45,070**. So the comparison was between the stylesheet and the section, and it held **wherever
+the element sat** — the chart could render below the listings and this line would still pass. The
+claim in its message ("the chart must close page 1") was never tested.
+
+**It was not load-bearing, and that is worth stating rather than glossing.** The assertion directly
+above it is `svg_of(html) is not None`, which is element-anchored by regex and does the real work,
+and the `force-new-page` assertion beside it is matched as markup by the file's own
+`section_markup()` helper — whose docstring cites this exact rule, twelve lines above the line that
+breaks it.
+
+**2 · The fragile one.** `test_the_inventory_page_draws_no_trend` asserted `"trend-chart" not in html`.
+That is true today only because `_v2/report.jinja2` defines no `.trend-chart` rule. Adding one — the
+first thing anyone does when giving a `_v2` kind a chart slot — fails this test without changing a
+single rendered element. It fails loud rather than silent, so it is a nuisance rather than a hazard,
+but it is the same mistake with the sign flipped.
+
+**Both now match the element** (`'<div class="trend-chart'`), and
+`test_specified_outputs_render.py` makes the property structural rather than remembered: every
+marker in that registry is asserted to contain `class="` or `<`, which a CSS rule cannot.
+
+**Why this entry exists at all, given nothing shipped wrong.** The same error, in the same construct,
+produced a wrong table in the chart-scope measurement four days ago — `'band-chart' in html` reported
+a band chart on every kind that shares the stylesheet. Three instances is a family, and the third was
+found only because the second was written down.
+
+---
+
+### D-191 — Backend Tests has been red on `main` for 25 consecutive runs, and the check said only "exit code 1"
+
+**Severity:** BROKEN · **Affects:** every merge to `main` since 2026-10-01 — nothing in that window
+has been verified by CI · **Found during:** merging #165 and #167, by checking mergeability and
+reading the check list
+**Status:** `open` — **the fact is filed; the mechanism is not known yet.** Filed without it
+deliberately: what let this run for two weeks is that nothing was written down.
+
+`Backend Tests` concluded `failure` on **every** run on `main` that the Actions API returns, from
+`b435c50` (2026-10-01) to `7695d2e` (2026-10-15) — **25 consecutive**, including the merges of #163,
+#164, #166, #165 and #167. The failing step is **`Run tests`** in all of them, and the only
+machine-readable detail GitHub carried was `Process completed with exit code 1`.
+
+**This is D-038 and D-041's mechanism for the third time**, and this entry's severity follows D-038's
+own test: *"a suite in this state cannot have been run recently by anyone."* The red tick was
+already there when the window opened, so the next red tick carried no news — which is also D-089's
+sentence, *"a baseline nobody can act on is not a baseline, it is a disabled check."* The difference
+is that D-089's red was known and recorded as a baseline. **This one was not recorded anywhere**, by
+anyone, for two weeks.
+
+#### Every green reported in that window was LOCAL
+
+The work merged between 2026-10-01 and 2026-10-15 — the seven market kinds on Design's `_v2` page,
+the theme rename, the specified-output gate — was each verified by running the suites in a
+development container and reading them green. Those runs were real and the numbers in those commit
+messages are accurate. **They are not CI.** If the cause turns out to be a real failure in the
+repository rather than an environmental one, the commits in that window are the set to re-check:
+`b435c50` through `7695d2e` on `main`.
+
+#### What has been eliminated
+
+| hypothesis | how it was tested | result |
+|---|---|---|
+| the contrast gate, which CI alone forces on with `PDF_CONTRAST_REQUIRE_BROWSER=1` | ran `test_pdf_contrast.py` with that variable set, against a real Chromium | **14 passed** (105s) |
+| the interpreter — CI pins **3.12**, the dev container runs **3.11.15** | built a 3.12 venv, installed `apps/api` then `apps/worker` through Poetry exactly as the workflow does, ran the whole suite from the repo root with CI's flag on `82fb720` | **2901 passed, 67 skipped, 20 xfailed** |
+| the database and Redis skips behaving differently | the 67 skips come from `apps/api/tests/conftest.py`'s default URL (`host 'fake'`, unreachable) and `BRIDGE_TEST_REDIS_URL` being unset — neither is supplied by the workflow either | identical in CI |
+
+**So the repository content is not the cause**, on CI's interpreter with CI's flag. What is left is
+the runner: `npm ci`, `npx playwright install --with-deps chromium`, or the runner's network. The
+first two fail identically forever once they start, which fits 25 consecutive identical failures
+better than anything flaky.
+
+#### Why the mechanism is not in this entry
+
+**The log body cannot be read from here.** GitHub serves job logs from a blob host, the built-in
+`gh` in this environment refuses that redirect, and the check run carries no `output.text` because
+nothing in the workflow wrote one. The step's annotations say `Process completed with exit code 1`
+and nothing else.
+
+That is itself the defect to fix first, and it is fixed on the same branch as this entry:
+`scripts/ci_annotate_failures.py` + the `Name the failures` step in `backend-tests.yml` write
+pytest's failure summary as a GitHub **annotation**, which the checks API serves to any client. **A
+signal that exists and carries no information is the shape of half the entries on this board** — it
+is D-142's `info`-level log, D-181's producer with no consumer, and D-183's chart that stopped
+rendering while its tests stayed green. This is that shape on the one check meant to catch the
+others.
+
+#### THE MECHANISM — named by the reporter's first run, 2026-10-15
+
+The annotation from PR #168's own run, which is the whole point of the change:
+
+```
+FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
+  - AssertionError: 1 colour pairing(s) below their WCAG threshold that are not on the baseline
+1 failed, 2917 passed, 67 skipped, 20 xfailed in 346.43s
+```
+
+**One test, and it is the contrast gate** — the one test CI alone forces on with
+`PDF_CONTRAST_REQUIRE_BROWSER=1`. Two weeks of `exit code 1` was one unbaselined colour pairing.
+
+**And it is browser-dependent, which is why the elimination above was clean and still wrong-footed.**
+That same gate was run here with CI's own flag against a real Chromium and passed, 14 tests. The
+difference is WHICH Chromium: CI installs Playwright's (`npx playwright install --with-deps
+chromium`), this container has one pre-installed at a pinned path. The gate measures what a browser
+PAINTS — `getComputedStyle`, deliberately, because PDFShift renders with Chromium and a CSS cascade
+modelled in Python can disagree in silence — so a different Chromium build is a different ground
+truth, and the ratchet's baseline was captured against one of them.
+
+**What is still not known: WHICH pairing.** `1 colour pairing(s)` is the first line of the assertion
+message and the reporter prints pytest's summary line, which stops there. The detail is in the
+`FAILURES` block the reporter does not yet include. That is the next change and it is small —
+widening the reporter to carry the first N lines of the failure body for a small number of failures.
+Until then the pairing can be read from the run's log by anyone who can open it in a browser.
+
+**Severity stands at BROKEN and the status stays `open`**, because the thing this entry is about is
+not the pairing: it is that a check ran 25 times, knew the answer every time, and said `exit code
+1`. The pairing is a one-line baseline decision. **That it took two weeks and a new tool to learn
+the name of one test is the defect.**
+
+---
+
+### D-192 — a global element selector in the token layer recoloured every sidebar nav item, and nothing could see it
+
+**Severity:** WRONG · **Affects:** every authenticated route — the primary navigation of the product,
+live on `main` through two merges · **Found during:** changing the button above it, by looking at a
+rendered logged-in page
+**Status:** `fixed` — #172
+
+Phase 0 (#169) adopted Design's `tokens.css` plus the three base rules their `ADOPTION.md` lists.
+The third is:
+
+```css
+a { color: var(--link); }
+```
+
+`SidebarMenuButton` (`components/ui/sidebar.tsx:489`) sets no text colour, and every nav item renders
+a `<Link>` inside it. So the rule coloured **Dashboard, Market Reports, Property Reports, Schedules,
+Lead Pages, Contacts, Settings and Help Center indigo** — a navigation rail of prose links.
+
+Design's own `App v3.dc.html` never hits this: every nav button there carries an explicit
+`color:{{ it.color }}`, `#334155` inactive and ink active. **The rule is correct for the design it
+was written against and wrong for the markup it was applied to** — the same shape as "restyle-only",
+one layer down.
+
+#### Why it survived two merges
+
+**Nothing can see the authenticated product.** `frontend-tests.yml` dies at `Install deps` (the
+`pngjs` lockfile, red since 2026-09-30), there is no DOM contrast auditor for `apps/web`, and every
+screenshot taken of this app before 2026-10-15 was of `/` and `/login` — the two routes that render
+without a session. The first render of a logged-in page in this project's history was two turns
+before this entry was written, and the defect was visible in it immediately.
+
+So the detection story is not "a gate was missing". It is **"the surface had never been looked at"**.
+
+#### The generalisable part
+
+**A global element selector in a token layer has a blast radius nothing in this repository
+measures.** `:root { --x: … }` changes only what reads `--x`; `a { … }` changes every anchor in
+every component, including ones whose authors assumed they inherited. A token file that also carries
+element rules is two different kinds of change wearing one name, and the second kind is the one that
+reaches past its consumers.
+
+Fixed at the component rather than by weakening the rule — `SidebarMenuButton` now sets
+`text-sidebar-foreground`, which `data-[active=true]:text-sidebar-accent-foreground` still overrides
+— because the rule is right for prose links and the nav was wrong to depend on inheritance.
+
+#### WHAT THIS IMPLIES AND HAS NOT BEEN CHECKED
+
+**Phase 0 may have other unobserved effects on authenticated routes.** Two of its three base rules
+are global element selectors (`a` and `h1`), and `h1 { font-size: 34px; font-weight: 800;
+letter-spacing: -0.03em }` has had exactly the same opportunity to reach past its intended consumers
+— on pages nobody has rendered. The 22 changed token values are safe by construction (only their
+readers move); the element rules are not.
+
+**The pass that would answer it:** render the main authenticated routes against `main` as of
+`6dd354b^` (immediately pre-Phase-0) and against `main` today, and diff. The harness exists — a
+locally minted JWT renders the chrome (the middleware decodes without verifying), and the noise floor
+must be measured per route, because `/app`'s is 4.56% and `/app/reports`' is 0.00%.
+
+#### THE PASS WAS RUN — 2026-10-15. The `h1` question closes NEGATIVE; the headline is elsewhere.
+
+Isolated to the stylesheet: the working tree held `main`, and only `apps/web/app/globals.css` was
+swapped between `6dd354b^` and today, so every difference below is Phase 0's and not #171's or
+#172's. Both states were **verified live in the browser** before capture (see the third note below).
+
+**1 · The `h1` rule did nothing, and here is why it could not.** All **51** `<h1>` elements on
+authenticated routes carry their own type classes; **zero** are bare. Tailwind utilities are class
+selectors and sit above `@layer base`, so `text-3xl font-display font-bold` wins on size and weight
+every time. Measured on `/app/admin`'s "Admin Console":
+
+| | pre-Phase-0 | today |
+|---|---|---|
+| font-size | 30px | **30px** |
+| font-weight | 700 | **700** |
+| letter-spacing | −0.75px | **−0.9px** |
+
+The only residual is **0.15px of letter-spacing** — `tracking-tight` (−0.025em) giving way to the new
+rule's −0.03em — on the **45** h1s that set no `tracking-` class. The other 6 set their own and are
+untouched (`/app/settings/billing` measures −0.5px in both states). **A negative result, written
+down: the second global selector reached nothing that had not already claimed the property.**
+
+**2 · But Phase 0 itself was twenty times larger here than anywhere it had been seen.**
+
+| route | noise floor | Phase 0's effect |
+|---|---|---|
+| `/app/schedules` | 0.00% | **25.42%** |
+| `/app/settings/security` | 0.00% | **19.86%** |
+| `/app/settings/billing` | 0.01% | **17.76%** |
+| `/app/people` | 2.59% | **20.95%** |
+| `/app/reports` | 13.38% | **31.57%** |
+| `/` and `/login`, measured 2026-10-15 | 0.04% | **0.36% / 1.30%** |
+
+Phase 0 was reported as a 0.36–1.30% change because those were the only two routes anyone could
+render. On the authenticated product it moved **a fifth to a third of every page**. Nothing was
+wrong with it — that is the light sidebar, the white ground and the warm neutrals arriving — but
+**the size of what shipped was unknown for three merges**, and the one defect inside it (the indigo
+nav) was invisible for the same reason.
+
+**3 · The stale-stylesheet trap fired a third time, and was caught a third time by the same check.**
+Next's dev server did not recompile `globals.css` on the restore, so an `h1` measurement came back
+**identical in both states** — which reads as "the rule did nothing" and was really "the rule was
+never loaded". Caught by reading `--primary` out of `getComputedStyle(documentElement)` and finding
+the pre-Phase-0 value against a post-Phase-0 file on disk. **Every state in the table above was
+verified that way before it was captured.** A browser is a cache like any other; assert the mutation
+landed.
+
+---
+
+### D-193 — an unauthenticated render is not a sample of an authenticated product, and this repository had no way to look at the latter
+
+**Severity:** FRAGILE · **Affects:** every visual change to `apps/web` — 98 routes, of which the
+**six** that render without a session are the only ones anyone had ever seen · **Found during:**
+verifying D-192, which was itself only findable once a logged-in page had been rendered
+**Status:** `open` — this is a capability gap, not a code defect. Nothing is broken; the product
+cannot be looked at.
+
+**Two defects in eight days came from the same cause, and neither was a gate failure.**
+
+| | what happened |
+|---|---|
+| **D-192** | Phase 0's `a { color: var(--link) }` turned every sidebar nav item indigo. Live on `main` through two merges. |
+| **the size of Phase 0 itself** | reported as **0.36% / 1.30%** of pixels changed for three merges. Measured on authenticated routes once they could be rendered: **17.76% – 31.57%**. |
+
+The second is the one worth generalising, because **the number was never wrong**. `/` and `/login`
+really did change by about a percent. They are simply the two pages the redesign touches least —
+they carry their own hard-coded colours and no sidebar — and they were the only two anyone could
+open. **A measurement taken where the effect is smallest, reported as the effect.**
+
+#### Why both were invisible, stated as a property rather than a failure
+
+There is no gate to blame. `frontend-tests.yml` has died at `Install deps` since 2026-09-30, but
+even green it runs 58 jsdom unit tests that render no page. The contrast auditor is PDF-only. What
+is missing is not a check — it is **the ability to see the thing at all**: every screenshot taken of
+this product before 2026-10-15 was of `/` or `/login`, because `middleware.ts` redirects `/app/*`
+without an `mr_token` cookie and nobody had ever minted one.
+
+#### WHAT IT WOULD TAKE, roughly, because that is the thing that would have caught both
+
+The pieces exist and were assembled by hand twice last week:
+
+1. **A session.** `middleware.ts:10` decodes the JWT and checks `exp`; it does **not** verify the
+   signature. A locally minted token renders the whole authenticated chrome. One helper, ~15 lines.
+   *(This is a property of the dev middleware, not an invitation: it is why a LOCAL render works,
+   and it is also worth knowing that the only thing standing between a forged cookie and the app
+   shell is the API refusing the data behind it.)*
+2. **A render script** — boot `next dev`, mint the token, visit N routes, capture. ~60 lines; the
+   version used for D-192 and this entry is in the session scratch and should be committed rather
+   than rewritten a third time.
+3. **Assertions that are not pixels.** The pixel diff is what made the finding, but it is a poor
+   gate here: `/app`'s noise floor measured **0.04%** one hour and **4.56%** the next, and
+   `/app/reports` **0.00%** then **13.38%**, because skeleton loading states settle differently
+   between captures. A durable gate reads **computed styles off named elements** — the same choice
+   `test_pdf_contrast.py` made for the same reason — and a per-route noise floor must be measured
+   before any pixel number is believed.
+4. **The frontend CI has to install first.** `pnpm install --frozen-lockfile` fails because root
+   `package.json` gained `pngjs` in #109 and `pnpm-lock.yaml` was never regenerated. One command.
+   Until that is fixed, nothing added here runs anywhere but a developer's machine.
+
+**Estimate, and it is an estimate:** a day for (1)–(3) against a handful of routes, and the real
+decision is which assertions are worth pinning — not the harness, which is the easy part. **Phase
+1's remaining groups are all behind this same login**, so whatever is built here is used
+immediately rather than speculatively.
+
+#### Why this is FRAGILE rather than ROUGH
+
+Nothing is currently wrong. But the two instances above are what the gap produces, they arrived
+eight days apart from a single change, and the next visual change to `apps/web` has exactly the same
+cover. The entry is open so that "we could not see it" stops being available as an explanation.
+
+#### Third instance, 2026-10-19 — the first one taken knowingly
+
+**#177 shipped twenty-six files of visual change without rendering any of them.** Design's tint
+answer was applied across every authenticated route: selected states became ink borders, icon chips
+lost their fill, nine type tags changed pair, a status badge's two branches swapped semantics, and
+an avatar became a brand-filled circle. The container had no `node_modules`, so there was no
+screenshot, no computed-style read, and no typecheck behind any of it — every change was a
+class-string substitution read by eye, plus three JSX wrappers.
+
+The first two instances were cases of **not knowing the gap was there**. This one was not: the entry
+was filed eight days earlier, the branch's own PR named it in its uncertainty section, and it
+shipped anyway because the alternative was holding Design's answer indefinitely. That is a
+defensible call and it is also the thing this entry predicted, so it is recorded here rather than
+left in a PR description. **The next one should not be defensible.** Point (4) above — the frontend
+CI being able to `pnpm install` at all — is the cheapest of the four and the one that would have
+turned "read by eye" into "typechecked", which is most of what was missing.
+
+---
+
+### D-195 — an unlimited allowance drew a 20%-full bar, in the one copy of `UsageBar` out of five that nobody reconciled
+
+**Severity:** WRONG · **Affects:** `/app/affiliate/agents/[agentId]` — the per-agent detail page an
+affiliate opens to see what an agent they sponsor has used · **Found during:** applying Design's
+2026-10-19 answer on tints, which named this surface as a defect rather than a restyle
+**Status:** `fixed` — the bar is gone. The condition that produced it is not; see below.
+
+**What it drew.** `limit >= 99999` is this codebase's sentinel for "unlimited". On that branch the
+component painted a track and filled a fifth of it:
+
+    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all ${isUnlimited ? 'bg-indigo-200' : color}`}
+        style={{ width: isUnlimited ? '20%' : `${pct}%` }}
+      />
+    </div>
+
+The number beside it read `147 / ∞`. The bar beneath it read *one fifth used* — of nothing, because
+there is no whole. **A fraction of an undefined denominator is not a measurement**, and the
+direction it errs in is the bad one: a filled track is the universal shape for "you are consuming
+your allowance", shown to exactly the accounts that have none to consume. The 20% is not derived
+from anything; it is a literal, chosen to make the bar look alive.
+
+Design's wording, which is why this is filed rather than restyled: *"'Unlimited' with a full-width
+tinted track reads as 100% used, which is the opposite. That one is a DEFECT, file it separately."*
+
+**The part worth keeping.** `UsageBar` is defined **five times**, in five files, with a
+character-identical signature and the same `99999` sentinel, and is called three times at each site:
+
+| definition | on unlimited |
+|---|---|
+| `app/app-layout.tsx:237` | no bar — `{!isUnlimited && …}` |
+| `app/app/settings/billing/page.tsx:40` | no bar — `{!isUnlimited && …}` |
+| `app/app/company/page.tsx:114` | no bar — `{!isUnlimited && …}` |
+| `components/v0-styling/AffiliateDashboardShell.tsx:103` | no bar **ever**, for anybody — same name, different component |
+| `app/app/affiliate/agents/[agentId]/page.tsx:127` | **a 20%-wide fill against infinity** |
+
+So the thing Design ruled on was already the behaviour of three of the four bar-drawing copies. This
+was not a decision anyone made and then applied inconsistently — it is **one copy that never
+received a fix the others got**, and nothing in the repository could have reported the divergence,
+because there is no shared component to diff against. Four of the five also compute
+`pct = isUnlimited ? 0` and then never read it, which is the fossil of the fix: whoever wrote the
+guard left the dead expression behind, four times, and the fifth file had the guard omitted.
+
+**What is not fixed.** The five copies. This entry fixes the rendering on the one route that was
+wrong; the next change to how an allowance is drawn still has to be made five times, and the same
+failure is available again. `app/app/company/page.tsx:114` additionally hard-codes `bg-[#6366F1]`,
+which is a Phase 1 seam in its own right.
+
+**Fixed:** `chore/tint-removal-design-answer` — the track is now inside `{!isUnlimited && …}`, so an
+unlimited allowance renders its count and `∞` and no bar at all.
+
+---
+
+### D-196 — the regression harness can die mid-mutation and leave the tree modified, reporting nothing at all
+
+**Severity:** WRONG · **Affects:** `scripts/apply_regressions.py` — the instrument behind every
+"seen to fail" claim in this remediation, 10 spec files, 60-odd recorded mutations ·
+**Found during:** running `tint_answer.json` for #177, by tripping it
+**Status:** `fixed` — `fix/d196-harness-restore`. All four parts of the remedy below are built, and
+each is held by a test that kills a real run.
+
+**What happened.** The harness output was piped to `head -40`. `head` exited after forty lines,
+the next `print()` raised `BrokenPipeError`, and Python terminated the process — **after the
+mutation had been written to disk and before the restore ran.** `apps/web/middleware.ts` was left
+mutated in the working tree. Exit status said nothing, because the harness never reached its
+reporting path; `stdout` was already gone.
+
+The mutation left behind was R6:
+
+    matcher: ["/app/:path*", "/admin/:path*", "/admin"],   ->   matcher: ["/app/:path*"],
+
+which is the line that makes `app/admin/**` unreachable (D-197). Committed, it would have exposed
+a deprecated admin tree. It was caught on the next full-suite run by
+`test_the_spec_files_are_well_formed`, which failed with *"anchor appears 0 times in
+apps/web/middleware.ts"* — a test written to catch a spec whose target had been renamed, catching
+a live mutation instead because the anchor it looks for had been consumed.
+
+**That catch is luck, and three things about it say so.** It is a different test from the gate
+under mutation. It only fires if the mutated anchor happens to be the `old` string of a recorded
+mutation — true here by construction, false for any mutation applied by hand. And it reports as a
+stale-spec problem, which is a different diagnosis from "your working tree is mutated".
+
+**Why this is the one failure this file cannot afford.** Its own docstring is three recorded
+misfires and their remedy, and the third is: *"A mutation that changes nothing and a working guard
+produce the same green."* This is that shape one level up — **a harness that cannot prove its own
+state, failing to say so.** It has an exit code reserved for exactly this (`2`, "the harness could
+not prove its own state, which is not a result about the gate at all") and the path that dies
+before using it is the one ordinary way anyone reads its output: a pipe to `head`, `tail`, `grep`
+or `less`. Every other integrity property it advertises — the anchor count, the read-back from
+disk, the byte-identical restore — assumes the process lives to the end of its own loop.
+
+**Not hypothetical, and not rare.** `tail` is how this output was read in six earlier sessions, and
+it survives only because `tail` consumes all of stdin. `head` and `grep -m` do not.
+
+**Scope of the remedy** — about ten lines, and no new dependency:
+
+1. Wrap the apply/test/restore cycle in `try/finally`, with the restore in the `finally`, so an
+   exception between them still restores. Today the restore is a straight-line statement after the
+   test run.
+2. Install handlers for `SIGINT`, `SIGTERM` and `SIGPIPE` that re-raise as an exception so (1)
+   catches them, rather than letting the default disposition kill the process. `signal.signal(
+   signal.SIGPIPE, signal.SIG_DFL)` is the usual advice for CLI tools and is the **wrong** choice
+   here: it makes death silent and immediate.
+3. Write a sentinel file naming the applied mutation before writing the mutation, and delete it
+   after a verified restore. A sentinel found on startup means the previous run died mid-mutation,
+   and the harness should restore from it and exit `2` rather than apply anything.
+4. A regression for the harness itself: apply, kill the process with `SIGTERM` between apply and
+   restore, assert the file is restored and a non-zero exit reported. `scripts/regressions/` cannot
+   express that — it mutates a file and runs pytest — so it belongs in
+   `tests/test_regression_harness_guards_itself.py`, which already exists for this purpose.
+
+(3) is the only one that covers `SIGKILL` and a dead container, which (1) and (2) cannot.
+
+**Operational note, still worth following.** Redirect to a file and read the file —
+`python3 scripts/apply_regressions.py spec.json > out.txt 2>&1; echo $?` — rather than piping to a
+pager or a head. And `git status` after any regression run, which would have shown this in one
+line.
+
+#### Built, and each part held by a test that kills a real run
+
+All four, in `fix/d196-harness-restore`:
+
+| part | what it closes | proved by |
+|---|---|---|
+| nothing between `apply_mutation` and the `try` whose `finally` restores — the `print` that sat there is inside it now | the exact reported death | `R6` puts the statement back; the SIGTERM test fails |
+| `_say` survives a dead consumer (and redirects its own stdout to `/dev/null` so the interpreter does not re-raise at shutdown); `SIGINT`/`SIGTERM` raise `Interrupted` so the `finally` runs | the pipe, and an ordinary `kill` | `test_a_dead_consumer_does_not_abort_the_cycle` pipes a real run to `head -2`; `test_sigterm_mid_mutation_still_restores_and_exits_2` |
+| `.regress-mutation-in-progress.json`, written **before** the mutation reaches disk and deleted after a verified restore. A later run **refuses to do anything** while it exists; `--restore` recovers it | `SIGKILL`, and a container that disappears | `test_sigkill_leaves_a_sentinel_and_the_next_run_refuses_to_start` |
+| `--restore` holds the **mutated** text as well, and refuses if the file on disk is not it | misfire (2) one level up: a recovery source older than a legitimate later edit | `test_restore_refuses_when_the_file_moved_on_after_the_mutation` |
+
+**`signal.SIGPIPE` is deliberately NOT set to `SIG_DFL`.** That is the usual advice for a CLI tool
+and it is exactly wrong here: it makes the death immediate and silent, which is the failure rather
+than the fix.
+
+#### THE SIGTERM TEST IS FLAKY — THIRD SIGHTING, 2026-10-21, AND STILL NOT ROOT-CAUSED
+
+`test_sigterm_mid_mutation_still_restores_and_exits_2` has now failed **three times, every one of
+them inside a full-suite run**, and never once on a repeat. Recorded here rather than left as a
+shrug, because three sightings with the same signature is data:
+
+| | |
+|---|---|
+| failures | 3, all in `pytest` over the whole tree |
+| isolated repeats after each | 15 consecutive passes on the third sighting; the file twice, 13 passed |
+| the branch it failed on | touched `docs/DEFECT_LIST.md` and one new test file — **nothing in the harness** |
+
+So it is **timing, not logic**: the test spawns a real run, waits for the mutation to reach disk,
+sends `SIGTERM`, and asserts the restore happened and the exit code is 2. Under a full suite the
+machine is busier and the window it waits on is the obvious suspect — but that is a hypothesis and
+nobody has instrumented it. **What it is not** is a regression from any of the work it has failed
+alongside; the third sighting's branch could not have touched it.
+
+**Not quarantined, and now fixed at the cause rather than skipped.** A flaky test that guards a
+harness which once left a mutated tree is worth more red than a `skip`.
+
+**The wait was a duration wearing a condition's clothes.** `_wait_for_sentinel` polled every 10ms
+— a condition — but gave up after **30 seconds even while the harness was still running**, which
+is the test deciding how long the machine is allowed to take. All three failures reported exactly
+that: no sentinel, harness alive. Under a full suite the harness's own gate shells out to
+`pytest --collect-only` over this very file, on a box already running the suite that is running
+the test.
+
+So the terminating condition is **the process**: wait while it is alive and the sentinel is
+absent. The ceiling is 300 seconds and exists only so a hung run cannot hang CI — if it is ever
+hit the message says *"AND THE HARNESS IS STILL RUNNING… a live harness five minutes into its
+first mutation is a real finding about the harness, not about the machine being busy"*, which is a
+different finding from the one it replaced.
+
+**And the entry is guarded too**, which is the second half. Every test in that file drives the
+harness against **one shared path in the real repo**, so a previous test's subprocess that has not
+finished unlinking is indistinguishable, from inside the next test, from a harness refusing to
+start — and the failure would read as the wrong test's. The autouse fixture now polls for the
+sentinel's absence before yielding and names the suspect if it is still there.
+
+Both halves seen to fail: the ceiling branch and the exited-first branch each name what happened
+rather than only that it did not happen, and planting a sentinel makes the entry guard fire with
+the sentence above.
+
+**The hypothesis is still a hypothesis.** Three sightings under load, none isolated, nothing in the
+harness touched by the branches they failed on — that supports *timing*, and the 30-second ceiling
+is the only timing this test controlled. If it flakes again after this, the hypothesis was wrong,
+and the new message will say which of the two branches it took.
+
+**The startup check reports and refuses; it does not restore on its own.** A tool that silently
+writes files when it starts is a worse problem than the one being fixed, and `--keep` leaves a
+mutation applied on purpose. The refusal is what protects the measurements: *"Nothing was run.
+Every measurement taken against this tree since that run is suspect."*
+
+**Signal handlers are installed in `__main__`, not in `main()`**, because this harness's own tests
+call `main()` in-process and replacing pytest's `SIGINT` handler for the rest of a session is a
+side effect a test must not have.
+
+**The six regressions mutate the harness that is running them** —
+`scripts/regressions/harness_restore.json`, 6/6 fired. That works because the running process uses
+its already-loaded code while the pytest subprocess reads the mutated file fresh, and it means the
+remedy is guarded by the instrument it repairs.
+
+**One thing the fix found in itself:** `_write_sentinel` first used `path.relative_to(ROOT)`, which
+**raises** for a path outside the repo — and the harness's own tests mutate files under `tmp_path`.
+It now uses `_rel`, the helper added for the same reason the last time this file was wrong about a
+path it did not own.
+
+---
+
+### D-197 — `apps/web/app/admin/**` is a second dead tree: fifteen route files, a deletion deadline that passed, and deadness enforced by one line of routing config
+
+**Severity:** FRAGILE · **Affects:** nothing that renders — which is the problem. 15 route files,
+19 of the 46 remaining tinted surfaces, and every production build, which must keep compiling them
+· **Found during:** reporting the app-wide scope of Design's tint answer (#177), where this tree
+was 19 of the hits and was being counted as pending work
+**Status:** `open` — documented rather than deleted, for the reason in the last section.
+
+`app/admin/**` is a complete standalone admin panel: 13 URLs, its own sidebar, its own layout, its
+own login. `app/app/admin/**` is the one that ships. **Every URL the dead tree produces has a live
+counterpart**, so the shadowing is total and nothing 404s:
+
+| dead URL | resolves to | exists |
+|---|---|---|
+| `/admin` | `/app/admin` | yes |
+| `/admin/accounts`, `/accounts/[id]`, `/affiliates`, `/emails`, `/lead-pages`, `/plans`, `/property-reports`, `/reports`, `/schedules`, `/users` | same path under `/app/admin` | all yes |
+| `/admin/login` | `/app/admin` | via `ADMIN_REMAP` |
+| `/admin/blocked-ips` | `/app/admin/security` | via `ADMIN_REMAP` |
+| `/admin/settings` | `/app/admin/system` | via `ADMIN_REMAP` |
+
+**Its own first line says it is deletable, and names a deadline that has passed:**
+
+    // DEPRECATED: This standalone admin panel is superseded by /app/admin
+    // Safe to delete after verifying all pages migrated (see ADMIN-MIGRATE tickets)
+    // Target deletion: 1 week after launch
+
+There are **no ADMIN-MIGRATE tickets anywhere in this repository** — `grep -rn ADMIN-MIGRATE`
+returns that comment and nothing else. The condition on its own deletion is unverifiable from the
+repository, which is how a one-week deadline became five months.
+
+#### Established against this project's own standard, not by reading the redirect
+
+`docs/DEAD_CODE.md` sets three conditions, and says the third is the one that matters. Applied:
+
+| condition | result |
+|---|---|
+| **1. Zero importers** | **holds.** No `import`/`from` in `app/`, `components/`, `lib/` or `packages/` resolves to any file under `app/admin/`. The only imports *into* the tree are from within it (`./logout-button`). |
+| **2. Zero route references** | **FAILS, once.** `app/access-denied/page.tsx:12` does `window.location.href = "/admin/login"`. |
+| **3. Zero runtime string construction** | **holds.** A repo-wide search for `/admin` as a string across `.ts/.tsx/.py/.json/.yml/.sql` returns: the tree's own `navItems`, `middleware.ts` itself, that one `access-denied` line, and `/api/proxy/v1/admin/...` — an API path, which the middleware's `pathname.startsWith("/admin")` check never sees. Nothing in `apps/api` or `apps/worker` builds a `/admin` page URL; no email, no `next.config.ts` rewrite (there are none at all), no `basePath`, no `trailingSlash`. |
+
+And every mechanism by which a Next.js route file can execute without a request, checked
+separately: **no parallel routes** (`@slot`), **no intercepting routes** (`(.)`, `(..)`), no
+`@source` narrowing in `globals.css`, and nothing re-exporting a page component.
+
+**So the one live reference points at a URL, not at these files** — and the URL is served by the
+redirect, never by the tree. Following it: `/admin/login` → `ADMIN_REMAP` → `/app/admin` → no
+token → `/login`. It works; the "admin login" link on the access-denied page lands on the ordinary
+user login, via two redirects, which is a separate small wrongness and the reason the compat
+redirect in `middleware.ts` must **not** be deleted along with the tree.
+
+#### The distinction worth keeping, which is the difference from D-131
+
+D-131's five templates are dead because **nothing names them**. This tree is dead because
+**something intercepts it** — one `pathname.replace(/^\/admin/, "/app/admin")` and one matcher
+entry. Those are configuration, and configuration is the weaker guarantee: narrowing the matcher to
+`["/app/:path*"]` is a one-token edit that makes 13 admin URLs live again, and D-196 is a recorded
+instance of that exact edit being left in a working tree by accident.
+
+**What becoming reachable would actually cost: less than it sounds.** This tree's layout verifies
+properly — `createServerApi().get('/v1/me')` and `data.is_platform_admin` read off **the API's
+response**, not off a client-supplied token. Which is the uncomfortable part: **the superseded
+implementation is the one that authenticates correctly, and the implementation that replaced it is
+D-194.** `app/app/admin/**` has no layout of its own and no file under it mentions
+`is_platform_admin` at all; its only gate is the middleware's unverified decode. So this entry
+also records, in case the tree is deleted, the pattern D-194 should be fixed to:
+
+    const api = await createServerApi()
+    if (!api.isAuthenticated()) return { admin: null, redirectTo: '/admin/login' }
+    const { data, error } = await api.get<any>('/v1/me')
+    if (error || !data) return { admin: null, redirectTo: '/admin/login' }
+    if (!data.is_platform_admin) return { admin: null, redirectTo: '/access-denied' }
+
+#### Documented rather than deleted, and why
+
+Three reasons, and the first is the one that decided it:
+
+1. **Deleting these 15 files orphans more than it removes.** `apps/web/components/admin/` — 7
+   files, `admin-overview.tsx`, `email-log-table.tsx`, `recent-reports-table.tsx`,
+   `schedules-table.tsx`, `schedules-table-client.tsx`, `types.ts`, `index.ts` — already has no
+   consumer outside itself, and `packages/ui/src/index.ts:16-19` re-exports a **parallel set of
+   copies** from `packages/ui/src/components/admin/`. A delete that stops at the route files
+   converts a visible dead tree into a larger invisible one: producer-with-no-consumer, created by
+   the cleanup. The deletion is a 20-plus-file sweep across three packages, and it needs its own
+   pass with its own proof.
+2. **It is the only correct admin verification in the codebase**, quoted above so that the pattern
+   survives the eventual deletion. D-194 is open and this is its reference.
+3. **D-131's precedent, stated on D-131:** its gate *"deliberately checks only the five live
+   templates, because failing on dead files would pressure the next person into editing them rather
+   than deleting them."* Same reasoning here — `test_tint_answer_is_current.py` records the tree as
+   out of scope rather than demanding it be de-tinted, so nobody spends an afternoon restyling 19
+   surfaces in a panel that renders for nobody.
+
+#### What it costs while it stays
+
+Fifteen route files that every production build compiles, and that any refactor of `@/lib/*` or
+`@/components/ui/*` must keep compiling — paid by whoever is next in those files, for a panel
+nobody can open. Plus 19 of the 46 tinted surfaces, which is why the sweep in #177 reported a scope
+four times the ticket's and had to explain most of it away.
+
+---
+
+### D-198 — `UsageBar` is defined five times with an identical signature, and that is the condition that produced D-195
+
+**Severity:** FRAGILE · **Affects:** five files, fifteen call sites — every surface that draws a
+plan allowance: the sidebar on every authenticated route, `/app/settings/billing`, `/app/company`,
+`/app/affiliate`, and `/app/affiliate/agents/[agentId]` · **Found during:** fixing D-195, which is
+one of the five
+**Status:** `open` — D-195 fixed the copy that was wrong. This is the condition, and it survives.
+
+**Five definitions, character-identical signature, same `limit >= 99999` sentinel, three call sites
+each:**
+
+| definition | on an unlimited allowance |
+|---|---|
+| `app/app-layout.tsx:237` | no bar — `{!isUnlimited && …}` |
+| `app/app/settings/billing/page.tsx:40` | no bar — `{!isUnlimited && …}` |
+| `app/app/company/page.tsx:114` | no bar — `{!isUnlimited && …}` |
+| `components/v0-styling/AffiliateDashboardShell.tsx:103` | draws no bar **ever**, for anybody — same name, different component |
+| `app/app/affiliate/agents/[agentId]/page.tsx:127` | **was** a hard-coded 20%-wide fill against infinity (D-195) |
+
+**This is not a design decision arriving.** Design's 2026-10-19 ruling — no bar for an unlimited
+allowance — was already the behaviour of three of the four copies that draw a bar. It is **a fix
+that propagated to four copies and missed the fifth**, and the fossil is visible: four of the five
+compute
+
+    const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
+
+and then never read `pct` in the unlimited case, because the guard beneath it makes the branch
+unreachable. Somebody wrote `isUnlimited ? 0`, decided the right answer was no bar at all, added
+the guard, left the expression — and did that four times. The fifth file got neither.
+
+**Nothing in this repository could have reported the divergence**, because there is nothing shared
+to diff against. No test rendered any of them; the only reason the fifth was found is that Design
+was asked about the colour of its track.
+
+**Two further divergences, since the five are not otherwise identical:** the fill colour is
+`bg-primary` in three, `bg-[#6366F1]` hard-coded in `app/app/company/page.tsx:114` (a Phase 1
+seam), and the `AffiliateDashboardShell` copy renders only the numbers. The label/number format
+differs in all five: `147/200`, `147 / 200`, `147 / ∞`, `∞`, and `147 / 200` with
+`toLocaleString()`.
+
+#### Scope of consolidating them — scoped, not done
+
+One `components/ui/usage-bar.tsx` exporting the `app-layout` implementation, which is the one with
+the most call sites and the correct unlimited behaviour. Then:
+
+1. Delete the four local definitions, import the shared one — 4 files, 15 call sites, all passing
+   the same three props, so no call site changes.
+2. **Decide two things first, and they are the reason this is not a mechanical change.** The
+   number format differs five ways (above) and `AffiliateDashboardShell` deliberately draws no
+   track at all. Consolidating silently picks a winner for both; one of them is visible on the
+   sidebar of every authenticated route.
+3. `bg-[#6366F1]` becomes `bg-primary`, which is a Phase 1 literal removal and changes a colour on
+   `/app/company`.
+4. A gate asserting one definition, replacing
+   `test_no_usage_bar_draws_a_fraction_of_an_undefined_whole`, which currently asserts there are
+   exactly five and that each guards the track — written that way deliberately, so that the count
+   is the thing that fails when a sixth copy appears.
+
+**Five surfaces whose rendering changes, none of which can be rendered in this container.** That is
+the whole reason it is scoped and not done: the consolidation's risk is entirely in what the shared
+component looks like on five pages, and that is the one thing nothing here can check (D-193).
+
+---
+
+### D-194 — `middleware.ts` authenticates nobody: it decodes the session JWT without verifying the signature
+
+**Severity:** WRONG — the control does not do the thing it is written to do · **Affects:** every route
+under `/app/*`, including `/app/admin`, `/app/company` and `/app/affiliate` · **Found during:**
+D-192's render pass, by noticing why a locally minted cookie rendered the product at all
+**Status:** `open` — **not fixed in this pass, by instruction.** What it exposes is established
+below; what to do about it is a decision, and one of the options has a cost.
+
+`apps/web/middleware.ts` is the only thing standing between an unauthenticated request and every
+authenticated route. Its own comment says what it does:
+
+```
+ * Decode a JWT payload without any external library.
+ * Uses only atob() which is available in Edge Runtime.
+ * Does NOT verify the signature — just reads the payload.
+```
+
+So the checks it performs — `token` present, `decoded` non-null, `exp` in the future,
+`decoded.is_platform_admin` for `/app/admin`, `decoded.account_type` for `/app/company` and
+`/app/affiliate` — are all performed **against a value the requester wrote.** A cookie is attacker
+controlled. `{"alg":"none"}` with `exp` a year out and `is_platform_admin: true` passes every one
+of them.
+
+#### What it ACTUALLY exposes, traced rather than assumed
+
+| layer | behaviour with a forged cookie |
+|---|---|
+| `middleware.ts` | **passes.** Every `/app/*` route is reachable, admin included |
+| `app/app/layout.tsx:36-48` | sets `isAdmin`, `isCompanyAdmin`, `isAffiliate`, `isSponsored`, `accountType` from the **same unverified payload** — so the chrome renders as that role, Admin nav and all |
+| `app/app/page.tsx:38` | routes by unverified `account_type` |
+| Next route handlers (`app/api/v1/admin/**`, 20+ files) | **check only that the cookie is PRESENT**, then forward it to the API. No verification, and none needed — see the next row |
+| `apps/api` `middleware/authn.py:119` | **verifies.** `verify_jwt(cookie_token, settings.JWT_SECRET)` → `jwt.decode(token, secret, algorithms=["HS256"])`. The algorithm is pinned, so `alg: none` is rejected outright |
+| admin endpoints | additionally `Depends(get_admin_user)` |
+
+**So no data crosses.** Every panel renders its skeleton and then shows an error or stays empty,
+because the API returns 401. What a forged cookie buys is:
+
+1. **the shape of the internal product** — the admin console's layout, its twelve nav destinations,
+   its route names and the client bundle served for them;
+2. **a product that looks compromised to anyone who gets there**, which is a support and trust cost
+   independent of data;
+3. **complete dependence on the API being right on every endpoint, with nothing behind it.** That is
+   the part that matters. One endpoint missing its `Depends`, one route trusting a path parameter
+   over the token's subject, and the forged cookie reaches real data with no second boundary.
+
+#### Why WRONG rather than FRAGILE or BROKEN, stated so it can be argued with
+
+Not BROKEN: nothing is non-functional and **no data exposure was demonstrated** — the API held
+everywhere it was checked. Not FRAGILE either, which is this board's category for code that works
+and breaks silently under a foreseeable change: this code **does not work now**. A function whose
+job is to authenticate, which accepts a value the caller forged, is producing a wrong answer every
+time it is asked. The fact that a second system catches the consequence does not make the first one
+right — that is the same argument as a validator that passes everything because the database has a
+constraint.
+
+**It is D-005's shape without D-005's outcome.** August's cross-tenant leak was a boundary that
+looked like a boundary and was not. This is a boundary that looks like a boundary and is not, and
+the only reason the outcome differs is that the layer behind it happens to be sound.
+
+#### Before anything is changed, two things need establishing
+
+1. ~~**Does any API endpoint lack the dependency?**~~ **ANSWERED 2026-10-19: no.** 187 routes
+   across 30 router files, parsed from the decorators: `routes/admin.py` 58/58 and
+   `routes/admin_metrics.py` 7/7 carry `get_admin_user` **per route**, and no other router has an
+   admin dependency because none of them is an admin router. The third exposure above is **ruled
+   out** for authorization. **The same enumeration found D-200**, which is the same worry in the
+   other half of the problem: the API's *authorization* is right on every endpoint, and its
+   *authentication* accepts an unguarded `X-Demo-Account` header as proof of identity. D-194 said
+   the API was the only thing standing; D-200 is that it has a door of its own.
+2. **What does verifying in the middleware cost?** The comment explains the current design: *"no
+   external library, no API call"*, because Edge runtime. Verifying HS256 needs the secret in the
+   edge environment and a WebCrypto implementation (`jose` works in Edge); the alternative is moving
+   the gate out of middleware and letting each route's data fetch be the boundary — which is
+   effectively today's behaviour, honestly labelled.
+
+**Neither is a fix, and this entry is not one.** Recorded now because the gap between what the file
+says it does and what a reader assumes it does is exactly the gap that let D-005 ship.
+
+#### The fix already exists in this repository, in the code this one replaced — see D-197
+
+Found two days after this entry, while establishing that `apps/web/app/admin/**` is dead. **That
+superseded admin panel verifies correctly**, server-side, in its layout:
+
+    const api = await createServerApi()
+    if (!api.isAuthenticated()) return { admin: null, redirectTo: '/admin/login' }
+    const { data, error } = await api.get<any>('/v1/me')
+    if (error || !data) return { admin: null, redirectTo: '/admin/login' }
+    if (!data.is_platform_admin) return { admin: null, redirectTo: '/access-denied' }
+
+`is_platform_admin` is read off **the API's response**, not off a client-supplied token, so the
+answer comes from the system that holds the secret. No Edge constraint applies, because this is a
+server component rather than middleware — which disposes of establishing-point (2) for the admin
+case: the gate does not have to live in the middleware at all.
+
+**By contrast, `app/app/admin/**` has no layout of its own, and no file under it mentions
+`is_platform_admin`.** Its only gate is the unverified decode above. So the implementation that was
+deprecated authenticates, and the implementation that replaced it does not. **The dead code is the
+reference implementation for this fix**, which is why D-197 quotes it in full and why it must be
+copied out before that tree is ever deleted.
+
+---
+
+### D-199 — three labels on the consumer report are hard-coded violet on a surface whose colour is the agent's brand
+
+**Severity:** WRONG · **Affects:** `/r/[id]`, the public home-value report an agent sends a lead —
+every account whose brand is not the default indigo · **Found during:** counting the four tinted
+surfaces left in the report viewer for Design (#178), which is why it was nearly filed as a styling
+question
+**Status:** `open`
+
+`apps/web/components/mobile-report/MobileReportViewer.tsx:253` paints the hero panel with **the
+agent's brand**:
+
+    <div className="rounded-2xl p-6 text-white" style={{ background:
+      `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%,
+                               ${report.branding?.accent_color  || '#8b5cf6'} 100%)` }}>
+
+Three labels inside it are hard-coded:
+
+| line | |
+|---|---|
+| 254 | `<p className="text-violet-200 text-sm mb-1">Estimated Value Range</p>` |
+| 258 | `<p className="text-violet-200 text-sm">` — the comparables sentence under the figure |
+| 271 | `<span className="text-violet-200 text-xs">` — the confidence line |
+
+`violet-200` is `#DDD6FE`. It was chosen against the **fallback** gradient
+(`#6366f1` → `#8b5cf6`), and it is correct for exactly one case: **an agent who has set no brand at
+all.** Every agent who has set one gets `#DDD6FE` on a surface of their own colour. A teal brand
+gives violet labels on a teal gradient.
+
+**This is not a tint question and not Design's to rule on.** The rest of the panel already solved
+it: the container sets `text-white`, which follows any background. These three override it with a
+fixed hue. The defect is that **a colour chosen to match a default was applied to a surface that is
+not the default** — the same shape as a fixture encoding an older contract, in CSS.
+
+**Two further consequences, both unmeasured here** (this container cannot render):
+
+1. **Contrast.** `#DDD6FE` was never audited against anything but the fallback gradient. Against a
+   light brand — a pale gold, a mint — it is plausibly below 4.5:1 on the largest headline a
+   consumer sees. `tests/test_pdf_contrast.py` covers the PDF and nothing covers this surface.
+2. **It is the consumer-facing artifact.** Design's whole argument for the chrome sweep is that
+   chrome must not compete with the report. This is *inside* the report, on the first panel, and it
+   is the one surface a lead sees before deciding whether the agent is worth replying to.
+
+#### Scope of the fix, which needs no decision from anybody
+
+Delete the three `text-violet-200` classes. The container's `text-white` then applies, which is what
+the other text in that panel already does, and which follows whatever the brand is. If a softer
+label is wanted, `text-white/80` is brand-independent and stays inside the same decision.
+
+**What is still Design's** is the separate question in
+`docs/REPORT_VIEWER_TINTS_FOR_DESIGN_2026-10-19.md`: whether the no-tinted-surfaces rule reaches
+inside the report at all, and if so which of the **other eleven** hard-coded indigo/violet sites
+become brand-driven and which become neutral. That question is unaffected by this fix, and this
+defect should not wait for it.
+
+**XFAILS THIS DEFECT GATES** (§0.6: two-way link, or an xfail is a skip with better manners).
+In `tests/test_consumer_report_brand_colours.py`, marked `xfail(strict=True)` with `D-199` named in
+the reason — delete the marker when the three classes go, and the strict marker will insist:
+
+- `test_no_text_inside_the_brand_hero_hard_codes_a_hue`
+
+`test_the_hero_panel_is_still_painted_with_the_agents_brand` in the same file is **not** gated: it
+is the guard on the one above, and it passes today. If the hero stopped reading `primary_color`,
+the gated assertion would be checking a panel that no longer exists.
+
+---
+
+### D-200 — the API accepts `X-Demo-Account` as proof of identity, unguarded, in production
+
+**Severity:** BROKEN · **Affects:** `apps/api` — every one of the **122 non-admin routes** that
+scopes its data by `request.state.account_id` · **Found during:** establishing D-194's point (1),
+"does any API endpoint lack the dependency" — the answer to which is no, and this is what the
+enumeration found instead
+**Status:** `fixed` — `fix/d196-harness-restore`. The header is now accepted only when
+`settings.ENVIRONMENT` is a test environment, and the decision function is tested from the shipped
+source. **Read "What the fix does not prove" before believing it is closed.**
+
+`apps/api/src/api/middleware/authn.py:129-133`, the third of three ways the middleware resolves an
+identity:
+
+    # ── 3) Demo header fallback ──────────────────────────────────────
+    if not acct:
+        demo = request.headers.get("X-Demo-Account")
+        if demo:
+            acct = demo
+
+**There is no guard.** No environment check, no debug flag, no allowlist, no signature.
+`AuthContextMiddleware` is registered unconditionally at `main.py:69`. A request carrying
+`X-Demo-Account: <some account uuid>` and no credential of any kind is served as that account.
+
+#### What it grants, traced
+
+| | |
+|---|---|
+| `request.state.account_id` | **the attacker's chosen value** |
+| `request.state.user` | `{"account_id": acct, "role": "USER"}` — the DB enrichment at `:143` is skipped, because it is keyed on `claims["user_id"]` and there are no claims |
+| `get_admin_user` | **403.** `user_info.get("is_platform_admin", False)` finds no key and defaults to `False`. Admin routes hold — **by a default value, not by a check of this path** |
+| every non-admin route | scopes by `request.state.account_id`, so it serves the named account |
+| RLS | `set_rls(cur, account_id)` is keyed on **the same value**, so where it is applied it enforces the attacker's chosen scope |
+
+**So this is D-005's shape with D-005's outcome.** D-194 said *"complete dependence on the API being
+right on every endpoint, with nothing behind it."* The enumeration confirms the API is right about
+**authorization** — and finds that its **authentication** has a door in it. The middleware that
+D-194 is about decodes a token it does not verify; this one does not require a token at all.
+
+#### Why it exists, which is the only sympathetic part
+
+It is the test suite's authentication mechanism. Eight API test files set this header as their way
+of being logged in, and say so in their own comments — `test_schedules_report_types.py:29` and
+`test_billing_checkout.py:148` both document it as *"the `X-Demo-Account` header, which that
+middleware accepts as an account id."* The docstring at `:68` calls it a *"temporary fallback"*. It
+has survived because removing it breaks ~8 test files, and nothing failed to remind anyone.
+
+#### The enumeration that found it, since that was the assignment
+
+187 routes across 30 router files, parsed from the decorators rather than counted by hand:
+
+| | routes | carrying `get_admin_user` |
+|---|---|---|
+| `routes/admin.py` | 58 | **58** |
+| `routes/admin_metrics.py` | 7 | **7** |
+| the other 28 router files | 122 | 0, correctly — they are not admin routes |
+
+**65 of 65 admin routes carry the dependency, per route, not merely on the router.** D-194's third
+exposure — "one endpoint missing its `Depends`" — **is ruled out.** That was worth establishing and
+it is now established.
+
+#### The fix, and the trap in the obvious version of it
+
+Four lines. The guard already exists in this codebase, 100 lines from here, applied to a far less
+dangerous endpoint — `routes/unsubscribe.py:180`, a token *generator*, refuses to exist in
+production:
+
+    if os.getenv("ENVIRONMENT", "dev") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+
+**Do not copy that line.** `os.getenv("ENVIRONMENT", "dev")` defaults to **dev**, so it fails
+**OPEN** when the variable is unset — which is the one condition under which nobody notices.
+`settings.ENVIRONMENT` defaults to `"production"` (`settings.py:12`), so the guard must be written
+against that and must require an explicit opt-in:
+
+    if not acct and settings.ENVIRONMENT in ("dev", "test"):
+        demo = request.headers.get("X-Demo-Account")
+        ...
+
+and the API test suite then has to set `ENVIRONMENT` (one `conftest.py` line) or mint a real
+HS256 token. **Minting the token is the better fix** and makes the tests exercise the path
+production uses; the env guard is the one that can ship today.
+
+**Three things this entry does not claim.** It was not tested against a deployment — read from
+source. Whether an outsider can obtain an `account_id` was **not** established: public prefixes
+were checked for one in a response body and none was found, but a UUID that appears in a URL, an
+email, a support ticket or a QR link is not a secret and must not be treated as the control. And
+`ENVIRONMENT`'s value in production was not read — if it is unset there, the `unsubscribe.py` guard
+above is also open.
+
+#### The guard that shipped
+
+`authn.py`, at the call site:
+
+    # ── 3) Demo header fallback — TEST ENVIRONMENT ONLY (D-200) ──────
+    if not acct and _demo_header_allowed():
+
+and the decision:
+
+    _DEMO_HEADER_ENVIRONMENTS = frozenset({"test"})
+
+    def _demo_header_allowed() -> bool:
+        return (settings.ENVIRONMENT or "").strip().lower() in _DEMO_HEADER_ENVIRONMENTS
+
+**An allowlist of one value, which is narrower than this codebase's own convention, deliberately.**
+`routes/auth.py:204` and `routes/devfiles.py:18` gate dev-only routes on
+`settings.ENVIRONMENT == "production"`. Two reasons not to copy that here:
+
+1. **An inverted test fails OPEN for every value nobody anticipated** — `"Production"`, `"prod"`,
+   `"staging"`, a trailing space from a deploy variable. An allowlist fails closed on all of them,
+   and the tests enumerate those cases rather than describing them.
+2. **`settings.py:11` says staging and local development both run `ENVIRONMENT=development`.**
+   Those are deployed, reachable environments with real sessions in them. A seed endpoint belongs
+   there; an authentication bypass does not. The header's only legitimate consumer is the test
+   suite, so the allowlist is the test environment and nothing else.
+
+`settings.ENVIRONMENT` defaults to `"production"` (`settings.py:12`), so an unset variable disables
+it — the property the whole fix rests on, and asserted by its own test. A `logger.warning` fires at
+import if the header is ever enabled, so an `ENVIRONMENT` set wrong in production is loud rather
+than quiet.
+
+**The eight test files keep working** via one line in `apps/api/tests/conftest.py`:
+`os.environ.setdefault("ENVIRONMENT", "test")`, placed above every `api` import because `settings`
+is built at import time — set it later and eight files get a 401 with nothing to say why.
+`setdefault` rather than assignment, so a CI job that sets `ENVIRONMENT` itself keeps its value.
+
+#### Where the tests live, and why it is not where they belong
+
+`tests/test_api_auth_boundary.py` — the **root** suite, not `apps/api/tests/`. Because it runs:
+`apps/api`'s suite needs `pydantic_settings`, `httpx`, `redis` and `psycopg`, none of which the
+container this was fixed in has. The predicate is lifted out of `authn.py` **by AST and executed
+against a stub `settings`** — not imported (that pulls in all four packages) and not copied (a copy
+of a security predicate is a second implementation that will drift from the one that ships).
+
+11 refused values and 3 accepted ones are enumerated, plus three structural assertions: that the
+header read sits behind the guard, that the conftest line precedes the first `api` import, and that
+the guard does not use `os.getenv` (see D-201).
+
+#### What the fix does not prove
+
+~~**No request was ever made against this.**~~ **CLOSED 2026-10-20 — requests were made.** The API's
+dependencies were installed (PyPI is reachable from this container, which nobody had tried) and the
+app was constructed for real. Against the running app, with `X-Demo-Account` and no other
+credential:
+
+| `ENVIRONMENT` | guard | response |
+|---|---|---|
+| `production` | refuses | `401 {"detail":"Unauthorized"}` |
+| `development` | refuses | `401 {"detail":"Unauthorized"}` |
+| `staging` | refuses | `401 {"detail":"Unauthorized"}` |
+| `Production` | refuses | `401 {"detail":"Unauthorized"}` — the capitalisation an inverted test would have failed open on |
+| `test` | allows | `500` from the route hitting the dead database, i.e. **the header got through**, which is the positive case |
+
+And **`apps/api`'s own suite ran for the first time: 166 passed, 22 skipped**, so the eight files
+that authenticate with this header still do. The one failure is this container missing `jinja2`, a
+worker dependency, in a test that imports the worker — not auth, and not this change.
+
+**Two things remain unknown and both bound how bad this was:** whether anything in front of the API
+strips unknown headers, and what `ENVIRONMENT` is actually set to in production. The second now
+matters less — the guard fails closed when it is unset — but it is still the difference between
+"this was never reachable" and "it was".
+
+#### The admin-route behaviour is NOT a mitigation, and must not be recorded as one
+
+An earlier draft of this entry noted that admin routes refuse a forged identity. They do, and the
+reason is that `get_admin_user` reads `user_info.get("is_platform_admin", False)` while the DB
+enrichment that would set that key is skipped on this path. **That is one dictionary default away
+from being the whole story.** Nothing checks this path; a key that is absent happens to be falsy.
+Add a default of `True` anywhere in that chain, or populate `user_info` from an untrusted source,
+and the 403 becomes a 200. It is an accident with a good outcome, not a control, and the fix above
+does not depend on it.
+
+---
+
+### D-201 — the one environment gate in the API written with `os.getenv` defaults to dev, so it fails open when the variable is unset
+
+**Severity:** WRONG · **Affects:** `GET /v1/email/unsubscribe/token` — a token *generator* for any
+`(email, account_id)` pair a caller names, on a **public** path prefix · **Found during:** writing
+D-200's guard, by checking which form the rest of the API uses
+**Status:** `fixed` — `fix/d201-unsubscribe-token-route`. **The route is deleted, not re-gated**, and
+a parsed sweep now fails on the fail-open form anywhere under `apps/api/src/api`.
+
+Six places in `apps/api/src` read `ENVIRONMENT`. Five are right. This one is `routes/unsubscribe.py:180`:
+
+    if os.getenv("ENVIRONMENT", "dev") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
+
+**The default is `"dev"`, so an unset variable is not production, so the endpoint exists.** Compare
+the two forms the same codebase uses correctly:
+
+| where | form | unset variable |
+|---|---|---|
+| `routes/auth.py:204` (`/v1/auth/seed-dev`) | `settings.ENVIRONMENT == "production"` | **refuses** — `settings.py:12` defaults to `"production"` |
+| `routes/devfiles.py:18` (`/dev-files/*`) | `settings.ENVIRONMENT == "production"` | **refuses** |
+| `routes/admin.py:3004` (a health display) | `os.getenv("ENVIRONMENT", "production")` | harmless, and the safe default anyway |
+| **`routes/unsubscribe.py:180`** | **`os.getenv("ENVIRONMENT", "dev")`** | **serves** |
+
+`settings.py` says why the right default exists, in as many words: *"Defaults to `production` so any
+deploy that forgets to set ENVIRONMENT is treated as production (fail-safe)."* This line opts out of
+that and gets the opposite.
+
+#### What the endpoint hands out
+
+`generate_unsubscribe_token(account_id, email)` — `HMAC-SHA256(f"{account_id}:{email}",
+EMAIL_UNSUB_SECRET)` — for **any** pair the caller supplies, plus the ready-made URL. With that
+token, `POST /v1/email/unsubscribe` suppresses delivery for that address on that account.
+
+**The file already explains this harm, thirty lines above, about a different mechanism.** The
+comment on the signing secret's dev fallback says: *"anyone could then forge a token and suppress
+delivery for any address on any account. Mismatched defaults fail closed; matched defaults fail
+open."* That reasoning is correct and the fallback it defends is correctly built. **The same file
+then leaves a route that issues those tokens on request**, reachable because its guard has the one
+default the rest of the codebase deliberately avoids.
+
+It is also under `/v1/email/unsubscribe`, which `authn.py`'s `_PUBLIC_PREFIXES` exempts from
+authentication entirely — so if the guard is open, the route is open to the internet.
+
+#### Severity, and what decides it
+
+**WRONG rather than BROKEN, on one unread fact.** If production sets `ENVIRONMENT`, the guard holds
+and this is a latent fail-open form. If production does not set it, the endpoint is live and this is
+BROKEN — the same question D-200 leaves open, and the answer is one environment variable that
+nobody here can read. **It needs the same trip to Render that the rest of the §T2 configuration
+questions need.**
+
+Like D-200, it needs an `account_id`. Like D-200, that is not a control: a UUID in a URL, an email
+header or a support ticket is not a secret.
+
+#### The fix
+
+    if settings.ENVIRONMENT != "test":
+        raise HTTPException(status_code=404, detail="Not found")
+
+or delete the route — it is a convenience for generating a test fixture, and `apps/api/tests` can
+call `generate_unsubscribe_token` directly. **Deleting it is the better fix**, for the same reason
+minting a real token is the better fix for D-200: the safest version of a test-only door is no door.
+
+#### Deleted, and why that was the easy call
+
+**It had no caller.** A repo-wide grep for `unsubscribe/token` across `.py`, `.ts`, `.tsx`, `.sh`
+and `.md` returns the route's own decorator and this entry — nothing else. Not a test, not a
+script, not the web app, not the worker. Anything that needs a token calls
+`generate_unsubscribe_token` directly, which is what `worker/email/send.py:75,95` does and what this
+module's own verify path does. The function stays; the HTTP surface goes.
+
+So the choice was never "gate it or delete it" — re-gating would have kept an internet-reachable
+token generator alive for the benefit of nobody.
+
+#### The sweep, and the bug the sweep had on its first draft
+
+`tests/test_api_auth_boundary.py` now fails on **any** `os.getenv("ENVIRONMENT", <not production>)`
+used in an `if` test, anywhere under `apps/api/src/api` — the form rather than the route, so the next
+one written this way fails in CI instead of in production. `routes/admin.py`'s
+`os.getenv("ENVIRONMENT", "production")` is allowed: the default is the safe one.
+
+**The first draft was a regex over the source, and all three sites it found were wrong.** The
+`os.getenv` inside `logger.critical(...)` at `unsubscribe.py:33`, which *reports* the value rather
+than gating on it, and two occurrences inside **comments that quote the bad form in order to warn
+about it** — one of them written two days earlier for D-200. Substring-is-not-a-construct, in a test
+written to catch a defect of that family, by the author who had already been caught by it twice in
+the same week. It now walks the AST: an `if` test is the construct, comments are not in the tree,
+and a logging argument is not a condition.
+
+**REGRESSIONS** — `scripts/regressions/unsubscribe_token_route.json`, 3/3 fired: the route comes
+back; a fail-open gate appears in an `if` test in a file that imports `os`; and a correct gate
+(`routes/devfiles.py`) is rewritten into the fail-open form.
+
+---
+
+### D-202 — the area on a report is stored in one column and read from another, and three of six read sites have no fallback
+
+**Severity:** WRONG · **Affects:** the dashboard's "latest report" line and the market-reports
+list — every report that has not been through the worker shows its area as `Unknown` or blank ·
+**Found during:** B4, by looking at a dashboard with real rows behind it for the first time
+**Status:** `fixed` — `fix/d202-report-area`
+
+`report_generations` has a first-class `cities text[]` column, set when the report is created. It
+also has `input_params jsonb`, and **exactly one statement in the codebase writes it** —
+`apps/worker/src/worker/tasks.py:1232`:
+
+    SET status='processing', input_params=%s, source_vendor='simplyrets'
+
+So `input_params->>'city'` exists only **after the worker has picked the job up**. A queued report,
+a report that failed before processing, and a report created by any path that does not reach that
+line have `cities` and no `input_params`.
+
+Six places read the area. Three of them know this:
+
+| | |
+|---|---|
+| `routes/affiliates.py:932`, `:1024` | `COALESCE(rg.input_params->>'city', rg.cities[1], 'Unknown')` |
+| `routes/company.py:272` | `COALESCE(rg.input_params->>'city', rg.cities[1], 'unknown')` |
+
+Three do not:
+
+| | what it shows for a report the worker has not touched |
+|---|---|
+| `routes/usage.py:82` | `COALESCE(input_params->>'city', 'Unknown')` — **"Unknown"**, and this feeds the dashboard |
+| `routes/reports.py:293` | bare `input_params->>'city'` — **null** |
+| `routes/reports.py:339` | bare `input_params->>'city'` — **null** |
+
+**Measured, not reasoned.** With fourteen reports seeded carrying `cities = ARRAY['Irvine']` and no
+`input_params`, `GET /v1/usage` returns `"city": "Unknown"` for every one, and the dashboard's
+latest-report line renders **"Inventory — Unknown"**. The affiliate view of the same rows returns
+the city.
+
+#### Why it took until now to see
+
+The entry could have been written from the SQL at any point in the last two months. It was not,
+because nobody had a dashboard with rows on it: before B0.5 every authenticated page rendered a
+skeleton, and a skeleton has no area to be wrong about. **This is the first defect the local stack
+found, and it is the kind it was built for** — a correct-looking page whose content is wrong, which
+no amount of reading the component would have shown.
+
+#### Severity, argued
+
+WRONG rather than ROUGH: it is not cosmetic. The dashboard's job is to tell an agent which report
+is the latest one, and "Inventory — Unknown" does not identify a report. It is also the shape this
+board keeps filing — **one fact, two storage locations, and a read path that picked the optional
+one** — with the aggravating detail that half the call sites already carry the fix.
+
+How much is live depends on whether production reports reliably reach `tasks.py:1232`. A report
+that completes does; a queued or failed one does not, and the dashboard shows the most recent
+report **whatever its status**. So the visible case is "the newest report is still processing",
+which is exactly when an agent looks.
+
+#### The fix
+
+Give the three read sites the same `COALESCE(input_params->>'city', cities[1], …)` the other three
+have. Three lines. The better fix is to stop reading `input_params` for this at all — `cities` is
+the column the writer always sets — but that is a change to six queries rather than three and wants
+its own pass.
+
+**Not fixed here.** B4 is a presentation batch; changing what the API returns mid-batch would make
+the before/after diff describe two things at once.
+
+#### Fixed — `fix/d202-report-area`
+
+The three read sites now carry the fallback the other three already had, each with a `-- D-202:`
+note naming why `input_params` alone is not enough:
+
+| | |
+|---|---|
+| `routes/usage.py` | `COALESCE(input_params->>'city', cities[1], 'Unknown') as city,` |
+| `routes/reports.py` ×2 | `COALESCE(input_params->>'city', cities[1]) AS city,` |
+
+**Verified against the running API, not against the diff.** With the local stack up and the
+fourteen seeded reports in `queued`, `processing`, `completed` and `failed`, `GET /v1/usage` and
+`GET /v1/reports` return `Tustin`, `Irvine` and `Orange` for the rows that previously returned
+`"Unknown"` and `null`. The dashboard's latest-report line reads **"Inventory — Tustin"**.
+
+`tests/test_report_area_has_one_source.py` (7 tests) asserts every read of the area sits inside a
+`COALESCE(…, cities[1])`, and — the premise — that `input_params` still has **exactly one writer**,
+in the worker, after the job starts. If something begins writing it at creation time the fallback
+stops being load-bearing and this entry's reasoning wants re-reading rather than its code.
+
+The test **strips SQL `--` and Python `#` lines before it scans anything**, because the fix writes
+comments that mention `input_params`; a scan that counted those would be measuring the explanation.
+It asserts the single writer as **file plus count, never a line number**, because stripping comments
+renumbers every line after the first one removed — which is how `tasks.py:1232` above became
+`:1061` in the stripped text.
+
+`scripts/regressions/report_area.json` — **5 mutations, 5 fired**: each read site losing its
+fallback (3), a second writer of `input_params` appearing, and the fallback written as a comment
+rather than as code. The last one is the §0.6 case in the opposite direction: the mutation that
+*looks* like a fix.
+
+The better fix named above — stop reading `input_params` for the area at all — is still the better
+fix, and still wants its own pass over all six queries.
+
+---
+
+### D-203 — the plan name a customer sees comes from a hard-coded map, not from the plans table, and the two disagree on half their rows
+
+**Severity:** WRONG · **Affects:** the sidebar's plan block on every authenticated route, and
+anything else rendering `plan_usage.plan.plan_name` · **Found during:** B4's bare-account variant,
+by putting a fixture on `team` and reading the sidebar
+**Status:** `fixed` — `fix/d202-report-area`. Answered by [JERRY]: **the table is the authority.**
+
+> **Re-graded FRAGILE → WRONG when the reading was settled.** FRAGILE was the right grade while
+> both readings were open, because under reading 1 nothing was wrong at all. Jerry's answer makes
+> reading 2 the record, and under reading 2 a Team customer was shown another plan's name on every
+> page load — which is this board's definition of WRONG. The grade moved because the *finding*
+> changed, not because the bar did.
+
+`apps/api/src/api/services/usage.py:28`:
+
+    _PLAN_DISPLAY_NAMES = {
+        "free": "Free",            "sponsored_free": "Trial",
+        "trial": "Trial",          "starter": "Starter",
+        "solo": "Starter",         "pro": "Pro",
+        "team": "Pro",             "affiliate": "Affiliate",
+    }
+
+The `plans` table has a `plan_name` column holding a name for every one of those slugs. The two
+agree on four rows and disagree on four:
+
+| slug | `plans.plan_name` | what the product shows |
+|---|---|---|
+| `team` | **Team** | **Pro** |
+| `solo` | **Solo Agent** | **Starter** |
+| `sponsored_free` | **Sponsored Free** | **Trial** |
+| `affiliate` | **Industry Affiliate** | **Affiliate** |
+
+**Measured.** An account whose `accounts.plan_slug` is `team` gets
+`{"plan_slug": "team", "plan_name": "Pro"}` from `/v1/account/plan-usage`, and the sidebar renders
+**"PRO PLAN"** above its usage bars. A Team customer is told, on every page load, that they are on
+Pro.
+
+#### Two readings, and this entry does not pick one
+
+1. **Deliberate tier collapsing.** `solo` and `starter` share a 25-report limit; `team` and `pro`
+   share an unlimited one. The map may be the customer-facing tier names for a set of legacy
+   slugs, in which case the behaviour is correct and the `plans.plan_name` column is the thing
+   that is wrong — a column nothing displays, sitting next to one that does.
+2. **Drift.** The map is a literal and the table is data; literals fall behind. Four rows out of
+   eight is a lot of coincidence for an intentional design, and nothing in the file says it is one.
+
+**The code gives no evidence either way.** There is no comment on the map, no migration note, and
+no test asserting the correspondence in either direction.
+
+#### Why it is filed as FRAGILE rather than WRONG
+
+Nothing is broken for a `free`, `trial`, `starter` or `pro` account, which is most of them. What is
+fragile is that **one fact has two sources and nothing records which is authoritative** — the same
+shape as D-202 one entry up, found the same afternoon. A new plan added to the table shows up in
+the sidebar as `undefined` unless somebody also edits the literal, and nothing will say so.
+
+#### What settles it — **[JERRY]**
+
+*Which name should a `team` account see: "Team" or "Pro"?* That is a customer-facing naming
+decision, not an engineering one, and §0.2 says to stop rather than guess. The same question
+covers `solo`, `sponsored_free` and `affiliate`.
+
+Once answered, the fix is one of two shapes and both are small:
+
+- **if the map is right** — delete `plans.plan_name`, or add a comment and a test saying the column
+  is storage-only and the map is the display source;
+- **if the table is right** — read `plan_name` from `plans` in `resolve_plan_for_account` and delete
+  the map.
+
+Either way it wants a test asserting a single source, because the present arrangement cannot tell
+you which answer it is implementing.
+
+#### Answered — [JERRY]: read the name from the `plans` row, delete the map
+
+> *"Same answer as D-093 — an account with no plan got a hardcoded 100 while the table said 3, and
+> the fix was resolve at runtime with no literal. This is that defect in the display-name column."*
+
+So the second shape, and **no column to add**: `plans.plan_name` already exists, and
+`0013_unify_plans_table.sql:63` already documents it —
+
+    COMMENT ON COLUMN plans.plan_name IS 'Human-readable plan name displayed in UI';
+
+— which is as close as this codebase comes to a written answer. The column that says in its own
+comment that it is what the UI displays was not what the UI displayed.
+
+**Nothing in the code evidenced the tier-collapsing reading**, so it was treated as drift. No
+comment on the map, no migration note, no test, and nothing in the admin panel. `solo`/`starter`
+and `team`/`pro` sharing a limit is a coincidence of the *limits*, not a record of anyone deciding
+to collapse the *names*. Jerry's rule for the case where it is genuine: **if two plans should share
+a display name, that is a value in the table** — visible, queryable, editable from the admin panel
+— not a literal in a service file.
+
+**And the drift has a traceable origin for one row.** `0012_seed_plans.sql` tries to insert
+`('affiliate', 'Affiliate', …)` with `ON CONFLICT (plan_slug) DO NOTHING`, but
+`0007_phase_29a_plans_and_account_types.sql` had already seeded `('affiliate', 'Industry Affiliate',
+…)`. The insert was a no-op, the table kept `Industry Affiliate`, and the Python map kept the name
+0012 wanted. The literal is not an arbitrary guess — it is **a migration's intent that never
+landed**, preserved in a place where no `ON CONFLICT` could stop it.
+
+#### Fixed — `fix/d202-report-area`
+
+The map is gone. `resolve_plan_for_account` already selected `p.plan_name` from the `plans` row the
+account points at and then threw it away; it now returns it:
+
+    display_name = plan_name or plan_slug
+
+**No literal fallback.** The old line ended `… or "Free"`, so an account on a slug with no `plans`
+row was told it was on Free. An unknown slug now shows the slug.
+
+**Measured live, before and after — not read off the diff.** Both columns were captured by
+checking out the pre-fix service, restarting the API against the same database, and asking it
+again; neither is a reconstruction from the map.
+
+`GET /v1/account/plan-usage`, five accounts, one per slug the fixture uses:
+
+| slug | `plans.plan_name` | `plan_name` before | `plan_name` after |
+|---|---|---|---|
+| `team` | Team | **Pro** | Team |
+| `affiliate` | Industry Affiliate | **Affiliate** | Industry Affiliate |
+| `sponsored_free` | Sponsored Free | **Trial** | Sponsored Free |
+| `starter` | Starter | Starter | Starter |
+| `free` | Free | Free | Free |
+
+And the rendered label, read out of Chromium against the running stack:
+
+| account | sidebar before | sidebar after |
+|---|---|---|
+| `team` | **PRO PLAN** | TEAM PLAN |
+| `starter` | STARTER PLAN | STARTER PLAN |
+
+The `PLAN` suffix and the capitals are `app-layout.tsx:473` — `{planUsage.plan.plan_name} Plan`
+under `uppercase`. **Two accounts, not five, because that block is gated on
+`!isAdmin && !isCompanyAdmin && !isAffiliate`**: an affiliate or title-company account renders the
+name through `AffiliateDashboardShell.tsx:278` instead, and minting a `REGULAR` token for an
+affiliate account to make the first block render would have photographed a page no affiliate user
+sees. The other three rows are proved at the API, which is where the defect was.
+
+**And one literal in the web layer, found by grepping for the other half of the rule.**
+`AffiliateDashboardShell.tsx:278` read `{planUsage.plan?.plan_name || 'Affiliate'} Plan` — the same
+guess the map made, one layer up, for an account whose plan object is absent. It now renders the
+row's name, or the slug, or **no pill at all**. Three lines below it do the same thing with plan
+*limits*, including a `|| 99999` that renders an absent limit as unlimited; that is **D-204**,
+filed and not fixed, because I have not established the fallback is reachable.
+
+`tests/test_plan_display_name_comes_from_the_table.py` (14 tests). What it asserts, and the two
+things worth knowing about how:
+
+- **The slugs and the display names are parsed out of `db/migrations`, never typed into the test.**
+  A test that hard-codes `{"team": "Team"}` to prove the code does not hard-code `{"team": "Pro"}`
+  has moved the literal, not removed it, and would drift exactly as the map did. A plan added to
+  the seeds arrives in the parametrised cases on its own.
+- **The scan is structural — it reads the AST, so comments are never looked at.** The fix writes a
+  comment block that names the deleted map and quotes `"PRO PLAN"`. A text scan would have been
+  measuring that explanation, which is §0.6's eighth instance in six days and three of those were
+  in tests written against this same family.
+
+The gates: `plans` still owns a display-name column; the service still selects `p.plan_name`;
+the `display_name` assignment contains **no string constant**; no dict literal anywhere under
+`apps/api/src/api` maps two or more plan slugs to name-shaped strings (**the shape, not the name**,
+so reintroducing it as `_TIER_LABELS` does not evade it); and the service quotes none of the
+display names the migrations write — which covers the non-dict form, `if slug == "team": "Pro"`.
+
+The dict detector requires values of **letters and spaces only**, which keeps this codebase's
+legitimate slug→Stripe-price-id maps (`price_1SO4sD…` carries digits) and slug→limit maps (ints)
+out of it. Both exemptions were checked by planting such a dict and confirming the suite stayed
+green, then planting `_TIER_LABELS = {"team": "Pro", "solo": "Starter"}` and confirming it went red.
+
+`scripts/regressions/plan_display_name.json` — **5 mutations, 5 fired**: the map returns under its
+old name; the `or "Free"` fallback returns; the map returns under a *different* name; one slug is
+special-cased without a dict (`if plan_slug == "team": display_name = "Pro"` — the ticket's exact
+symptom); and the `SELECT` loses `p.plan_name`, which is the premise the one-line fix rests on.
+
+---
+
+### D-204 — the affiliate dashboard's usage bars fall back to hard-coded plan limits, and the schedules one falls back to the unlimited sentinel
+
+**Severity:** FRAGILE · **Affects:** `/app` for an `INDUSTRY_AFFILIATE` account whose
+`plan-usage` response has no `plan` object · **Found during:** D-203's fix, by grepping the web
+layer for the other half of the same rule
+**Status:** `open`
+
+D-203's rule — *no fallback to a literal, an unknown slug shows the slug or nothing* — was applied
+to the display name in the service and to `AffiliateDashboardShell.tsx:278` in the web layer. Three
+lines immediately below that one are the same defect in the **limit** column, which is D-093's own
+column:
+
+    used={planUsage.usage?.market_reports_used || 0}
+    limit={planUsage.plan?.market_reports_limit || 5000}
+    limit={planUsage.plan?.schedules_limit || 99999}
+    limit={planUsage.plan?.property_reports_limit || 100}
+
+`5000` is the affiliate plan's seeded limit, `100` is **the same literal D-093 was filed about**,
+and `99999` is this codebase's unlimited sentinel — so an affiliate account whose plan object is
+missing is shown a schedules bar that says it has no limit at all. The generous direction, and the
+one nothing complains about.
+
+#### Why it is FRAGILE and not WRONG
+
+**I have not established that the fallback is reachable.** `/v1/account/plan-usage` always returns
+a `plan` object after D-203 — `resolve_plan_for_account` defaults an absent slug to `free` and
+reads that row — so on the live path these `||` arms are dead. What makes them fragile rather than
+harmless is that they are the *only* record of those three numbers in the frontend, they are three
+copies of data the table owns, and the component reads them with `?.` precisely because somebody
+expected the object to be absent sometimes. One of those two beliefs is wrong and the code holds
+both.
+
+Establishing which is the first step of any fix, and it is the step D-131 skipped.
+
+#### The fix, when it is taken
+
+Render no bar rather than a bar with an invented ceiling, the same way the display-name pill now
+renders nothing rather than guessing `'Affiliate'`. Not taken here: it changes what an affiliate
+dashboard shows in a case nobody has yet proved happens, which wants its own before/after rather
+than riding along on a two-line API fix.
+
+Related: D-093 (a hard-coded `100` standing in for the table), D-195 (the unlimited bar), D-203
+(the display-name column of this same defect).
+
+---
+
+### D-205 — the PDF contrast ratchet has not passed since 2026-09-30, and the surface it measures is brand-dependent
+
+**Severity:** FRAGILE · **Affects:** every branch — the gate fails before anything is changed; and, in
+the document itself, any customer whose brand colour is light · **Found during:** D-202/D-203's
+full-suite run, then bisected
+**Status:** `fixed` — `fix/d205-d206-design-ruling`, 2026-10-21, to Design's ruling.
+
+    FAILED apps/worker/tests/test_pdf_contrast.py::test_no_new_unreadable_text_in_the_pdfs
+    4.44:1  #ffffff on #a66b07  div.cover-agent-name  in property__linen
+
+#### Not this container, and not this branch
+
+The same line, byte for byte, in CI on `main`: run 39482608779, `1 failed, 2992 passed`, and the
+`::error::` annotation D-191 added names this test and no other. Every `Backend Tests` run on `main`
+in the last two days is `failure`, and the workflow's own header already recorded 25 consecutive red
+runs before that.
+
+#### Bisected. It has never passed in its current form
+
+One test, one commit at a time, in a worktree:
+
+| commit | date | result |
+|---|---|---|
+| `8f55f0d7` | 09-30 | **1 passed** — hit-testing, baseline matched its measurement |
+| `8ca6104b` | 09-30 | **34** pairings not on the baseline ← the measurement switch |
+| `a83d9d77` | 09-30 | 2 |
+| `3ac024e4` | 09-30 | 2 |
+| `c225e4f8` | 10-05 | 1 |
+| `68a73605` | 10-06 | 1 |
+| `e546e07f` | 10-07 | 1 |
+| `0c6581b8` | 10-08 | 1 |
+| `2726c599` | 10-13 | 1 |
+| `d7247a51` | 10-20 | 1 |
+
+`8ca6104b` is *fix(contrast): the gate stops hit-testing — and the switch was not a clean
+subtraction (#128)*. It is the last commit that wrote data rows into the baseline — `+63 / -88` —
+and **at that commit its own measurement reported 34 pairings the baseline it shipped did not
+describe.** Every commit since has only *removed* rows, as a shrinking ratchet should. The count
+fell 34 → 2 at the very next commit and 2 → 1 when `teal` was cut. One has been left for twenty
+days.
+
+**What dropped 34 to 2 was `a83d9d77`, the colour tolerance — not the decliner.** The first
+telling of this entry said `3ac024e4` ("decline text the measurer cannot read") silenced them, and
+that is wrong: the bisect puts the drop one commit earlier, at *"match baseline colours with a
+tolerance — and 48 was wrong"*, and `3ac024e4` left the count at 2. The tolerance absorbed 32
+findings into baseline rows they had drifted away from, which is the job it was built for.
+
+**Checked rather than assumed.** At `d7247a51` the tolerance absorbs **20** findings — the gate
+would report 21 without it and reports 1 with it. Every one of the 20 is matched to a row produced
+by **the same brand**, at a distance of 1 to 4:
+
+    property__linen  div.cover-label  #c9a962 on #e0910a  (amber)  -> baseline #e0900a  distance 1
+    property__linen  div.cover-city   #ffffff on #72b012  (lime)   -> baseline #73b113  distance 3
+    …eighteen more, all same-brand, max distance 4
+
+Two slots do have different brands within tolerance of each other, and both are the opposite of a
+collapse: `property__harbor`'s `div.cover-city` and `div.brand` paint **distance 0** across all six
+brands, because harbor's cover is a fixed navy and white rather than a brand tint. That is one
+pairing measured six times and correctly one baseline row.
+
+So nothing is hidden by the tolerance. What *is* hidden is in the declined set — **D-206**.
+
+#### Why it differs from the 2026-09-29 capture — the entry was re-keyed, not lost
+
+The pairing **was** recorded before the switch. The 2026-09-29 baseline carried two rows for it:
+
+    property__elegant  div.cover-agent-name  #ffffff  #6aa312     <- lime
+    property__elegant  div.cover-agent-name  #ffffff  #c47e09     <- amber
+
+`#c47e09` is 0.8 × `#F59E0B`, the amber brand — the old DOM walker enumerated *every colour a
+gradient names* and composited the footer's `rgba(0,0,0,0.2)` over the gradient's **start** stop.
+The pixel sampler reads **the modal pixel of five points across the text run**, which lands
+two-thirds of the way down the same gradient: `#a66b07`, which is 0.677 × `#F59E0B`. **Distance 51.**
+No key tolerance could have carried that entry across the switch — 12 exists to absorb churn of 2
+to 4, not a change of method — and the regeneration in that commit was what should have re-keyed
+it. For 30 of the 34 it eventually did, through later commits. For this one it never did.
+
+#### The tolerance asymmetry was MY diagnosis and it was wrong
+
+The first version of this entry said the failure was the key tolerance absorbing colour drift while
+the ratio has none, and pointed at `div.cover-agent-title #e8d5a3 #a46a07` sitting at distance 3
+from the failing backdrop. **That is not what is happening.** A baseline key is
+`(family, selector, fg, bg)`; a different selector with a different foreground is a different
+readability fact, and `#e8d5a3` at 3.08:1 and `#ffffff` at 4.44:1 are correctly two entries. The
+nearest baseline row with the same family, selector and foreground is `#58880e` — **distance 114**,
+a genuinely different brand. No tolerance, on either axis, is implicated.
+
+The asymmetry is real as a property of the file and it is still worth not fixing: a ratio tolerance
+wide enough to absorb 0.06 would have hidden this pairing, and it is a real failure.
+
+#### What it actually is: a per-brand surface described by one entry
+
+Every measured run of this selector, from a single pass over the property corpus — 2,640 runs, 12
+of them here:
+
+| theme · brand | brand colour | backdrop | ratio | in the baseline? |
+|---|---|---|---|---|
+| `linen` · lime | `#84CC16` | `#58880e` | **4.25** | **yes** |
+| `linen` · amber | `#F59E0B` | `#a66b07` | **4.44** | **no** — this is the failure |
+| `linen` · luxury_estates | `#0D9488` | `#08645c` | 7.03 | n/a |
+| `linen` · demo_title | `#DC2626` | `#951919` | 8.64 | n/a |
+| `linen` · coastal | `#0E7490` | `#084d60` | 9.37 | n/a |
+| `linen` · violet | `#7C3AED` | `#5427a0` | 9.66 | n/a |
+| `harbor` · all six | — | `#ffffff` | 16.24 | n/a — dark text on white |
+
+**Two of six brands fail, and the gate is silent about the worse one.** Lime at 4.25 is baselined,
+so it passes review; amber at 4.44 is not, so it fails the build. The gate reports the better of the
+two failures and says nothing about the one below it.
+
+The backdrop is **0.677 × the brand colour** on every one of the six, to within channel rounding —
+`linen_report.jinja2:13` sets `--burgundy: {{ theme_color }}`, `:46` paints the cover as a gradient
+from it, and `:62` lays the footer on `rgba(0,0,0,0.2)`. So **this ratio is a function of the
+customer's brand colour and the template cannot fix it for all brands.** The two that fail are the
+two light ones; brand relative luminance, for the record: violet 0.134, coastal 0.146, demo_title
+0.167, luxury_estates 0.230, **amber 0.439, lime 0.481**. Nothing in the corpus sits between 0.23
+and 0.44, so the cut-off cannot be read off these six — which is the sharpest version of the
+finding: **a seventh brand in the corpus could add a failure with nothing in the template changed,
+and the gate would call it a regression.**
+
+#### Severity
+
+0.06 of contrast on an agent's name is ROUGH on its own. FRAGILE is for the gate: **a ratchet red on
+the default branch has stopped ratcheting** — it cannot report the next regression because it is
+already failing, and D-191's fix made that red *legible* without making it green. Fourth instance on
+this board of a check that is on and inert, after the two weeks of red CI in October and D-038 /
+D-041.
+
+#### What not to do
+
+#### ANSWERED by Design, 2026-10-21 — option 3, structural, and both surfaces are retired
+
+**Relayed, not read: Design's full answer is with [JERRY] and this entry has the ruling only.**
+What came back:
+
+* **option 3**, a scrim or a solid plate — the structural remedy;
+* **both surfaces are already retired in the redesign**, so D-205 and D-206 are legacy defects
+  with an expiry rather than things to design around;
+* and a one-line kill of option 1 worth recording verbatim in substance: **the `0.677 × brand`
+  backdrop IS option 1.** A derived colour applied to the agent's brand is what the footer already
+  does, and it is what fails. We would have taken option 1.
+
+That argument is better than the one this entry made for the same conclusion, and it is the reason
+the stopgap below is **held rather than applied** — see the two mapping problems under "What has
+to be resolved first".
+
+**Do not regenerate the baseline.** Recording `#a66b07` would close the finding by writing it down,
+which is the one move the file exists to prevent — and it would leave lime's 4.25 equally
+undisturbed. The three candidate fixes, of which Design has now picked the third:
+
+1. **the footer overlay** — `rgba(0,0,0,0.2)` → a darker value raises white's ratio for every brand
+   at once, and is the only one of the three that fixes the document rather than the gate. It
+   changes what ships, so it is Design's;
+2. **a floor on the derived backdrop** — clamp the composited footer colour so white always clears
+   4.5 whatever the brand, which is the `display_ink` / `accent_ink` pattern this codebase already
+   has (D-171, D-177) applied to one more surface;
+3. **key the baseline per brand, or stop pretending one entry can describe six** — the honest
+   bookkeeping fix, and the one that makes the other two reviewable.
+
+#### The detection fix — built, and it locates the boundary the presets could not
+
+`scripts/sweep_cover_brand_space.py` + `tests/test_cover_brand_sweep_is_current.py`. Three live
+themes × 38 brands — 32 spaced evenly in **relative luminance** with the hue rotating, plus the six
+presets — 16,720 text runs measured by the same pixel instrument the gate uses.
+
+The number this entry was filed around:
+
+| | |
+|---|---|
+| `linen` · `div.cover-agent-name` | **passes up to L=0.417, fails from L=0.439** |
+
+The six presets could only say *"somewhere between 0.230 and 0.439"*. The boundary is now pinned to
+a band 0.022 wide, and it is a **property of the surface rather than of the corpus** — which is the
+whole difference.
+
+And the surrounding picture, which the presets understated badly. Failing brands out of 38:
+
+| theme | surface | fails |
+|---|---|---|
+| `linen` | `div.cover-label` | **36/38** |
+| `linen` | `div.cover-brand-text` | 34/38 |
+| `linen` | `th` / `td` | 29 / 28 |
+| `linen` | `div.cover-agent-title` | 25/38 |
+| `linen` | `div.cover-agent-name` | 19/38 |
+| `harbor` | `div.brand` | **38/38** — every brand |
+| `harbor` | `div.cover-agent-title` | 29/38 |
+| `harbor` | `span` (the title) | **declined for all 38** |
+| `atlas` | eight `span.*` | 1/38 each, all at L=0.190 |
+
+**`atlas` is the control and it holds.** Eight surfaces fail at exactly one ramp step out of
+thirty-eight; the other two themes fail across most of the space. Atlas is the theme already
+rendering through Design's shared `_v2` page with the `on_primary` / `primary_on_dark` roles — so
+the sweep independently reproduces the ruling: the covers that are not yet on that architecture are
+the covers that fail.
+
+**Four bugs in the sweep, each the family it was built to catch, each recorded where it happened:**
+
+1. roles were read from the **entry template only**, so `atlas` recorded `roles_used: []` — its
+   roles live in the `_v2` include. Follows includes transitively now.
+2. `ROLE_NAMES` knew **one generation of token**. `atlas` names the same values `primary`,
+   `on_primary`, `tint`, `display_ink`; reading only `theme_color*` said atlas had no brand-derived
+   roles while the sweep was measuring its cover failing.
+3. the surface filter matched selectors containing `cover` or `brand`, which **excluded D-206's own
+   surface** — its selector is bare `span`. Replaced with measured brand-dependence: a surface is
+   kept when its colours actually move with the brand.
+4. the slot key was `(selector, foreground)`, and where the **foreground** is the brand-derived half
+   every brand produced a different key — one row per brand instead of a curve. **A key that
+   includes the thing being varied cannot describe the variation.**
+
+#### What the first run did and did not find — checked, because a claim arrived that it did
+
+A finding reached us that the sweep's first run turned up a **new** defect outside its remit: a
+fixed colour, `#5E636B` on `#F6F5F1` at **4.33:1**, failing on every brand and invisible to the six
+presets. **The record does not support it, and the pairing is in the record**, which is what makes
+it worth writing down rather than simply denying.
+
+`#5e636b on #f6f5f1` is `atlas`'s `span.nophoto-note` and `span.step-body` at ramp step 03. It is
+measured at **5.54:1 against a 4.5 threshold — passing** — and across all 38 brands that pairing
+runs **5.35 to 6.01**, passing everywhere. There is no 4.33 in it.
+
+**And there is exactly one fixed-colour failure in the whole sweep**, found by asking which
+surfaces have the same foreground *and* the same backdrop on every brand:
+
+    harbor  div.brand  #94a3b8 on #ffffff  2.56:1 / 4.5  fails 38/38
+
+It is **already on the contrast baseline**, twice — `pdf_contrast_baseline.txt:70-71`, on `#ffffff`
+and on `#f1f5f9`. So it is recorded and unfixed rather than newly discovered, the six presets
+reported it identically, and the gate is silent about it by policy and not by oversight.
+
+**So the honest account of the first run is: no new defect.** What it produced was the boundary
+(`passes to L=0.417, fails from L=0.439`), the much wider spread on `linen`'s cover — 36 of 38
+brands on `div.cover-label` — and `atlas` as a clean control at 1 of 38. That is what the sweep was
+for, and it did it. **The attractive version of the story — that a sweep for brand-dependence
+found a brand-independent defect on its first execution — is not what happened here**, and it is
+recorded as not having happened because the next person to read this entry will find the hex pair
+in the record and could reconstruct the claim from it.
+
+The argument for sweeps does not need it. A sweep measures the space instead of the samples
+somebody thought to pick; locating a boundary the presets could only bracket is that argument,
+and `div.brand` at 2.56:1 — the worst pairing on any live property cover, baselined and failing for
+every brand — is a reminder that the quiet failures here are the recorded ones.
+
+The gate asserts what a record cannot assert about itself: that it still names the themes the
+registry has, the template each one renders, and the roles those templates interpolate **now** —
+and that every declined surface carries the per-brand arithmetic excusing it. That last one is
+D-206 made structural, and it was seen to fail: blanking `harbor`'s calculation gives
+`declined surface(s) with no recorded calculation: harbor span`.
+
+**Nothing in this investigation changed a template, the baseline, or the measurement.** The entry
+is the deliverable.
+
+#### What has to be resolved first — two mapping problems, both found before applying anything
+
+**1. The theme names.** Design named the live themes `elegant`, `bold`, `modern` and called
+`harbor` removed. Ours are `atlas`, `linen`, `harbor`. Resolved from `themes.json`, which is
+canonical: **their names predate our 2026-10-13 rename and their live list is exactly our three.**
+`bold → atlas` (5), `elegant → linen` (3), `modern → harbor` (2); ids unchanged; the retired pair
+is `classic` (1) and `teal` (4), cut 2026-10-05, and **nothing has been retired since.**
+
+So **`harbor` is live**, it is id 2, and it is the theme that carries the gradient cover title —
+D-206's surface. Had "harbor = removed" been taken at face value, the stopgap would have been
+skipped on a live cover. Why Design could reach it is **D-207**, and it is ours.
+
+**2. The stopgap tokens are the `_v2` tokens, and `on_primary` is this codebase's
+`theme_color_text` — proved, not assumed.** Design specifies `on_primary` for the footer band and
+`primary_on_dark` for the glyphs. Those are the names in
+`templates/property/_v2/report.jinja2` — Design's own shared page, which `atlas` already renders
+through (`primary` ×35, `on_primary` ×9, `tint` ×7, `display_ink` ×6, `primary_on_dark` ×2). **So
+the vocabulary is not from another product; it is the vocabulary of the architecture these two
+covers have not been moved to yet.** `linen` and `harbor` are the two themes still carrying their
+own 720- and 795-line templates and the older `theme_color_*` roles, which is precisely why they
+are the two that fail.
+
+The mapping is exact. `compute_color_roles(brand)["theme_color_text"]` against a solid brand
+reproduces `golden/themes.json`'s `contrast_on_primary` **to the hundredth for all six brands**:
+
+| brand | ink | on solid brand | `golden` `contrast_on_primary` |
+|---|---|---|---|
+| demo_title | `#ffffff` | 4.83 | 4.83 |
+| luxury_estates | `#14151a` | 4.87 | 4.87 |
+| coastal | `#ffffff` | 5.36 | 5.36 |
+| amber | `#14151a` | 8.49 | 8.49 |
+| lime | `#14151a` | 9.23 | 9.23 |
+| violet | `#ffffff` | 5.70 | — |
+
+Same token, two names, and **an existing golden gate already holds it above 4.5 for any brand.**
+
+**Which settles what the instruction means: the plate is not optional.** `on_primary` is ink
+guaranteed against **`primary`**, so it is only correct where the surface *is* `primary`. Swap the
+ink and leave the band as `rgba(0,0,0,0.2)` over the gradient — which lands at `0.677 × brand` —
+and it goes the wrong way: luxury_estates from **7.03 to 2.59**, amber from 4.44 to 4.10, lime
+still failing at 4.40. The first reading of this section recorded that as "the stopgap makes it
+worse". It is not; **it is what the stopgap looks like with its structural half left out.**
+
+So, measured, the stopgap as specified works on both surfaces:
+
+| surface | change | worst of six |
+|---|---|---|
+| `linen` footer band | solid `theme_color` plate, ink `theme_color_text` | **4.83** vs 4.5 |
+| `harbor` cover title | solid `theme_color_on_dark` glyphs, gradient and circles removed | **3.90** vs 3.0 |
+
+#### Why it is still not applied — and the decision is [JERRY]'s, not Design's
+
+**Changing the band colour re-keys the baseline.** An entry is
+`(family, selector, fg, bg)`; `pdf_contrast_baseline.txt` carries **36 `property__linen` rows**, of
+which **5 are footer selectors** (`cover-agent-*`, `cover-logo`) keyed on the tinted band. A solid
+plate orphans those 5 and introduces new keys for whatever the new pairings are — and the reverse
+check fires on orphans as loudly as the forward check fires on new findings. The same is true, more
+mildly, for `harbor`: solid glyphs are *measurable*, so that surface **rejoins** the gate and
+`EXPECTED_DECLINED` drops to 0, which is a change to an asserted constant.
+
+There is a sanctioned path and it is already written in the baseline's own header — Jerry,
+2026-10-06: *"regenerate per surface as each lands… a baseline cannot describe a document that no
+longer exists… a template replacement is not casual."* Five rows, one family, every other line
+byte-identical, and the diff is the review.
+
+**But the standing instruction is that the baseline stays untouched**, and it was given against
+exactly the failure mode a regeneration risks. Those two do not conflict in principle — one is
+about hiding a finding, the other about describing a replaced surface — and which applies here is a
+call for whoever owns the policy. **So both stopgaps are held together, as one decision, and what
+they cost is now measured rather than estimated: 5 orphaned rows, an `EXPECTED_DECLINED` of 0, and
+two surfaces that clear their thresholds for every brand.**
+
+---
+
+### D-206 — the contrast gate declines the harbor cover title on a hand calculation done for a colour no customer has, and up to four of six brands fail it
+
+**Severity:** WRONG · **Affects:** the property report cover for any account whose brand is dark —
+one of the six brands in the corpus on any reading, four on the conservative one ·
+**Found during:** D-205, checking whether the runs the measurer declines deserved it
+**Status:** `fixed` — `fix/d205-d206-design-ruling`, 2026-10-21, to Design's ruling.
+
+`test_pdf_contrast.py` excludes six runs from the gate as unmeasurable. They are one element —
+`property__harbor`, `.cover-title span`, the word **"Report"** at 56px — once per brand.
+
+#### The decline is correct in kind. Verified, not assumed
+
+`harbor_report.jinja2:52` paints those glyphs with a gradient clipped to the text:
+
+    .cover-title span{background:var(--gradient-coral); -webkit-background-clip:text;
+                      -webkit-text-fill-color:transparent;}
+
+The pixel measurer blanks glyphs with that same property, so for this element blanking changes
+nothing and the "backdrop" sample returns **the element's own gradient**. Measured: amber's
+backdrop reads `#f6a722`, which is a point on `--gradient-coral`, not the near-black
+`--gradient-dark` the title actually sits on. The numbers are meaningless and declining them is
+right. D-154 got that part correct.
+
+#### What the decline rests on, and why it no longer holds
+
+The commit that introduced it (`3ac024e4`) justified it with a hand calculation: *"4.47:1 at the
+worst pair of stops, 9.28:1 at the best."* Both reproduce to the digit —
+
+    #FF6B5B on #2D3348 = 4.47        #FFB199 on #1A1F36 = 9.28
+
+— and `#FF6B5B` is **the template's default coral**, the value used when no brand is set. But
+line 21 is
+
+    --gradient-coral: linear-gradient(135deg, {{ theme_color }} 0%,
+                                      {{ theme_color_light }} 50%, #FFB199 100%);
+
+so the gradient's **first stop is the customer's brand colour**. The calculation was done for the
+one colour no customer has.
+
+Redone per brand, worst glyph stop against the worst point of the backdrop (`--gradient-dark`'s
+lighter stop `#2D3348`, plus the 10%-opacity brand circle at `:44`), threshold **3.0** because
+56px is WCAG large text:
+
+| brand | stop 0 | stop 50% | worst pairing | |
+|---|---|---|---|---|
+| violet | `#7C3AED` | `#a97ef3` | **2.07** | **fails** |
+| coastal | `#0E7490` | `#62a4b6` | **2.16** | **fails** |
+| demo_title | `#DC2626` | `#e87171` | **2.49** | **fails** |
+| luxury_estates | `#0D9488` | `#61b9b1` | **2.99** | **fails** |
+| amber | `#F59E0B` | `#f8bf60` | 4.91 | passes |
+| lime | `#84CC16` | `#afdd67` | 5.27 | passes |
+
+**Four of six on that reading — and the count is sensitive to the reading, which the first telling
+of this entry did not say.** The backdrop is itself a gradient (`#1A1F36` → `#2D3348`) with the 10%
+brand circle over it, and the table above takes the worst corner: the lighter stop, tint included.
+The whole sensitivity:
+
+| brand | lighter stop + tint | lighter stop, no tint | darker stop, no tint |
+|---|---|---|---|
+| violet | **2.07** | **2.20** | **2.85** |
+| coastal | **2.16** | **2.33** | 3.03 |
+| demo_title | **2.49** | **2.59** | 3.36 |
+| luxury_estates | **2.99** | 3.34 | 4.34 |
+| amber | 4.91 | 5.82 | 7.56 |
+| lime | 5.27 | 6.33 | 8.22 |
+
+So: **violet fails on every reading**; coastal and demo_title fail on all but the most favourable
+corner; **luxury_estates fails only with the tint included.** One brand fails this cover however it
+is measured, three on the ordinary reading, four on the conservative one. Whether a glyph of
+"Report" actually sits on one of the circles was not verified per brand.
+
+**None of which the gate reports**, because it declines all six. And the entry's argument does not
+turn on the count: the surface derives a contrast pair from a colour it does not control, which is
+true at 2.07 and at 2.99.
+
+#### The two cover surfaces fail in opposite directions
+
+D-205's failing surface is `linen`'s agent name — white on a brand-tinted footer — and the two
+brands that fail it are **amber and lime**, the light ones. This surface is brand-coloured glyphs
+on near-black, and the ones that fail it are **the dark ones** — violet on every reading, up to all
+four. The same six brands, two covers, and **the failing sets are disjoint on every reading**:
+nothing that fails one fails the other. Neither surface can be fixed by choosing a better colour,
+because the colour is the customer's.
+
+#### Why a count gate could not catch it
+
+`EXPECTED_DECLINED = 1` asserts the number of distinct declined **elements**, and its failure
+message tells the next person to *"work out its real contrast by hand"* when a new one appears. It
+is a good guard against the blind spot growing silently, and it passes today. What it cannot notice
+is that the element it already covers **changed template and changed colour model** underneath it:
+`modern` was renamed to `harbor` (`2726c599`) and rewired onto Design's page architecture in
+between, and the justification was never recomputed. The count was right the whole time; the
+reasoning behind the count expired.
+
+That is the shape this board keeps filing — a check that stayed green across the change that
+invalidated what it was checking — and it is why the entry is WRONG rather than FRAGILE: the
+document is genuinely unreadable at 2.07:1 for a violet-branded customer, and nothing reports it.
+
+#### ANSWERED by Design, 2026-10-21 — and this surface's stopgap is the half that works
+
+**Relayed, not read — Design's full answer is with [JERRY].** Option 3, structural; both surfaces
+retired in the redesign, so this is a legacy defect with an expiry; and option 1 killed on the
+ground that the `0.677 × brand` backdrop on D-205's surface **is** option 1 and fails.
+
+For this surface the specified stopgap is `primary_on_dark` as a **solid** glyph colour with the
+gradient and the two 10%/8% circles removed. Under our property roles that is
+`theme_color_on_dark`, and it clears the threshold for every brand with margin:
+
+| brand | `theme_color_on_dark` | vs `#2D3348` | vs `#1A1F36` |
+|---|---|---|---|
+| demo_title | `#ff5151` | 3.90 | 5.06 |
+| coastal | `#0e9cc2` | 3.90 | 5.07 |
+| violet | `#a979ff` | 4.09 | 5.31 |
+| luxury_estates | `#0da89a` | 4.22 | 5.48 |
+| amber | `#F59E0B` | 5.82 | 7.56 |
+| lime | `#84CC16` | 6.33 | 8.22 |
+
+Worst case **3.90:1** against 3.0, and it is brand-independent in the sense that matters — the
+derivation has a floor built into it, which is what `theme_color_on_dark` is for. **Solid also
+removes the decline**: glyphs painted by `color` are measurable, so this surface would rejoin the
+gate and `EXPECTED_DECLINED` would go to 0.
+
+**Held anyway**, with D-205's, because the two were specified as one decision and D-205's half is
+measurably worse than doing nothing — see the mapping section on that entry. Applying this one
+alone would also leave the gate's declined count at 1 for a surface nobody had fixed, which is how
+this entry started.
+
+See `docs/COVER_CONTRAST_FOR_DESIGN_2026-10-20.md`. Nothing is changed here — not the template, not
+the baseline, not `EXPECTED_DECLINED`.
+
+What *could* be done in the meantime without touching the document: record the per-brand hand
+calculation next to `EXPECTED_DECLINED` so the next rename cannot carry it silently, and make the
+gate's failure message name the brands rather than the element. Both are bookkeeping; neither makes
+the cover readable. **Both are now built** — `scripts/sweep_cover_brand_space.py` carries the
+calculation in its record and `tests/test_cover_brand_sweep_is_current.py` fails on a declined
+surface that has none.
+
+#### A DECLINE THAT REPORTS — the shape, specified and not applied
+
+WCAG has no model for a text surface whose contrast varies across the glyph run. A gradient clipped
+to the letters is one ratio at the first stop and another at the last, and the standard has no rule
+for *"some of the letters pass"*. So the question is **not** how to measure this surface. It is how
+to decline it in a way that reports rather than hides — because `EXPECTED_DECLINED = 1` failed by
+being **silent**, not by declining.
+
+Declining the *measurement* must not decline the *finding*. Three parts, and the first two exist:
+
+1. **the arithmetic lives with the exclusion, per brand, dated** — built; it is in the sweep record
+   and a declined surface without it fails the gate;
+2. **the exclusion is invalidated by what it depends on** — built; the gate re-reads the themes
+   from the registry and the roles from the live templates, so the rename-and-rewire that expired
+   the original calculation would now fail rather than pass;
+3. **the recorded verdict is load-bearing.** Not built. A declined surface whose hand calculation
+   says `FAILS` should fail the build — as an unmeasured finding, named as such, with its figures
+   printed every run rather than only on failure. The decline then means *"the instrument cannot
+   read this, and here is what it really is"*, which is a sentence. Today it means nothing is said
+   at all.
+
+**Part 3 is now built, and `main` is RED on purpose.** [JERRY], 2026-10-21: *"Harbor at 2.07:1 for
+a violet-branded customer is a cover a real agent would send and cannot read. Red is the correct
+colour and a declined measurement that reports nothing is precisely what let D-206 sit twenty
+days."* Taken in the open rather than slipped in, which is what the previous paragraph asked for.
+
+    FAILED tests/test_cover_brand_sweep_is_current.py::
+           test_a_declined_surface_whose_calculation_fails_fails_the_build
+
+      harbor .cover-title span — harbor_report.jinja2:52, violet,         2.07:1 against 3.0
+      harbor .cover-title span — harbor_report.jinja2:52, coastal,        2.16:1 against 3.0
+      harbor .cover-title span — harbor_report.jinja2:52, demo_title,     2.49:1 against 3.0
+      harbor .cover-title span — harbor_report.jinja2:52, luxury_estates, 2.99:1 against 3.0
+
+**It names the brand, the ratio and the line** — the two conditions set for making the red
+actionable rather than ambient. *"Declined surface fails"* is another red line nobody reads;
+a brand and a ratio and a file is a finding.
+
+**And it reports on a green run too.** The figures go out as a warning, which pytest prints in its
+summary whether the run passed or failed, so all six brands reach the log every time —
+
+    declined contrast surfaces, hand-calculated (D-206):
+      harbor .cover-title span … violet 2.07:1/3.0 FAILS
+      …
+      harbor .cover-title span … lime 5.27:1/3.0 ok
+
+— and when the surface is fixed there is nothing declined, the warning stops, and that silence is
+the right one. **Reporting is the half `EXPECTED_DECLINED` lacked**; it was never wrong about the
+number.
+
+Two things the gate reads as **data, never as prose**: exactly one `computed_YYYY_MM_DD` block of
+per-brand figures, so a second calculation has to retire the first in a diff instead of sitting
+beside it; and an explicit `authoritative_reading` naming which of the three readings the verdict
+is taken on — `lighter_stop_with_tint`, the conservative one. `verdict` and `method` stay in the
+record for people and are not parsed by anything, because a gate that greps an explanation is
+measuring the explanation.
+
+#### FIXED — 2026-10-21, to Design's ruling, and the build went green by the covers being correct
+
+Design answered both surfaces. The fix is two templates and **no new value**: every colour it
+introduces is a token the system already had.
+
+| surface | was | is |
+|---|---|---|
+| `harbor` `.cover-title span` | `--gradient-coral` clipped to the glyphs | **solid `theme_color_on_dark`** (`primary_on_dark`) |
+| `harbor` `.cover-left` | `linear-gradient(#1A1F36, #2D3348)` + two brand circles at 10%/8% | **flat `--ink: #0f172a`**, circles dropped |
+| `linen` `.cover-footer` | `rgba(0,0,0,0.2)` over a brand gradient — `0.677 × brand` | **flat `--ink: #0f172a`** + a 3px `--burgundy` rule on the top edge |
+| `linen` `.cover-agent-title`, `.cover-logo` | `--gold-light`, `--gold` | **`theme_color_on_dark`** |
+| `linen` `.cover-agent-contact` | `opacity:0.9` on white | **`rgba(255,255,255,0.72)`** |
+
+`linen` did not have `theme_color_on_dark` before: it had no surface with a fixed dark ground to put
+brand text on. Its fallback is **white**, not the `#1a1a1a` the neighbouring roles use — `#1a1a1a`
+on `--ink` is **1.03:1**, so the obvious copy-paste default would have been invisible on exactly the
+surface the role exists for.
+
+**Measured after, across every ink on every brand — not the one that prompted each fix.** Design's
+ground `#0f172a`: `theme_color_on_dark` clears **4.5 for all six** (5.57 worst, 9.04 best); white is
+17.85; the secondary at 72% is 9.60. The 3px rule carries no text, so it is not a pairing.
+
+**Both reds cleared, and by the covers rather than by the gates:**
+
+| | |
+|---|---|
+| `test_no_new_unreadable_text_in_the_pdfs` | **passes** — the forward check finds nothing new |
+| `test_a_declined_surface_whose_calculation_fails_fails_the_build` | **passes** — nothing is declined any more |
+| contrast baseline | **55 rows → 43.** Twelve retired, none added |
+| `EXPECTED_DECLINED` | **1 → 0.** Solid type is measurable, so the surface rejoined the gate |
+| brand sweep, all three themes | **0 declined** |
+| full suite | **3030 passed, 68 skipped, 21 xfailed, 0 failed** |
+
+The twelve retired rows are exactly the two covers' fixed surfaces: `linen`'s `cover-agent-name`,
+two `cover-agent-title`, two `cover-logo` and two `span`; `harbor`'s `cover-city` and four
+`cover-label`. The regeneration is the one the file's own rule permits — *"Regenerate after FIXING
+something (never to clear a new failure)"* — and the diff is the review.
+
+#### THE REST, SCOPED — 2026-10-21, and two more surfaces fixed without a third ask
+
+Asked to scope what remains before going back to Design again, and to apply anything whose remedy
+was already ruled. Every failing surface in the 38-brand sweep, sorted by what kind of defect it
+is rather than by which cover it is on:
+
+**A · A fixed ink on a fixed light ground — already written down one document over. APPLIED.**
+
+`harbor`'s `div.brand`, `#94a3b8` on `#ffffff`, **2.56:1, failing for all 38 brands** and nothing to
+do with the brand. The property colour-role table already specifies the muted neutral: `#5E636B`,
+*"the lightest text colour on the surface"*, **6.05:1**. No ruling needed — the value existed.
+
+**And the first attempt at it broke something else, which is the same error two days running.**
+Redefining `--silver` from `#94A3B8` to `#5E636B` fixed the footer and took `.cover-city` — the
+same token on the **dark** cover panel — from fine to **2.24:1**. One token, two grounds, one
+measurement. It is now a second token, `--muted`, applied only where the ground is light.
+
+**B · The raw brand as text on white — the role table says `primary_ink`. APPLIED.**
+
+`harbor`'s `div.cover-agent-title` used `--coral` (the raw brand) on `#ffffff`: **29 of 38 brands
+fail**. `theme_color_on_light` is derived against white and clears 4.5 for all 38, worst **4.60**.
+
+Those two retired **five** more baseline rows: `div.brand` ×2 and `div.cover-agent-title` ×3.
+Contrast baseline **43 → 38**.
+
+**C · The same role on a TINT — not ruled, and it is D-177 recurring on the property themes.**
+
+The role table says `primary_ink` covers *"brand-coloured text on white/tint"*. Measured over 38
+brands, it does not:
+
+| ground | worst | brands failing |
+|---|---|---|
+| `#ffffff` white | 4.60 | **0 of 38** |
+| `#faf7f2` linen cream | 4.30 | 6 |
+| `#f1f5f9` harbor ghost | 4.20 | 14 |
+| `#e8d5a3` linen gold-light | 3.17 | **34** |
+
+`theme_color_on_light` is derived **against white** and used on four grounds. That is D-177 exactly
+— *"accent_ink was guaranteed on white and used on a tint"* — fixed on the market surface and never
+on these. Its remedy exists in this codebase: `ink_on(colour, background)` in `property_builder.py`,
+which `market_builder.py` already uses as `accent_on_tint`. Plumbing an on-tint role through
+`compute_color_roles` and both templates is a build rather than a token swap, so it is scoped here
+and not taken. Surfaces: `harbor` `div.contents-num`, `span.pill`, `div.range-slider-price.low`;
+`linen` `div.contents-label`, `div.num`, `div.property-label`, `div.property-section-title`, `span`.
+
+**D · Text on the cover gradient — the two-stop fill problem, and `on_primary` does not close it.**
+
+The role table says `on_primary` for *"all text on `primary` fills"*. `linen`'s cover is a gradient
+from `primary` to `primary_dark`, and `on_primary` is derived against `primary` alone:
+
+| brand | on `primary` | on `primary_dark` |
+|---|---|---|
+| luxury_estates | 4.87 | **3.02** |
+| the other five | 4.83 – 9.23 | 4.87 – 8.59 |
+
+**Five of six, and `luxury_estates` fails on the darker stop** — because its `on_primary` is dark
+ink chosen for the lighter end. Today's inks are far worse (white fails 3 of 6, `--gold-light` and
+`--gold` fail 6 of 6 at 1.36 and 1.05), so the token is a large improvement and still not a fix.
+A flat `primary` fill would make it correct for all six by the existing rules — which is the same
+move as the footer — but `linen`'s cover gradient is the theme's signature and flattening it is a
+composition decision, not a token swap. **Ask.**
+
+**E · `atlas`, eight surfaces at 1 of 38 — a gap in Design's own derivation.**
+
+`span.masthead-brand`, `span.cover-city`, `span.conf-grade` and five others fail at exactly one ramp
+step, **L=0.190**, and nowhere else. `atlas` renders through Design's shared `_v2` page with their
+own roles, so this is their derivation missing one luminance rather than a template defect.
+Reported, not fixed.
+
+#### WHAT IS NOT FIXED, AND IT IS MOST OF `linen`'s COVER
+
+Design ruled on the **footer band**. The elements on the brand gradient **above** it were not in
+scope and are unchanged. From the 38-brand sweep, after the fix:
+
+| theme | surface | brands failing, of 38 |
+|---|---|---|
+| `linen` | `div.cover-label` | **36** |
+| `linen` | `div.cover-brand-text` | 34 |
+| `linen` | `th` / `td` | 29 / 28 |
+| `linen` | `h1.cover-title` | 21 |
+| `linen` | `div.cover-street` | 19 |
+| `harbor` | `div.brand` | **38** — `#94a3b8` on `#ffffff`, brand-independent |
+
+All baselined, all recorded, none of them newly discovered. Under Design's rule 3 the cover
+gradient itself is legal — it is `primary` to `primary_dark`, both permitted brand fills — so what
+fails is the gold and white **type on it**, which is the same defect one surface over and a bigger
+scope than this ruling. **The build being green does not mean the covers are readable.** It means
+the two surfaces that were ruled on are, and that nothing is being hidden about the rest.
+
+#### HOW IT WENT RED, AND HOW IT WENT GREEN — the record, kept
+
+#### `main` IS DELIBERATELY RED FROM 2026-10-21, AND THIS IS THE WRITTEN REASON
+
+> A red build with no written reason becomes background within a week. **That is this entry's own
+> history** — twenty days of a red ratchet nobody read, with D-191's annotation naming the failing
+> test the whole time.
+
+**Both cleared on the same day by the fix above.** Kept because a red build's reason is worth
+keeping after it goes green: the next person to see a deliberate red needs to know one was taken,
+read, and closed by correcting the thing rather than the check.
+
+Two failures on `main`, both deliberate and both about this cover:
+
+| | |
+|---|---|
+| `test_no_new_unreadable_text_in_the_pdfs` | D-205 — `linen`'s agent name, `4.44:1`, red 2026-09-30 → **green 2026-10-21** |
+| `test_a_declined_surface_whose_calculation_fails_fails_the_build` | D-206 — `harbor`'s cover title, four brands, red 2026-10-21 → **green the same day** |
+
+**Pending: Design's answer on `harbor`** — whether the cover-title guidance in their package applies
+to the theme we ship under that name, which is their `modern`. See
+`docs/THEME_MAPPING_AND_FOOTER_FOR_DESIGN_2026-10-21.md`. The stopgaps stay held until it comes.
+
+**How it goes green.** By the cover being fixed. Not by widening the exclusion, not by regenerating
+the baseline, not by raising `EXPECTED_DECLINED`, and not by changing
+`authoritative_reading` to a more favourable one. If Design's answer makes the cover fixable, the
+build goes green by the fix. If their answer is that the surface is theirs and already replaced,
+the entry closes when the replacement lands — and until one of those happens, red is the honest
+colour for a document four of six brands cannot read.
+
+---
+
+### D-207 — a handover document gained the new theme names in its file paths and kept the old ones everywhere else, so a reader concluded a live theme was removed
+
+**Severity:** ROUGH · **Affects:** Claude Design, who read it and told us `harbor` was removed ·
+**Found during:** resolving that claim against `themes.json` before applying a stopgap
+**Status:** `fixed` — `fix/d205-ratchet`
+
+Design's answer on the cover contrast named the live themes **`elegant`, `bold`, `modern`** and
+said **`harbor` is removed.** Ours are `atlas`, `linen`, `harbor`. One of those two statements had
+to be wrong, and the stakes were not academic: `harbor` is the theme carrying D-206's gradient
+cover, so "removed" would have meant skipping a stopgap on a live surface.
+
+`themes.json` settles it. Their names predate our 2026-10-13 rename and **their live list is
+exactly our three**:
+
+| their name | ours | id | and |
+|---|---|---|---|
+| `bold` | `atlas` | 5 | the default |
+| `elegant` | `linen` | 3 | D-205's surface |
+| `modern` | `harbor` | 2 | **D-206's surface, live** |
+
+`classic` (1) and `teal` (4) are the retired pair, cut 2026-10-05, and nothing has been retired
+since. So their mapping is not wrong — it is **eight days stale**, and they were reading our
+documents.
+
+#### Why "removed" was a reasonable inference from what we gave them
+
+`docs/CLAUDE_DESIGN_HANDOVER.md` is dated 2026-10-01 and its header still says *"the five
+property-report themes (`bold`, `classic`, `elegant`, `modern`, `teal`)"*. Its body names
+`bold`/`elegant`/`modern` throughout — the live list at line 19, the contrast table at 113–117, the
+page counts at 96–100. **But lines 68–70 were updated to the post-rename template paths**, and
+only one of the three carries its mapping:
+
+    .../templates/property/atlas/atlas_report.jinja2    <- bold's type only
+    .../templates/property/linen/linen_report.jinja2
+    .../templates/property/harbor/harbor_report.jinja2
+
+So a reader learns that `atlas` is `bold`, and meets `linen` and `harbor` as names the document
+never ties to anything. Given a live list of three that does not include them, **"these are other
+themes, and they are not live" is the reading the document invites.** `DESIGN_ADOPTION_SCOPE.md`
+(2026-10-05) is all old names with no new ones at all.
+
+This is the §0.6 family on a document rather than a test: **a file updated in one place and not the
+others gives a reader two incompatible mappings, and the newer one looks like the exception.** It
+is also the second time a theme name relayed outward has cost something — `THEME_RENAME_SCOPE.md`
+records a *"wrong version of this was relayed"* about `resolve()` itself.
+
+#### Fixed
+
+A mapping box at the top of both documents, stating the three renames, the two retirements, the
+date, and that nothing has been retired since. **The bodies are left as written**: the old names
+appear inside dated quotations and measurements, and a find-and-replace would falsify the record.
+The box says so, so the next reader knows the mixture is deliberate.
+
+Not done, and worth considering: a gate asserting that a Design-facing document naming a theme
+either uses the live name or carries the mapping box. `test_no_live_code_path_names_a_retired_theme`
+already does this for code — `docs/` is not code, and a stale name in a handover costs a round trip
+rather than a wrong render, which is why this is ROUGH.
+
+---
+
+### D-208 — `theme_color_on_light` is derived against white and the role table uses it on four grounds
+
+**Severity:** WRONG · **Affects:** brand-coloured text on every tinted panel of both self-contained
+property themes — up to 34 of 38 brands on one ground · **Found during:** scoping what remained
+after D-205's cover fix
+**Status:** `fixed` — `fix/ink-on-tint`, 2026-10-21
+
+**This is D-177 on the surface its fix did not reach.** That entry's own sentence: *"accent_ink was
+guaranteed on white and used on a tint."* It was fixed on the market templates on 2026-10-07 and
+the two self-contained property themes were never visited.
+
+`theme_color_on_light` darkens the brand until it clears AA **against `#ffffff`**. The property
+colour-role table says `primary_ink` covers *"all brand-coloured text on white/**tint**"* — four
+grounds, one derivation. Measured over 38 brands:
+
+| ground | worst | brands failing |
+|---|---|---|
+| `#ffffff` white | 4.60 | **0 of 38** |
+| `#faf7f2` linen cream | 4.30 | 6 |
+| `#f1f5f9` harbor ghost | 4.20 | 14 |
+| `#f0ebe3` linen cream-dark | — | **30** |
+| `#e8d5a3` linen gold-light | 3.17 | **34** |
+
+And one more in the other direction: `theme_color_on_dark` is derived against `#18235c`, while
+`harbor`'s `.aerial-card h3` sits on `#2b3045`, which is lighter — **15 of 38 fail there**.
+
+#### Fixed with the function D-177 left behind
+
+`ink_on(colour, background)` has been in `property_builder.py` since D-112, and
+`market_builder.py` has used it as `accent_on_tint` since D-177. It was never exposed to the
+property templates. It is now a **Jinja filter**, with `_ensure_readable_on_dark` as its
+counterpart:
+
+    color: {{ brand | ink_on(g_cream) }};
+    color: {{ brand | ink_on_dark(g_panel) }};
+
+**A filter rather than more roles, because the ground is declared in the template and nowhere
+else.** `theme_color_on_cream` in the builder would put one template's neutral into the builder's
+vocabulary, and the next ground would need another.
+
+Per-ground inks, each declared next to the neutral it is derived from: `--burgundy-on-cream`,
+`--burgundy-on-cream-dark`, `--burgundy-on-gold`, `--coral-on-ghost`, `--coral-on-panel`. **All of
+them clear 4.5 for all 38 brands.** Contrast baseline **38 rows → 29**.
+
+**And one more, on the same day: `harbor`'s `.analysis-table tfoot`.** White on the raw brand fill,
+**29 of 38 brands failing** — every light one. The role table already answers it: *"`on_primary` |
+all text on `primary` fills"*. Applied, it goes to **1 of 38**, and the baseline drops **29 → 26**,
+which takes **`harbor` to zero baselined contrast failures** — the second theme after `atlas` to get
+there.
+
+It was held back for a day on the reasoning that it was the same "text on a brand fill" question
+going to Design whole. That was the wrong trade: a table every reader looks at, a measured
+improvement from 29/38 to 1/38, using Design's own token exactly as their role table specifies, and
+the ask that was being kept tidy is about **where the brand sits on the cover gradient** — which a
+table cell is not. If their answer later implies something different for brand fills generally, it
+is one more change.
+
+#### Two things learned on the way, both the same mistake
+
+**1. The footer number is not always on cream.** Pointing `.page-footer .num` at
+`--burgundy-on-cream` measured **4.48:1** on one page's `#fef4f4` — missing by 0.02, because the
+footer repeats on pages whose background is a faint brand tint. **Picking the ground from the
+token's name instead of from the measurement**, which is the plate and `--silver` for the third
+time in two days.
+
+The fix is an argument rather than another measurement: `ink_on` returns a **darkened** ink, and a
+dark ink's contrast only rises as the ground lightens, so an ink that clears the **darkest** paper
+tone the template declares clears every lighter one. Everything on an unknown paper ground now
+takes `--burgundy-on-cream-dark`, and that covers `#faf7f2`, `#fef4f4` and `#ffffff` by
+monotonicity rather than by enumeration.
+
+**AND THE PREMISE IS GATED NOW.** The argument stands on `ink_on` returning a *darkened* ink, and
+nothing asserted that — so if it ever returned a lighter one, every site relying on "clear the
+darkest ground" would lose its guarantee **silently**, because the lighter grounds are deliberately
+unmeasured. `tests/test_ink_derivation_premises.py` asserts the direction over all 38 brands and
+every ground, asserts the consequence separately rather than leaving it to follow, asserts the
+counterpart for `ink_on_dark`, and asserts that `--gold-light` is still **outside** the family — so
+"clear the darkest and the rest follow" cannot quietly widen into "one ink serves every ground".
+Seen to fail: making `ink_on` return white names the brand, both luminances and the consequence.
+
+**The grounds it checks are derived from the sweep, not listed** — with one gap, written down
+rather than remembered: **the sweep record is a committed artefact, not a live measurement.**
+`test_cover_brand_sweep_is_current.py` holds it to the live themes, their templates and the roles
+those templates interpolate, so a template change invalidates it loudly. What it does **not**
+catch is a *page* that introduces a new tint without touching any role — that ground stays
+invisible until somebody re-runs the sweep. The common case is covered and the uncommon one is
+not, which is the honest shape of it.
+
+**The grounds it checks are derived from the sweep, not listed.** The first version of that file
+listed three hexes, which was *the same enumeration the rule it guards replaced* — and `#FEF4F4`
+was in the list for the worst possible reason: somebody had already missed it once, at 4.48:1. It
+now reads every background the sweep actually measured on the live themes, keeps the ones lighter
+than `--cream-dark`, and pairs each with the brand that produced it. **That finds 82 distinct light
+grounds across the 38 brands where the list had 3** — most of them faint brand tints, which are not
+constants at all and which no list of hexes could have named.
+
+**WHAT GREEN THERE MEANS, AND WHAT IT DOES NOT.** It means the monotonicity holds. It says nothing
+about whether the ink is any *good*: an `ink_on` returning `#000000` for every brand would pass
+every assertion in that file and would be bad design, because it throws the brand away. **The
+derivation's quality is gated nowhere**, and a green run must not be read as the stronger claim.
+
+**THE PATTERN, NAMED, BECAUSE THE FIX ONLY HOLDS WHILE NOBODY GOES BACK TO ENUMERATING.** Three
+instances in two days, all of them picking the ground from the **name of the token** rather than
+from the measurement:
+
+| | the ink | derived for | actually on |
+|---|---|---|---|
+| the brand plate | `on_primary` | `primary` | `0.677 × brand` |
+| `--silver` | one grey, redefined | the footer, on white | *also* `.cover-city`, on the dark panel |
+| the footer number | `--burgundy-on-cream` | `#FAF7F2` | `#FEF4F4` — **4.48:1**, short by 0.02 |
+
+Each was measured and each was correct for the ground it named. The third missed by **two
+hundredths**, which is the tell: the method was exhausting a list of grounds somebody could think
+of, and the list was never complete. §0.6 carries the general form —
+*clear the worst case and the rest follow* — and the warning that **adding a per-ground ink for the
+next paper tone is correct, costs nothing, and quietly re-establishes the enumeration this
+replaced.** The two grounds that genuinely need their own derivation are the ones outside the
+family: `--gold-light`, darker than any paper tone, and `#2b3045`, which is dark and needs the
+other direction.
+
+**2. The grounds had to be single-sourced before the lint would accept them.** Passing the hex
+straight to `ink_on('#FAF7F2')` put a second copy of each ground on a **brand-role line**, and the
+colour lint flagged **eighteen new literals** — correctly: a ground is not a brand value, and the
+answer is one source rather than eighteen annotations. Each ground is now a `{% set %}` used twice,
+once to declare the neutral and once to derive the ink, and the brand's `default(...)` fallback
+appears once per template instead of once per role. Lint: **0 new, 0 stale**.
+
+---
+
+### D-209 — the property colour-role table names one muted value and `harbor` declares four greys
+
+**Severity:** FRAGILE · **Affects:** nothing today; it is the condition that produced two
+collisions already · **Found during:** fixing `div.brand`, when redefining one grey broke another
+surface
+**Status:** `open`
+
+`harbor_report.jinja2` declares **four** neutral greys — `--midnight #1A1F36`, `--slate #4A5568`,
+`--silver #94A3B8`, `--muted #5E636B` — against a role table that names **one** muted value
+(`#5E636B`, *"the lightest text colour on the surface"*).
+
+**That is not a tidiness complaint. It has already cost two surfaces.** `--silver` served text on
+white (the page footer, **2.56:1**, failing) *and* text on the dark cover panel (`.cover-city`,
+where a light grey is correct). Redefining it to the role table's value fixed the footer and took
+`.cover-city` from fine to **2.24:1** — one token, two grounds, one measurement. The resolution was
+to add `--muted` as a fourth grey, which fixes the instance and **widens the condition**.
+
+#### Why it is FRAGILE and not ROUGH
+
+Nothing is failing now; the sweep is clean on every grey. What is fragile is that four greys with
+overlapping purposes and no stated ground mean **the next person to adjust one cannot tell which
+surfaces they are adjusting** — which is exactly how this one went wrong, with the measurement in
+hand.
+
+#### What closing it looks like
+
+Audit every `--silver` and `--slate` use for the ground behind it, split them by ground rather than
+by shade, and reduce to the role table's vocabulary — one muted value for light grounds and one for
+dark, named for the ground and not for the colour. Thirty-odd call sites across the two
+self-contained themes. **Not taken with the contrast fix** because it is a rename across two files
+with no failing surface to measure against, which is a different kind of change from the one that
+found it.
+
+---
+
+### D-210 — the ink palette has two candidates and a 0.024-wide band of brand luminance where neither clears AA
+
+**Severity:** ROUGH · **Affects:** text on a brand fill, for any brand whose relative luminance
+falls between 0.184 and 0.209 — one of 38 swept brands, and none of the six presets ·
+**Found during:** root-causing why nine surfaces across two architectures all failed at the same
+single point
+**Status:** `open` — **the derivation is shared with Design's `_v2` page, so the fix is a
+conversation rather than an edit.** See `docs/COVER_TYPE_AND_ATLAS_FOR_DESIGN_2026-10-21.md`.
+
+Nine surfaces fail at **exactly one** of the 38 swept brands and nowhere else: eight `span.*` on
+`atlas` and, since `on_primary` landed on it, `harbor`'s `.analysis-table tfoot`. Two different
+roles, two different architectures, the same luminance — `L=0.190` — at 4.38 to 4.49 against 4.5.
+
+**It is the candidate set, not the search.** `_text_on_accent` picks the better of exactly two
+inks:
+
+    _best_of(("#ffffff", "#14151a"))
+
+and on `#298b14`, the ramp brand at `L=0.190`, both are short:
+
+| candidate | on `#298b14` |
+|---|---|
+| `#ffffff` | **4.38** |
+| `#14151a` | 4.16 |
+| `#000000` | **4.80** |
+
+The search is correct — it picks white, the better of its two — and **a third candidate it does
+not have would clear.** Measured across the whole luminance axis, the band where neither of the two
+clears is **0.184 to 0.209, 0.024 wide, worst 4.29**. Adding pure black as a candidate **empties
+it**: every brand luminance is then served.
+
+#### The comment that authorised the trade is comparing the wrong pair
+
+`_text_on_accent` explains its near-black as *"#14151a rather than #1a1a1a: it is what
+`worker.themes` uses for the same role, and having one near-black in the product is worth the 0.4%
+of contrast."* That is true of `#14151a` against `#1a1a1a`. The comparison that matters for this
+gap is against **`#000000`**, and at the worst point it is **15%**, not 0.4% — 4.16 against 4.80.
+The trade was made against a difference an order of magnitude smaller than the one it costs here.
+
+#### The band was measured on greys, and that substitution is exact here
+
+Contrast depends only on relative luminance, so a grey standing in for a brand of the same
+luminance is sound for a threshold question — but it would not be sound for a derivation that
+reads hue. `_text_on_accent` does not: it picks the better of two **fixed** candidates by contrast
+alone. Checked rather than argued — `#298b14` (saturated, L=0.1899) and `#797979` (grey, L=0.1912)
+get the same choice and the same ratio to three places. **The substitution would only matter for a
+derivation that reads hue, and if one ever did, that would be its own defect rather than a flaw in
+this measurement.**
+
+#### Why ROUGH
+
+No preset brand is in the band, so nothing a customer has today is affected — it is one synthetic
+ramp step. What it is, is a **hole in the derivation rather than in a template**, which is why it
+showed up nine times in two unrelated places at once and why patching the nine would have been
+patching the symptom. Sizing it was the cheap part: knowing it is 0.024 wide and closed by one
+extra candidate turns Design's answer into a correction rather than an investigation.
+
+---
+
+### D-211 — Frontend Tests has never passed, and every `apps/web` change for four months merged with its gate red
+
+**Severity:** BROKEN · **Affects:** every change to `apps/web` since at least 2026-06-24, including
+the whole B phase · **Found during:** scoping the marketing and wizard surfaces, which were
+described as having "no measurement at all"
+**Status:** `fixed` — `fix/frontend-tests-green`. **54 of 54 pass**, and the workflow is green for the first time on record. None of the 13 was a live product defect; the split is on the entry below.
+
+`.github/workflows/frontend-tests.yml` runs `tsc --noEmit` and the jest suite on every push that
+touches `apps/web/**`. It works. It has simply never been green:
+
+    gh run list --workflow=frontend-tests.yml --limit 100          ->  100 of 100 failure
+    gh run list --workflow=frontend-tests.yml --status success     ->  (empty)
+
+The oldest of those hundred runs is **2026-06-24**. The most recent on `main`
+(39491654740, `Merge pull request #188`) ends `Test Suites: 4 failed, 3 passed, 7 total` /
+`Tests: 13 failed, 41 passed, 54 total`, and `npx jest` in `apps/web` reproduces that figure
+exactly today — the same 13 in the same 4 suites. The typecheck step passes; the suite is where it
+dies.
+
+**This is worse than the absence it was mistaken for.** An unmeasured surface produces no findings.
+A permanently red gate produces thirteen, every run, which is how a team learns to scroll past the
+job — and it means no web change in four months was gated on anything.
+
+| Suite | Failing | Cause |
+|---|---|---|
+| `AccountSwitcher` | 6 | `No QueryClient set` — the component uses react-query, the test renders it with no provider |
+| `NewSchedulePage` | 2 | same, plus D-212 |
+| `TemplatesMapping` | 4 | genuine drift — `buildNewListingsHtml` no longer contains `123 Main St`, nor the price-band data, default colors or comma formatting the test expects |
+| `PlanPage` | 1 | sponsored-badge assertion |
+
+Three causes, none deep. What makes it BROKEN is not the difficulty — it is that the only gate
+standing between a web change and production has been reporting failure continuously and nothing
+in the process noticed.
+
+---
+
+### D-212 — the only test naming a wizard asserts a literal against itself, and mocks a component the page stopped using
+
+**Severity:** WRONG · **Affects:** `apps/web/__tests__/NewSchedulePage.test.tsx`; the claim that
+any wizard has test coverage · **Found during:** the same scoping
+**Status:** `fixed` — `fix/frontend-tests-green`. The page test renders the real page now, and the three self-asserting tests read `REPORT_TYPES` from `types.ts`.
+
+Five tests. The two that render anything fail (D-211). The three that pass are this shape:
+
+```js
+const expectedReportTypes = ['market_snapshot', /* … */, 'featured_listings'];
+expectedReportTypes.forEach(type => { expect(expectedReportTypes).toContain(type); });
+```
+
+The array is asserted against itself; `types.ts` is never imported and the product is never
+involved. The other two are of the form `expect(expectedLabels['x']).toBe('New Listings (Photo
+Gallery)')` — a literal compared with the literal beside it.
+
+And the two that do render mock `next/dynamic` in order to substitute a fake `ScheduleWizard`.
+`app/app/schedules/new/page.tsx` imports `UnifiedReportWizard` **statically** and has done since
+the wizard merge, so the mock substitutes nothing and `getByTestId('schedule-wizard')` looks for
+an element that no longer exists.
+
+Same family as D-087 and the self-referential assertions this board keeps filing: a test whose
+subject was replaced and which goes on reporting on the replacement's behalf.
+
+---
+
+### D-213 — the property wizard turns a plan-limit refusal into a generic error, at the end of a four-step flow
+
+**Severity:** WRONG · **Affects:** `/app/property/new` for any account at its
+`property_reports_per_month` limit — on `free` that is the second report of the month ·
+**Found during:** enumerating what the two live wizards carry
+**Status:** `open`
+
+`apps/web/components/property-wizard/step-generate.tsx:162`:
+
+```js
+if (!createRes.ok) {
+  const errData = await createRes.json().catch(() => ({}));
+  throw new Error(errData.detail || "Failed to create report");
+}
+```
+
+Every non-OK response takes that branch, a 403 included. The reader looks up an address, picks
+comparables, picks a theme and pages, presses Generate, and gets a red card.
+
+The **unified** wizard, for the same refusal, has a dedicated `limit_reached` state that reads
+`used` and `limit` off the body and says "You've used N of M this month… Upgrade your plan to
+continue, or wait until your limit resets next month." It also has `verification_required`
+(D-019), a distinct state added precisely because "Try Again" is the one action that cannot help.
+The property wizard has neither.
+
+So the same two refusals are handled two ways by two wizards in the same product, and the one
+with the better handling is the one whose limit is larger. Design's `Wizards v3` deck shows the
+remaining count **on the step** — "Uses 1 of your 1 remaining property reports this month" — which
+is the right fix and needs usage plumbed into the wizard before the work rather than after it.
+
+---
+
+### D-214 — the property wizard seeds a retired theme id in two places, and only the success branch corrects it
+
+**Severity:** FRAGILE · **Affects:** `/app/property/new` on every first paint, and persistently
+whenever `GET /v1/account` fails · **Found during:** the same enumeration
+**Status:** `open`
+
+`property-wizard.tsx:61` is `useState(4)` and `:68` is `useRef({ themeId: 4, … })`. **Theme 4 is
+`teal`, retired 2026-10-05.** The fix at `:80` — `let themeId: number = DEFAULT_THEME_ID` with a
+`THEME_ID_TO_NAME` membership check, and a comment explaining that the old `1..5` range accepted
+the two retired ids — lives inside the *successful* branch of the account fetch. `if (!res.ok)
+return;` and the `catch` both leave the 4 exactly where it was.
+
+With `selectedThemeId === 4`, `THEMES` (ids 2, 3, 5) matches nothing, so **no theme card renders as
+selected** (`step-theme.tsx:147`, `isSelected = selectedThemeId === theme.id`) and
+`handleReset()` restores that state from the ref. What is *submitted* is safe — the
+`selectedTheme` memo at `:106` falls back to `DEFAULT_THEME_ID`, so the API receives 5 — which is
+why this is FRAGILE rather than WRONG: the reader picks nothing, sees nothing selected, and gets
+atlas without being told.
+
+**This is D-174 in the other language.** D-174 was two Pydantic request models in
+`routes/property.py` declaring `default=4` — the same retired id, harmless for the same reason
+(`theme_registry.resolve` sends every retired value to the default), invisible for the same
+reason. The gate written for it,
+`tests/test_theme_registry_is_single_sourced.py::test_no_request_model_defaults_a_theme_field_to_a_retired_id`,
+deliberately **parses** rather than matching spellings — and parses `source_files(".py")`. The
+`.tsx` half of the product was never in its reach, so a gate built for exactly this defect passes
+while exactly this defect sits two files away. `test_no_live_code_path_names_a_retired_theme`
+matches retired theme **names**, which is the other near-miss: this is an id.
+
+---
+
+### D-215 — `COMPACT_PAGES` and `FULL_PAGES` are byte-identical, and a per-theme flag chooses between them
+
+**Severity:** ROUGH · **Affects:** `apps/web/components/property-wizard/types.ts` and
+`property-wizard.tsx:271` · **Found during:** the same enumeration
+**Status:** `open`
+
+```js
+const newPages = theme.compact ? COMPACT_PAGES : FULL_PAGES;
+```
+
+Both constants are nine pages — `cover`, `overview`, `contents`, `aerial`, `property`, `analysis`,
+`market_trends`, `comparables`, `range` — with the same names and the same `required` flags.
+Compared with whitespace normalised they are identical. `compact` is `true` on atlas and `false`
+on harbor and linen, so the branch is live, evaluates differently per theme, and produces the same
+list either way.
+
+Either the compact variant was never written or it was written and then equalised; nothing in the
+file says which. Design's deck says "Pages {{ pageCount }} of 6", which is a third number again.
+
+---
+
+### D-216 — `/docs` overflows horizontally at phone width
+
+**Severity:** ROUGH · **Affects:** `/docs` at 390px; the first thing found by the first
+measurement of the public pages · **Found during:** probing the eleven public routes at two
+viewports
+**Status:** `open`
+
+At a 390px viewport the document scrolls 70px sideways. Eight elements sit past the edge, and the
+innermost is the `curl` example:
+
+```
+div.bg-slate-900.rounded-lg.p-4.font-mono.text-sm  ->  width 444, right edge 460
+```
+
+No `overflow-x-auto`, no wrapping, so the block sets its parent card's width and takes the heading
+and paragraph above it along. M5 audited `/app` at 1024 / 1142 / 1280 and the public pages at
+nothing; this is what the first look costs.
+
+---
+
+### D-217 — 2,882 lines of wizard components with no importer
+
+**Severity:** ROUGH · **Affects:** `apps/web/components/` · **Found during:** establishing which
+wizards are live
+**Status:** `open`
+
+| File | Lines | Reached by |
+|---|---|---|
+| `components/Wizard.tsx` | 769 | nothing |
+| `components/schedules/schedule-wizard.tsx` | 693 | `schedules/index.ts` only, and nothing imports that barrel |
+| `components/onboarding/setup-wizard.tsx` | 704 | `onboarding/index.ts` only; the two live imports of that barrel take `DashboardOnboarding` |
+| `components/lead-pages/ConsumerLandingWizard.tsx` | 716 | nothing |
+
+The barrel exports are the part worth noting: `export { SetupWizard } from "./setup-wizard"` makes
+dead code look reachable to a reader and to a grep, which is how 693 lines of schedule wizard went
+on looking like the schedule wizard after `/app/schedules/new` moved to `UnifiedReportWizard`.
+
+---
+
+### D-218 — the fabricated testimonials survive as dead code, one import from being live
+
+**Severity:** ROUGH · **Affects:** `apps/web/components/marketing/testimonials.tsx` ·
+**Found during:** checking whether Design's landing inherits the M-phase's findings
+**Status:** `open`
+
+Three invented people — `Jessica M.`, `David C.`, `Sarah T.` — with invented quotes and five stars
+each. `11459e7c` removed the render and left the file, with a comment at `marketing-home.tsx:23`
+saying Trustpilot will replace it. **A prospect does not see them**, which is why this is ROUGH
+and not WRONG.
+
+What makes it worth an entry rather than a shrug: one of the three already takes its byline from
+the live fixture (`title: DEMO_AGENT.location`), so the file is half-adopted into the M1 fixture
+and would come back looking maintained. A redesign that restores a testimonials section will find
+this component first.
+
+---
+
+### D-219 — placeholder emails on domains that are not reserved, one of them a real title company
+
+**Severity:** ROUGH · **Affects:** eleven inputs across nine files, `/login` and `/register`
+among them · **Found during:** checking a report that `demo@trendyreports.io` appears in a
+placeholder — it does not, and this is what the check found instead
+**Status:** `fixed` — `fix/consumer-form-autofill-and-placeholder-domains`
+
+RFC 2606 §3 reserves `example.com`, `.org` and `.net` for exactly this, and eleven placeholders
+were not using them: `you@company.com` (`/login`, `/register`, `/forgot-password`),
+`admin@company.com`, `rep@company.com`, `your@email.com`, `sarah@acmerealty.com`,
+`info@acmetitle.com`, and **`admin@pacificcoasttitle.com`** on the admin "new company" form.
+
+The last one is the reason this is an entry rather than a tidy-up. **Pacific Coast Title is a real
+firm**, and an invented address at a real company is M1-T4's finding — "Sarah Johnson of Compass
+Real Estate" — in a different file. `email.com` and `company.com` are likewise registered domains
+somebody receives mail at; `example.com` cannot be, which is the whole point of it existing.
+
+All eleven moved to the reserved family. Gated by
+`tests/test_public_forms_are_fillable.py::test_every_placeholder_email_uses_a_reserved_domain`,
+which derives the list from the source rather than carrying one.
+
+---
+
+### D-220 — the forms a stranger fills cannot be autofilled
+
+**Severity:** ROUGH · **Affects:** `/p/{code}` lead capture (name, email, phone), `/cma/{code}`
+contact step (name, phone, email), `/welcome` (both passwords) · **Found during:** the same check
+**Status:** `fixed` — same branch
+
+Seven inputs on three public forms carried no `autoComplete`. The auth pages had it already —
+`/login`, `/register`, `/forgot-password`, `/reset-password` — so this was the consumer half and
+the invited-user half, which is the half where it matters most: a homeowner on a phone typing
+their name, number and email into a lead form, and a new user setting a password their manager
+should store.
+
+The `autoComplete="off"` instances were left alone and are correct: they sit on address inputs
+backed by a Google Places combobox, where browser autofill fights the suggestion list.
+
+#### The first version of this count was wrong, and the reason generalises
+
+`grep -c autoComplete` counts **lines containing a match**, not matches, and a JSX attribute list
+spans many lines — so a file with two inputs, one covered, reads as covered. The replacement, a
+`<input[^>]*>` regex, was worse in a way that looks better: `onChange={e => setPhone(...)}`
+contains a `>`, so the match ends inside the attribute list and **every input with an arrow
+handler appears to have no attributes at all**. That pass reported 25 uncovered inputs where
+there are 24, and two of the ones it named had been fixed minutes earlier.
+
+The gate parses instead: it walks forward from the tag name tracking quote state and brace depth
+and stops at the first `>` that really ends the tag. §0.6's rule about a selector named after one
+instance, one level down — **the question was "does this element carry the attribute" and the
+cheap tools answer a different question that resembles it.** Regression R5 mutates the scanner
+itself (`depth == 0` removed) and the gate fails, so the parser's correctness is guarded rather
+than assumed.
+
+---
+
+### D-221 — `/blog`'s newsletter form discards every submission, under an unsourced headcount
+
+**Severity:** WRONG · **Affects:** `/blog`, public, since the page shipped · **Found during:**
+looking for a reported contact form, which does not exist
+**Status:** `open` — **gated.** Wiring it needs a subscriber store that does not exist; removing
+a visible marketing element is a product call. Build neither until Jerry answers. **[JERRY]**
+
+`app/blog/page.tsx:197` is a `<form>` with an email input and a Subscribe button, in a **server
+component** — the file contains zero occurrences of `onSubmit`, `action=` or `"use client"`.
+Submitting it does a native GET to `/blog?` and the address is gone. No request is made, so
+nothing is dropped on the floor by an endpoint: there is no endpoint.
+
+Above it: *"Join 5,000+ real estate professionals who get our weekly newsletter."* Unsourced, and
+the same family G2 answered by deleting "2,000+ agents" from `/login` and "4.9/5 from 500+" from
+`/register`. `/blog` was missed by that sweep because it was unlinked from the nav at the time.
+
+Two things to decide together, because they fail as a pair: a signup that works but has no
+newsletter behind it is no better than one that silently discards, and a headcount for a list
+that does not exist cannot be sourced.
+
+This is also why the D-220 gate carries one exception. Giving this input an autocomplete attribute
+would make it *easier* to fill a box that throws the answer away.
+`test_each_exception_is_still_needed` fails when the exception stops being necessary, so it cannot
+outlive this entry.
+
+---
+
+### D-222 — the lead form's retry window is stored, never read, and not the server's
+
+**Severity:** ROUGH · **Affects:** `apps/web/app/p/[code]/lead-capture-form.tsx` on a 429 ·
+**Found during:** checking whether any consumer lead handler sets state the UI never renders
+**Status:** `open`
+
+```js
+setErrorMessage("You've submitted too many requests. Please try again in an hour.");
+setStatus("rate_limited");
+setRetryAfter(60);  // 60 minutes
+```
+
+`retryAfter` is written here and **read nowhere** — it is one of exactly three set-but-never-read
+state variables in `apps/web` (the others are `pdfUrl` in `MobileReportViewer` and `loading` in
+the admin settings page). And the 60 is a literal: the response's `Retry-After` is never looked
+at, so the visible "in an hour" agrees with the code and neither agrees with the server unless
+the server happens to say an hour.
+
+**The error itself is shown** — `errorMessage` renders at `:187`, and the sibling consumer path
+(`/cma/{code}`) renders its own `error` at both steps — so no submission fails silently on either
+lead path. That is why this is ROUGH: a wait time that is decorative rather than wrong, not a lost
+lead. The fix is to read `Retry-After` off the response and render the real number, or to delete
+the state and keep the sentence; the first is the one worth doing and it is not a one-liner.
+
+---
+
+### D-223 — the account switcher vanishes when its fetch fails, and says nothing
+
+**Severity:** FRAGILE · **Affects:** `components/account-switcher.tsx`, sidebar, any account holder
+with more than one account · **Found during:** triaging D-211's thirteen failures — **the one that
+was a live defect**
+**Status:** `fixed` — `fix/frontend-tests-green`
+
+```js
+const { data, isLoading } = useAccounts();
+const accounts: Account[] = (data as AccountsResponse)?.accounts ?? [];
+const currentAccount: Account | null = accounts[0] ?? null;
+...
+if (!currentAccount) {
+  return null;
+}
+```
+
+`error` was never destructured. A failed accounts fetch leaves `data` undefined, `accounts` empty
+and `currentAccount` null, and the early return then removes the switcher from the sidebar
+entirely. A person with two accounts cannot switch, is not told why, and has nothing on screen to
+retry — **absent-is-not-a-default**, the family this board has filed four times, arriving this
+time through a successful refactor.
+
+The behaviour existed before the react-query migration: `AccountSwitcher.test.tsx` asserts a
+destructive toast reading *"Failed to load account information"*, and that assertion has been
+failing ever since the migration landed, inside a suite that has never been green. **This is what
+a permanently red gate costs** — the test did its job, four months ago, and nobody was reading.
+
+Fixed by surfacing the error. A toast rather than an inline state because a toast is what the
+component used to do and what the test records; whether a persistent inline message would be
+better is Design's call, not a decision to make inside a test-repair branch.
+
+Seen to fail: `scripts/regressions/account_switcher_error.json` R1 removes the effect and the gate
+fails.
+
+---
+
+### D-224 — four jest fixtures describing a product from an earlier era
+
+**Severity:** ROUGH · **Affects:** `apps/web/__tests__/TemplatesMapping.test.ts`, guarding
+`lib/templates.ts`, which `/print/{runId}` renders · **Found during:** the same triage
+**Status:** `fixed` — `fix/frontend-tests-green`
+
+Four failures, and in every one the **builder was right**:
+
+| the mock said | the product says | checked against |
+|---|---|---|
+| `address` / `beds` / `baths` | `street_address` / `bedrooms` / `bathrooms` | the builder's own comment, "Field mapping from PropertyDataExtractor" |
+| `<!-- LISTINGS_TABLE_ROWS -->` | `<!-- TABLE_PAGES -->` | the only marker `buildNewListingsHtml` replaces |
+| `price_range` / `active_count` | `label` / `count` | **`compute/price_bands.py:228-232`, the producer** |
+| default accent `#F26B2B` | `#4F46E5` | `DEFAULT_ACCENT_COLOR`, commented "Indigo (monochrome brand default)" |
+
+The price-bands one is the one worth keeping: the mock described a shape **nothing in the system
+emits**, so the test was failing against a product that had never existed in that form. Two of the
+three price-band fields still resolved — the median rendered at `$625,000` while the title showed
+`—` and the count `0` — which is a partial read, and partial reads are how the consumer CMA path
+lost nine fields.
+
+A fifth test, "should format large numbers with commas", asserted `150` and `75`: neither has a
+comma, and the `150` is an Active count the market-snapshot builder has **no placeholder for** —
+its keys are `market_name`, `period_label`, `report_date`, `lookback_days`, `median_price`,
+`closed_sales`, `avg_dom`, `moi`, `new_listings`, `pendings` and the rest. It checks `1,250`
+through `{{new_listings}}` now, which is a number that actually formats.
+
+**These are hand-written fixtures and nothing ties them to the producer.**
+`tests/test_sample_data_matches_the_builder.py` is the Python side's answer to exactly this
+question; the jest fixtures have no equivalent and can go stale again. Recorded here rather than
+implied by a green run.
+
+---
+
+### D-225 — the plan-page suite tests a copy of the plan page written inside the test file
+
+**Severity:** ROUGH · **Affects:** `apps/web/__tests__/PlanPage.test.tsx`, eleven tests ·
+**Found during:** the same triage
+**Status:** `fixed` — `fix/plan-page-tests-the-plan-page`. The mock is deleted and the suite renders `app/account/plan/page.tsx` with the real `StripeBillingActions`: 11 tests against a stand-in became 16 against the page. **But see D-227** — the route it tests is not linked from anywhere.
+
+`MockPlanPage` is defined in the test file and renders a hand-written sketch of the page: the
+usage ratio, the 0.8 warning threshold, the sponsored badge and the Stripe wrapper, all
+re-implemented. `app/account/plan/page.tsx` **is never imported**. Ten of the eleven tests pass
+and none of them can fail because of anything in the product.
+
+The one that failed did so for its own reason — `getByText('Trial')` matched both `plan-name` and
+`sponsored-badge`, because the fixture's `plan_name` is also "Trial". Fixed by asserting on the
+badge's own content, which is also stricter: the old form would have been satisfied by the plan
+name alone if the badge disappeared.
+
+Left open rather than deleted. The thresholds it encodes are a record of what the page is meant to
+do, and rewriting eleven tests against the real page — which fetches plan, usage and account — is
+its own piece of work. **Nothing in that file is evidence the plan page works**, and that sentence
+is now in its header. D-212 is the same shape, one file over, and was repairable because the
+component it should have been testing was a single import away.
+
+---
+
+### D-226 — the shared jest setup clears the call log and leaves the queue
+
+**Severity:** ROUGH · **Affects:** `apps/web/jest.setup.ts`, every suite using the global fetch
+mock · **Found during:** three AccountSwitcher failures that each passed alone
+**Status:** `fixed` — `fix/frontend-tests-green`
+
+`afterEach(() => jest.clearAllMocks())` empties the **call log** and leaves `mockResolvedValueOnce`
+**queues** in place. A value a test queues and does not consume is handed to the next test's first
+fetch, so a test can be answered with the previous test's data.
+
+The signature is the one that wastes an afternoon: **each test passes in isolation and fails in
+the file.** Three of AccountSwitcher's six did exactly that, and chasing them as component bugs
+would have found nothing, because the component was fine.
+
+The global fetch mock is now reset outright in `afterEach`, guarded with `jest.isMockFunction` so
+a suite that installs a real fetch is not affected. Worth stating what this does not cover: any
+other `jest.fn()` with a queued `*Once` value has the same exposure, and only `global.fetch` is
+reset.
+
+---
+
+### D-227 — `/account/plan` is an unlinked second copy of the billing page
+
+**Severity:** ROUGH · **Affects:** `apps/web/app/account/plan/page.tsx`,
+`components/v0-styling/PlanPageShell.tsx` · **Found during:** rewriting D-225's suite to test the
+page instead of a mock of it
+**Status:** `open` — **deleting it or linking it is a product call.** **[JERRY]**
+
+Nothing in the product links `/account/plan`. Every Billing entry in the sidebar
+(`app-layout.tsx:154, 188, 211`) points at `/app/settings/billing`, which carries its own, fuller
+per-plan upgrade and downgrade flow. The route is outside the `/app` tree, so it also has neither
+the app chrome nor the `QueryProvider` that `app/app/layout.tsx:58` mounts, and it is not in
+`scripts/render-routes.json`.
+
+Its billing actions cover **five of the eight plan slugs**: `StripeBillingActions` returns an
+upgrade pair for `free`, `sponsored_free` and `trial`, a Manage Billing button for `pro` and
+`team`, and **null for everything else** — including `starter`, which is the Growth tier the
+pricing page sells, and `solo`. On `/app/settings/billing` those accounts are served; here they
+see a plan card with no control under it.
+
+**This is the part that makes D-225 worse than it looked.** That suite was a hand-written mock of
+a page no one can reach from inside the product, and ten of its eleven tests passed. Two layers of
+stand-in between the test and anything a customer sees.
+
+The rewritten suite is still worth more than the mock — it asserts three rules nothing else
+asserts (the override, the two-condition badge, the server-side decision) — but if the route goes
+as a duplicate, the file goes with it rather than being ported.
+
+---
+
+### D-228 — the landing page shows two Irvine medians: $925,000 in the report previews, $1.2M in the autopilot card
+
+**Severity:** ROUGH · filed during the landing adoption, which introduced it: the previews are the wizard's `SharedPDFPreview`, whose figures come from `components/shared/email-preview/sample-data.ts`, not `lib/demo-data.ts`.
+**Status:** `fixed` — `feat/landing-adopt-design`. The autopilot card reads the Market Snapshot preview's figures, and the Closed Sales sample's median, trend and days on market were aligned to the snapshot's — those two previews also disagreed about the same 42 sales.
+
+---
+
+### D-229 — `components/shared/email-preview/sample-data.ts` is a second demo-data source beside `lib/demo-data.ts`
+
+**Severity:** ROUGH · filed during the landing adoption; the cause of D-228.
+**Status:** `recorded`
+
+---
+
+### D-230 — the landing page's city box is not carried into signup
+
+**Severity:** ROUGH · filed during the landing adoption; Design's "Your {city} report will be waiting" line was left out because of it.
+**Status:** `recorded`
+
+---
+
+### D-231 — Design's landing pricing copy sells cadence and city limits the product does not have
+
+**Severity:** ROUGH · filed during the landing adoption ("1 city, monthly" / "Up to 3 cities, weekly"); nothing gates cadence by plan, so the verified figures were kept in Design's layout.
+**Status:** `recorded`
+
+---
+
+### D-232 — "350+ Southern California cities" in Design's landing hero has no source
+
+**Severity:** ROUGH · filed during the landing adoption; left out. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-233 — "Data from CRMLS and partner MLSs" in Design's landing footer is unverified
+
+**Severity:** ROUGH · filed during the landing adoption; "and partner MLSs" left out. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-234 — "Your logo goes next to theirs" in the sponsor band is a capability claim nobody has checked
+
+**Severity:** ROUGH · filed during the landing adoption; kept as Design wrote it.
+**Status:** `recorded`
+
+---
+
+### D-235 — the render harness's chrome-only runs flip `/app/people` between degraded and ok, and move `/app/affiliate`'s button count, with no change to either
+
+**Severity:** ROUGH · filed during the landing adoption's before/after comparison.
+**Status:** `recorded`
+
+---
+
+### D-236 — the schedule edit route opens a blank wizard, and saving it creates a new schedule
+
+**Severity:** WRONG · filed during the report-wizard restyle: `/app/schedules/[id]/edit` passes `scheduleId` to `UnifiedReportWizard`, which accepts it and never reads it, so nothing loads and the submit is a `POST /v1/schedules`.
+**Status:** `recorded`
+
+---
+
+### D-237 — the wizard's ZIP list says "Up to 5" and accepts any number
+
+**Severity:** ROUGH · filed during the report-wizard restyle: `addZip` in `step-where-when.tsx` has no count check.
+**Status:** `recorded`
+
+---
+
+### D-238 — the recipients block in the wizard shows a "6" step badge
+
+**Severity:** ROUGH · filed during the report-wizard restyle: `RecipientsSection` is passed `stepNumber={undefined}` and renders 6; present before the restyle.
+**Status:** `recorded`
+
+---
+
+### D-239 — the deliver step's Send now / Schedule choice can never render
+
+**Severity:** ROUGH · filed during the report-wizard restyle: it is behind `!defaultMode`, and `defaultMode` always has a value, so each route is locked to one mode.
+**Status:** `recorded`
+
+---
+
+### D-240 — "five of the eight report types skip the audience step" is wrong; it is four of eight, three of the seven offered
+
+**Severity:** ROUGH · filed during the report-wizard restyle; the wrong count is in `docs/SCOPE_MARKETING_AND_WIZARDS_2026-10-21.md` and a comment in `NewSchedulePage.test.tsx`.
+**Status:** `recorded`
+
+---
+
+### D-241 — signing up does not sign you in; a new account lands on /login with nothing said
+
+**Severity:** WRONG · filed during the property-wizard walk: `POST /v1/auth/register` sets its cookie on its own response and returns `{"ok": true, "email_verified": false}` with no `access_token`, and `app/api/proxy/v1/auth/register/route.ts` only sets `mr_token` from `data.access_token`, so `router.push("/app")` is bounced to `/login`.
+**Status:** `fixed` — `fix/day-one-defaults`: register returns `access_token`, so the proxy writes `mr_token`; a fresh registration lands on `/app` (walked).
+
+---
+
+### D-242 — the property wizard sends the string "N/A" as the owner's name when the record has none
+
+**Severity:** ROUGH · filed during the property-wizard walk: `mapSiteX` defaults `owner_name` to `"N/A"` and `step-generate.tsx` sends it top-level and inside `sitex_data`. Design's "Owner names never print" was left out of the restyle for the same reason — removing owner identity from the report is not merged.
+**Status:** `recorded`
+
+---
+
+### D-243 — a fresh account's first property report goes out with a white accent, #ffffff
+
+**Severity:** WRONG · filed during the property-wizard walk: `loadAccountDefaults` lets the account's `secondary_color` override the theme's default accent, and a new account's is `#ffffff`; the request body carried `"accent_color": "#ffffff"` on both walks.
+**Status:** `fixed` — `fix/day-one-defaults`: migration 0059 drops the `#ffffff` default and clears it on accounts still on both column defaults; a fresh account's request carried the theme's `#D69649` (walked).
+
+---
+
+### D-244 — the property wizard's comparables default to active listings, not closed sales
+
+**Severity:** ROUGH · filed during the property-wizard walk: `compsStatus` starts at `"Active"` and resets to it.
+**Status:** `recorded`
+
+---
+
+### D-245 — the theme preview images predate the 2026-10-13 cover changes and carry a sample brokerage, "Luxury Estates Realty"
+
+**Severity:** ROUGH · filed during the property-wizard walk: `public/previews/*.jpg`, last changed 2026-09-30, shown on the Look step's theme cards.
+**Status:** `recorded`
+
+---
+
+### D-246 — the property wizard's preview is a hand-drawn cover sketch, not the template
+
+**Severity:** ROUGH · filed during the property-wizard restyle: Design draws the real cover on the right; the product has no React render of it, so the sketch is kept and labelled as one.
+**Status:** `recorded`
+
+---
+
+### D-247 — the property wizard's header "Generate Report" button showed the spinner and sent nothing
+
+**Severity:** WRONG · filed during the property-wizard restyle: it called `setGenerationPhase("generating")` without `startGeneration`, so the request was never made and the spinner never ended.
+**Status:** `fixed` — `feat/property-wizard-adopt-design`. Design's header has no such button; the one that calls the API is the step's own.
+
+---
+
+### D-248 — Design's "Who's reading it?" and "Public page + QR code" are product decisions, not built
+
+**Severity:** ROUGH · filed during the property-wizard restyle: seller/buyer maps to `report_type`, which `PropertyReportCreate` accepts and the wizard never sends; the public-page switch has no counterpart.
+**Status:** `recorded`
+
+---
+
+### D-249 — Design's App v3 rail hides Branding from sponsored agents; the old shell gave them their own
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: `getNavGroups` spreads Branding only when `!isSponsored`, against the old tier's "full tools + own branding + billing". Every other route survives the rewrite. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-250 — the reports list's "Sent to contacts" / "Downloaded only" filter is really "from a schedule" / "not"
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: both pills key on `schedule_name`, so a send-now report emailed to contacts is listed under "Downloaded only".
+**Status:** `recorded`
+
+---
+
+### D-251 — the schedules page still wraps Design's new table in the old stat tiles and boxed card
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: IMPLEMENTATION.md describes the page change; no file for `app/app/schedules/page.tsx` was provided.
+**Status:** `recorded`
+
+---
+
+### D-252 — the schedules list shows "—" for cadence on every row
+
+**Severity:** ROUGH · filed during the App v3 drop-ins; the same before and after.
+**Status:** `recorded`
+
+---
+
+### D-253 — report types the list does not know render as raw lowercase slugs ("dom", "price changes")
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: the new reports page falls back to `report_type.replace(/_/g, " ")`; the old list title-cased them. Seen on seeded rows.
+**Status:** `recorded`
+
+---
+
+### D-254 — the dashboard no longer mounts the onboarding checklist or the limit alerts
+
+**Severity:** ROUGH · filed during the App v3 drop-ins: Design's dashboard puts the limit in the lead sentence and drops `DashboardOnboarding`; IMPLEMENTATION.md leaves open whether sponsored accounts still need it. **[JERRY]**
+**Status:** `recorded`
+
+---
+
+### D-255 — market_snapshot is the one kind not on Design's `_v2` page — production still renders it on the legacy `_base` template
+
+**Severity:** ROUGH · filed during the report-preview batch: `V2_KINDS` in `market_builder.py` lists seven kinds and leaves out the one the wizard calls "the one most agents send monthly".
+**Status:** `fixed` — #221: Market Snapshot renders Design's `_v2` page (band, months of inventory, price tiers, property types, and the 12-month median line kept as a fourth row by the D-102 decision); 2 pages to 1. The nine listing cards and the AI narrative are dropped, as Design's page has neither. The legacy page it left was deleted in #223.
+
+---
+
+### D-256 — the legacy Snapshot page paints its median in the raw accent, so a #ffffff accent (D-243's default) makes the headline number invisible
+
+**Severity:** WRONG · filed during the report-preview batch: seen on `/app/reports/new` and `/app/get-started` for the fixture account (`secondary_color` #ffffff) — "MEDIAN SALE PRICE" under a blank line.
+**Status:** `recorded`
+
+---
+
+### D-257 — the Snapshot header states the window twice: "Last 30 days · Irvine · Last 30 days · Live MLS Data"
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `market_snapshot`.
+**Status:** `recorded`
+
+---
+
+### D-258 — the Open Houses page prints raw ISO timestamps ("2026-10-24T18:27:14.910390") under each card
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `open_houses`; not checked against a real feed.
+**Status:** `recorded`
+
+---
+
+### D-259 — one stock photo in the sample listings renders blank (the 7th gallery card, "322 Sycamore Blvd")
+
+**Severity:** ROUGH · filed during the report-preview batch: same card on `new_listings_gallery`, `open_houses` and the Snapshot grid; its Unsplash URL in `sample_report_data.py` does not load.
+**Status:** `recorded`
+
+---
+
+### D-260 — the API's default accent is #0d9488 and the worker's is #4F46E5, under a comment in `brand_resolver.py` saying they must match
+
+**Severity:** FRAGILE · filed during the report-preview batch: `brand_resolver.py:35-38` against `market_builder.py:96`.
+**Status:** `recorded`
+
+---
+
+### D-261 — `generate_sample_jpg`'s timeout handler logs an undefined `preview_url`, so a PDFShift timeout is a NameError and a 500, not the intended 504
+
+**Severity:** ROUGH · filed during the report-preview batch: `branding_tools.py`, the `except httpx.TimeoutException` branch.
+**Status:** `recorded`
+
+---
+
+### D-262 — the wizard's preview caption says "Pick a report to preview it here" while a preview is showing
+
+**Severity:** ROUGH · filed during the report-preview batch: on `/app/reports/new` before and after; Snapshot is preselected, the caption reads as if nothing were.
+**Status:** `recorded`
+
+---
+
+### D-263 — the property theme previews (D-245) cannot be regenerated without live SiteX and SimplyRETS credentials and one real address
+
+**Severity:** FRAGILE · filed during the report-preview batch: both `generate_*_preview_jpgs.py` read the HTML `gen_la_verne_all_themes.py` writes, and that script fetches the live record for 1358 5th St, La Verne; there is no fixture path.
+**Status:** `recorded`
+
+---
+
+### D-264 — the email preview is also a React redraw (`SharedEmailPreview`), not the worker's email template — the same shape the report previews had; not compared
+
+**Severity:** ROUGH · filed during the report-preview batch: used by the schedule wizard and both branding pages.
+**Status:** `recorded`
+
+---
+
+### D-265 — the New Listings page says "this week" beside its price range on a 30-day window
+
+**Severity:** ROUGH · filed during the report-preview batch: on the sample render of `new_listings` and `new_listings_gallery` ("$950K – $2.2M this week").
+**Status:** `recorded`
+
+---
+
+### D-266 — login ignores `?next=`: the admin pages redirect to `/login?next=/admin` and sign-in always lands on `/app`
+
+**Severity:** ROUGH · filed during the login/register adoption: the old page declared `useSearchParams()` and never read it; Design's drops it. Behaviour unchanged either way.
+**Status:** `recorded`
+
+---
+
+### D-267 — `/forgot-password`, `/reset-password` and `/verify-email` are still on the old dark split frame
+
+**Severity:** ROUGH · filed during the login/register adoption: Design's IMPLEMENTATION.md says they "should move onto it too (same move, not included)".
+**Status:** `recorded`
+
+---
+
+### D-268 — the landing city does not reach signup: Design's README says "Start free" carries `?city=` into signup, and `/register` reads no query parameter
+
+**Severity:** ROUGH · filed during the login/register adoption: true of the old page and of Design's.
+**Status:** `recorded`
+
+---
+
+### D-269 — login writes `mr_token` from JavaScript with `max-age=3600`, so a session cookie lasts an hour whatever the user wanted
+
+**Severity:** FRAGILE · filed during the login/register adoption: `app/login/page.tsx`, unchanged by the adoption; Design removed "Keep me signed in" because nothing read it. Not checked against the API's own cookie.
+**Status:** `recorded`
+
+---
+
+### D-270 — login's own error copy is unreachable: the API's `detail` ("Invalid credentials") always wins over "That email and password don't match."
+
+**Severity:** ROUGH · filed during the login/register adoption: seen on the error render.
+**Status:** `recorded`
+
+---
+
+### D-271 — with no stored accent, two worker readers fall back to ink `#1a1a1a` while the API resolves teal `#0d9488` and the market builder indigo `#4F46E5`
+
+**Severity:** FRAGILE · filed during the day-one fix: `property_tasks/property_report.py:162` and `tasks.py` (branding block, `row[11] or "#1a1a1a"`); the third default beside D-260's two. The document accent itself comes from the report row, so the walk's PDF was not affected.
+**Status:** `recorded`
+
+---
+
+### D-272 — a fresh account's primary colour is the column default `#03374f`, not the platform default `#18235c` the resolver uses for an empty value
+
+**Severity:** ROUGH · filed during the day-one fix: `0001_base.sql`; left as is — unlike white it is a real colour, and changing it would recolour every untouched account.
+**Status:** `recorded`
+
+---
+
+### D-273 — a rep's Deactivate and "Cancel Invitation" write `accounts.is_active`, which nothing reads: the agent still signs in, still sends, still shows active, and an invite link still works
+
+**Severity:** WRONG · filed during the sponsor-views inventory: verified on the local stack — deactivate 200, rep and company lists still "active", agent login 200; a cancelled invite accepted with 200. Login, accept-invite (`auth.py:441`), `account_can_send` (`schedules_tick.py:424`) and both status lists read `users.is_active`. So Reactivate and Remove (shown only for "deactivated") are unreachable from the dashboard.
+**Status:** `fixed` — `fix/deactivate-and-bulk-cap`: deactivate now deactivates the agent's users and spends its unused invite tokens, the auth middleware refuses a deactivated user's session, reactivate reverses it; proved against the database by `apps/api/tests/test_sponsor_actions_do_what_they_say.py` (sign-in, session, `account_can_send`, accept-invite, the rep's list).
+
+---
+
+### D-274 — D-006's fix does not hold under enforced RLS: the company portal sets its OWN id as context, and the policies match `account_id` only, so a company sees none of its agents' rows
+
+**Severity:** FRAGILE · filed during the sponsor-views inventory: proved with a non-superuser role in a rolled-back transaction — company context 0 agent reports, agent context 1. Today it works only because the app connects as a superuser (see the note at the head of this list).
+**Status:** `recorded`
+
+---
+
+### D-275 — the live landing page tells sponsors "Your logo goes next to theirs"; no co-brand exists on agents' reports
+
+**Severity:** WRONG · filed during the sponsor-views inventory: `components/marketing/sponsor-band.tsx`, live on www.trendyreports.io. Every render path gives a REGULAR account its own branding only (`tasks.py:507`, `property_report.py:143`, `brand_resolver.py:99`).
+**Status:** `recorded`
+
+---
+
+### D-276 — the company agents page filters by `rep_id`, which `/v1/company/agents` does not return, so every "View agents" link from the reps table lands on an empty list
+
+**Severity:** WRONG · filed during the sponsor-views inventory: `app/app/company/agents/page.tsx:150` against `company.py` list_agents (returns `rep_name` only).
+**Status:** `recorded`
+
+---
+
+### D-277 — the company branding page's theme picker is never saved: the PATCH sends no `default_theme_id` and the API model has no such field
+
+**Severity:** WRONG · filed during the sponsor-views inventory: `app/app/company/branding/page.tsx:394`; the choice resets on reload.
+**Status:** `recorded`
+
+---
+
+### D-278 — a company rep's branding page says the company brand cascades to "all reports generated by you and your agents"; it never reaches agents' reports
+
+**Severity:** WRONG · filed during the sponsor-views inventory: `app/app/settings/branding/page.tsx`, the read-only company-rep view.
+**Status:** `recorded`
+
+---
+
+### D-279 — an independent rep's branding saves to `accounts`, which the worker does not read for INDUSTRY_AFFILIATE; the only UI that writes `affiliate_branding` (`components/branding-form.tsx`) is imported nowhere
+
+**Severity:** WRONG · filed during the sponsor-views inventory: `/app/settings/branding` → `PATCH /v1/account/branding`; the worker renders reps from `affiliate_branding` (`tasks.py:483`).
+**Status:** `recorded`
+
+---
+
+### D-280 — `get_company_admin` checks only that the account is a TITLE_COMPANY, not the user's role: any user on a company account is its admin
+
+**Severity:** FRAGILE · filed during the sponsor-views inventory: `apps/api/src/api/deps/company.py`.
+**Status:** `recorded`
+
+---
+
+### D-281 — `/v1/affiliate/all-reports` and `/all-schedules` skip the `verify_affiliate_account` check every other affiliate endpoint makes
+
+**Severity:** ROUGH · filed during the sponsor-views inventory: `affiliates.py:908`, `:959`. A non-affiliate gets only its own rows, so nothing leaks today.
+**Status:** `recorded`
+
+---
+
+### D-282 — the rep and company tiers rank "pending" and "deactivated" in opposite order, so one agent can read differently on each
+
+**Severity:** ROUGH · filed during the sponsor-views inventory: `services/affiliates.py` (pending first) against `company.py` (deactivated first).
+**Status:** `fixed` — `fix/deactivate-and-bulk-cap`: the rep tier ranks "deactivated" first, as the company tier does.
+
+---
+
+### D-283 — `reports_change_pct` divides by `max(last_month, 1)`, so growth from zero reads as "up 3600%"
+
+**Severity:** ROUGH · filed during the sponsor-views inventory: `company.py`; the company dashboard now reads `reports_last_month` and says "None last month" instead.
+**Status:** `recorded`
+
+---
+
+### D-284 — a company's first branding save without a display name is a 500: the upsert inserts NULL into `affiliate_branding.brand_display_name`, which is NOT NULL
+
+**Severity:** ROUGH · filed while extending `test_company_tenant_isolation.py`: `PATCH /v1/company/branding` with `{"primary_color": ...}` for a company with no branding row raises `NotNullViolation`, unhandled. The company branding page always sends the name, so the page does not hit it; any other caller does.
+**Status:** `fixed` — #227: an unnamed first save names the brand after the company's account. The same PR fixes D-288, the rep-invite half of the same hole. `apps/api/tests/test_a_new_company_can_invite_reps.py`.
+
+---
+
+### D-285 — eight database-backed API tests fail on `main`, and CI cannot see it because it provisions no database
+
+**Severity:** FRAGILE · filed while adding `test_sponsor_actions_do_what_they_say.py`: run against the local stack, `test_billing_checkout.py` (3: the checkout/portal URL moved to `/app/settings/billing`, and a fixture), `test_schedules_report_types.py` (3) and `test_me_endpoint.py` (2 errors: its fixture inserts an account with no `slug`, which is NOT NULL) fail identically with and without this branch. They skip in CI, so they have been red where nobody looks. Adding Postgres to CI turns CI red on exactly these eight until each is triaged.
+**Status:** `fixed` — #219. Backend Tests now runs a Postgres 16 service, applies every migration, and sets `DATABASE_URL` (migrated) and `TEST_DATABASE_URL` (empty scratch). The eight: the schedules row gained `timezone`/`filters` (one builder now), billing asserts `/app/settings/billing` and that a sponsored agent can check out (billing.py's compliance note), the `/me` fixtures insert `slug`. Running it also caught the two tenant-isolation suites seeding `TEST_DATABASE_URL` while the app read `DATABASE_URL`; they read `DATABASE_URL` only. `tests/test_ci_runs_the_database_suites.py` keeps CI provisioned; `scripts/regressions/ci_database.json` 5/5. First CI run: 3161 passed, 0 failed.
+
+---
+
+### D-286 — two regression-harness signal tests failed once in a full local run and passed alone and on rerun
+
+**Severity:** FRAGILE · seen on the first full DB-backed run for #219: `test_regression_harness_guards_itself.py::test_sigterm_mid_mutation_still_restores_and_exits_2` and `::test_sigkill_leaves_a_sentinel_and_the_next_run_refuses_to_start`. Both passed in isolation (with and without a database) and in the next full run. Likely timing in `_enter_mutation_window` under load; not yet reproduced, so not yet diagnosed.
+**Status:** `recorded`
+
+---
+
+### D-287 — both unsubscribe endpoints returned 500 to every request, and the lookup under them matched no schedule the API had created: recipients could not opt out
+
+**Severity:** BROKEN · filed while scoping the schedule hand-over: `routes/unsubscribe.py` `_suppress` did `with db_conn() as conn: conn.cursor()`; `db_conn()` yields `(conn, cur)`. Beneath it the account was found by `%s = ANY(schedules.recipients)`, and the API stores every recipient as JSON, so a fixed tuple would have answered "unsubscribed" and recorded nothing. The link and RFC 8058 one-click both. Opt-outs clicked while this was live were not recorded: the web route logs `[Unsubscribe] API returned 500 for {email}`, which is where they can be recovered from.
+
+**It never regressed; it never worked.** `_suppress` was written that way in `f1510014` (2025-11-11, *Phase 24B: Schedules CRUD API + Unsubscribe Endpoint*), and `db_conn()` yielded `(conn, cur)` in that same commit. `b82d0124` (2025-11-20, typed recipients) then made the lookup unable to match. The 2026-08-18 work (U1–U5, `c5086f1a`…`928b2d47`) verified signing, per-recipient links, encoding, the landing page and the RFC 8058 headers; `test_unsubscribe_token_roundtrip.py` stubs the database, and nothing called the route. Every part was verified except the one that records the opt-out.
+**Owner answer, 2026-10-29:** Pacific Coast's reps never mailed real recipients, so there are no lost opt-outs to recover and the Render log check for `API returned 500` is not needed.
+**Status:** `fixed` — #225: the candidates come from `email_log` (written for every scheduled send with the resolved addresses), the token picks the account, the suppression lands where the worker's send filter reads it. `apps/api/tests/test_unsubscribe_records_a_suppression.py` (5, red on main). **Gate: #229** — `apps/api/tests/test_unsubscribe_end_to_end.py` sends a real scheduled email through the worker's path, follows its footer link and its List-Unsubscribe header the way the web routes do, and requires the next send to skip both addresses; it fails rather than skips on GitHub Actions without a database. `scripts/regressions/unsubscribe.json` 7/7.
+
+---
+
+### D-288 — every rep invite from a title company with no branding row was a 500: `copy_branding_to_child`'s fallback omitted the NOT NULL `brand_display_name`
+
+**Severity:** BROKEN · filed while building rep seats: every company starts with no `affiliate_branding` row, so the next company to sign up would have hit it on its first invite. The `except` retried another INSERT omitting the name, inside the transaction the first failure had aborted. Pacific Coast Title has a row and was unaffected.
+**Status:** `fixed` — #227: the fallback names the rep's brand after the company's account. `apps/api/tests/test_a_new_company_can_invite_reps.py`; `scripts/regressions/new_company_branding.json` 2/2.
+
+---
+
+### D-289 — the property wizard's page picker still held the nine-page set, so every atlas report from the wizard had no notes page
+
+**Severity:** WRONG · filed during the six-page consolidation: `components/property-wizard/types.ts` listed `FULL_PAGES`/`COMPACT_PAGES` without `notes`, and the builder rendered only what it was sent — no agent panel, no explainers, on the default theme.
+**Status:** `fixed` — #220: `REPORT_PAGES` is the six pages and `PropertyReportBuilder.normalize_page_set` always adds the required ones. `tests/test_wizard_pages_match_the_builder.py`, `apps/worker/tests/test_renders_exactly_six_in_order.py`.
+
+---
+
+### D-290 — the `_v2` property themes' font stacks were autoescaped to `&#39;`, so every theme rendered in the browser's default serif
+
+**Severity:** WRONG · filed when a render was looked at on 2026-10-26: `--display: &#39;Barlow Condensed&#39;, …` is invalid CSS and was dropped; atlas had rendered in Times since it moved to the shared page on 2026-10-06. Nothing failed — every gate read text, numbers, colours and pages.
+**Status:** `fixed` — #220: `| safe` on the two custom properties, plus lining figures on every theme. `apps/worker/tests/test_each_theme_renders_in_its_own_typefaces.py` (no HTML entity inside a `<style>` block).
+
+---
+
+### D-291 — the market PDF paid for an OpenAI narrative on every kind and printed it on one
+
+**Severity:** ROUGH · filed during D-255: `tasks.py` generated a narrative unless the kind was in `V2_KINDS`, and the builder blanked it for those; Design's page renders none.
+**Status:** `fixed` — #221 stopped the call for `_v2` kinds; #223 removed narrative generation from the market path entirely when the legacy page went.
+
+---
+
+### D-292 — the legacy Market Snapshot labelled its months-of-inventory pace "90 days" over a 30-day window
+
+**Severity:** WRONG · filed during D-255's before render.
+**Status:** `fixed` — by removal: #221 moved the snapshot to Design's page, where the sentence and bar come from `compute.moi.headline`, and #223 deleted the legacy page.
+
+---
+
+### D-293 — the admin account page labels `sponsored_free` "Trial (10 reports/month)"; the plan enforces 3
+
+**Severity:** WRONG · filed during the sponsor compliance check: `apps/web/app/admin/(dashboard)/accounts/[id]/page.tsx:317`. The 10 is the legacy `monthly_report_limit` (D-051); enforcement reads `market_reports_limit` = 3, and production's `sponsored_free` is 3/3/1/1 like `free`.
+**Status:** `fixed` — fix/plan-numbers-and-preview (#240), owner decision 2026-10-29: the plan picker is built from `GET /v1/admin/plans`, which now carries `market_reports_limit`, and the page's limit card and override placeholder read the enforced limit. No plan number is typed into the page (`__tests__/PlanLimitLabel.test.ts`, `apps/api/tests/test_admin_plans_list_the_enforced_limit.py`).
+
+---
+
+### D-294 — the market running head prints a bare count before the title — "257 Market Snapshot" — with nothing saying what was counted
+
+**Severity:** ROUGH · filed during the report-surface plumbing check: `templates/market/_base/page_header.jinja2` `{{ total_count }} {{ report_title }}`, repeated on every page by PDFShift. On a listings kind the count reads as listings; on the snapshot it is a number with no noun.
+**Status:** `recorded`
+
+---
+
+### D-295 — `components/property/` (four components and an index), `lib/wizard-types.ts` and `lib/property-report-assets.ts` are reachable from no page
+
+**Severity:** ROUGH · filed during the six-page consolidation: nothing imports `@/components/property`; the live wizard is `components/property-wizard/`. `ThemeSelector` still offers the retired themes, which is the D-131 trap in the web app.
+**Status:** `recorded`
+
+---
+
+### D-296 — the invite and welcome emails put typed names into HTML unescaped
+
+**Severity:** FRAGILE · filed while writing the rep-change notice: `services/email.py` `send_role_invite_email`, `send_rep_welcome_email` and siblings interpolate inviter, company and first names straight into the markup. The names are typed by company admins and invitees. The new notice escapes every value.
+**Status:** `fixed` — feat/transactional-shell: every typed value goes through `_e`; `test_every_typed_name_is_escaped` covers all 15 account emails.
+
+---
+
+### D-297 — a platform admin deactivating a rep's user leaves the rep's seat held
+
+**Severity:** ROUGH · filed with rep seats (#224): seats close on reassignment and on a cancelled invite. The admin user toggle (`routes/admin.py`, `is_active`) writes `users` only, so the seat stays open and counts against the company.
+**Status:** `recorded`
+
+---
+
+### D-298 — `MASTHEAD_SUBTITLE_ALPHA` and the masthead title-size ladder in `market_builder.py` feed context keys no template reads
+
+**Severity:** ROUGH · filed with #223: the legacy masthead that read `title_px` and the subtitle alpha was deleted. The band derivation stays (the running footer's tint colours use it); the ladder and the alpha are inert.
+**Status:** `recorded`
+
+---
+
+### D-299 — the company dashboard's "quiet" and "last active" count market reports only
+
+**Severity:** WRONG · filed during the seat scoping: `/v1/company/overview` and `/reps` read `report_generations` alone, so a rep whose agents send only property reports reads "nothing sent yet". The seat model's idle rule (`services/seats.py`) reads both tables — and they spell finished differently (`completed` / `complete`).
+**Status:** `recorded`
+
+---
+
+### D-300 — `/v1/company/overview` sent `total_agent_seats`, which was the agent count under a seat name
+
+**Severity:** ROUGH · filed during the seat scoping: agents take no seat. **Seats are rep seats** — the company pays for its own reps; agents stay `sponsored_free` and upgrade themselves. **If anyone later wants sponsored agents to get more than Free, that needs a compliance check first** (a thing of value from a title company to a referral source). Production on 2026-10-27: `free` and `sponsored_free` both 3/3/1/1, zero overrides on the 17 sponsored accounts.
+**Status:** `fixed` — #224: removed; a `seats` block (`total, held, open, pending, idle`, null when not on seats) replaces it.
+
+---
+
+### D-301 — one `free` account in production carries a per-product limit override; not identified
+
+**Severity:** ROUGH · filed from Jerry's production plans query (2026-10-27), which also confirmed zero overrides on the 17 sponsored accounts. Unrelated to the sponsor compliance question; recorded so it is not rediscovered.
+**Status:** `recorded`
+
+---
+
+### D-302 — the company reps and agents tables offer "Deactivate", "Remove", "Remove from Company" and the agents table's "Resend Invite" with no handler: the items do nothing
+
+**Severity:** WRONG · filed during the board filing: `app/app/company/reps/page.tsx:500`, `app/app/company/agents/page.tsx:398` and `:404` render `DropdownMenuItem`s with no `onClick`. Design's handoff note 7 recorded the reps half. The seat model's reassign and cancel-invite endpoints (#224) are what "a rep leaves" should reach. **Queued for the company UI work** (2026-10-28).
+**Status:** `recorded`
+
+---
+
+### D-303 — the market email's "Showing X of Y" counted listings the layout did not draw
+
+**Severity:** WRONG · found adopting Design's 5th-package market email. The truncation note took `showing` from the caller (the email cap, e.g. 8 for featured listings), while the adaptive gallery layouts drew their own number: the 2×2 layout drew 4 cards under "Showing 8 of N", the stacked one up to 3. The note now counts the listings the email actually renders, and every layout renders all it is given. Pinned by `test_the_note_counts_what_the_email_drew` (M10 in `scripts/regressions/market_email.json`).
+**Status:** `fixed` — feat/market-email-5th-package.
+
+---
+
+### D-304 — the consumer report page names the record owner to whoever has the link
+
+**Severity:** BROKEN · found building the home-value email. D-116 took the assessor-roll owner block off the property report and D-155 took the owner's name out of the email, both because the person who requests a home-value report is often not the owner: a neighbour, a buyer, another agent. The page both the email and the SMS link to, `/r/{id}`, is rendered from the public, unauthenticated `GET /v1/r/{id}/data`, and it still returned `property.owner_name`. The viewer printed it twice: "Owner: <name>" under the address, and an "Owner" row in Property Details. `owner_name` stays in `consumer_reports.property_data` for the agent path. Red-to-green: `apps/api/tests/test_consumer_report_does_not_name_the_owner.py`.
+**Status:** `fixed` — fix/consumer-viewer-owner-name.
+
+---
+
+### D-305 — the consumer report's link preview prints the estimate
+
+**Severity:** WRONG · found with D-304. `app/r/[id]/page.tsx` `generateMetadata` writes "Estimated value: $X - $Y" into the page's description and Open Graph tags, so the SMS, iMessage, Slack or email link preview shows the range before anyone opens the report. On 2026-10-28 the owner decided the home-value email carries no estimate, because a number without the sales beside it reads like an appraisal. The preview is that number without the sales. **Decision for Jerry:** drop the range from the metadata (the page still shows it in context), or keep it in previews.
+**Status:** `fixed` — fix/plan-numbers-and-preview. Owner decision (2026-10-29): take it out; a preview is public wherever the link is forwarded, and the estimate belongs in the report beside how it was worked out. The metadata now names the report and nothing more (`tests/test_report_link_preview_has_no_estimate.py`).
+
+---
+
+### D-306 — the consumer report's agent block could belong to another user on the account
+
+**Severity:** WRONG · found building the home-value email. `process_consumer_report` loaded the agent's photo, email, job title and licence number with `JOIN users u ON u.account_id = a.id ... LIMIT 1`, with no filter on the report's own `agent_id` and no ORDER BY. On an account with more than one user, the PDF and the delivery email could carry another user's identity. Scoped to `u.id = agent_id` by feat/home-value-email; pinned by `test_the_brand_lookup_is_the_reports_own_agent`, and mutation HV4 makes it fire.
+**Status:** `fixed` — feat/home-value-email (#234): the brand query is scoped to `u.id = agent_id`.
+
+---
+
+### D-307 — the market path picks "the agent" as any user on the account
+
+**Severity:** FRAGILE · found with D-306. Three more lookups in `tasks.py` take an account's agent as `LIMIT 1` over `users` with no ORDER BY: `_build_regular_brand` (the market email's agent block), the market PDF's branding context, and the agent CC on a manual send (which does `ORDER BY created_at`). A market schedule belongs to an account, not a user, so there is no agent id to scope by. Correct while every REGULAR account has one user (true locally; production unchecked), and nondeterministic the day one has two. Needs a rule ("the account owner") before a fix.
+**Status:** `recorded`
+
+---
+
+### D-308 — the self-signup welcome email promises 5 reports a month; Free allows 3
+
+**Severity:** WRONG · found keeping the account emails' wording inside Design's shell. `send_regular_agent_welcome_email` says "Your Free plan includes 5 reports per month." That 5 is `plans.monthly_report_limit`, the legacy column. The market-report gate reads `market_reports_limit`, which is **3** for `free` (and 3 for `sponsored_free`, whose legacy value is the 10 in Design's mocks). Kept as written in the shell PR because the owner asked for the current wording until Design's copy is fixed; marked with a TODO at the line. **Decision for Jerry:** say 3, or read the number from the plan at send time.
+**Status:** `fixed` — fix/plan-numbers-and-preview. Owner decision (2026-10-29): plan numbers in email copy are read from the plans table. The welcome email reads `market_reports_limit` for `free` at send time and drops the number rather than guess when it cannot (`apps/api/tests/test_plan_numbers_in_email_come_from_the_plan.py`, including a change to the plan reaching the next email). No other plan number is typed into email copy; the limit notices take the enforced limit from their caller. D-293 is the same drift on the admin page, still open.
+
+---
+
+### D-309 — the public lead-page search returns the assessor's owner name, tax and last-sale data for any address
+
+**Severity:** WRONG · found reviewing #238 (the home value funnel). `POST /v1/cma/{code}/search` needs no login (`/v1/cma/` is exempt in `middleware/authn.py`) and, for whatever address a visitor types, returns `owner_name` plus assessed value, land and improvement value, tax amount, and last sale price and date (`lead_pages.py:262-289`). The funnel shows none of it, but every visitor's browser receives it and the lead posts `owner_name` back. Nothing on the server reads it as the requester's name — the lead record, the delivery email, the agent SMS and the CRM view all use `requester_name` / `payload.name` (checked 2026-10-29) — so this is exposure, not misattribution: the D-116 data leaving through the lookup instead of the report. The consumer path has no use for the owner name since D-304. **Proposed fix:** drop `owner_name` and the tax and sale fields from the public search response and from what the funnel posts; the authenticated agent path (`/v1/property/search`) keeps them.
+**Status:** `recorded`
 
 ---
 

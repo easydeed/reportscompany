@@ -1,0 +1,23 @@
+[
+  {
+    "name": "PE1 an email references a new public file without listing it",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "/email/trendy-lockup-light@3x.png",
+    "new": "/email/trendy-lockup-light-v2@3x.png",
+    "test": "tests/test_permanent_email_assets.py apps/api/tests/test_transactional_shell.py"
+  },
+  {
+    "name": "PE2 white.png is dropped from the permanent list",
+    "file": "tests/permanent_email_assets.txt",
+    "old": "white.png                           # account emails",
+    "new": "#white.png                          # account emails",
+    "test": "tests/test_permanent_email_assets.py"
+  },
+  {
+    "name": "PE3 a listed file no longer exists",
+    "file": "tests/permanent_email_assets.txt",
+    "old": "logo-white.png                      #",
+    "new": "logo-white-gone.png                 #",
+    "test": "tests/test_permanent_email_assets.py"
+  }
+]

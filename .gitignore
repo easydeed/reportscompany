@@ -58,3 +58,15 @@ tmp/*_raw.json
 # process is killed outright, so an interrupted measurement leaves this behind
 # and the next `git status` reports a 79-line artefact as new source.
 _measure_contrast_by_pixel.js
+
+# scripts/apply_regressions.py writes this before a mutation reaches disk and
+# deletes it after a verified restore (D-196). If it is here, a run died
+# holding a mutation and the next run will refuse to start until `--restore`
+# has put the file back. Ignored so that `git add -A` cannot commit a
+# half-applied regression along with the work it was meant to prove.
+.regress-mutation-in-progress.json
+
+# scripts/render_routes.mjs output — screenshots and the computed-style probes
+# for a before/after run. Regenerated in minutes and large; the comparison is
+# the artefact worth keeping, not the run.
+.render/

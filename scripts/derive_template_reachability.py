@@ -7,16 +7,21 @@ and the documents built on it say **"everything in `_base/` renders
 nowhere"** — unqualified — and that sentence is in the handover that went to
 Design. It has been cited three times as a reason to delete.
 
-THERE ARE TWO `_base/` DIRECTORIES.
+THERE WERE TWO `_base/` DIRECTORIES; ONE IS LEFT.
 
-    templates/property/_base/   dead: nothing reaches it
-    templates/market/_base/     LIVE: `market/market.jinja2` is one line,
-                                `{% extends '_base/base.jinja2' %}`, and that
-                                base imports `_base/macros.jinja2`. It is the
-                                whole of every market report.
+    templates/property/_base/   was dead: nothing reached it. DELETED
+                                2026-10-27 (D-131), after every surface
+                                rendered byte-identical without it.
+    templates/market/_base/     LIVE: `_v2/report.jinja2` (every market
+                                report's body) imports `_base/macros.jinja2`,
+                                and `_base/page_header.jinja2` and
+                                `page_footer.jinja2` are PDFShift's running
+                                head and foot on every page. The legacy
+                                `market.jinja2` + `_base/base.jinja2` were
+                                deleted 2026-10-28 (D-255 follow-up).
 
 So "delete the `_base/` tree" is true of one and would delete the market
-report's entire base. The original classification was not wrong about
+report's header, footer and chart. The original classification was not wrong about
 `property/_base/` — it was written while looking at `templates/property/`,
 and the sentence it produced does not say so.
 
@@ -94,26 +99,86 @@ def python_roots():
     """Template names passed to `get_template(...)` anywhere in the worker.
 
     Parsed with Python's own parser, not grepped — a `get_template` inside a
-    comment or a docstring is not a call. Returns the literal strings; which
-    surface each belongs to is decided by whether the file resolves, because
-    the same name can exist under both loaders.
+    comment or a docstring is not a call. Returns the names; which surface each
+    belongs to is decided by whether the file resolves, because the same name
+    can exist under both loaders.
+
+    AND NOT ONLY LITERALS, WHICH IS WHERE THIS WAS WRONG. The first version
+    collected `ast.Constant` arguments only. `market_builder` renders Design's
+    page with
+
+        template = self.env.get_template(
+            V2_TEMPLATE_PATH if self.report_type in V2_KINDS else TEMPLATE_PATH)
+
+    (as it read until 2026-10-28; now `get_template(V2_TEMPLATE_PATH)`)
+    — module constants, not literals — so `_v2/report.jinja2` came back
+    UNREACHABLE on its first render, and the gate's own message asked the right
+    question: "are they reached from PYTHON?"
+
+    That message exists because of D-131, where following only Jinja edges
+    reported two live templates as dead. This is the same shape one level in:
+    following only literal arguments misses a template referenced through a
+    name. So module-level string constants are resolved too, and a `Name` or
+    `Attribute` argument that resolves to nothing is reported rather than
+    dropped — an argument the scan cannot follow is the thing that produced
+    both of these.
     """
     import ast
     names = set()
+    unresolved = []
     for path in (ROOT / "apps/worker/src").rglob("*.py"):
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"))
         except SyntaxError:
             continue
+        # Module-level `NAME = "literal"`, which is how a template path is
+        # spelled when it is also used for a dispatch decision.
+        consts = {}
+        for node in tree.body:
+            if isinstance(node, (ast.Assign, ast.AnnAssign)):
+                targets = (node.targets if isinstance(node, ast.Assign)
+                           else [node.target])
+                value = node.value
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    for t in targets:
+                        if isinstance(t, ast.Name):
+                            consts[t.id] = value.value
+
+        def collect(arg):
+            """One argument, which may be a literal, a name, or a ternary."""
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                names.add(arg.value)
+                return True
+            if isinstance(arg, ast.Name) and arg.id in consts:
+                names.add(consts[arg.id])
+                return True
+            if isinstance(arg, ast.IfExp):
+                # `a if cond else b` — BOTH branches are roots. Only taking one
+                # is how a conditional render path goes missing.
+                return collect(arg.body) and collect(arg.orelse)
+            return False
+
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
-            fn = node.func
-            if getattr(fn, "attr", None) != "get_template":
+            if getattr(node.func, "attr", None) != "get_template":
                 continue
             for arg in node.args:
-                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    names.add(arg.value)
+                if not collect(arg):
+                    unresolved.append(
+                        f"{path.relative_to(ROOT)}:{getattr(arg, 'lineno', '?')}")
+    if unresolved:
+        # TWO SITES ARE EXPECTED AND BOTH ARE COVERED ELSEWHERE, so the warning
+        # is a list to read rather than a list of defects:
+        #   property_builder.py — `get_template(template_path)`, a local from
+        #     `THEME_TEMPLATES`, which this derivation imports directly.
+        #   email/template.py — `get_template(f"blocks/{name}.jinja2")` on
+        #     `_BLOCK_ENV`, a third loader that is neither market nor property.
+        # A THIRD entry appearing is the thing to look at.
+        print(f"WARNING: get_template arguments this scan could not resolve: "
+              f"{unresolved}. A template reached only through one of these "
+              f"will be reported as dead. Two are expected — see the note "
+              f"above `python_roots`.", file=sys.stderr)
     return sorted(names)
 
 
@@ -132,11 +197,13 @@ def main() -> int:
     prop_all = set(prop_dir.rglob("*.jinja2"))
 
     # ── market ──────────────────────────────────────────────────────────
-    # One root. `MarketReportBuilder` renders `market.jinja2` for every
-    # report type; the layout is chosen inside the template, not by file.
+    # Every root is a `get_template` argument. `MarketReportBuilder` renders
+    # `_v2/report.jinja2` for every kind (through `V2_TEMPLATE_PATH`) and the
+    # running head and foot by literal; there is no hardcoded entry file left
+    # to go stale, which is how `market.jinja2` would otherwise have stayed
+    # "live" here after it was deleted.
     market_dir = TEMPLATES / "market"
-    market_roots = ([market_dir / "market.jinja2"]
-                    + [market_dir / n for n in extra if (market_dir / n).exists()])
+    market_roots = [market_dir / n for n in extra if (market_dir / n).exists()]
     market_live = walk(market_dir, market_roots)
     market_all = set(market_dir.rglob("*.jinja2"))
 

@@ -9,15 +9,17 @@ Design received — is **"everything in `_base/` renders nowhere"**. Unqualified
 
 There are two `_base/` directories:
 
-    templates/property/_base/   dead: nothing reaches it
-    templates/market/_base/     LIVE: `market/market.jinja2` is one line,
-                                `{% extends '_base/base.jinja2' %}`, and that
-                                base imports `_base/macros.jinja2`
+    templates/property/_base/   was dead: nothing reached it (deleted)
+    templates/market/_base/     LIVE: `_v2/report.jinja2` imports
+                                `_base/macros.jinja2`, and the running head
+                                and foot are `_base/page_header.jinja2` and
+                                `page_footer.jinja2`
 
 Jinja resolves a template name against the loader's directory, and the two
 builders give their loaders different ones, so the string `'_base/base.jinja2'`
-names two different files depending on which surface is rendering. Acting on
-"delete the `_base/` tree" would delete the base of every market report.
+named two different files depending on which surface was rendering. Acting on
+"delete the `_base/` tree" would have deleted the base of every market report;
+today it would delete every market report's header, footer and chart.
 
 The entry was not wrong about `property/_base/`. It was written while looking
 at `templates/property/`, and the sentence does not say so. **A classification
@@ -27,7 +29,8 @@ has been cited three times as a reason to delete.
 HOW THIS ANSWERS IT
 -------------------
 By WALKING from the roots each builder actually renders — `THEME_TEMPLATES`
-for the property reports, `market.jinja2` for the market ones — so "dead" is
+for the property reports, the builders' `get_template` arguments for the
+market ones — so "dead" is
 derived per surface. `scripts/derive_template_reachability.py` is the
 derivation; this module asserts the two things that must stay true of it.
 """
@@ -82,17 +85,24 @@ def test_the_market_base_is_live(reach):
         "because the only reason that sentence was dangerous was this file."
     )
     live = reach["market"]["live_files"]
-    assert "_base/base.jinja2" in live and "market.jinja2" in live, (
-        f"the market surface's live set is {live}"
-    )
+    for name in ("_v2/report.jinja2", "_base/macros.jinja2",
+                 "_base/page_header.jinja2", "_base/page_footer.jinja2"):
+        assert name in live, f"the market surface's live set is {live}"
+    # The legacy page was deleted on 2026-10-28; a root pointing at it again
+    # would make the walk raise on the missing file, not pass.
+    assert "market.jinja2" not in live and "_base/base.jinja2" not in live
 
 
-def test_the_property_base_is_dead(reach):
-    """D-131's actual claim, scoped. Still true, and now derived."""
-    dead = reach["property"]["dead_files"]
-    assert "_base/base.jinja2" in dead and "_base/_macros.jinja2" in dead, (
-        f"templates/property/_base/ is reachable after all: dead set is {dead}"
-    )
+def test_the_property_base_is_gone_and_nothing_is_dead(reach):
+    """D-131's claim, resolved. `templates/property/_base/` and the three
+    self-contained `<theme>.jinja2` files rendered nowhere; they were deleted
+    on 2026-10-26 after every surface rendered byte-identical without them.
+    What holds now is that the property tree has no dead file left — a new
+    one would be the same drift again."""
+    from pathlib import Path as _P
+    assert not (_P(REPO) / "apps/worker/src/worker/templates/property/_base").exists()
+    assert reach["property"]["dead_files"] == [], (
+        f"dead property templates again: {reach['property']['dead_files']}")
     assert not reach["property"]["_base_is_live"]
 
 
@@ -139,8 +149,8 @@ def test_every_claim_about_a_dead_base_says_which_one(rel):
     assert not bad, (
         f"{rel} calls `_base/` dead without saying which one:\n"
         + "\n".join(f"  :{n}  {l}" for n, l in bad)
-        + "\n\ntemplates/market/_base/base.jinja2 is extended by "
-          "market/market.jinja2 and is the base of every market report."
+        + "\n\ntemplates/market/_base/ holds every market report's running "
+          "head, foot and trend chart."
     )
 
 

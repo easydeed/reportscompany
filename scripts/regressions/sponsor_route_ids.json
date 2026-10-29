@@ -1,0 +1,23 @@
+[
+  {
+    "name": "G1 a new route takes affiliate_id from the client (the D-005 shape)",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "@router.get(\"/all-reports\")",
+    "new": "@router.get(\"/agents-of\")\ndef agents_of(affiliate_id: str, account_id: str = Depends(require_account_id)):\n    with db_conn() as (conn, cur):\n        cur.execute(\"SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid\", (affiliate_id,))\n        return {\"ids\": [r[0] for r in cur.fetchall()]}\n\n\n@router.get(\"/all-reports\")",
+    "test": "tests/test_sponsor_routes_take_the_caller_from_the_token.py"
+  },
+  {
+    "name": "G2 a route's caller loses Depends and becomes a query parameter",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "def get_all_agent_schedules(account_id: str = Depends(require_account_id)):",
+    "new": "def get_all_agent_schedules(account_id: str):",
+    "test": "tests/test_sponsor_routes_take_the_caller_from_the_token.py"
+  },
+  {
+    "name": "G3 an allowed id keeps its name and loses its ownership check",
+    "file": "apps/api/src/api/routes/affiliates.py",
+    "old": "        cur.execute(\"\"\"\n            SELECT 1 FROM accounts\n            WHERE id = %s::uuid AND sponsor_account_id = %s::uuid\n        \"\"\", (agent_account_id, account_id))\n        if not cur.fetchone():\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n\n        from ..services.usage import get_full_plan_usage",
+    "new": "        cur.execute(\"\"\"\n            SELECT 1 FROM accounts\n            WHERE id = %s::uuid\n        \"\"\", (agent_account_id,))\n        if not cur.fetchone():\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n\n        from ..services.usage import get_full_plan_usage",
+    "test": "tests/test_sponsor_routes_take_the_caller_from_the_token.py"
+  }
+]

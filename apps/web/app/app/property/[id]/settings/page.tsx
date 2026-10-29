@@ -136,8 +136,8 @@ export default function PropertyReportSettingsPage() {
     return (
       <div className="p-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-slate-200 rounded w-1/4"></div>
-          <div className="h-64 bg-slate-200 rounded"></div>
+          <div className="h-8 bg-muted rounded w-1/4"></div>
+          <div className="h-64 bg-muted rounded"></div>
         </div>
       </div>
     );
@@ -184,18 +184,18 @@ export default function PropertyReportSettingsPage() {
       
       <div className="grid gap-6">
         {/* Analytics Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-border p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Analytics</h2>
           <div className="grid grid-cols-3 gap-4">
-            <div className="text-center p-4 bg-slate-50 rounded-lg">
+            <div className="text-center p-4 bg-background rounded-lg">
               <div className="text-2xl font-bold text-slate-900">{settings.view_count}</div>
               <div className="text-sm text-slate-600">Total Views</div>
             </div>
-            <div className="text-center p-4 bg-slate-50 rounded-lg">
+            <div className="text-center p-4 bg-background rounded-lg">
               <div className="text-2xl font-bold text-slate-900">{settings.unique_visitors}</div>
               <div className="text-sm text-slate-600">Unique Visitors</div>
             </div>
-            <div className="text-center p-4 bg-slate-50 rounded-lg">
+            <div className="text-center p-4 bg-background rounded-lg">
               <div className="text-sm font-medium text-slate-900">
                 {settings.last_viewed_at 
                   ? new Date(settings.last_viewed_at).toLocaleDateString()
@@ -208,7 +208,7 @@ export default function PropertyReportSettingsPage() {
         </div>
         
         {/* QR Code Card */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-border p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">QR Code & Link</h2>
           
           <div className="flex items-start gap-6">
@@ -217,7 +217,7 @@ export default function PropertyReportSettingsPage() {
                 <img 
                   src={settings.qr_code_url} 
                   alt="QR Code" 
-                  className="w-32 h-32 border border-slate-200 rounded-lg"
+                  className="w-32 h-32 border border-border rounded-lg"
                 />
               </div>
             )}
@@ -232,11 +232,11 @@ export default function PropertyReportSettingsPage() {
                     type="text"
                     readOnly
                     value={publicUrl}
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-sm"
                   />
                   <button
                     onClick={() => navigator.clipboard.writeText(publicUrl)}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-medium"
+                    className="px-3 py-2 bg-muted hover:bg-muted rounded-lg text-sm font-medium"
                   >
                     Copy
                   </button>
@@ -248,7 +248,7 @@ export default function PropertyReportSettingsPage() {
                   Short Code
                 </label>
                 <div className="flex gap-2 items-center">
-                  <code className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-mono">
+                  <code className="px-3 py-2 bg-background border border-border rounded-lg text-sm font-mono">
                     {settings.short_code}
                   </code>
                   <button
@@ -269,7 +269,7 @@ export default function PropertyReportSettingsPage() {
         </div>
         
         {/* Landing Page Controls */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6">
+        <div className="bg-white rounded-xl border border-border p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Landing Page Controls</h2>
           
           <div className="space-y-6">
@@ -291,7 +291,7 @@ export default function PropertyReportSettingsPage() {
               <button
                 onClick={() => setIsActive(!isActive)}
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  isActive ? "bg-green-600" : "bg-slate-200"
+                  isActive ? "bg-green-600" : "bg-muted"
                 }`}
               >
                 <span
@@ -312,7 +312,7 @@ export default function PropertyReportSettingsPage() {
                 type="date"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                className="w-full max-w-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full max-w-xs px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <p className="text-xs text-slate-500 mt-1">
                 Leave empty for no expiration
@@ -331,7 +331,7 @@ export default function PropertyReportSettingsPage() {
                 onChange={(e) => setMaxLeads(e.target.value)}
                 min="0"
                 placeholder="Unlimited"
-                className="w-full max-w-xs px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full max-w-xs px-3 py-2 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <p className="text-xs text-slate-500 mt-1">
                 Page will stop accepting leads after this number. Leave empty for unlimited.
@@ -351,7 +351,7 @@ export default function PropertyReportSettingsPage() {
                     value={accessCode}
                     onChange={(e) => setAccessCode(e.target.value)}
                     placeholder="No password protection"
-                    className="w-full px-3 py-2 pr-10 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     type="button"

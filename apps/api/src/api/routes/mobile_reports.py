@@ -30,7 +30,10 @@ class PropertyData(BaseModel):
     city: str
     state: str
     zip: str
-    owner_name: Optional[str] = None
+    # No `owner_name` (D-304). This response is public and goes to whoever
+    # requested the report, who is often not the owner; D-116 and D-155 took
+    # the assessor-roll name off the PDF and the email for the same reason.
+    # The name stays in `property_data` for the agent path.
     apn: Optional[str] = None
     bedrooms: Optional[int] = None
     bathrooms: Optional[float] = None
@@ -173,7 +176,6 @@ async def get_report_data(
         city=property_data.get("city") or report.get("property_city", ""),
         state=property_data.get("state") or report.get("property_state", ""),
         zip=property_data.get("zip") or report.get("property_zip", ""),
-        owner_name=property_data.get("owner_name"),
         apn=property_data.get("apn"),
         bedrooms=property_data.get("bedrooms"),
         bathrooms=property_data.get("bathrooms"),

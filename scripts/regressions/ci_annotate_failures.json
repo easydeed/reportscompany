@@ -1,0 +1,51 @@
+[
+  {
+    "name": "pipefail is dropped, so tee's exit code hides a red suite",
+    "file": ".github/workflows/backend-tests.yml",
+    "old": "          set -o pipefail\n          .venv/bin/pytest -rf 2>&1 | tee pytest-output.txt",
+    "new": "          .venv/bin/pytest -rf 2>&1 | tee pytest-output.txt",
+    "test": "tests/test_ci_annotate_failures.py"
+  },
+  {
+    "name": "the workflow stops calling the reporter",
+    "file": ".github/workflows/backend-tests.yml",
+    "old": "        run: python3 scripts/ci_annotate_failures.py pytest-output.txt",
+    "new": "        run: echo 'tests failed'",
+    "test": "tests/test_ci_annotate_failures.py"
+  },
+  {
+    "name": "the reporter runs on every build, which makes the annotation meaningless",
+    "file": ".github/workflows/backend-tests.yml",
+    "old": "      - name: Name the failures\n        if: failure()",
+    "new": "      - name: Name the failures",
+    "test": "tests/test_ci_annotate_failures.py"
+  },
+  {
+    "name": "the counts guard goes back to a substring, so xfailed reads as failed",
+    "file": "scripts/ci_annotate_failures.py",
+    "old": "    if counts and not failure_count(counts):",
+    "new": "    if counts and \"failed\" not in counts:",
+    "test": "tests/test_ci_annotate_failures.py"
+  },
+  {
+    "name": "the summary sweep widens to skips and xfails",
+    "file": "scripts/ci_annotate_failures.py",
+    "old": "FAILURE_PREFIXES = (\"FAILED\", \"ERROR\")",
+    "new": "FAILURE_PREFIXES = (\"FAILED\", \"ERROR\", \"SKIPPED\", \"XFAIL\")",
+    "test": "tests/test_ci_annotate_failures.py"
+  },
+  {
+    "name": "the cap stops saying it capped",
+    "file": "scripts/ci_annotate_failures.py",
+    "old": "        if len(failures) > max_lines:\n            body += f\"\\n... and {len(failures) - max_lines} more\"",
+    "new": "        if len(failures) > max_lines:\n            pass",
+    "test": "tests/test_ci_annotate_failures.py"
+  },
+  {
+    "name": "newlines stop being encoded, so the annotation ends at the first one",
+    "file": "scripts/ci_annotate_failures.py",
+    "old": "                   .replace(\"\\n\", \"%0A\"))",
+    "new": "                   .replace(\"\\n\", \" \"))",
+    "test": "tests/test_ci_annotate_failures.py"
+  }
+]

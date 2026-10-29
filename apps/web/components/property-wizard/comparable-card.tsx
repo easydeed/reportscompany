@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { Check, Home, MapPin, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import type { Comparable } from "./types";
 
 interface ComparableCardProps {
@@ -27,98 +26,54 @@ export function ComparableCard({
     : "N/A";
   const displayPrice = isActive ? comp.list_price || comp.sale_price : comp.sale_price;
 
+  // Design's Wizards v3 comps row: a check, the home, the price. The whole row
+  // is one button that toggles, which is what the card's click already did;
+  // the separate "Add to Report" button inside it is gone because a button
+  // inside a button is not valid and did the same thing.
   return (
-    <motion.div
+    <motion.button
+      type="button"
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
-      className={`rounded-xl border-2 p-4 transition-all duration-200 cursor-pointer ${
-        isSelected
-          ? "border-[#6366F1] bg-[#EEF2FF]/50 shadow-md"
-          : "border-border bg-card hover:shadow-md"
-      }`}
+      aria-pressed={isSelected}
       onClick={() => onToggle(comp.id)}
+      className={`grid w-full items-center gap-3 rounded-xl border-[1.5px] p-2.5 text-left transition-colors ${
+        isSelected ? "border-[#0F172A] bg-[#FAFAF7]" : "border-[#ECEAE3] bg-white hover:border-[#0F172A]"
+      }`}
+      style={{ gridTemplateColumns: "20px 56px minmax(0,1fr) auto" }}
     >
-      <div className="flex gap-3">
-        <div className="aspect-[4/3] w-20 shrink-0 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
-          {comp.photo_url ? (
-            <img
-              src={comp.photo_url}
-              alt={comp.address}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <Home className="h-6 w-6 text-muted-foreground/50" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">
-            {comp.address}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {comp.city}, {comp.state} {comp.zip}
-          </p>
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-sm font-bold text-foreground">
-              ${displayPrice.toLocaleString()}
-            </span>
-            <span className="text-muted-foreground text-xs">{"·"}</span>
-            {isActive ? (
-              <span className="text-xs text-emerald-600 font-medium">
-                Active {comp.dom > 0 ? `· ${comp.dom} DOM` : ""}
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                Sold {formattedDate}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          {comp.bedrooms} bed {"·"} {comp.bathrooms} bath {"·"}{" "}
-          {comp.sqft.toLocaleString()} sqft
+      <span
+        className={`flex h-5 w-5 items-center justify-center rounded-full ${
+          isSelected ? "bg-[#0F172A] text-white" : "border-[1.5px] border-[#CBD5E1] text-transparent"
+        }`}
+        aria-hidden
+      >
+        {isSelected ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+      </span>
+      <span className="flex aspect-[4/3] w-14 items-center justify-center overflow-hidden rounded-md bg-[#F6F5F1]">
+        {comp.photo_url ? (
+          <img src={comp.photo_url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <Home className="h-5 w-5 text-[#94A3B8]" />
+        )}
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate text-sm font-semibold text-[#0F172A]">{comp.address}</span>
+        <span className="truncate text-xs text-[#5E636B]">
+          {comp.bedrooms} bd · {comp.bathrooms} ba · {comp.sqft.toLocaleString()} sf · ${comp.price_per_sqft}/sf
         </span>
-      </div>
-      <div className="flex items-center gap-x-2 text-xs text-muted-foreground mt-1">
-        <MapPin className="h-3 w-3" />
-        <span>{comp.distance_miles} mi away</span>
-        <span>{"·"}</span>
-        <span>${comp.price_per_sqft}/sqft</span>
-      </div>
-
-      <div className="mt-3">
-        <Button
-          variant={isSelected ? "default" : "outline"}
-          size="sm"
-          className={`w-full text-xs ${
-            isSelected
-              ? "bg-[#6366F1] text-white hover:bg-[#4F46E5]"
-              : ""
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle(comp.id);
-          }}
-        >
-          {isSelected ? (
-            <>
-              <Check className="h-3.5 w-3.5 mr-1" />
-              In Report
-            </>
-          ) : (
-            <>
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Add to Report
-            </>
-          )}
-        </Button>
-      </div>
-    </motion.div>
+        <span className="flex items-center gap-1 text-xs text-[#5E636B]">
+          <MapPin className="h-3 w-3" />
+          {comp.distance_miles} mi ·{" "}
+          {isActive ? `Active${comp.dom > 0 ? ` · ${comp.dom} DOM` : ""}` : `Sold ${formattedDate}`}
+        </span>
+      </span>
+      <span className="text-sm font-semibold tabular-nums text-[#0F172A]">
+        ${displayPrice.toLocaleString()}
+      </span>
+    </motion.button>
   );
 }

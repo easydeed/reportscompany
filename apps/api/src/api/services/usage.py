@@ -24,17 +24,30 @@ class LimitDecision(str, Enum):
 
 
 # ─── DISPLAY NAMES ────────────────────────────────────────────────────────────
-
-_PLAN_DISPLAY_NAMES = {
-    "free": "Free",
-    "sponsored_free": "Trial",
-    "trial": "Trial",
-    "starter": "Starter",
-    "solo": "Starter",
-    "pro": "Pro",
-    "team": "Pro",
-    "affiliate": "Affiliate",
-}
+#
+# THERE IS NO MAP HERE ANY MORE — D-203.
+#
+# `_PLAN_DISPLAY_NAMES` was a slug -> name literal that overrode the
+# `plans.plan_name` this function already selects. It disagreed with the table
+# on FOUR OF EIGHT rows, so an account on `team` was told "PRO PLAN" in the
+# sidebar on every page load, and one on `solo` was told "Starter".
+#
+# This is D-093 in a different column. There, an account with no plan row got
+# a hard-coded `100` while the table said `3`, and the answer was to resolve
+# from the `plans` row at runtime with no literal anywhere. The table already
+# owns limits, pricing and enforcement; the display name was the one field
+# that lived in Python, which made it the one field that could disagree.
+#
+# ON THE TIER-COLLAPSING READING: if two plans genuinely should share a
+# display name, that is a value in the table — visible, queryable, and
+# editable from the admin panel — not a literal in a service file. Nothing in
+# the code evidenced that reading: no comment, no migration note, no test.
+# `solo`/`starter` and `team`/`pro` sharing a limit is a coincidence of the
+# limits, not a record of anyone deciding to collapse the names. Treated as
+# drift.
+#
+# AND NO LITERAL FALLBACK. An unknown slug shows the slug. A guess is how the
+# map started.
 
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -192,7 +205,9 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
     effective_limit = _first_not_none(limit_override, plan_limit, default=100)
     has_override    = limit_override is not None
 
-    display_name = _PLAN_DISPLAY_NAMES.get(plan_slug, plan_name) or "Free"
+    # The name the `plans` row carries, and nothing else. `plan_name` is
+    # already selected above from the row this account actually has.
+    display_name = plan_name or plan_slug
 
     return {
         # ── legacy keys ──────────────────────────────────────────────────────

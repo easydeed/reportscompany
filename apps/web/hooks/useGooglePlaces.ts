@@ -30,6 +30,10 @@ let scriptLoadPromise: Promise<void> | null = null;
 /**
  * Dynamically load Google Maps script if not already loaded
  */
+export function ensureGooglePlaces(): Promise<void> {
+  return loadGoogleMapsScript()
+}
+
 function loadGoogleMapsScript(): Promise<void> {
   // Already loaded
   if (window.google?.maps?.places) {
@@ -231,7 +235,7 @@ export function useGooglePlaces(
 /**
  * Parse Google Places address components into a structured PlaceResult
  */
-function parseAddressComponents(place: google.maps.places.PlaceResult): PlaceResult {
+export function parseAddressComponents(place: google.maps.places.PlaceResult): PlaceResult {
   let streetNumber = "";
   let street = "";
   let unit = "";

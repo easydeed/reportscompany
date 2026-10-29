@@ -1,0 +1,692 @@
+{
+ "market_snapshot": {
+  "report_type": "market_snapshot",
+  "city": "Irvine",
+  "lookback_days": 30,
+  "period_label": "Last 30 days",
+  "report_date": "October 28, 2026",
+  "counts": {
+   "Active": 40,
+   "Pending": 0,
+   "Closed": 20,
+   "NewListings": 40
+  },
+  "metrics": {
+   "median_list_price": 1280000.0,
+   "median_close_price": 1229772.5,
+   "avg_dom": 21.5,
+   "avg_ppsf": 691.0,
+   "close_to_list_ratio": 98.5,
+   "months_of_inventory": 2.0,
+   "months_of_inventory_display": {
+    "current": 2.0,
+    "gauge_pct": 16,
+    "formatted_current": "2.0 months",
+    "pace_label": "at the last 90 days' sales pace",
+    "has_estimate": true
+   },
+   "new_listings_count": 40
+  },
+  "by_property_type": {
+   "SFR": {
+    "label": "SFR",
+    "count": 20,
+    "active_count": 0,
+    "median_price": 1229772.5,
+    "avg_dom": 21.5
+   },
+   "Condo": {
+    "label": "Condo",
+    "count": 0,
+    "active_count": 20,
+    "median_price": 1269500.0,
+    "avg_dom": 20.5
+   },
+   "Townhome": {
+    "label": "Townhome",
+    "count": 0,
+    "active_count": 20,
+    "median_price": 1290500.0,
+    "avg_dom": 21.5
+   }
+  },
+  "price_tiers": {
+   "Entry": {
+    "label": "Entry",
+    "count": 10,
+    "active_count": 20,
+    "median_price": 919497.5,
+    "moi": 2.0,
+    "moi_display": {
+     "current": 2.0,
+     "gauge_pct": 16,
+     "formatted_current": "2.0 months",
+     "pace_label": "at the last 90 days' sales pace",
+     "has_estimate": true
+    },
+    "min_price": null,
+    "max_price": 1260800.0
+   },
+   "Move-Up": {
+    "label": "Move-Up",
+    "count": 5,
+    "active_count": 9,
+    "median_price": 1384910.0,
+    "moi": 1.8,
+    "moi_display": {
+     "current": 1.8,
+     "gauge_pct": 15,
+     "formatted_current": "1.8 months",
+     "pace_label": "at the last 90 days' sales pace",
+     "has_estimate": true
+    },
+    "min_price": 1260800.0,
+    "max_price": 1571075.0
+   },
+   "Luxury": {
+    "label": "Luxury",
+    "count": 5,
+    "active_count": 11,
+    "median_price": 1695185.0,
+    "moi": 2.2,
+    "moi_display": {
+     "current": 2.2,
+     "gauge_pct": 18,
+     "formatted_current": "2.2 months",
+     "pace_label": "at the last 90 days' sales pace",
+     "has_estimate": true
+    },
+    "min_price": 1571075.0,
+    "max_price": null
+   }
+  },
+  "listings_sample": [
+   {
+    "status": "Closed",
+    "list_price": 650000,
+    "close_price": 640250.0,
+    "list_date": "2026-10-26T19:58:39.025567",
+    "close_date": "2026-10-27T19:58:39.025567",
+    "days_on_market": 5,
+    "sqft": 1400,
+    "price_per_sqft": 464,
+    "bedrooms": 2,
+    "bathrooms": 2.0,
+    "street_address": "100 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "SFR",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": 98.5,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Closed",
+    "list_price": 713000,
+    "close_price": 702305.0,
+    "list_date": "2026-10-23T19:58:39.025567",
+    "close_date": "2026-10-24T19:58:39.025567",
+    "days_on_market": 8,
+    "sqft": 1940,
+    "price_per_sqft": 368,
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "street_address": "103 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "SFR",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": 98.5,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Closed",
+    "list_price": 776000,
+    "close_price": 764360.0,
+    "list_date": "2026-10-20T19:58:39.025567",
+    "close_date": "2026-10-21T19:58:39.025567",
+    "days_on_market": 11,
+    "sqft": 2480,
+    "price_per_sqft": 313,
+    "bedrooms": 2,
+    "bathrooms": 2.0,
+    "street_address": "106 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "SFR",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": 98.5,
+    "next_open_house": "2026-10-30"
+   }
+  ]
+ },
+ "new_listings": {
+  "report_type": "new_listings",
+  "city": "Irvine",
+  "lookback_days": 30,
+  "period_label": "Last 30 days",
+  "report_date": "October 28, 2026",
+  "counts": {
+   "Active": 40,
+   "Pending": 0,
+   "Closed": 0
+  },
+  "metrics": {
+   "median_list_price": 1280000.0,
+   "avg_dom": 21.0,
+   "avg_ppsf": 691.0
+  },
+  "listings_sample": [
+   {
+    "status": "Active",
+    "list_price": 1175000,
+    "close_price": null,
+    "list_date": "2026-10-26T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 30,
+    "sqft": 2120,
+    "price_per_sqft": 554,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "street_address": "125 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Condo",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Active",
+    "list_price": 1700000,
+    "close_price": null,
+    "list_date": "2026-10-26T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 15,
+    "sqft": 1580,
+    "price_per_sqft": 1076,
+    "bedrooms": 4,
+    "bathrooms": 2.0,
+    "street_address": "150 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Townhome",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Active",
+    "list_price": 671000,
+    "close_price": null,
+    "list_date": "2026-10-25T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 6,
+    "sqft": 1580,
+    "price_per_sqft": 425,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "street_address": "101 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Condo",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   }
+  ]
+ },
+ "closed": {
+  "report_type": "closed",
+  "city": "Irvine",
+  "lookback_days": 30,
+  "period_label": "Last 30 days",
+  "report_date": "October 28, 2026",
+  "counts": {
+   "Active": 0,
+   "Pending": 0,
+   "Closed": 20
+  },
+  "metrics": {
+   "median_close_price": 1229772.5,
+   "avg_dom": 21.5,
+   "close_to_list_ratio": 98.5
+  },
+  "listings_sample": [
+   {
+    "status": "Closed",
+    "list_price": 650000,
+    "close_price": 640250.0,
+    "list_date": "2026-10-26T19:58:39.025567",
+    "close_date": "2026-10-27T19:58:39.025567",
+    "days_on_market": 5,
+    "sqft": 1400,
+    "price_per_sqft": 464,
+    "bedrooms": 2,
+    "bathrooms": 2.0,
+    "street_address": "100 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "SFR",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": 98.5,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Closed",
+    "list_price": 1091000,
+    "close_price": 1074635.0,
+    "list_date": "2026-10-05T19:58:39.025567",
+    "close_date": "2026-10-26T19:58:39.025567",
+    "days_on_market": 26,
+    "sqft": 1400,
+    "price_per_sqft": 779,
+    "bedrooms": 2,
+    "bathrooms": 2.5,
+    "street_address": "121 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "SFR",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": 98.5,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Closed",
+    "list_price": 1532000,
+    "close_price": 1509020.0,
+    "list_date": "2026-10-09T19:58:39.025567",
+    "close_date": "2026-10-25T19:58:39.025567",
+    "days_on_market": 7,
+    "sqft": 1400,
+    "price_per_sqft": 1094,
+    "bedrooms": 2,
+    "bathrooms": 2.0,
+    "street_address": "142 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "SFR",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": 98.5,
+    "next_open_house": "2026-10-30"
+   }
+  ]
+ },
+ "inventory": {
+  "report_type": "inventory",
+  "city": "Irvine",
+  "lookback_days": 30,
+  "period_label": "Last 30 days",
+  "report_date": "October 28, 2026",
+  "counts": {
+   "Active": 40,
+   "Pending": 0,
+   "Closed": 20
+  },
+  "metrics": {
+   "median_dom": 19.5,
+   "median_list_price": 1280000.0,
+   "months_of_inventory": 5.9,
+   "months_of_inventory_display": {
+    "current": 5.9,
+    "gauge_pct": 49,
+    "formatted_current": "5.9 months",
+    "pace_label": "at the last 90 days' sales pace",
+    "has_estimate": true
+   },
+   "total_active": 40,
+   "closed_in_rate_window": 20,
+   "new_this_month": 40
+  },
+  "listings_sample": [
+   {
+    "status": "Active",
+    "list_price": 1448000,
+    "close_price": null,
+    "list_date": "2026-10-13T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 43,
+    "sqft": 1940,
+    "price_per_sqft": 746,
+    "bedrooms": 4,
+    "bathrooms": 2.0,
+    "street_address": "138 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Townhome",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Active",
+    "list_price": 1427000,
+    "close_price": null,
+    "list_date": "2026-10-14T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 42,
+    "sqft": 1760,
+    "price_per_sqft": 811,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "street_address": "137 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Condo",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Active",
+    "list_price": 1385000,
+    "close_price": null,
+    "list_date": "2026-10-16T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 40,
+    "sqft": 1400,
+    "price_per_sqft": 989,
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "street_address": "135 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Townhome",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   }
+  ]
+ },
+ "price_bands": {
+  "report_type": "price_bands",
+  "city": "Irvine",
+  "lookback_days": 30,
+  "period_label": "Last 30 days",
+  "report_date": "October 28, 2026",
+  "counts": {
+   "Active": 40,
+   "Pending": 0,
+   "Closed": 20
+  },
+  "metrics": {
+   "median_list_price": 1269500.0,
+   "avg_dom": 21.2,
+   "min_price": 650000,
+   "max_price": 1889000
+  },
+  "price_bands": [
+   {
+    "label": "$500K \u2013 $750K",
+    "low": 500000,
+    "high": 750000,
+    "count": 5,
+    "median_price": 692000.0,
+    "avg_dom": 7.0,
+    "avg_ppsf": 399
+   },
+   {
+    "label": "$750K \u2013 $1M",
+    "low": 750000,
+    "high": 1000000,
+    "count": 12,
+    "median_price": 870500.0,
+    "avg_dom": 15.5,
+    "avg_ppsf": 473
+   },
+   {
+    "label": "$1M \u2013 $1.25M",
+    "low": 1000000,
+    "high": 1250000,
+    "count": 12,
+    "median_price": 1122500.0,
+    "avg_dom": 27.5,
+    "avg_ppsf": 588
+   },
+   {
+    "label": "$1.25M \u2013 $1.5M",
+    "low": 1250000,
+    "high": 1500000,
+    "count": 12,
+    "median_price": 1374500.0,
+    "avg_dom": 36.2,
+    "avg_ppsf": 728
+   },
+   {
+    "label": "$1.5M \u2013 $1.75M",
+    "low": 1500000,
+    "high": 1750000,
+    "count": 12,
+    "median_price": 1626500.0,
+    "avg_dom": 11.5,
+    "avg_ppsf": 891
+   },
+   {
+    "label": "$1.75M+",
+    "low": 1750000,
+    "high": null,
+    "count": 7,
+    "median_price": 1826000.0,
+    "avg_dom": 21.0,
+    "avg_ppsf": 978
+   }
+  ],
+  "hottest_band": {
+   "label": "$500K \u2013 $750K",
+   "low": 500000,
+   "high": 750000,
+   "count": 5,
+   "median_price": 692000.0,
+   "avg_dom": 7.0,
+   "avg_ppsf": 399
+  },
+  "slowest_band": {
+   "label": "$1.25M \u2013 $1.5M",
+   "low": 1250000,
+   "high": 1500000,
+   "count": 12,
+   "median_price": 1374500.0,
+   "avg_dom": 36.2,
+   "avg_ppsf": 728
+  },
+  "price_bands_extent": "results",
+  "price_bands_note": "Bands sized from this period's results \u2014 fewer than 12 closings in the last twelve months to size them from. They may shift between reports.",
+  "listings_sample": [
+   {
+    "status": "Closed",
+    "list_price": 650000,
+    "close_price": 640250.0,
+    "list_date": "2026-10-26T19:58:39.025567",
+    "close_date": "2026-10-27T19:58:39.025567",
+    "days_on_market": 5,
+    "sqft": 1400,
+    "price_per_sqft": 464,
+    "bedrooms": 2,
+    "bathrooms": 2.0,
+    "street_address": "100 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "SFR",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": 98.5,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Active",
+    "list_price": 671000,
+    "close_price": null,
+    "list_date": "2026-10-25T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 6,
+    "sqft": 1580,
+    "price_per_sqft": 425,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "street_address": "101 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Condo",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   },
+   {
+    "status": "Active",
+    "list_price": 692000,
+    "close_price": null,
+    "list_date": "2026-10-24T19:58:39.025567",
+    "close_date": null,
+    "days_on_market": 7,
+    "sqft": 1760,
+    "price_per_sqft": 393,
+    "bedrooms": 4,
+    "bathrooms": 2.0,
+    "street_address": "102 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "property_subtype": "Townhome",
+    "hero_photo_url": "https://example.com/p.jpg",
+    "photo_url": "https://example.com/p.jpg",
+    "close_to_list_ratio": null,
+    "next_open_house": "2026-10-30"
+   }
+  ]
+ },
+ "new_listings_gallery": {
+  "report_type": "new_listings_gallery",
+  "city": "Irvine",
+  "lookback_days": 30,
+  "period_label": "Last 30 days",
+  "report_date": "October 28, 2026",
+  "total_listings": 40,
+  "total_shown": 40,
+  "audience_key": "all",
+  "listings": [
+   {
+    "hero_photo_url": "https://example.com/p.jpg",
+    "street_address": "125 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "list_price": 1175000,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 2120,
+    "list_date": "Oct 26, 2026"
+   },
+   {
+    "hero_photo_url": "https://example.com/p.jpg",
+    "street_address": "150 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "list_price": 1700000,
+    "bedrooms": 4,
+    "bathrooms": 2.0,
+    "sqft": 1580,
+    "list_date": "Oct 26, 2026"
+   },
+   {
+    "hero_photo_url": "https://example.com/p.jpg",
+    "street_address": "101 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "list_price": 671000,
+    "bedrooms": 3,
+    "bathrooms": 2.5,
+    "sqft": 1580,
+    "list_date": "Oct 25, 2026"
+   }
+  ],
+  "audience_email_cap": 32,
+  "metrics": {
+   "total_listings": 40,
+   "median_list_price": 1301000,
+   "min_price": 671000,
+   "max_price": 1889000,
+   "avg_dom": null
+  }
+ },
+ "featured_listings": {
+  "report_type": "featured_listings",
+  "city": "Irvine",
+  "lookback_days": 30,
+  "period_label": "Last 30 days",
+  "report_date": "October 28, 2026",
+  "total_listings": 40,
+  "total_shown": 15,
+  "audience_key": "luxury",
+  "listings": [
+   {
+    "hero_photo_url": "https://example.com/p.jpg",
+    "street_address": "159 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "list_price": 1889000,
+    "bedrooms": 4,
+    "bathrooms": 2.5,
+    "sqft": 1940,
+    "price_per_sqft": 974,
+    "days_on_market": 24,
+    "list_date": "Oct 17, 2026"
+   },
+   {
+    "hero_photo_url": "https://example.com/p.jpg",
+    "street_address": "158 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "list_price": 1868000,
+    "bedrooms": 3,
+    "bathrooms": 2.0,
+    "sqft": 1760,
+    "price_per_sqft": 1061,
+    "days_on_market": 23,
+    "list_date": "Oct 18, 2026"
+   },
+   {
+    "hero_photo_url": "https://example.com/p.jpg",
+    "street_address": "156 Sandpiper Ln",
+    "city": "Irvine",
+    "zip_code": "92618",
+    "list_price": 1826000,
+    "bedrooms": 4,
+    "bathrooms": 2.0,
+    "sqft": 1400,
+    "price_per_sqft": 1304,
+    "days_on_market": 21,
+    "list_date": "Oct 20, 2026"
+   }
+  ],
+  "metrics": {
+   "total_listings": 15,
+   "max_price": 1889000,
+   "avg_sqft": 1940
+  }
+ },
+ "open_houses": {
+  "report_type": "open_houses",
+  "city": "Irvine",
+  "lookback_days": 7,
+  "period_label": "Open Houses This Week",
+  "report_date": "2026-10-28",
+  "counts": {
+   "OpenHouses": 0,
+   "Active": 0
+  },
+  "metrics": {},
+  "listings": [],
+  "listings_sample": []
+ }
+}

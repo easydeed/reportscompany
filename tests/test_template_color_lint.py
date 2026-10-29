@@ -238,13 +238,41 @@ def test_the_baseline_is_not_empty():
     of shrink that is NOT progress on the rule — the violations went away
     with the files, not because anyone fixed a colour — so it is recorded
     separately rather than read as 28 fixes.
+
+    70 -> 65 on 2026-10-21, and it is the SAME non-progress as the line above.
+    The five entries named `atlas/atlas_report.jinja2`, whose literals went with
+    the 1,290 lines that file lost when atlas moved onto `_v2/report.jinja2`
+    (#146, 2026-10-06). **They had been stale for fifteen days**: the lint reports
+    retirements only alongside a `--write-baseline`, and nothing had run one, so
+    `--check-baseline` stayed green while five of its 70 rows described a file
+    that no longer contained them. Retired here because D-205's cover fix forced
+    a regeneration and `--write-baseline` cannot retire one file's rows and not
+    another's.
+
+    D-205's own fix added nothing: linen's white `--burgundy-on-dark` fallback is
+    annotated in the template rather than baselined, because white as the fallback
+    for text on dark is not a brand value.
+
+    65 -> 52 on 2026-10-26, the same non-progress again: the 13 entries named
+    the last two self-contained property entry files, whose literals went when
+    both moved onto `_v2/report.jinja2`. The shared file added none.
+
+    52 -> 32 on 2026-10-26, non-progress once more: the 20 entries named
+    `templates/property/_base/` and the three self-contained `<theme>.jinja2`
+    files (D-131), deleted because they rendered nowhere.
+
+    32 -> 17 on 2026-10-28 (#230), and 13 of the 15 ARE progress: the six story
+    templates still exist and now take every brand colour from injectBrand's
+    derived tokens, with no default of their own. The other two named
+    `social-gallery.html`, which is deleted — the non-progress kind again.
     """
     n = sum(lint.read_baseline().values())
     assert n > 0, "nothing baselined — has the rule stopped matching?"
-    assert n == 70, (
-        f"the baseline holds {n} entries, not the 70 left after the theme cut "
-        f"on 2026-10-05. Fewer is progress: update this number. More is a new "
-        f"violation that was baselined instead of fixed."
+    assert n == 17, (
+        f"the baseline holds {n} entries, not the 17 left after the social "
+        f"stories' rows were retired on 2026-10-28. Fewer is progress: "
+        f"update this number. More is a new violation that was baselined "
+        f"instead of fixed."
     )
 
 
@@ -291,3 +319,102 @@ def test_the_cli_exits_nonzero_on_a_new_violation(tmp_path):
                         "--check-baseline", str(clean)],
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stdout
+
+
+# ── THE OTHER DIRECTION — a baseline row the templates no longer produce ───────
+#
+# `--check-baseline` validated the rows the baseline HAD and could not see a row
+# whose source stopped containing it. Five rows naming `atlas/atlas_report.jinja2`
+# sat here for FIFTEEN DAYS after that file lost 1,290 lines moving onto
+# `_v2/report.jinja2`; the command reported green throughout, and they surfaced
+# only because D-205's cover fix forced a `--write-baseline`.
+#
+# A ratchet that only counts upward is half a ratchet. `test_pdf_contrast.py` has
+# had both directions since D-153 and says in its docstring why they must share a
+# predicate; this is the lint catching up to it.
+
+
+def test_a_retired_violation_also_fails_the_check():
+    """A row with no finding behind it is reported, not tolerated.
+
+    The mirror of `test_a_new_violation_fails_the_check`, and it uses the same
+    function on the same inputs in the opposite direction so the two cannot
+    drift apart.
+    """
+    real = lint.run(lint.TEMPLATE_ROOTS)
+    baseline = lint.read_baseline()
+    assert not lint.stale_baseline(real, baseline), (
+        "the live baseline already has stale rows — fix those before reading "
+        "this test's result as evidence about the mechanism"
+    )
+
+    gone = "apps/worker/src/worker/templates/property/atlas/atlas_report.jinja2\tBRAND-ROLE\t#15216e"
+    assert gone not in baseline, (
+        "fixture assumption changed: this key was retired on 2026-10-21 and is "
+        "used here precisely because nothing produces it any more"
+    )
+    with_ghost = lint.Counter(baseline)
+    with_ghost[gone] = 1
+    assert lint.stale_baseline(real, with_ghost) == {gone: 1}
+
+
+def test_the_two_directions_are_symmetric_on_the_same_input():
+    """One predicate, two directions. Written as a property rather than as two
+    expectations, because the way a forward and a reverse check drift is that
+    somebody edits one of them."""
+    real = lint.run(lint.TEMPLATE_ROOTS)
+    # A baseline that over-tolerates EVERY finding has stale rows and no new
+    # ones. Inflating one key would leave every other finding unbaselined, which
+    # is the new direction and not the one under test.
+    generous = lint.Counter({f.key: 99 for f in real})
+    assert lint.stale_baseline(real, generous)
+    assert not lint.check_baseline(real, generous)
+    # An empty baseline has new rows and no stale ones.
+    assert lint.check_baseline(real, lint.Counter())
+    assert not lint.stale_baseline(real, lint.Counter())
+
+
+def test_the_check_returns_nonzero_on_a_stale_row(tmp_path, monkeypatch, capsys):
+    """The exit code, which is the only part of this CI can see.
+
+    Through `main()` with a substituted baseline rather than through
+    `subprocess`, and the reason is the flaw this test found in its own first
+    version: the reverse direction is only asked on a FULL scan, so a test that
+    pointed the CLI at one temp file was exercising the partial path and
+    passing for the wrong reason. A full scan needs the real roots, and making
+    one of its rows stale needs a different baseline — so the baseline is what
+    gets substituted.
+
+    The process boundary is still covered for the forward direction by
+    `test_the_cli_exits_nonzero_on_a_new_violation`.
+    """
+    ghost = tmp_path / "baseline.txt"
+    real = lint.run(lint.TEMPLATE_ROOTS)
+    rows = sorted(f.key for f in real)
+    ghost.write_text(
+        "# fixture: every real row, plus one nothing produces\n"
+        + "\n".join(rows)
+        + "\napps/worker/src/worker/templates/property/atlas/atlas_report.jinja2"
+          "\tBRAND-ROLE\t#15216e\n")
+    monkeypatch.setattr(lint, "BASELINE_PATH", ghost)
+
+    rc = lint.main(["--check-baseline"])
+    out = capsys.readouterr().out
+    assert rc == 1, f"exited {rc} with a stale row present\n{out}"
+    assert "STALE" in out and "#15216e" in out, f"stale row not named\n{out}"
+    assert "0 new" in out, f"the forward direction should be clean here\n{out}"
+
+
+def test_a_partial_scan_says_it_did_not_check_the_reverse_direction(tmp_path, capsys):
+    """Scope is part of a claim.
+
+    `--check-baseline <path>` cannot speak to retirement, because every row it
+    did not cover would look retired. It must not quietly report `0 stale`,
+    which would read as "asked and found nothing".
+    """
+    clean = tmp_path / "clean.jinja2"
+    clean.write_text("<style>.x{color:var(--primary);}</style>")
+    rc = lint.main(["--check-baseline", str(clean)])
+    out = capsys.readouterr().out
+    assert rc == 0, f"a clean partial scan should pass\n{out}"
+    assert "stale NOT CHECKED (partial scan)" in out, out

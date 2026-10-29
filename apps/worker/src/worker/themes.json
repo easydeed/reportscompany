@@ -20,27 +20,41 @@
     "A retired theme keeps its row below because the stats columns keep counting",
     "the reports that were made with it. `accounts.default_theme_id` CHECK stays",
     "1..5 for the same reason: tightening it to IN (2,3,5) would fail against",
-    "rows that already hold 1 and 4."
+    "rows that already hold 1 and 4.",
+    "",
+    "RENAMING IS NOT RETIRING, AND THE TWO LISTS ARE SEPARATE",
+    "`bold`, `elegant` and `modern` were renamed to `atlas`, `linen` and",
+    "`harbor` on 2026-10-13. Their IDS (5, 3, 2) ARE STILL LIVE and their",
+    "templates still exist \u2014 under new paths. So they do NOT belong in",
+    "`retired`, which means 'this id has no template and is not in use': a",
+    "retired entry for id 5 would make `resolve(5)` fall back to the default",
+    "and relabel every report an account on 5 has ever produced.",
+    "",
+    "They go in `renamed` instead, which exists for one reason: a FORMER name",
+    "in live code is just as broken as a retired one, for a different cause.",
+    "`'bold'` now asks the renderer for `bold/bold_report.jinja2`, which the",
+    "rename moved. So `test_no_live_code_path_names_a_retired_theme` reads",
+    "retired names AND former names, and says which kind it found."
   ],
   "default_id": 5,
   "themes": [
     {
       "id": 2,
-      "name": "modern",
-      "label": "Modern",
-      "template": "modern/modern_report.jinja2"
+      "name": "harbor",
+      "label": "Harbor",
+      "template": "harbor/harbor_report.jinja2"
     },
     {
       "id": 3,
-      "name": "elegant",
-      "label": "Elegant",
-      "template": "elegant/elegant_report.jinja2"
+      "name": "linen",
+      "label": "Linen",
+      "template": "linen/linen_report.jinja2"
     },
     {
       "id": 5,
-      "name": "bold",
-      "label": "Bold",
-      "template": "bold/bold_report.jinja2"
+      "name": "atlas",
+      "label": "Atlas",
+      "template": "atlas/atlas_report.jinja2"
     }
   ],
   "retired": [
@@ -56,7 +70,30 @@
       "name": "teal",
       "label": "Teal",
       "retired_on": "2026-10-05",
-      "reason": "Theme cut to three for the Design rewire. Was the default for 41 of 44 accounts; those rows were migrated to 5 (bold) by db/migrations/0047_theme_cut_to_three.sql."
+      "reason": "Theme cut to three for the Design rewire. Was the default for 41 of 44 accounts; those rows were migrated to 5 (bold) by db/migrations/0058_theme_cut_to_three.sql (this said 0047, which is 0047_plan_downgrade_columns.sql \u2014 corrected 2026-10-13)."
+    }
+  ],
+  "renamed": [
+    {
+      "id": 5,
+      "was": "bold",
+      "now": "atlas",
+      "renamed_on": "2026-10-13",
+      "reason": "Named for a five-theme set that no longer exists; bold, elegant and modern implied a hierarchy and a register the three surviving designs do not have. Jerry, 2026-10-13."
+    },
+    {
+      "id": 3,
+      "was": "elegant",
+      "now": "linen",
+      "renamed_on": "2026-10-13",
+      "reason": "Named for a five-theme set that no longer exists; bold, elegant and modern implied a hierarchy and a register the three surviving designs do not have. Jerry, 2026-10-13."
+    },
+    {
+      "id": 2,
+      "was": "modern",
+      "now": "harbor",
+      "renamed_on": "2026-10-13",
+      "reason": "Named for a five-theme set that no longer exists; bold, elegant and modern implied a hierarchy and a register the three surviving designs do not have. Jerry, 2026-10-13."
     }
   ]
 }

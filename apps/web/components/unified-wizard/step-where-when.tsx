@@ -1,12 +1,18 @@
 "use client"
 
+/**
+ * Step 3 — where, and how far back. Design's `Wizards v3`: City / ZIP pills,
+ * the search or the ZIP list, then the window as five tiles.
+ *
+ * The city search is still CityCombobox, with its own styling (it is shared
+ * with other forms), and adding a ZIP still behaves exactly as before. The deck's row of "nearby" city chips is not carried
+ * over: it is five hard-coded Orange County cities, not anything the account
+ * knows about.
+ */
 import { useState } from "react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { cn } from "@/lib/utils"
-import { X } from "lucide-react"
 import { CityCombobox } from "@/components/shared/city-combobox"
-import type { WizardState } from "./types"
+import { REPORT_TYPES, type WizardState } from "./types"
+import { FieldLabel, Pill, StepHeader } from "./wizard-ui"
 
 interface StepWhereWhenProps {
   state: WizardState
@@ -30,100 +36,99 @@ export function StepWhereWhen({ state, onChange }: StepWhereWhenProps) {
     onChange({ zipCodes: state.zipCodes.filter((z) => z !== zip) })
   }
 
+  const rt = REPORT_TYPES.find((r) => r.id === state.reportType)
+  const lookbackNote = rt
+    ? state.lookbackDays === rt.defaultLookback
+      ? `${rt.defaultLookback} days is the default for ${rt.title}.`
+      : `Default for ${rt.title} is ${rt.defaultLookback} days.`
+    : null
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">Where &amp; When?</h2>
-        <p className="text-sm text-gray-500 mt-1">Choose the area and time window for your report.</p>
-      </div>
+    <div className="flex flex-col gap-[26px]">
+      <StepHeader
+        title="Where, and how far back?"
+        sub="One city or up to five ZIPs. The window sets which sales count."
+      />
 
-      {/* Area selection */}
-      <div className="space-y-3">
-        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Area</Label>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => onChange({ areaType: "city" })}
-            className={cn(
-              "flex-1 rounded-lg border-2 py-3 text-sm font-medium transition-all",
-              state.areaType === "city" ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-500 hover:border-gray-300"
-            )}
-          >
+      <div className="flex flex-col gap-2.5">
+        <div className="flex gap-1.5">
+          <Pill on={state.areaType === "city"} onClick={() => onChange({ areaType: "city" })}>
             City
-          </button>
-          <button
-            onClick={() => onChange({ areaType: "zip" })}
-            className={cn(
-              "flex-1 rounded-lg border-2 py-3 text-sm font-medium transition-all",
-              state.areaType === "zip" ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-500 hover:border-gray-300"
-            )}
-          >
-            ZIP Codes
-          </button>
+          </Pill>
+          <Pill on={state.areaType === "zip"} onClick={() => onChange({ areaType: "zip" })}>
+            ZIP codes
+          </Pill>
         </div>
 
         {state.areaType === "city" ? (
           <CityCombobox
             value={state.city}
             onChange={(city) => onChange({ city: city?.city || null })}
-            placeholder="Search for a city..."
+            placeholder="City, e.g. Irvine"
           />
         ) : (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2.5">
             <div className="flex gap-2">
-              <Input
+              <input
                 value={zipInput}
                 onChange={(e) => setZipInput(e.target.value.replace(/\D/g, "").slice(0, 5))}
                 onKeyDown={(e) => e.key === "Enter" && addZip()}
-                placeholder="Enter ZIP code"
-                className="h-14 flex-1"
+                placeholder="5-digit ZIP, press Enter"
+                inputMode="numeric"
                 maxLength={5}
+                className="h-[52px] flex-1 rounded-[10px] border-[1.5px] border-[#D6D3CB] bg-white px-4 text-[17px] text-[#0F172A] outline-none focus:border-[#0F172A]"
               />
               <button
+                type="button"
                 onClick={addZip}
                 disabled={zipInput.length !== 5}
-                className="px-4 h-14 rounded-lg bg-primary text-white text-xs font-medium disabled:opacity-40 transition-opacity"
+                className="h-[52px] rounded-[10px] bg-[#0F172A] px-[18px] text-sm font-semibold text-white disabled:opacity-40"
               >
                 Add
               </button>
             </div>
-            {state.zipCodes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {state.zipCodes.map((zip) => (
-                  <span key={zip} className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
-                    {zip}
-                    <button onClick={() => removeZip(zip)} className="hover:text-red-500 transition-colors">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-[10px] text-gray-400">Up to 5 ZIP codes</p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {state.zipCodes.map((zip) => (
+                <button
+                  key={zip}
+                  type="button"
+                  onClick={() => removeZip(zip)}
+                  aria-label={`Remove ZIP ${zip}`}
+                  className="rounded-full bg-[#0F172A] px-3 py-1.5 text-[13px] font-semibold text-white"
+                >
+                  {zip} ×
+                </button>
+              ))}
+              <span className="text-[13px] text-[#94A3B8]">Up to 5</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Timeframe */}
-      <div className="space-y-3">
-        <Label className="text-xs font-semibold text-gray-700 uppercase tracking-wider">Timeframe</Label>
-        <div className="grid grid-cols-5 gap-2">
-          {LOOKBACK_OPTIONS.map((days) => (
-            <button
-              key={days}
-              onClick={() => onChange({ lookbackDays: days })}
-              className={cn(
-                "rounded-lg border-2 py-3.5 text-center transition-all",
-                state.lookbackDays === days
-                  ? "border-primary bg-primary/5 text-primary font-semibold"
-                  : "border-gray-200 text-gray-500 hover:border-gray-300"
-              )}
-            >
-              <div className="text-sm font-semibold">{days}</div>
-              <div className="text-[10px]">days</div>
-            </button>
-          ))}
+      <div className="flex flex-col gap-2.5">
+        <FieldLabel>Window</FieldLabel>
+        <div className="grid grid-cols-5 gap-1.5">
+          {LOOKBACK_OPTIONS.map((days) => {
+            const on = state.lookbackDays === days
+            return (
+              <button
+                key={days}
+                type="button"
+                aria-pressed={on}
+                onClick={() => onChange({ lookbackDays: days })}
+                className={
+                  on
+                    ? "rounded-[10px] border-[1.5px] border-[#0F172A] bg-[#0F172A] py-3 text-center text-white"
+                    : "rounded-[10px] border-[1.5px] border-[#ECEAE3] bg-white py-3 text-center text-[#334155] hover:border-[#0F172A]"
+                }
+              >
+                <span className="block text-lg font-bold leading-none">{days}</span>
+                <span className="mt-[3px] block text-[11px]">days</span>
+              </button>
+            )
+          })}
         </div>
+        {lookbackNote && <span className="text-[13px] text-[#64748B]">{lookbackNote}</span>}
       </div>
     </div>
   )

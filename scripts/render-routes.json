@@ -1,0 +1,218 @@
+{
+  "_why": [
+    "The route list is a manifest and not a literal in the script because it is",
+    "the part that goes wrong. Its first draft (invented, never run) contained",
+    "/app/contacts and /app/templates \u2014 neither has ever been a route \u2014 and",
+    "expected /app/admin to render under a token with is_platform_admin false,",
+    "where a 404 is the correct answer. A harness is only as honest as its list,",
+    "so tests/test_render_manifest_is_current.py checks every path against the",
+    "filesystem and every expectation against middleware.ts's own gates."
+  ],
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "tokens": {
+    "regular": {
+      "account_id": "cccccccc-0000-4000-8000-000000000001",
+      "user_id": "cccccccc-0000-4000-8000-000000000001",
+      "account_type": "REGULAR"
+    },
+    "admin": {
+      "account_id": "9b096c1b-d3d9-45dd-b5bf-0ab0204c8372",
+      "user_id": "c041d3fa-64b7-4e3b-962b-7f6386fe6272",
+      "account_type": "REGULAR",
+      "is_platform_admin": true
+    },
+    "company": {
+      "account_id": "aaaaaaaa-0000-4000-8000-000000000001",
+      "user_id": "aaaaaaaa-0000-4000-8000-000000000001",
+      "account_type": "TITLE_COMPANY",
+      "is_company_admin": true
+    },
+    "affiliate": {
+      "account_id": "cccccccc-0000-4000-8000-000000000002",
+      "user_id": "cccccccc-0000-4000-8000-000000000002",
+      "account_type": "INDUSTRY_AFFILIATE",
+      "is_affiliate": true
+    },
+    "sponsored": {
+      "account_id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "user_id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "account_type": "REGULAR",
+      "is_sponsored": true
+    },
+    "bare": {
+      "account_id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "user_id": "aaaaaaaa-0000-4000-8000-000000000003",
+      "account_type": "REGULAR",
+      "is_sponsored": true
+    }
+  },
+  "routes": [
+    {
+      "path": "/app",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app",
+      "token": "bare",
+      "expect": "renders",
+      "marker": "h1",
+      "_why": "The dashboard's absence rules \u2014 null sentence title, Nothing scheduled, No new leads, Nothing sent yet \u2014 on an account with no content and an unlimited plan. Day one of a real account, and the one page it is shown first."
+    },
+    {
+      "path": "/app/reports",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/property",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/schedules",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/people",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/leads",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/lead-page",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/branding",
+      "token": "regular",
+      "expect": "redirects",
+      "marker": "h1",
+      "expectFinal": "/app/settings/branding"
+    },
+    {
+      "path": "/app/billing",
+      "token": "regular",
+      "expect": "redirects",
+      "marker": "h1",
+      "expectFinal": "/app/settings/billing"
+    },
+    {
+      "path": "/app/settings",
+      "token": "regular",
+      "expect": "redirects",
+      "marker": "h1",
+      "expectFinal": "/app/settings/profile"
+    },
+    {
+      "path": "/app/settings/profile",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/settings/security",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/settings/branding",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/help",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/get-started",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/reports/new",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/schedules/new",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/admin",
+      "token": "admin",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/company",
+      "token": "company",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/app/affiliate",
+      "token": "affiliate",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/login",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    },
+    {
+      "path": "/",
+      "token": "regular",
+      "expect": "renders",
+      "marker": "h1"
+    }
+  ],
+  "blocked": [
+    {
+      "path": "/app/admin",
+      "token": "regular",
+      "expect": "blocked",
+      "_why": "middleware.ts gates /app/admin on is_platform_admin; with ADMIN_CLOAK_404=1 it rewrites to /404, else redirects to /app. A 404 here is the gate working, and a harness that calls it a defect is wrong."
+    },
+    {
+      "path": "/app/company",
+      "token": "regular",
+      "expect": "blocked",
+      "_why": "requires account_type === TITLE_COMPANY"
+    },
+    {
+      "path": "/app/affiliate",
+      "token": "regular",
+      "expect": "blocked",
+      "_why": "requires account_type === INDUSTRY_AFFILIATE"
+    }
+  ],
+  "_redirects_note": "/app/settings, /app/branding and /app/billing are server redirect stubs (`redirect()` in a server component) left from the settings merge. They declare expectFinal so the harness proves they still land where they are supposed to, rather than reporting an 'execution context destroyed' race.",
+  "_tokens_note": "Real ids from scripts/seed_test_accounts.py's personas, because the API verifies the signature AND scopes every query by account_id \u2014 a made-up id renders the same empty page as no token at all. The claim sets double as the middleware's gate inputs (is_platform_admin, account_type), so one table drives both the shell's role and the data it gets."
+}

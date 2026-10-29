@@ -43,9 +43,9 @@ import { DEFAULT_THEME_ID, resolveThemeId } from "@/lib/themes.generated"
 // ─── Theme definitions (mirror property-wizard/types.ts) ───
 
 const THEMES = [
-  { id: 2, name: "Modern", style: "Clean & Contemporary", font: "DM Sans", gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", previewImage: "/previews/2.jpg" },
-  { id: 3, name: "Elegant", style: "Sophisticated & Refined", font: "Playfair Display", gradient: "linear-gradient(135deg, #1a1a1a 0%, #C9A962 100%)", previewImage: "/previews/3.jpg" },
-  { id: 5, name: "Bold", style: "Impactful & Striking", font: "Clash Display + DM Sans", gradient: "linear-gradient(135deg, #15216E 0%, #D69649 100%)", previewImage: "/previews/5.jpg" },
+  { id: 2, name: "Harbor", style: "Clean & Contemporary", font: "DM Sans", gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)", previewImage: "/previews/2.jpg" },
+  { id: 3, name: "Linen", style: "Sophisticated & Refined", font: "Playfair Display", gradient: "linear-gradient(135deg, #1a1a1a 0%, #C9A962 100%)", previewImage: "/previews/3.jpg" },
+  { id: 5, name: "Atlas", style: "Impactful & Striking", font: "Clash Display + DM Sans", gradient: "linear-gradient(135deg, #15216E 0%, #D69649 100%)", previewImage: "/previews/5.jpg" },
 ]
 
 const COLOR_PRESETS = [
@@ -251,7 +251,7 @@ export default function BrandingPage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--body)] mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">Loading branding settings...</p>
         </div>
       </div>
@@ -337,7 +337,7 @@ export default function BrandingPage() {
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <p>
             You can still customize your profile photo, name, and contact info from{" "}
-            <a href="/app/settings/profile" className="text-indigo-600 underline dark:text-indigo-400">
+            <a href="/app/settings/profile" className="text-[var(--link)] hover:text-[var(--link-hover)] underline">
               Settings → Profile
             </a>. These appear alongside your company branding on agent reports.
           </p>
@@ -356,10 +356,10 @@ export default function BrandingPage() {
     <div className="max-w-[1400px] mx-auto">
       {/* Trial agent info banner */}
       {isSponsored && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 dark:bg-indigo-950/30 dark:border-indigo-800">
+        <div className="bg-card border border-border rounded-xl p-4 mb-6">
           <div className="flex items-start gap-3">
-            <Info className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
-            <p className="text-sm text-indigo-800 dark:text-indigo-300">
+            <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+            <p className="text-sm text-[var(--body)]">
               Upload your logo and set your brand colors &mdash; these appear on every
               report you send to clients.
             </p>
@@ -390,7 +390,7 @@ export default function BrandingPage() {
         <div className="space-y-5">
 
           {/* Brand Identity */}
-          <Section icon={<Sparkles className="w-4 h-4 text-indigo-600" />} iconBg="bg-indigo-50" title="Brand Identity" subtitle="Your display name and tagline">
+          <Section icon={<Sparkles className="w-4 h-4 text-[var(--body)]" />} iconBg="" title="Brand Identity" subtitle="Your display name and tagline">
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Display Name</Label>
@@ -451,7 +451,7 @@ export default function BrandingPage() {
                       onClick={() => update({ primary_color: preset.primary, accent_color: preset.accent })}
                       className={cn(
                         "group relative rounded-lg border-2 p-2.5 transition-all hover:scale-[1.03]",
-                        active ? "border-indigo-500 bg-indigo-50/50 shadow-md" : "border-border hover:border-indigo-200"
+                        active ? "border-[1.5px] border-[var(--border-selected)] bg-[var(--surface-selected)]" : "border-border hover:border-[var(--border-strong)]"
                       )}
                     >
                       <div className="flex gap-1.5 mb-1.5">
@@ -459,7 +459,7 @@ export default function BrandingPage() {
                         <div className="w-5 h-5 rounded" style={{ backgroundColor: preset.accent }} />
                       </div>
                       <p className="text-[10px] font-medium text-foreground">{preset.name}</p>
-                      {active && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-indigo-600" />}
+                      {active && <Check className="absolute top-1 right-1 w-3.5 h-3.5 text-foreground" />}
                     </button>
                   )
                 })}
@@ -478,7 +478,7 @@ export default function BrandingPage() {
                     onClick={() => update({ default_theme_id: theme.id })}
                     className={cn(
                       "group relative rounded-lg border-2 overflow-hidden transition-all hover:scale-[1.02]",
-                      active ? "border-indigo-500 shadow-lg ring-2 ring-indigo-200" : "border-border hover:border-indigo-200"
+                      active ? "border-[1.5px] border-[var(--border-selected)]" : "border-border hover:border-[var(--border-strong)]"
                     )}
                   >
                     <div className="aspect-[3/4] overflow-hidden">
@@ -492,7 +492,7 @@ export default function BrandingPage() {
                       <p className="text-[10px] font-semibold text-center">{theme.name}</p>
                     </div>
                     {active && (
-                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
+                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-foreground flex items-center justify-center">
                         <Check className="w-3 h-3 text-white" />
                       </div>
                     )}
@@ -580,7 +580,7 @@ export default function BrandingPage() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Email</Label>
-                <Input value={branding.agent_email} onChange={(e) => update({ agent_email: e.target.value })} placeholder="sarah@acmerealty.com" className="h-10" />
+                <Input value={branding.agent_email} onChange={(e) => update({ agent_email: e.target.value })} placeholder="sarah@example.com" className="h-10" />
               </div>
             </div>
             <div className="mt-3 space-y-1.5">
@@ -712,7 +712,7 @@ export default function BrandingPage() {
                   type="email"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
-                  placeholder="your@email.com"
+                  placeholder="you@example.com"
                   className="flex-1 h-9 text-xs"
                 />
                 <Button onClick={handleSendTestEmail} disabled={isSending} className={cn("h-9 w-9 p-0", sendSuccess && "bg-emerald-600 hover:bg-emerald-700")}>

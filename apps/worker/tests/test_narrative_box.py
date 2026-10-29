@@ -1,4 +1,10 @@
-"""The narrative's copy budget and the box it has to fit are one decision (§7.2).
+"""Page-1 capacity per market kind, and — until 2026-10-28 — the narrative box.
+
+WHAT REMAINS IS `PAGE_1_CAPACITY`. The narrative box half of this file went
+with the legacy page (see the note above the capacity tests); the history
+below is kept because the capacities were first measured against it.
+
+The narrative's copy budget and the box it has to fit were one decision (§7.2).
 
 `ai_market_narrative.NARRATIVE_MAX_CHARS` and the `height` on
 `.ai-narrative-text` in templates/market are two halves of the same number. The
@@ -12,7 +18,6 @@ cannot, so it is `scripts/measure_market_pagination.py`'s territory and the
 numbers it produced are recorded here as the pinned capacities below.
 """
 
-import re
 import sys
 from pathlib import Path
 
@@ -21,13 +26,6 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from worker.ai_market_narrative import NARRATIVE_MAX_CHARS  # noqa: E402
-
-MARKET_CSS = ROOT / "apps/worker/src/worker/templates/market/_base/base.jinja2"
-
-#: Characters per line of `.ai-narrative-text`, measured by bisecting rendered
-#: height at 14px/20.3px in the real column, with a long-word corpus.
-CHARS_PER_LINE = 97
 
 #: Page-1 listing capacity, per report type and per deterministic state.
 #:
@@ -78,76 +76,55 @@ CHARS_PER_LINE = 97
 #: these are properties of the layout rather than of a fixture.
 PAGE_1_CAPACITY = {
     "new_listings_gallery": {"no_narrative": 6, "with_narrative": 6},
-    "featured_listings": {"no_narrative": 6, "with_narrative": 6},
+    # 6 -> 2, AND IT IS DESIGN'S CARD, NOT A REGRESSION IN OURS. Their
+    # featured card is 326.8px against the shared gallery card's 238.3 —
+    # 18px price plate, 15px address, and a 2-column grid whose photo is
+    # 260px tall because the column is 349px wide. Two fit under the band
+    # where six did. See §8 of the capacity document: this is the one kind
+    # the market adoption COSTS pages on.
+    "featured_listings": {"no_narrative": 2, "with_narrative": 2},
     "open_houses": {"no_narrative": 6, "with_narrative": 6},
-    "market_snapshot": {"no_narrative": 3, "with_narrative": 3, "with_trend": 0},
-    "closed": {"no_narrative": 15, "with_narrative": 11},
-    "inventory": {"no_narrative": 15, "with_narrative": 11, "with_trend": 5},
-    "price_bands": {"no_narrative": 3, "with_narrative": 2},
-    "new_listings": {"no_narrative": 3, "with_narrative": 2},
+    # 0 / 0, ONE STATE, since D-255. Design's snapshot body carries no
+    # listings — inventory, price tiers, the median line, property types —
+    # so nothing paginates, as for `price_bands`. It was 3 / 3 / 0 on the
+    # legacy page, where `with_trend` (D-102) gave page 1 to the chart and
+    # sent the nine listings to page 2. Measured by
+    # `scripts/measure_market_pagination.py`: 1 page, [0].
+    "market_snapshot": {"no_narrative": 0, "with_narrative": 0},
+    # 17 IN BOTH STATES since `closed` moved to Design's `_v2` page, and that
+    # identity is the point: the narrative is suppressed for `V2_KINDS`, so
+    # page-1 capacity is one number rather than a property of prose length.
+    # It was 15 / 11 — a four-row swing — on the old page.
+    "closed": {"no_narrative": 17, "with_narrative": 17},
+    # 17/17, ONE STATE — and the third number is gone, not just equalised.
+    # `with_trend: 5` recorded the inventory page's capacity when it carried
+    # the sales-pace chart; Design's `_v2` page has no chart slot, so the
+    # pace series has no report type at all (see `TREND_SERIES`). A
+    # `with_trend` key here would be a capacity for a state the kind can no
+    # longer be in.
+    "inventory": {"no_narrative": 17, "with_narrative": 17},
+    # ZERO, AND IT IS NOT A REGRESSION. `price_bands` moved to Design's `_v2`
+    # page, which renders seven fixed band rows and NO LISTINGS TABLE — so the
+    # number of listings that fit on page 1 is zero because none are rendered,
+    # not because none fit. The kind went from 2 pages to 1.
+    #
+    # A capacity of 0 reading as a failure is the risk here, which is why the
+    # measurement script prints "n/a (no listings table)" for it rather than a
+    # bare 0.
+    "price_bands": {"no_narrative": 0, "with_narrative": 0},
+    # 17 in both states since `new_listings` moved to the `_v2` page, from
+    # 3 / 2 on the analytics layout. The biggest single change on this surface:
+    # 16 pages to 5 for 120 listings.
+    "new_listings": {"no_narrative": 17, "with_narrative": 17},
 }
 
 
-def narrative_box_lines():
-    """The line count in the CSS, read from the rule rather than assumed."""
-    css = MARKET_CSS.read_text(encoding="utf-8")
-    block = re.search(r"\.ai-narrative-text\s*\{(.*?)\}", css, re.S)
-    assert block, ".ai-narrative-text rule not found in the market base template"
-    height = re.search(r"height:\s*calc\(\s*(\d+)\s*\*\s*([\d.]+)em\s*\)", block.group(1))
-    assert height, (
-        "`.ai-narrative-text` has no `height: calc(N * Xem)`. The box must be a "
-        "FIXED height — §7.2's whole decision is that page-1 capacity cannot "
-        "depend on the length of model-generated prose."
-    )
-    return int(height.group(1)), float(height.group(2))
-
-
-def test_the_narrative_box_is_a_fixed_number_of_lines():
-    lines, em = narrative_box_lines()
-    assert lines == 4, f"box is {lines} lines; the recorded decision is 4"
-    assert em == 1.45, f"line-height multiplier is {em}, expected 1.45"
-
-
-def test_the_copy_budget_fits_the_box_it_is_sized_for():
-    """NARRATIVE_MAX_CHARS must not exceed what the box holds.
-
-    The failure this prevents is a raised budget, or a shrunk box, landing
-    without the other — which does not break anything visible in a test suite
-    that never renders a page, and pushes the first table down in production.
-    """
-    lines, _ = narrative_box_lines()
-    capacity = lines * CHARS_PER_LINE
-    assert NARRATIVE_MAX_CHARS <= capacity, (
-        f"budget is {NARRATIVE_MAX_CHARS} chars but a {lines}-line box holds "
-        f"about {capacity} ({CHARS_PER_LINE}/line, measured). Raise the box or "
-        f"lower the budget — they are one decision."
-    )
-
-
-def test_the_budget_is_not_so_small_the_box_is_mostly_empty():
-    """The other direction: a budget far under the box wastes page 1.
-
-    Without this, 'make the test pass' has a trivial answer — drop the budget to
-    50 characters — which would satisfy the check above and give up three of the
-    four lines this box costs every report.
-    """
-    lines, _ = narrative_box_lines()
-    capacity = lines * CHARS_PER_LINE
-    assert NARRATIVE_MAX_CHARS >= capacity * 0.9, (
-        f"budget {NARRATIVE_MAX_CHARS} uses only "
-        f"{NARRATIVE_MAX_CHARS / capacity:.0%} of a box that costs page 1 "
-        f"{lines} lines on every report"
-    )
-
-
-def test_the_prompt_still_asks_for_the_length_the_box_is_sized_for():
-    """Four lines is the measured height of three sentences. If the prompt's
-    target moves, the box was sized against copy nobody is asking for."""
-    src = (ROOT / "apps/worker/src/worker/ai_market_narrative.py").read_text(encoding="utf-8")
-    assert "2-3 sentences" in src, (
-        "the narrative prompt no longer asks for 2-3 sentences; the four-line "
-        "box was measured against exactly that target (§7.2)"
-    )
+# THE NARRATIVE BOX'S FOUR GATES WERE HERE: the box was a fixed four lines,
+# `NARRATIVE_MAX_CHARS` fit it and filled 90% of it, and the prompt asked for
+# the 2-3 sentences it was measured against. `.ai-narrative-text` lived in the
+# legacy `base.jinja2`, deleted on 2026-10-28 once every kind was on Design's
+# page — which renders no narrative — so the box has no stylesheet and the
+# budget no page. The PDF stopped generating the prose in the same change.
 
 
 @pytest.mark.parametrize("report_type", sorted(PAGE_1_CAPACITY))

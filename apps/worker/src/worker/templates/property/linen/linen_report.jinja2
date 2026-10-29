@@ -1,0 +1,22 @@
+{#
+  ELEGANT — on Design's one page architecture (2026-10-05).
+
+  The whole of what makes linen linen: typeface, weight, tracking, case and
+  corner radius, from the README's theme table ("elegant | Cormorant Garamond
+  | 500 | −0.01em | none | Geist | 0"). Layout, page set, spacing, colour
+  roles and copy are `_v2/report.jinja2`, shared with atlas and harbor.
+
+  WHAT THIS REPLACED
+  786 lines of self-contained HTML and CSS rendering the nine-page set
+  (contents, aerial and analysis pages; executive summary as its own page).
+  Those pages are now the cover panel, the property-page photo plates and the
+  range page, and a notes page carries the agent and the disclaimers.
+#}
+{% set t_font_link = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Geist:wght@400;500;600;700&display=swap' %}
+{% set t_display = "'Cormorant Garamond', Georgia, 'Times New Roman', serif" %}
+{% set t_body = "'Geist', system-ui, sans-serif" %}
+{% set t_display_weight = 500 %}
+{% set t_display_tracking = '-0.01em' %}
+{% set t_display_case = 'none' %}
+{% set t_radius = '0' %}
+{% include '_v2/report.jinja2' %}

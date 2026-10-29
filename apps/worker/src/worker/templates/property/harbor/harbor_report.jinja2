@@ -1,0 +1,22 @@
+{#
+  MODERN — on Design's one page architecture (2026-10-05).
+
+  The whole of what makes harbor harbor: typeface, weight, tracking, case and
+  corner radius, from the README's theme table ("modern | Manrope | 800 |
+  −0.035em | none | Manrope | 14px"). Layout, page set, spacing, colour roles
+  and copy are `_v2/report.jinja2`, shared with atlas and linen.
+
+  WHAT THIS REPLACED
+  848 lines of self-contained HTML and CSS rendering the nine-page set
+  (contents, aerial and analysis pages; executive summary as its own page).
+  Those pages are now the cover panel, the property-page photo plates and the
+  range page, and a notes page carries the agent and the disclaimers.
+#}
+{% set t_font_link = 'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap' %}
+{% set t_display = "'Manrope', system-ui, sans-serif" %}
+{% set t_body = "'Manrope', system-ui, sans-serif" %}
+{% set t_display_weight = 800 %}
+{% set t_display_tracking = '-0.035em' %}
+{% set t_display_case = 'none' %}
+{% set t_radius = '14px' %}
+{% include '_v2/report.jinja2' %}

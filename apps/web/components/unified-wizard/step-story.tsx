@@ -1,96 +1,85 @@
 "use client"
 
+/**
+ * Step 1 — what the report is. Design's `Wizards v3` grid: two columns, a
+ * thumbnail of each kind's first page, a name and one line.
+ *
+ * Open Houses is shown and greyed rather than hidden, as Design draws it,
+ * with the reason. It stays unselectable: `disabled` in REPORT_TYPES is still
+ * what decides that.
+ */
 import { cn } from "@/lib/utils"
-import {
-  Check,
-  Image,
-  BadgeDollarSign,
-  TrendingUp,
-  Building2,
-  Award,
-  CalendarClock,
-  BarChart3,
-  ListOrdered,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+import { ReportThumb } from "@/components/shared/report-thumb"
+import type { PreviewReportType } from "@/components/shared/email-preview/sample-data"
 import { REPORT_TYPES } from "./types"
+import { StepHeader } from "./wizard-ui"
 
-const iconMap: Record<string, LucideIcon> = {
-  image: Image,
-  "badge-dollar-sign": BadgeDollarSign,
-  "trending-up": TrendingUp,
-  "building-2": Building2,
-  award: Award,
-  "calendar-clock": CalendarClock,
-  "bar-chart-3": BarChart3,
-  "list-ordered": ListOrdered,
+/** Design's order and one-line notes. New Listings Analytics is not in the deck. */
+const NOTES: Record<string, string> = {
+  market_snapshot: "Median, days, list-to-sale. The monthly one.",
+  closed: "Who sold, for how much. Seller prospecting.",
+  new_listings_gallery: "What just hit. Buyer prospecting.",
+  inventory: "Everything for sale and months of supply.",
+  price_bands: "Which price range is moving.",
+  featured_listings: "Four homes to show off.",
+  new_listings: "How new supply is pricing.",
+  open_houses: "Paused — open-house data isn't reliable yet.",
 }
-
-const CATEGORIES = [
-  { key: "gallery" as const, label: "Gallery Reports" },
-  { key: "data" as const, label: "Data Reports" },
-  { key: "analytics" as const, label: "Analytics Reports" },
-]
+const ORDER = Object.keys(NOTES)
 
 interface StepStoryProps {
   selected: string | null
   onSelect: (reportType: string) => void
+  primaryColor: string
+  accentColor: string
 }
 
-export function StepStory({ selected, onSelect }: StepStoryProps) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900">What report do you want to create?</h2>
-        <p className="text-sm text-gray-500 mt-1">Choose from 7 report types across gallery, data, and analytics formats.</p>
-      </div>
+export function StepStory({ selected, onSelect, primaryColor, accentColor }: StepStoryProps) {
+  const kinds = ORDER.flatMap((id) => {
+    const rt = REPORT_TYPES.find((r) => r.id === id)
+    return rt ? [rt] : []
+  })
 
-      {CATEGORIES.map((cat) => {
-        const items = REPORT_TYPES.filter((r) => r.category === cat.key && !r.disabled)
-        return (
-          <div key={cat.key}>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-              {cat.label}
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {items.map((rt) => {
-                const active = selected === rt.id
-                const Icon = iconMap[rt.icon]
-                return (
-                  <button
-                    key={rt.id}
-                    onClick={() => onSelect(rt.id)}
-                    className={cn(
-                      "group relative flex flex-col items-start gap-2 rounded-xl border-2 p-3 text-left transition-all",
-                      active
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-gray-200 hover:border-primary/40 hover:bg-gray-50/50"
-                    )}
-                  >
-                    <div className="flex items-center gap-2 w-full">
-                      {Icon && (
-                        <Icon
-                          className={cn(
-                            "w-5 h-5 flex-shrink-0",
-                            active ? "text-primary" : "text-muted-foreground"
-                          )}
-                        />
-                      )}
-                      <span className="text-sm font-semibold text-gray-900 flex-1">{rt.title}</span>
-                      {active && (
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary flex-shrink-0">
-                          <Check className="h-3 w-3 text-white" />
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{rt.description}</p>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+  return (
+    <div className="flex flex-col gap-[22px]">
+      <StepHeader
+        title="What should your sphere hear about?"
+        sub="Snapshot is the one most agents send monthly. Pick another to see it on the right."
+      />
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {kinds.map((rt) => {
+          const active = selected === rt.id
+          const off = !!rt.disabled
+          return (
+            <button
+              key={rt.id}
+              type="button"
+              disabled={off}
+              aria-pressed={active}
+              onClick={() => !off && onSelect(rt.id)}
+              className={cn(
+                "flex items-center gap-3 rounded-xl border-[1.5px] py-2.5 pl-2.5 pr-3 text-left transition-colors",
+                active ? "border-[#0F172A] bg-[#FAFAF7]" : "border-[#ECEAE3] bg-white",
+                off ? "cursor-not-allowed opacity-50" : "hover:border-[#0F172A]",
+              )}
+            >
+              <ReportThumb
+                width={34}
+                shadow="thumb"
+                className="shrink-0"
+                primaryColor={primaryColor}
+                accentColor={accentColor}
+                reportType={rt.id as PreviewReportType}
+                lookbackDays={rt.defaultLookback}
+              />
+              <span className="flex min-w-0 flex-col">
+                <span className="text-sm font-bold text-[#0F172A]">{rt.title}</span>
+                <span className="text-xs leading-[1.35] text-[#64748B]">{NOTES[rt.id]}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

@@ -79,46 +79,44 @@ def used_classes(html):
 
 @pytest.mark.parametrize("report_type", REPORT_TYPES)
 def test_the_metric_strip_can_actually_stack(report_type):
-    """THE REGRESSION. `.metric-card` defined, applied to nothing."""
+    """
+    THE REGRESSION. `.metric-card` was defined and applied to nothing. Since
+    Design's 5th package the strip's stacking class is `tr-stack`; the check is
+    the same join — every four-across cell carries the class that stacks it.
+    """
     html = render(report_type)
-    # `.metric-card` is declared in the shared <style> block on every layout, so
-    # its presence there says nothing. The strip itself is the four 25% cells.
-    if 'width="25%"' not in html:
+    cells = re.findall(r'<td\b[^>]*width="25%"[^>]*>', html)
+    if not cells:
         pytest.skip("this layout renders no four-across metric strip")
-    assert "metric-card" in used_classes(html), (
-        "the .metric-card rule that stacks the four-across strip on a phone is "
-        "defined and attached to no element, so it can never fire"
+    unstackable = [c for c in cells if "tr-stack" not in c]
+    assert not unstackable, (
+        f"{len(unstackable)} of {len(cells)} strip cells carry no .tr-stack, so the "
+        f"rule that stacks the strip on a phone can never reach them"
     )
 
 
 def test_no_responsive_rule_is_defined_and_unused():
     """
-    The general form. A mobile rule attached to nothing is invisible in review —
-    both files read correctly — and it is only the join that is missing.
+    The general form. A rule attached to nothing is invisible in review — both
+    files read correctly — and it is only the join that is missing.
 
-    `.mobile-hide` and `.mobile-center` are exempt: they are legitimately
-    conditional on content this fixture does not produce. Named individually
-    rather than pattern-matched, so a new dead rule is not quietly covered by
-    the exemption.
+    Every `tr-*` rule, the dark-mode ones included: a dark rule with no element
+    is a colour that never changes, which is the failure the dark gate exists
+    for. No exemptions; add one by name, with a reason, if a rule is genuinely
+    conditional on content no fixture here produces.
     """
-    # `.mobile-hide` and `.mobile-center` are legitimately conditional on
-    # content this fixture does not produce. `.band-row` is dead: the price-band
-    # rows are single-cell and have nothing to stack, so the rule describes a
-    # layout that no longer exists — recorded on the register rather than given
-    # an element to make the check pass.
-    EXEMPT = {"mobile-hide", "mobile-center", "band-row", "dark-border"}
-    # Across every document the product renders, not one — `.mobile-stack`
-    # belongs to the card grids and a snapshot without listings has no cards.
-    # A rule is dead only if NOTHING uses it anywhere.
+    EXEMPT = set()
+    # Across every document the product renders, not one: a rule is dead only
+    # if NOTHING uses it anywhere.
     defined, used = set(), set()
     for rt in REPORT_TYPES:
         for listings in (None, LISTINGS):
             html = render(rt, listings=listings)
-            defined |= {c for c in defined_classes(html)
-                        if c.startswith(("mobile", "metric", "band"))}
+            defined |= {c for c in defined_classes(html) if c.startswith("tr-")}
             used |= used_classes(html)
+    assert defined, "no tr-* rule found at all — the check is reading the wrong thing"
     dead = sorted(defined - used - EXEMPT)
-    assert not dead, f"responsive rules attached to nothing in any document: {dead}"
+    assert not dead, f"rules attached to nothing in any document: {dead}"
 
 
 @pytest.mark.parametrize("report_type", REPORT_TYPES)
@@ -128,11 +126,10 @@ def test_the_stacking_rule_is_still_in_the_stylesheet(report_type):
     query is removed, and the pair is what has to hold.
     """
     html = render(report_type)
-    assert "@media only screen and (max-width: 600px)" in html
-    if "metric-card" in used_classes(html):
-        assert re.search(r"\.metric-card\s*\{[^}]*display:\s*block", html), (
-            "cells carry .metric-card but no rule makes it stack"
-        )
+    assert "@media only screen and (max-width:620px)" in html
+    assert re.search(r"\.tr-stack\s*\{[^}]*display:\s*block", html), (
+        "no rule makes .tr-stack stack"
+    )
 
 
 # ---------------------------------------------------------------------------

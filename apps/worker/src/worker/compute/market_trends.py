@@ -33,6 +33,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from worker.compute.moi import (
     months_of_supply,
     describe as describe_moi,
+    condition as moi_condition,
+    CONDITION_BALANCED,
+    CONDITION_SELLERS,
+    CONDITION_UNKNOWN,
     MIN_CLOSED_FOR_MOI,
     PACE_LABEL as MOI_PACE_LABEL,
 )
@@ -476,14 +480,21 @@ def _classify_market_condition(
     if moi is None:
         return {
             "indicator": "unknown",
-            "label": "Insufficient Data",
+            "label": CONDITION_UNKNOWN,
             "description": "Not enough recent sales data to determine market conditions.",
             "score": 0,
         }
 
-    if moi < 4:
+    # THE THRESHOLDS AND THE LABELS COME FROM `compute/moi`, which is the
+    # module whose docstring says "one place decides ... so the surfaces cannot
+    # disagree". The classification was the one piece of MOI interpretation it
+    # did not own, and it was reimplemented six times at two different
+    # thresholds as a result (D-182). The boundaries and the wording here are
+    # UNCHANGED — `moi < 4` was always the documented NAR figure and this is
+    # the module that now holds it.
+    label = moi_condition(moi)
+    if label == CONDITION_SELLERS:
         indicator = "sellers"
-        label = "Seller's Market"
         # 0 MOI = 10, 4 MOI = 5; linear interpolation
         score = max(5, min(10, round(10 - moi * 1.25)))
         description = (
@@ -493,9 +504,8 @@ def _classify_market_condition(
             + (f" ({avg_ctl:.1f}% close-to-list ratio)" if avg_ctl else "")
             + "."
         )
-    elif moi <= 6:
+    elif label == CONDITION_BALANCED:
         indicator = "balanced"
-        label = "Balanced Market"
         score = 5
         description = (
             f"The market is in balance with {moi} months of inventory and "
@@ -504,7 +514,6 @@ def _classify_market_condition(
         )
     else:
         indicator = "buyers"
-        label = "Buyer's Market"
         # 6 MOI = 5, 12+ MOI = 1; linear decay
         score = max(1, min(4, round(11 - moi)))
         description = (
@@ -633,7 +642,7 @@ SAMPLE_MARKET_TRENDS: Dict[str, Any] = {
     "months_of_inventory": describe_moi(2.8),
     "market_condition": {
         "indicator": "sellers",
-        "label": "Seller's Market",
+        "label": CONDITION_SELLERS,
         "description": (
             "With only 2.8 months of inventory and 89 sales in the last 90 days, "
             "sellers have the clear advantage. Homes are moving quickly and typically "

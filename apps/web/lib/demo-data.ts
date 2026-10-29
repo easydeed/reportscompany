@@ -73,6 +73,41 @@ export const DEMO_LISTING = {
   sqft: "2,340",
 } as const;
 
+/**
+ * The property-report preview on the landing page: an estimate for
+ * DEMO_LISTING and four comparables that bracket it. Consistent with
+ * DEMO_LISTING.price — Design's mock priced the same card at $1.41M against
+ * this fixture's $1.19M, and two numbers for one house on one page is the
+ * Irvine contradiction M1 was written to remove.
+ */
+export const DEMO_ESTIMATE = {
+  value: DEMO_LISTING.priceShort,
+  low: "$1.10M",
+  high: "$1.28M",
+  pricePerSqft: "$506",
+  compsLow: "$1.05M",
+  compsHigh: "$1.32M",
+} as const;
+
+export const DEMO_COMPS = [
+  { address: "22 Canopy", specs: "4 bd · 3 ba · 2,380 sf", dist: "0.3 mi", price: "$1,150,000" },
+  { address: "41 Cedarbrook", specs: "4 bd · 3 ba · 2,210 sf", dist: "0.4 mi", price: "$1,212,000" },
+  { address: "7 Mustang", specs: "4 bd · 3 ba · 2,460 sf", dist: "0.6 mi", price: "$1,268,000" },
+  { address: "63 Hedgerow", specs: "3 bd · 2 ba · 1,980 sf", dist: "0.7 mi", price: "$1,095,000" },
+] as const;
+
+/** The agent's contact list as the landing page's contacts preview counts it. */
+export const DEMO_SPHERE = {
+  all: 107,
+  pastClients: 64,
+  leads: 9,
+} as const;
+
+/** The home-value lead shown arriving on the lead-capture preview. */
+export const DEMO_LEAD = {
+  address: "89 Maple Heights",
+} as const;
+
 // ─── Brokerages ──────────────────────────────────────────────────────────────
 
 /**
@@ -157,6 +192,25 @@ export function currentReportPeriod(now: Date = new Date()): string {
 export function lastMonthPeriod(now: Date = new Date()): string {
   const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+/** "October" — the month a demo report is "for". */
+export function currentMonthName(now: Date = new Date()): string {
+  return now.toLocaleDateString("en-US", { month: "long" });
+}
+
+/** "Oct 1" and "Nov 1" — the last and next send of a monthly schedule. */
+export function monthlySendDates(now: Date = new Date()): { last: string; next: string } {
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return {
+    last: fmt(new Date(now.getFullYear(), now.getMonth(), 1)),
+    next: fmt(new Date(now.getFullYear(), now.getMonth() + 1, 1)),
+  };
+}
+
+/** "Oct 21, 2026" — a demo report's date line. */
+export function reportDate(now: Date = new Date()): string {
+  return now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 /** "3 weeks ago", "last month" — for "last sent" style labels. */

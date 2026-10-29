@@ -1,0 +1,689 @@
+{# Design's market page — `design_handoff_market_reports/Report Page.dc.html`.
+
+   ONE PAGE, DISPATCHED ON KIND, which is their architecture and ours:
+   `market.jinja2` already dispatched on `LAYOUT_MAP`, and their README says so
+   ("`market.jinja2` already dispatches on layout; add the `listings` density
+   switch and the shared band/table partials"). This is the shared band plus the
+   table body (or the snapshot or bands body); every kind in
+   `market_builder.V2_KINDS` renders it, which since D-255 is all eight.
+
+   WHAT IS NOT HERE, AND WHY. No running head and no footer: those are PDFShift's
+   repeating `header` and `footer`, rendered by `_base/page_header.jinja2` and
+   `_base/page_footer.jinja2` at `start_at = 1`, and the 0.44in / 0.89in they
+   reserve is what gives this body its 9.67in. Design's mapping confirms the
+   placement and that our reservation already fits their 40px bar "with 2px to
+   spare — keep 0.44in, don't resize the head."
+
+   The masthead band below is BODY CONTENT, page 1 only, never a header — also
+   their mapping. It is why page 1 holds fewer rows than a continuation page, and
+   why their 3x2 gallery grid on page 1 is the band's cost rather than a grid
+   decision.
+
+   NO AI NARRATIVE. Design removes it from the table kinds so page-1 capacity is
+   one state per kind; `market_builder` suppresses it for `V2_KINDS` before the
+   generate call. Measured: 11 rows with it, 15 without. #}
+{% import '_base/macros.jinja2' as macros %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ v2_band.title }}{% if header.city %} — {{ header.city }}{% endif %}</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* The brand colour AS THE FILL. Not the darkened two-stop band: every text
+       colour on it is derived from it, so the text adapts rather than the fill
+       being bent to fit text hardcoded to white (D-112). */
+    --primary: {{ primary_color }};
+    --on-primary: {{ on_primary }};
+    --display-ink: {{ display_ink }};
+    --primary-ink: {{ primary_ink }};
+    --accent: {{ accent_color }};
+    /* Design's `accent_ink`, which is our `accent_on_light` — one token, two
+       vocabularies, see docs/MARKET_TOKEN_MAPPING_2026-10-07.md. Guaranteed
+       >=4.5 on white AND on the tint since D-177. */
+    --accent-ink: {{ accent_on_light }};
+    --tint: {{ tint }};
+    --on-primary-rule: {{ on_primary_rule }};
+
+    /* Design's neutrals, with their measured contrast on white. */
+    --ink: #14161A;        /* 18.1:1 */
+    --body: #2A2D33;       /* 13.8:1 */
+    --muted: {{ v2_muted }};       /* 6.05:1 — the lightest text on the surface */
+    --rule: #ECECE8;
+    --rule-soft: #E4E4E0;
+
+    --font: 'Geist', system-ui, -apple-system, sans-serif;
+    --mono: 'Geist Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font);
+    color: var(--body);
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── The page-1 band (shared across kinds) ──────────────────────────────
+     FIXED HEIGHT BY CONSTRUCTION, which is Design's requirement: "band height
+     is therefore fixed: nothing in it grows with data." The label sits in a
+     50px box and steps its type size down by character count rather than
+     wrapping — `market_builder._v2_label_size`, their ladder. */
+  .band {
+    background: var(--primary);
+    color: var(--on-primary);
+    padding: 30px 52px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  .band-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .band-title {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--on-primary);
+  }
+  .band-logo { max-height: 44px; max-width: 200px; width: auto; object-fit: contain; }
+  .band-brand { font-size: 20px; font-weight: 700; color: var(--on-primary); }
+
+  .band-lead { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+  .band-lead-left { display: flex; align-items: flex-end; gap: 18px; min-width: 0; }
+  .band-big {
+    /* SIZE PER KIND, from the builder. Design: 88px, "snapshot: 96px; bands:
+       64px headline" — a price range is wider than a count and does not fit at
+       88. The value is in `v2_band.big_px` rather than a class per kind. */
+    font-weight: 600;
+    line-height: 0.88;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    color: var(--display-ink);
+  }
+  /* THE FIXED 50px BOX. The type steps, the box does not. */
+  .band-label-box {
+    height: 50px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    padding-bottom: 3px;
+    min-width: 0;
+  }
+  /* `on_primary`, NOT `display_ink`, AND THE PIXEL GATE IS WHY.
+     The ladder's largest step is 22px at weight 600 — which is NOT large text
+     by either of WCAG 1.4.3's definitions (>=24px, or >=18.66px at >=700), so
+     it needs 4.5 and `display_ink`'s threshold is 3.0. Design specifies white
+     here; measured, that is 3.74:1 on #0d9488. Every step of the ladder (22,
+     18, 15, 13) is below 24px, so the token is wrong for this element at every
+     size it can take.
+     This is `.cover-city` on the property surface, one day later, on a
+     different surface and from the same package. The 88px number and the 26px
+     stat values ARE large text and keep `display_ink`. */
+  .band-label {
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    color: var(--on-primary);
+    white-space: pre-line;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .band-lead-right { text-align: right; flex-shrink: 0; }
+  /* `primary_ink`, NOT `primary`. Design specifies "white pill, `primary`
+     text" — the RAW BRAND COLOUR on white, at 13px/600, which is not large
+     text. Measured: 3.74:1 on teal, 2.15 on amber, 1.98 on lime. `primary_ink`
+     is the brand darkened until it clears AA on white and on the tint
+     (D-170, D-177), which is the token that exists for brand-coloured text on
+     a light surface. The FILL stays white and the brand stays recognisable. */
+  .band-pill {
+    display: inline-block;
+    background: #ffffff;
+    color: var(--primary-ink);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .band-pill-sub { font-size: 12px; font-weight: 500; color: var(--on-primary); margin-top: 6px; }
+
+  .band-stats {
+    display: grid;
+    grid-template-columns: repeat({{ v2_band.cells | length }}, minmax(0, 1fr));
+    border-top: 1px solid var(--on-primary-rule);
+    padding-top: 16px;
+  }
+  .band-stat { padding-right: 16px; }
+  .band-stat + .band-stat { border-left: 1px solid var(--on-primary-rule); padding-left: 16px; }
+  .band-stat-value {
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--display-ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .band-stat-label { font-size: 11.5px; font-weight: 500; color: var(--on-primary); margin-top: 3px; }
+
+  /* ── The table ──────────────────────────────────────────────────────────
+     Design's grid: `1fr 64 72 108 72 44`. A GRID, not a <table>, because the
+     column widths are the spec and a table would negotiate them. */
+  .table { padding: 22px 52px 0; }
+  /* ROW HEIGHT IS DERIVED FROM DESIGN'S ROW COUNT, not chosen.
+     They state 13 rows on page 1 and 26 on a continuation page and do not state
+     a height. A market page's body is 9.67in = 928px, so 26 rows means
+     928 / 26 = 35.7px per row INCLUDING its rule. The first version used
+     `padding: 7px 0` with default line-heights, measured 19 rows per
+     continuation page, and would have cost two pages per report against their
+     spec. These values are what 26 requires:
+         address 13px x 1.15 = 15.0   +   hood 11.5px x 1.15 = 13.2
+       + padding 2 x 3px     =  6.0   +   rule 1px
+       = 35.2px  ->  26 rows = 915px of 928  (measured: 13 and 26)
+     MEASURED, AND DESIGN'S TWO NUMBERS DO NOT AGREE WITH EACH OTHER.
+     26 continuation rows requires a row of at most (928 - 22) / 26 = 34.8px.
+     13 page-1 rows at that height requires a page-1 chrome of 441-476px
+     (band + table padding + header row). Their band spec — padding 30/26,
+     gap 30, a 44px logo slot, an 88px number at line-height 0.88, a stats row
+     — computes to about 295px, and ours measures 265. So no single row height
+     satisfies both of their numbers against their own band: hitting 26 puts
+     page 1 at 17, and hitting 13 would put the continuation page at 19 and
+     cost two pages per report.
+
+     Resolved by hitting the CONTINUATION number, because that is the one that
+     drives page count on a 200-row report, and reporting the page-1 overshoot
+     with the arithmetic. 17 on page 1 is more rows than they specified, which
+     costs the customer nothing — it is fewer pages, not more. */
+  .trow {
+    display: grid;
+    grid-template-columns: 1fr 64px 72px 108px 72px 44px;
+    align-items: baseline;
+    gap: 0 12px;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .thead {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule-soft);
+    padding-bottom: 8px;
+  }
+  .tnum { text-align: right; font-variant-numeric: tabular-nums; }
+  .taddr { font-size: 13px; font-weight: 600; line-height: 1.05; color: var(--ink);
+           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .thood { font-size: 11.5px; font-weight: 400; line-height: 1.05; color: var(--muted); }
+  .tcell { font-size: 13px; font-weight: 400; line-height: 1.15; color: var(--body); }
+  /* THE FIFTH COLUMN'S ACCENT, which is a different fact per kind and the
+     same rule. Design states it twice: `closed` puts ">100% in `accent_ink`
+     600, else `#5E636B` 400", and `new_listings` marks a listing that went
+     live today. Both are "accent_ink 600 when this row is the notable one,
+     muted 400 otherwise", so the page carries one rule and the builder decides
+     which fact it is — a template cannot ask whether a ratio is above a
+     threshold, or whether a day count is zero, without reimplementing both. */
+  .tvs-over { color: var(--accent-ink); font-weight: 600; }
+  .tvs-under { color: var(--muted); font-weight: 400; }
+
+  /* ── The snapshot body ──────────────────────────────────────────────────
+     Design's three rows, each `200px 1fr`, gap 32: the inventory bar, price
+     tiers, by property type. The headline blocks are a FIXED 78px (one
+     nowrap headline + three clamped lines) so the rows do not move with copy
+     length. Bars are graphics on white: the tier fill is the accent, the
+     inventory cells the brand, the empty tracks Design's neutrals. Every
+     piece of TEXT is a neutral or `--ink`, so no brand colour has to clear
+     4.5:1 here. */
+  .snap { padding: 26px 52px 0; display: flex; flex-direction: column; gap: 30px; }
+  .snap-row { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; align-items: start; }
+  .snap-head { display: flex; flex-direction: column; gap: 6px; height: 78px; overflow: hidden; }
+  .snap-title { font-size: 13px; font-weight: 600; color: var(--ink);
+                white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .snap-note { font-size: 12px; line-height: 1.5; color: var(--muted);
+               display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .moi-bar { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 34px; margin-top: 4px; }
+  .moi-cell { background: #EDEDEA; border-radius: 3px; }
+  .moi-cell.on { background: var(--primary); }
+  .moi-legend { display: grid; grid-template-columns: 4fr 2fr 2fr; gap: 4px; margin-top: 8px;
+                font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em;
+                text-transform: uppercase; color: var(--muted); }
+  .moi-legend div { padding-top: 6px; }
+  .moi-legend .l-s { border-top: 2px solid #14161A; }
+  .moi-legend .l-b { border-top: 2px solid #B9BBC1; }
+  .moi-legend .l-y { border-top: 2px solid #DADBDF; }
+  .tiers { display: flex; flex-direction: column; gap: 10px; }
+  .tier { display: grid; grid-template-columns: 110px minmax(0, 1fr) 150px; gap: 14px; align-items: center;
+          font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .tier-name { font-weight: 600; color: var(--ink); display: block; }
+  .tier-range { font-size: 10.5px; color: var(--muted); display: block; }
+  .tier-bar { display: flex; align-items: center; gap: 10px; }
+  .tier-track { flex: 1; height: 22px; background: #F4F4F1; border-radius: 3px; overflow: hidden; }
+  .tier-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+  .tier-count { width: 24px; font-size: 11.5px; font-weight: 600; color: var(--ink); }
+  .tier-side { font-size: 11.5px; color: var(--muted); text-align: right; }
+  .ptypes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .ptype { background: #F6F5F1; border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+  .ptype-name { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ptype-value { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
+  .ptype-sub { font-size: 11px; color: var(--muted); }
+  .snap-empty { font-size: 12px; color: var(--muted); }
+  .snap-trend .trend-chart { break-inside: avoid; }
+  .snap-trend .trend-chart-note { font-size: 9px; color: var(--muted); margin: 2px 0 0; }
+
+  /* ── The bands body ─────────────────────────────────────────────────────
+     Design's grid: `120px 1fr 72 60 64` — band + tag, a 36px bar with the
+     count beside it, median, days, $/sq ft.
+
+     THE BAR'S WIDTH IS A SHARE OF THE LARGEST BAND, not of the total: the row
+     is a comparison between bands, and a share of the total makes every bar
+     short as soon as there are several. The count sits BESIDE the bar as ink
+     text, which is Design's spec and also the only placement that survives a
+     count of zero and a bar of zero width. */
+  .bands { padding: 22px 52px 0; }
+  .brow {
+    display: grid;
+    grid-template-columns: 120px 1fr 72px 60px 64px;
+    align-items: center;
+    gap: 0 12px;
+    padding: 6px 0;
+  }
+  .bhead {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--rule-soft);
+    padding-bottom: 8px;
+  }
+  .blabel { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .btag {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 2px;
+  }
+  /* Fastest takes `accent_ink` (derived, >=4.5 on white and on the tint since
+     D-177); slowest takes Design's fixed `#B42318`, which they measured at
+     5.9:1. Only the slow one is a literal, because "slow" is not a brand
+     colour on any brand. */
+  .btag-fast { color: var(--accent-ink); }
+  .btag-slow { color: {{ v2_bands.slow_tag if v2_bands else '#B42318' }}; }
+  .bbar-cell { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .bbar {
+    height: 36px;
+    border-radius: 3px;
+    background: var(--primary);
+    flex-shrink: 0;
+  }
+  .bbar-fast { background: var(--accent); }
+  .bcount { font-size: 13px; font-weight: 500; color: var(--ink);
+            font-variant-numeric: tabular-nums; }
+  .bcell { font-size: 13px; font-weight: 400; line-height: 1.05;
+           color: var(--body); text-align: right;
+           font-variant-numeric: tabular-nums; }
+  .bdays-fast { color: var(--accent-ink); font-weight: 600; }
+  .bdays-slow { color: {{ v2_bands.slow_tag if v2_bands else '#B42318' }}; font-weight: 600; }
+  .brow { break-inside: avoid; page-break-inside: avoid; }
+  .bempty { font-size: 13px; font-weight: 400; color: var(--muted);
+            padding: 10px 0; }
+  /* ── Design's photo grid ──────────────────────────────────────────────
+     THE PHOTO RESERVES ITS BOX FROM THE COLUMN WIDTH, via `aspect-ratio` on a
+     `background-image` div. Remote photos do not load in a headless render, so
+     a card whose height came from a loaded image would make
+     `measure_gallery_continuation_fit.py` measure a page that collapses to
+     nothing. The legacy card used a fixed `height: 180px` for the same reason
+     and the comment there says so; this is the width-driven version of the
+     same guarantee, which is what a grid of varying column counts needs.
+
+     Design states the type (price plate 15px/700, address 13px/600, meta
+     11.5px) and NOT the photo height or the card height. So the card height is
+     an OUTPUT of their spec, measured rather than chosen — see §8 of
+     docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md. */
+  .grid { padding: 22px 52px 0; display: grid; gap: 14px; }
+  .gcard { border-radius: 8px; overflow: hidden; background: #ffffff;
+           border: 1px solid var(--rule-soft); }
+  .gphoto { position: relative; width: 100%; aspect-ratio: 4 / 3;
+            background-color: var(--tint); background-size: cover;
+            background-position: center; }
+  /* Design: "solid white #14161A 15px/700, padding 4px 9px, radius 4px,
+     top-left 10px". A SOLID PLATE and never text straight onto photography —
+     their rule, and the only one that is readable over an unknown image. */
+  .gplate { position: absolute; top: 10px; left: 10px; background: #ffffff;
+            color: #14161A; font-size: 15px; font-weight: 700;
+            padding: 4px 9px; border-radius: 4px; }
+  /* The missing-photo tile: `tint` (primary at 8% over white), the
+     neighbourhood 22px/600 in `primary` bottom-left, "Photos coming soon"
+     9.5px mono uppercase at 75%. No broken-image icon and no stock house —
+     Design's spec, and a stock photo of a house that is not the house is the
+     one thing here that would be a lie. */
+  /* `background-color`, NOT the `background` shorthand. The shorthand resets
+     every background longhand it does not name, so `background: var(--tint)`
+     here silently wiped `background-size: cover` from the base `.gphoto` rule
+     — found by the fit measurement reporting `photo_px: 0`, because its
+     detector looks for a cover-sized box. Nothing was visibly wrong (the tile
+     has no image), which is exactly why it would have survived until someone
+     put a url on this branch. */
+  .gphoto.empty { background-color: var(--tint); display: flex;
+                  flex-direction: column; justify-content: flex-end;
+                  padding: 10px; }
+  .ghood { font-size: 22px; font-weight: 600; color: var(--primary-ink);
+           line-height: 1.05; }
+  .gsoon { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+           letter-spacing: 0.08em; text-transform: uppercase;
+           color: var(--muted); margin-top: 3px; }
+  .ginfo { padding: 8px 10px 10px; }
+  .gaddr { font-size: 13px; font-weight: 600; color: var(--ink);
+           line-height: 1.3; overflow: hidden; text-overflow: ellipsis;
+           white-space: nowrap; }
+  .gmeta { font-size: 11.5px; font-weight: 400; color: var(--body);
+           line-height: 1.3; margin-top: 2px; overflow: hidden;
+           text-overflow: ellipsis; white-space: nowrap; }
+  .goh { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+         letter-spacing: 0.06em; text-transform: uppercase;
+         color: var(--accent-ink); margin-top: 4px; }
+  /* `featured_listings` only: 18px plate, 15px address, and the three specs
+     stacked to the right instead of one meta line underneath. */
+  .gcard.featured .gplate { font-size: 18px; }
+  .gcard.featured .gaddr { font-size: 15px; }
+  .gcard.featured .ginfo { display: flex; justify-content: space-between;
+                           align-items: flex-start; gap: 10px; }
+  .gstats { text-align: right; flex-shrink: 0; }
+  .gstat { font-size: 11.5px; font-weight: 400; color: var(--body);
+           line-height: 1.35; font-variant-numeric: tabular-nums; }
+  .gcard { break-inside: avoid; page-break-inside: avoid; }
+  .gempty { font-size: 13px; font-weight: 400; color: var(--muted);
+            padding: 22px 52px 0; }
+  .gshowing { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+              letter-spacing: 0.06em; text-transform: uppercase;
+              color: var(--muted); padding: 14px 52px 0; }
+
+  .bnote { font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+           letter-spacing: 0.06em; color: var(--muted);
+           border-top: 1px solid var(--rule-soft);
+           margin-top: 10px; padding-top: 10px; }
+
+  .tshowing {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 12px 52px 0;
+  }
+
+  /* Rows must not split across a page break; the paginator decides where the
+     break goes and the fit gate measures what that yields. */
+  .trow { break-inside: avoid; page-break-inside: avoid; }
+
+  @media print {
+    body { background: #ffffff; }
+    .band { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<section class="band">
+  <div class="band-top">
+    <div class="band-title">{{ v2_band.title }}</div>
+    {% if agent.logo_url %}
+    <img class="band-logo" src="{{ agent.logo_url }}" alt="">
+    {% elif agent.brand_name %}
+    <div class="band-brand">{{ agent.brand_name }}</div>
+    {% endif %}
+  </div>
+
+  <div class="band-lead">
+    <div class="band-lead-left">
+      <div class="band-big" style="font-size: {{ v2_band.big_px }}px">{{ v2_band.big }}</div>
+      {# THE BOX IS UNCONDITIONAL, THE SPAN IS NOT. `price_bands` has a
+         headline that REFUSES: under 10 listings in the fastest band, or under
+         3 days ahead of the area average, the band shows the plain title with
+         no label beneath it (see `_v2_fastest_headline`). With
+         `autoescape=False` an unguarded label expression printed the literal
+         string `None` at 22px — caught by
+         `test_no_undefined_values[price_bands]`, which is the only gate on
+         this surface that reads the rendered page for a bare `None`.
+
+         A JINJA COMMENT, NOT AN HTML ONE. The first version of this note was
+         `<!-- ... -->` and quoted the expression it was about, so Jinja
+         substituted it and the comment itself shipped `None` into the page —
+         inside a comment, where the gate could not see it and a reader of the
+         source would conclude the guard was not working. Jinja does not treat
+         `<!-- -->` as a comment, and an HTML comment ships to the client.
+
+         The 50px box stays so the band's height does not move between a kind
+         that has a label and a kind that, for this data, does not. #}
+      <div class="band-label-box">
+        {% if v2_band.label %}
+        <span class="band-label" style="font-size: {{ v2_band.label_px }}px">{{ v2_band.label }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% if v2_band.pill %}
+    <div class="band-lead-right">
+      <span class="band-pill">{{ v2_band.pill }}</span>
+      {% if v2_band.pill_sub %}<div class="band-pill-sub">{{ v2_band.pill_sub }}</div>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="band-stats">
+    {% for cell in v2_band.cells %}
+    <div class="band-stat">
+      <div class="band-stat-value">{{ cell.value }}</div>
+      <div class="band-stat-label">{{ cell.label }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if v2_snapshot %}
+<section class="snap">
+  <div class="snap-row">
+    <div class="snap-head">
+      <div class="snap-title">{{ v2_snapshot.moi.headline }}</div>
+      <div class="snap-note">{{ v2_snapshot.moi.note }}</div>
+    </div>
+    <div>
+      <div class="moi-bar">{% for on in v2_snapshot.moi.cells %}<div class="moi-cell{% if on %} on{% endif %}"></div>{% endfor %}</div>
+      <div class="moi-legend"><div class="l-s">Seller's &lt;4 mo</div><div class="l-b">Balanced</div><div class="l-y">Buyer's 6+</div></div>
+    </div>
+  </div>
+  <div class="snap-row">
+    <div class="snap-head">
+      <div class="snap-title">{{ v2_snapshot.tier_headline }}</div>
+      <div class="snap-note">{{ v2_snapshot.tier_note }}</div>
+    </div>
+    <div class="tiers">
+      {% for t in v2_snapshot.tiers %}
+      <div class="tier">
+        <div><span class="tier-name">{{ t.name }}</span><span class="tier-range">{{ t.range }}</span></div>
+        <div class="tier-bar"><div class="tier-track"><div class="tier-fill" style="width:{{ t.width }}%"></div></div><span class="tier-count">{{ t.closed }}</span></div>
+        <div class="tier-side">{{ t.median }} median · {{ t.moi }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% if monthly_trend %}
+  {# NOT IN DESIGN'S SNAPSHOT. The twelve-month median line led the legacy
+     page 1 by Jerry's decision (D-102, 2026-09-28) — the one thing here a
+     reader cannot get from Zillow — so it stays, as a fourth row in Design's
+     grid, through the same macro and its tests. Flagged to Design. #}
+  <div class="snap-row">
+    <div class="snap-head">
+      <div class="snap-title">Twelve months of prices</div>
+      <div class="snap-note">Median closed price by month in {{ header.city or 'this area' }}.</div>
+    </div>
+    <div class="snap-trend">{{ macros.monthly_trend_chart(monthly_trend, primary_ink, monthly_trend_note, monthly_trend_fmt, width=480, height=130) }}</div>
+  </div>
+  {% endif %}
+  <div class="snap-row">
+    <div class="snap-title">By property type</div>
+    {% if v2_snapshot.types %}
+    <div class="ptypes">
+      {% for t in v2_snapshot.types %}
+      <div class="ptype">
+        <div class="ptype-name">{{ t.name }}</div>
+        <div class="ptype-value">{{ t.median }}</div>
+        <div class="ptype-sub">{{ t.sold }} sold · {{ t.days }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="snap-empty">No homes sold in this period, so there is nothing to compare by type.</div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if v2_bands %}
+<section class="bands">
+  {# NO COLUMN HEADER OVER NO ROWS. `v2_bands` is a dict and always truthy for
+     this kind, so the outer test says "this kind has a bands body", not "there
+     are bands to show". A search that matched nothing used to render five
+     column headings above empty space, which reads as a broken page rather
+     than as an empty result. Standing instruction: the report renders and says
+     the search returned nothing. #}
+  {% if not v2_bands.rows %}
+  <div class="bempty">No price bands — this search returned no listings.</div>
+  {% else %}
+  <div class="brow bhead">
+    <div>Price band</div>
+    <div>Listings</div>
+    <div style="text-align:right">Median</div>
+    <div style="text-align:right">Days</div>
+    <div style="text-align:right">$/sq ft</div>
+  </div>
+  {% for row in v2_bands.rows %}
+  <div class="brow">
+    <div>
+      <span class="blabel">{{ row.label }}</span>
+      {% if row.tag %}
+      <span class="btag {{ 'btag-fast' if row.is_fastest else 'btag-slow' }}">{{ row.tag }}</span>
+      {% endif %}
+    </div>
+    <div class="bbar-cell">
+      <div class="bbar {{ 'bbar-fast' if row.is_fastest else '' }}"
+           style="width: {{ row.bar_pct }}%"></div>
+      <span class="bcount">{{ row.count }}</span>
+    </div>
+    <div class="bcell">{{ row.median }}</div>
+    <div class="bcell {{ 'bdays-fast' if row.is_fastest else ('bdays-slow' if row.is_slowest else '') }}">{{ row.days }}</div>
+    <div class="bcell">{{ row.ppsf }}</div>
+  </div>
+  {% endfor %}
+  {% endif %}
+  {% if v2_bands.note %}
+  {# The table kinds' structural equivalent is `.tshowing`. This carries the
+     same job plus D-111's caveat about where the boundaries came from. #}
+  <div class="bnote">{{ v2_bands.note }}</div>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if v2_gallery %}
+{% if not v2_gallery.rows %}
+{# AN EMPTY GRID IS A BARE `<section>` AND READS AS A BROKEN PAGE. Same shape
+   as the bands body's five column headings over nothing. The standing
+   instruction on an empty search is that the report renders and says the
+   search returned nothing — it does NOT change whether the report sends. #}
+<div class="gempty">No listings matched this search{% if v2_gallery.empty_city %} in {{ v2_gallery.empty_city }}{% endif %}{% if v2_gallery.empty_label %} — {{ v2_gallery.empty_label }}{% endif %}.</div>
+{% else %}
+<section class="grid"
+         style="grid-template-columns: repeat({{ v2_gallery.cols }}, minmax(0, 1fr))">
+  {% for row in v2_gallery.rows %}
+  <div class="gcard{% if v2_gallery.card == 'featured' %} featured{% endif %}">
+    {% if row.photo_url %}
+    <div class="gphoto" style="background-image: url('{{ row.photo_url }}')">
+      <span class="gplate">{{ row.price }}</span>
+    </div>
+    {% else %}
+    <div class="gphoto empty">
+      <span class="gplate">{{ row.price }}</span>
+      {% if row.hood %}<div class="ghood">{{ row.hood }}</div>{% endif %}
+      <div class="gsoon">Photos coming soon</div>
+    </div>
+    {% endif %}
+    <div class="ginfo">
+      <div>
+        <div class="gaddr">{{ row.address }}</div>
+        {% if v2_gallery.card != 'featured' %}
+        <div class="gmeta">{{ row.meta }}</div>
+        {% endif %}
+        {% if row.open_house %}<div class="goh">{{ row.open_house }}</div>
+        {% elif row.listed %}<div class="goh">{{ row.listed }}</div>{% endif %}
+      </div>
+      {% if v2_gallery.card == 'featured' %}
+      <div class="gstats">
+        <div class="gstat">{{ row.beds }} bd</div>
+        <div class="gstat">{{ row.baths }} ba</div>
+        <div class="gstat">{{ row.sqft }} sq ft</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% if v2_gallery.showing < v2_gallery.total %}
+<div class="gshowing">Showing {{ v2_gallery.showing }} of {{ v2_gallery.total }}</div>
+{% endif %}
+{% endif %}
+
+{% if v2_table %}
+<section class="table">
+  <div class="trow thead">
+    <div>Address</div>
+    <div class="tnum">Bd/Ba</div>
+    <div class="tnum">Sq ft</div>
+    <div class="tnum">{{ v2_table.columns.price }}</div>
+    <div class="tnum">{{ v2_table.columns.fifth }}</div>
+    <div class="tnum">Days</div>
+  </div>
+  {% for row in v2_table.rows %}
+  <div class="trow">
+    <div>
+      <div class="taddr">{{ row.address }}</div>
+      {% if row.hood %}<div class="thood">{{ row.hood }}</div>{% endif %}
+    </div>
+    <div class="tcell tnum">{{ row.beds_baths }}</div>
+    <div class="tcell tnum">{{ row.sqft }}</div>
+    <div class="tcell tnum">{{ row.price }}</div>
+    <div class="tnum {{ 'tvs-over' if row.emphasis else 'tvs-under' }}">{{ row.fifth }}</div>
+    <div class="tcell tnum">{{ row.days }}</div>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{# "Showing a–b of N". The page number is NOT here: this document does not know
+   how the paginator will break it, and a page number written by the body would
+   be wrong on every page but one. PDFShift's footer carries `Page x of P`. #}
+{% if v2_table %}
+<div class="tshowing">
+  {% if v2_table.showing < v2_table.total %}
+  Showing {{ v2_table.showing }} of {{ v2_table.total }}
+  {% else %}
+  {{ v2_table.total }} {{ v2_table.noun if v2_table.total != 1 else v2_table.noun_one }}
+  {% endif %}
+</div>
+{% endif %}
+
+</body>
+</html>

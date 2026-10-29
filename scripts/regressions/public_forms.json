@@ -1,0 +1,37 @@
+[
+  {
+    "name": "R1 a placeholder on a domain somebody owns",
+    "file": "apps/web/app/login/page.tsx",
+    "old": "placeholder=\"you@example.com\"",
+    "new": "placeholder=\"demo@trendyreports.io\"",
+    "test": "tests/test_public_forms_are_fillable.py"
+  },
+  {
+    "name": "R2 the consumer lead form loses its email autofill",
+    "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+    "old": "          autoComplete=\"email\"\n          placeholder=\"you@example.com\"",
+    "new": "          placeholder=\"you@example.com\"",
+    "test": "tests/test_public_forms_are_fillable.py"
+  },
+  {
+    "name": "R3 the CMA funnel loses its phone autofill",
+    "file": "apps/web/app/cma/[code]/cma-funnel.tsx",
+    "old": " inputMode={method === \"sms\" ? \"tel\" : \"email\"} autoComplete={method === \"sms\" ? \"tel\" : \"email\"}",
+    "new": " inputMode={method === \"sms\" ? \"tel\" : \"email\"}",
+    "test": "tests/test_public_forms_are_fillable.py"
+  },
+  {
+    "name": "R4 the /blog exception outlives the defect it names",
+    "file": "apps/web/app/blog/page.tsx",
+    "old": "              type=\"email\"\n              placeholder=\"you@example.com\"",
+    "new": "              type=\"email\"\n              autoComplete=\"email\"\n              placeholder=\"you@example.com\"",
+    "test": "tests/test_public_forms_are_fillable.py"
+  },
+  {
+    "name": "R5 the input scanner stops at the first > and sees nothing",
+    "file": "tests/test_public_forms_are_fillable.py",
+    "old": "            elif c == \">\" and depth == 0:\n                break",
+    "new": "            elif c == \">\":\n                break",
+    "test": "tests/test_public_forms_are_fillable.py"
+  }
+]

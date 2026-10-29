@@ -361,7 +361,12 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                 # Don't fail registration if email fails
                 logger.error(f"Failed to queue verification email for {email}: {e}")
 
-            return {"ok": True, "email_verified": False}
+            # The token goes in the body as well as the cookie. The web app
+            # calls this through a Next proxy, and a server-side fetch does
+            # not hand the API's Set-Cookie on — the proxy writes `mr_token`
+            # from `access_token`, exactly as it does for login. Without it a
+            # new account was bounced from /app to /login (D-241).
+            return {"ok": True, "email_verified": False, "access_token": token}
 
 
 @router.post("/auth/accept-invite", response_model=AcceptInviteResponse)

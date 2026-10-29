@@ -1,0 +1,108 @@
+/* TrendyReports — design tokens for the product redesign (Landing v4 / App v3 / Wizards v3 / Home Value Page).
+   Drop-in replacement for the :root block in apps/web/app/globals.css.
+   Everything the redesign looks like that is NOT markup lives here. Variable names are kept
+   identical to the current globals.css so no component import changes. New names are marked NEW. */
+
+:root {
+  /* ── Backgrounds ── */
+  --background: #FFFFFF;            /* was #F8FAFC. App pages are white; cream is the sidebar/marketing ground */
+  --surface-cream: #FAFAF7;         /* NEW — sidebar, marketing page, open drawer row, wizard artifact column */
+  --card: #FFFFFF;
+  --popover: #FFFFFF;
+  --muted: #ECEAE3;                 /* was #F1F5F9 (cool). Warm panel: active nav, inactive step dot, icon-button hover */
+  --muted-hover: #F1EFE8;           /* NEW — nav item hover */
+  --band: #EEEDE7;                  /* NEW — landing footer */
+
+  /* ── Text ── */
+  --foreground: #0F172A;
+  --card-foreground: #0F172A;
+  --popover-foreground: #0F172A;
+  --body: #334155;                  /* NEW — paragraph text, inactive nav items */
+  --secondary-foreground: #475569;  /* was #0F172A. Explanatory sentences, pills-off text */
+  --muted-foreground: #64748B;      /* unchanged. Meta text, section labels. Smallest colour allowed for text ≥11px */
+  --placeholder: #94A3B8;           /* NEW — placeholders and decorative icons ONLY, never text */
+  --disabled: #CBD5E1;              /* NEW — disabled borders, radio ring, switch-off track */
+
+  /* ── Brand (product) ── */
+  --primary: #0F172A;               /* was #4F46E5. Inside the app the primary button is INK. Indigo is reserved (see --link) */
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #1E293B;         /* NEW */
+  --link: #4F46E5;                  /* NEW — links, landing primary CTA, current madlib slot, focus ring hue */
+  --link-hover: #3730A3;            /* NEW */
+  --accent: #EEF2FF;                /* unchanged — Seller tag bg */
+  --accent-foreground: #3730A3;
+
+  /* ── Agent brand (report-only; never used on chrome) ── */
+  --agent-primary: #4F46E5;         /* NEW — set per account from branding; default = indigo theme */
+  --agent-accent: #D97706;          /* NEW */
+
+  /* ── Secondary ── */
+  --secondary: #FFFFFF;             /* secondary button is white + border, not grey fill */
+
+  /* ── Interactive ── */
+  --ring: #4F46E5;                  /* was #818CF8 */
+  --ring-alpha: rgba(79,70,229,0.18);  /* NEW — focus ring: 0 0 0 3px */
+  --border: #E4E2DA;                /* was #E2E8F0 (cool). Card and control borders */
+  --border-subtle: #ECEAE3;         /* NEW — table rules, section rules, sidebar edge */
+  --border-strong: #D6D3CB;         /* NEW — large inputs (1.5px), madlib underline, dot grid */
+  --input: #E4E2DA;
+
+  /* ── Status (text / bg pairs; semantic, fixed) ── */
+  --success: #059669;               /* switch-on track, "next send" dot */
+  --success-foreground: #065F46;    /* NEW — Opened / Done / Called pill text */
+  --success-muted: #D1FAE5;         /* NEW — pill bg, done step dot bg */
+  --success-strong: #047857;        /* NEW — done step dot fg */
+  --warning: #D97706;               /* usage bar ≥80% */
+  --warning-foreground: #92400E;    /* NEW — Hot pill text */
+  --warning-muted: #FEF3C7;         /* NEW */
+  --destructive: #B91C1C;           /* was #DC2626. Usage bar at 100%, delete hover */
+  --destructive-foreground: #991B1B;/* Bounced / Failed pill text (on muted) */
+  --destructive-muted: #FEE2E2;     /* NEW */
+  --info-foreground: #1E40AF;       /* NEW — Running pill */
+  --info-muted: #DBEAFE;            /* NEW */
+  --neutral-muted: #F1F5F9;         /* NEW — Sent pill bg */
+
+  /* ── Charts (unchanged) ── */
+  --chart-1: #4F46E5; --chart-2: #D97706; --chart-3: #3B82F6; --chart-4: #059669; --chart-5: #818CF8;
+
+  /* ── Radius ── */
+  --radius: 0.625rem;               /* was 0.5rem. 10px: buttons, inputs */
+  --radius-card: 1rem;              /* NEW — 16px cards, 12–14px small cards */
+  --radius-pill: 999px;             /* NEW */
+
+  /* ── Sidebar (LIGHT — the single biggest visual change) ── */
+  --sidebar: #FAFAF7;               /* was #0F172A */
+  --sidebar-foreground: #334155;    /* was #CBD5E1 */
+  --sidebar-border: #ECEAE3;        /* was #1E293B */
+  --sidebar-accent: #ECEAE3;        /* active item bg; was #1E293B */
+  --sidebar-accent-foreground: #0F172A;
+  --sidebar-primary: #0F172A;       /* "New report" button; was #818CF8 */
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-ring: #4F46E5;
+  --sidebar-muted: #64748B;         /* was #475569 → 3.41:1 on dark. #64748B on #FAFAF7 = 4.6:1 */
+
+  /* ── Shadows ── cards have NONE. Only floating things. */
+  --shadow-sm: none;
+  --shadow-card: none;
+  --shadow-elevated: 0 12px 32px -16px rgba(15,23,42,0.25);                                   /* drawer overlay, popover */
+  --shadow-artifact: 0 30px 60px -20px rgba(15,23,42,0.32), 0 0 0 1px rgba(15,23,42,0.06);    /* NEW — embedded report page */
+  --shadow-pin: 0 1px 3px rgba(0,0,0,0.25);                                                   /* NEW — map pins */
+
+  /* ── Motion ── */
+  --ease-out: cubic-bezier(0.2,0.8,0.2,1);  /* NEW — artifact fill-in, drawer, carousel (0.4–0.5s) */
+  --duration-fast: 0.2s;                     /* hover bg, switch knob */
+  --duration-slow: 0.5s;                     /* artifact transforms */
+}
+
+/* ── Type scale (apply to body/h1 in @layer base) ──
+   font: Plus Jakarta Sans 400/500/600/700/800 (already loaded).
+   body: 15px / 1.5 in app (was 14px / 1.6); 16px / 1.6 marketing + Home Value Page
+   h1 page title: 34px / 800 / -0.03em / 1.1 (marketing hero clamp(42px,5.4vw,68px) / -0.04em)
+   h2 step/section: 24px / 800 / -0.02em
+   card title: 17px / 700 ; row title 15px / 600
+   meta: 13px / 500 #64748B ; small meta 12px
+   section label: 11–12px / 700 / uppercase / 0.08–0.1em / #64748B
+   numbers: font-variant-numeric: tabular-nums everywhere a number sits in a column */
+
+/* ── Spacing (px) ── 4 base. Used values: 2 4 6 8 10 12 14 16 20 24 28 36 40 44 48 80.
+   page padding 44px 48px 80px; page max-width 1120; section gap 36; card padding 20–24; row padding 12–14 0; control gap 8–10. */

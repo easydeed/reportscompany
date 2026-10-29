@@ -1,0 +1,16 @@
+[
+  {
+    "name": "N1 the rep's fallback branding row omits the NOT NULL name again",
+    "file": "apps/api/src/api/services/invite_service.py",
+    "old": "            SELECT %s::uuid, a.name, false FROM accounts a WHERE a.id = %s::uuid\n",
+    "new": "            SELECT %s::uuid, NULL, false FROM accounts a WHERE a.id = %s::uuid\n",
+    "test": "apps/api/tests/test_a_new_company_can_invite_reps.py::test_a_company_with_no_branding_can_invite_a_rep"
+  },
+  {
+    "name": "N2 the company's first save inserts the empty name",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "                COALESCE(%s, (SELECT name FROM accounts WHERE id = %s::uuid)),\n",
+    "new": "                NULLIF(%s, (SELECT name FROM accounts WHERE id = %s::uuid)),\n",
+    "test": "apps/api/tests/test_a_new_company_can_invite_reps.py::test_a_company_with_no_branding_can_save_it_without_a_display_name"
+  }
+]

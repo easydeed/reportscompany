@@ -6,6 +6,28 @@
 Counted, not estimated: file sizes from `wc`, test counts from `pytest --collect-only`, page
 sets and maps read from the code that declares them.
 
+> ## THE THEME NAMES IN THIS DOCUMENT PREDATE THE 2026-10-13 RENAME
+>
+> *Added 2026-10-21, after a reader of this file concluded that `harbor` was a removed theme.*
+>
+> This document says the live themes are **bold, elegant and modern**. Those are their former
+> names. **Ids 2, 3 and 5 are unchanged and all three are live.**
+>
+> | in this document | live name | id | property template |
+> |---|---|---|---|
+> | `bold` | **`atlas`** | 5 | `atlas/atlas_report.jinja2` *(the default)* |
+> | `elegant` | **`linen`** | 3 | `linen/linen_report.jinja2` |
+> | `modern` | **`harbor`** | 2 | `harbor/harbor_report.jinja2` |
+>
+> `classic` (1) and `teal` (4) are the retired ones, cut 2026-10-05. **No theme has been retired
+> since**, and `atlas`, `linen` and `harbor` are new *names*, not new or removed designs.
+> `apps/worker/src/worker/themes.json` is canonical and says the same thing in its `renamed` block;
+> `renaming is not retiring` is the heading it does it under.
+>
+> **Why this box exists rather than a find-and-replace:** the old names appear below inside dated
+> quotations and measurements, and rewriting those would falsify the record. The mapping is stated
+> once, here, and the body is left as it was written.
+
 ---
 
 ## The short answer

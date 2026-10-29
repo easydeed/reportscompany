@@ -50,13 +50,14 @@ interface AffiliateStats {
   // GENERATED with. 41 of 44 accounts defaulted to teal before the theme cut,
   // so most of the history in this chart is a retired theme. Dropping classic
   // and teal here would render a dashboard saying those reports never
-  // happened. Live themes: modern, elegant, bold.
+  // happened. Live themes: harbor, linen, atlas (renamed 2026-10-13 from
+  // modern, elegant, bold — ids 2, 3, 5 unchanged).
   themes: {
     classic: number
-    modern: number
-    elegant: number
+    harbor: number
+    linen: number
     teal: number
-    bold: number
+    atlas: number
   }
   leaderboard: {
     account_id: string
@@ -81,11 +82,11 @@ interface AffiliateStats {
 // retired themes still own most of the history. Not the themes' own brand
 // colours — these are chart swatches.
 const THEME_COLORS: Record<string, string> = {
-  classic: 'bg-slate-100 text-slate-700 border-slate-300',
-  modern: 'bg-blue-100 text-blue-700 border-blue-300',
-  elegant: 'bg-indigo-100 text-indigo-700 border-indigo-300',
+  classic: 'bg-muted text-slate-700 border-slate-300',
+  harbor: 'bg-blue-100 text-blue-700 border-blue-300',
+  linen: 'bg-accent text-accent-foreground border-transparent',
   teal: 'bg-teal-100 text-teal-700 border-teal-300',
-  bold: 'bg-amber-100 text-amber-700 border-amber-300',
+  atlas: 'bg-amber-100 text-amber-700 border-amber-300',
 }
 
 export default function AffiliatePropertyReportsPage() {
@@ -254,7 +255,7 @@ export default function AffiliatePropertyReportsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Conversion Rate</CardTitle>
-            <Target className="h-4 w-4 text-indigo-500" />
+            <Target className="h-4 w-4 text-[var(--body)]" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{aggregate.conversion_rate}%</div>

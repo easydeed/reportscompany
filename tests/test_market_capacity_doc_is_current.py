@@ -1,0 +1,482 @@
+"""The capacity comparison we send Design, against the pin it quotes.
+
+`docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md` tells Design their row counts are
+less dense than ours and costs one extra page on a 118-row `closed` report. It
+is a document that leaves the building, and the figures in it came out of a
+browser measurement that CI cannot run.
+
+So the half that can be checked without Chromium is checked: the document must
+agree with `PAGE_1_CAPACITY`, which is the pinned result of that measurement and
+is itself gated by `test_narrative_box.py`. The stale figures this corrects —
+"13 rows on page 1 and 25 on page 2" — sat in a docstring for exactly as long as
+nothing read them.
+"""
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+DOC = REPO / "docs/MARKET_CAPACITY_VS_DESIGN_2026-10-07.md"
+sys.path.insert(0, str(REPO / "apps/worker/tests"))
+
+from test_narrative_box import PAGE_1_CAPACITY  # noqa: E402
+
+#: What Design's package specifies, from the market README's continuation-pages
+#: section. Their numbers, not ours to derive — the point is the comparison.
+DESIGN_SPEC = {"closed_page_1": 13, "closed_continuation": 26}
+
+
+def text():
+    return DOC.read_text(encoding="utf-8")
+
+
+def doc_capacity():
+    """§5's ```capacity block, parsed.
+
+    NOT `str(rows) in text`. The first version of this gate did that and
+    passed on a capacity of 17 because the document contains "D-173" — a
+    two-digit number matching inside a defect id. Substring-is-not-a-construct,
+    in the gate written to stop a document going stale, which is the third time
+    in this session that pattern has been the bug.
+    """
+    body = text()
+    start = body.index("```capacity") + len("```capacity")
+    block = body[start:body.index("```", start)]
+    out = {}
+    for line in block.strip().splitlines():
+        key, _, value = line.partition("=")
+        report_type, _, state = key.strip().partition(".")
+        out.setdefault(report_type, {})[state] = int(value.strip())
+    return out
+
+
+def test_the_document_quotes_the_pinned_capacity():
+    """§5, parsed, against the pin — both directions."""
+    doc, pin = doc_capacity(), PAGE_1_CAPACITY
+    assert doc == pin, (
+        f"§5 and PAGE_1_CAPACITY disagree.\n  document: {doc}\n  pin:      "
+        f"{pin}\n\nRe-run `measure_market_pagination.py --emit-capacity` and "
+        f"update §5. A document sent to Design must not quote a capacity the "
+        f"build no longer has — that is the thing we have asked them three "
+        f"times not to do."
+    )
+
+
+def test_the_comparison_is_against_the_no_narrative_column():
+    """The claim rests on reading their 13 against our 15, not our 11.
+
+    Design removes the narrative from the table kinds, so their page 1 is one
+    state. Comparing against the figure production renders today would be
+    comparing two different documents, which is the error this whole exchange
+    has been about.
+    """
+    body = text()
+    # `closed` moved to the `_v2` page on 2026-10-07 and now reads 17 in BOTH
+    # states, because the narrative is suppressed for `V2_KINDS`. The identity
+    # is the assertion worth making: page-1 capacity is a number rather than a
+    # property of prose length, which is the determinism Design's design buys
+    # and the thing the old 15/11 split could not give.
+    assert (PAGE_1_CAPACITY["closed"]["no_narrative"]
+            == PAGE_1_CAPACITY["closed"]["with_narrative"] == 17), (
+        f"`closed` reads {PAGE_1_CAPACITY['closed']}. Two different numbers "
+        f"mean the narrative is reaching the `_v2` page again, which makes "
+        f"page-1 capacity depend on prose length."
+    )
+    # THE CONTROL IS GONE AND THAT IS THE FINDING, NOT A GAP TO PATCH.
+    #
+    # This asserted `inventory` at 15/11 as "a kind that has NOT moved and
+    # still shows the swing the move removes". `inventory` moved on 2026-10-08
+    # — the fourth positive control in this suite consumed by the migration it
+    # was controlling for, after `closed` and `inventory` in the layout map and
+    # `inventory` twice in the kinds suite.
+    #
+    # And here the replacement is narrower than the original, which is worth
+    # being exact about rather than papering over.
+    #
+    # THE PROSE SWING IS GONE EVERYWHERE. The 15-against-11 gap existed only on
+    # `closed` and `inventory`, the two kinds whose layout put a narrative box
+    # above a long table, and both have moved. Every kind on the surface now
+    # reads the SAME number with and without a narrative — which is the
+    # determinism the comparison was about, and it is asserted over all eight
+    # rather than demonstrated on one.
+    #
+    # `market_snapshot` still swings on its TREND CHART (3/3/0 — the chart
+    # costs it every row on page 1), and that is the last unwired kind's own
+    # business. A chart is not prose: the number does not depend on how much an
+    # LLM wrote, which is the specific defect D-102 was about. So the two are
+    # asserted separately instead of one standing in for the other.
+    #
+    # The historical figures stay in the DOCUMENT, because that is what the
+    # comparison was made against and §2's arithmetic is unreadable without
+    # them. They are gone from the live pin, which is correct: the pin is
+    # current and the document records what was.
+    prose_swing = {
+        kind: states for kind, states in PAGE_1_CAPACITY.items()
+        if states["no_narrative"] != states["with_narrative"]
+    }
+    assert prose_swing == {}, (
+        f"these kinds' page-1 capacity still depends on how much prose an LLM "
+        f"wrote: {prose_swing}. That is D-102's defect and the thing Design's "
+        f"one-state page removes."
+    )
+    # THE CONTROL IS GONE, SAID RATHER THAN DELETED. `market_snapshot`'s
+    # `with_trend: 0` was the one remaining swing, kept so the assertion above
+    # was not vacuously true. D-255 wired the snapshot: its chart is a row of
+    # Design's page and it carries no listings, so it reads one state like
+    # every other kind. The assertion above now holds by construction — what
+    # is asserted instead is that no kind has a third state left to swing.
+    assert all(set(states) == {"no_narrative", "with_narrative"}
+               for states in PAGE_1_CAPACITY.values()), (
+        f"a kind has a capacity state beyond the two narrative states: "
+        f"{ {k: v for k, v in PAGE_1_CAPACITY.items() if len(v) != 2} }"
+    )
+    assert "the middle column" in body, (
+        "the document no longer says which column the comparison is against. "
+        "Their 13 is a no-narrative figure; ours was 15 without and 11 with."
+    )
+    for historical in ("15", "11"):
+        assert historical in body, (
+            f"the document no longer records our pre-move figure {historical}. "
+            f"§2's arithmetic compared their 13 against those numbers and "
+            f"cannot be read without them."
+        )
+
+
+def test_the_page_cost_arithmetic_holds():
+    """One extra page on N=118, from Design's own formula.
+
+    Recomputed rather than trusted, because it is the only number in the
+    document that is arithmetic on top of a measurement and so the only one
+    that can be wrong while every input is right.
+    """
+    import math
+    n = 118
+    theirs = math.ceil((n - DESIGN_SPEC["closed_page_1"])
+                       / DESIGN_SPEC["closed_continuation"]) + 1
+    ours_p1 = PAGE_1_CAPACITY["closed"]["no_narrative"]
+    ours = math.ceil((n - ours_p1) / 29) + 1
+    assert (theirs, ours) == (6, 5), (
+        f"the page cost is now theirs={theirs}, ours={ours}; the document says "
+        f"6 and 5. Either a capacity moved or Design's spec changed."
+    )
+    assert "| Design's spec (13 + 26/page) | **6** |" in text()
+    assert "| ours, no narrative (15 + 29/page) | **5** |" in text()
+
+
+def test_the_stale_docstring_is_not_back():
+    """The figures this corrects, by value."""
+    script = (REPO / "scripts/measure_market_pagination.py").read_text(
+        encoding="utf-8")
+    assert "13 rows on page 1 and 25 on page 2" not in script
+    assert "11 then 29" in script, (
+        "the script's docstring no longer records the measurement that "
+        "replaced the stale one. A corrected number with no date and no "
+        "method is the next stale number."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# §2a — the eight-kind page cost.
+#
+# Gated because §0.6's new rule applies to it: a document's data is for the
+# gate. The markdown table IS a structured region, so it is parsed by its pipes
+# rather than scanned for numbers — the row is the claim, not the sentence.
+# ─────────────────────────────────────────────────────────────────────────────
+
+#: Continuation capacity per kind, from the same measurement run as
+#: PAGE_1_CAPACITY. Not in that dict because it pins page 1 only.
+OURS_CONTINUATION = {
+    "closed": 29, "inventory": 29, "new_listings": 8, "price_bands": 6,
+    "market_snapshot": 6, "new_listings_gallery": 9, "featured_listings": 9,
+    "open_houses": 9,
+}
+
+#: Design's per-kind row counts. `None` continuation means their package states
+#: the page-1 grid and NOT what a continuation page carries — which is a real
+#: gap in the spec and is why those rows carry no delta.
+DESIGN_ROWS = {
+    "closed": (13, 26), "inventory": (13, 26), "new_listings": (13, 26),
+    "new_listings_gallery": (6, None), "featured_listings": (4, None),
+    "open_houses": (9, None), "market_snapshot": (0, None),
+    "price_bands": (0, None),
+}
+
+
+def _pages(page_1, continuation, n):
+    if n <= page_1:
+        return 1
+    if not continuation:
+        return None
+    import math
+    return math.ceil((n - page_1) / continuation) + 1
+
+
+def _doc_table_rows():
+    """§2a's rows, by their pipes: `{type: (cap, n, ours, theirs_or_None)}`."""
+    rows = {}
+    for line in text().splitlines():
+        if not line.startswith("| `"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) != 6:
+            continue
+        name = cells[0].strip("`")
+        if name not in DESIGN_ROWS:
+            continue
+        theirs = cells[4].strip("* ")
+        rows[name] = (
+            int(cells[1]), int(cells[2]), int(cells[3].strip("* ")),
+            int(theirs) if theirs.isdigit() else None,
+        )
+    return rows
+
+
+def _forecast_inputs():
+    """§2a's ```forecast block — the capacities the forecast was taken with."""
+    body = text()
+    start = body.index("```forecast") + len("```forecast")
+    block = body[start:body.index("```", start)]
+    out = {}
+    for line in block.strip().splitlines():
+        key, _, value = line.partition("=")
+        kind, _, field = key.strip().partition(".")
+        out.setdefault(kind, {})[field] = int(value.strip())
+    return out
+
+
+def test_the_eight_kind_page_cost_recomputes():
+    """§2a's arithmetic, against ITS OWN RECORDED INPUTS — not the live pin.
+
+    This checked `ours` against `PAGE_1_CAPACITY` and broke the moment a kind
+    was built, because the pin moved and the forecast did not. That is the
+    right behaviour for a current document and the wrong behaviour for a
+    recorded one: **a forecast validated against live inputs cannot stay
+    valid, and editing it to match destroys the only thing it was for.**
+
+    So §2a now records the capacities it was taken with, and this checks the
+    arithmetic is internally consistent. §7 holds the built figures and
+    `test_the_built_figures_match_the_live_pin` checks those against the pin.
+    """
+    sys.path.insert(0, str(REPO / "apps/worker/src"))
+    from worker.market_builder import PDF_CONFIG  # noqa: E402
+
+    doc = _doc_table_rows()
+    assert len(doc) == 8, f"§2a has {len(doc)} parseable kinds, expected 8: {sorted(doc)}"
+    inputs = _forecast_inputs()
+    assert inputs, "§2a records no forecast inputs, so its arithmetic cannot be checked"
+
+    wrong = []
+    for report_type, (cap, n, ours, theirs) in sorted(doc.items()):
+        real_cap = PDF_CONFIG[report_type]["cap"]
+        want_n = min(120, real_cap)
+        if report_type in inputs:
+            want_ours = _pages(inputs[report_type]["page_1"],
+                               inputs[report_type]["continuation"], want_n)
+        else:
+            # Kinds the forecast did not restate took the pin at the time, and
+            # none of them has been built, so the pin is still their input.
+            want_ours = _pages(PAGE_1_CAPACITY[report_type]["no_narrative"],
+                               OURS_CONTINUATION[report_type], want_n)
+        t_p1, t_cont = DESIGN_ROWS[report_type]
+        want_theirs = _pages(t_p1, t_cont, want_n) if t_cont else None
+        if (cap, n, ours, theirs) != (real_cap, want_n, want_ours, want_theirs):
+            wrong.append(
+                f"{report_type}: document says cap={cap} N={n} ours={ours} "
+                f"theirs={theirs}; recomputed cap={real_cap} N={want_n} "
+                f"ours={want_ours} theirs={want_theirs}"
+            )
+    assert not wrong, "§2a disagrees with its own inputs:\n  " + "\n  ".join(wrong)
+
+
+#: The `_v2` continuation capacity of each wired kind, and `None` for a kind
+#: whose body has no continuation because it has no listings table.
+#:
+#: WAS A SINGLE `26` IN THE FORMULA BELOW, which was the table kinds' row count
+#: standing in for "the continuation capacity". That held while the seam was all
+#: table kinds and gave `price_bands` six pages when it builds one — because the
+#: formula paginated a listings table the page does not have. A constant that is
+#: right for every member of a set is indistinguishable from a constant that is
+#: right for the set, until the set grows.
+V2_CONTINUATION = {
+    "closed": 26,
+    "new_listings": 26,
+    "inventory": 26,
+    "price_bands": None,
+    "market_snapshot": None,
+    "new_listings_gallery": 9,
+    "open_houses": 9,
+    "featured_listings": 4,
+}
+
+#: The BUILT page count per wired kind, measured by
+#: `scripts/measure_market_pagination.py` at 120 listings on 2026-10-10.
+#:
+#: PINNED RATHER THAN RECOMPUTED, and the previous version of the gate below is
+#: why. It computed `ceil((120 - page_1) / continuation) + 1`, which is right
+#: only for a kind whose cap is above 120 — true of all four table-and-bands
+#: kinds and false of every gallery kind, where `PDF_CONFIG` caps at 12 or 100
+#: and the cap decides the page count, not the row capacity. The formula was a
+#: constant that was right for every member of the set until the set grew,
+#: which is a §0.6 rule this suite has now instantiated twice.
+V2_BUILT_PAGES = {
+    "closed": 5, "new_listings": 5, "inventory": 5, "price_bands": 1,
+    "market_snapshot": 1,
+    "new_listings_gallery": 14, "open_houses": 12, "featured_listings": 4,
+}
+
+
+def test_the_built_figures_match_the_live_pin():
+    """§7, which IS current, against the pin — the other half of the split.
+
+    The wired kinds must read the same number in every narrative state, which
+    is the determinism Design's design buys, and §7's table must say what the
+    pin says.
+    """
+    sys.path.insert(0, str(REPO / "apps/worker/src"))
+    from worker.market_builder import V2_KINDS  # noqa: E402
+    import math
+
+    body = text()
+    for kind in sorted(V2_KINDS):
+        states = set(PAGE_1_CAPACITY[kind].values())
+        assert len(states) == 1, (
+            f"{kind} is wired to the `_v2` page and reads {PAGE_1_CAPACITY[kind]}. "
+            f"Two numbers mean page-1 capacity depends on prose length again."
+        )
+        assert kind in V2_CONTINUATION, (
+            f"{kind} is wired with no recorded continuation capacity, so its "
+            f"built page count cannot be recomputed here."
+        )
+        page_1 = PAGE_1_CAPACITY[kind]["no_narrative"]
+        per_page = V2_CONTINUATION[kind]
+        assert kind in V2_BUILT_PAGES, (
+            f"{kind} is wired with no measured page count recorded. Re-run "
+            f"`scripts/measure_market_pagination.py` and pin it."
+        )
+        if per_page is None:
+            # No listings body: the report is one page whatever N is, and the
+            # pin reads 0 because nothing paginates. Asserted, not skipped.
+            assert page_1 == 0, (
+                f"{kind} has no continuation capacity recorded but its page-1 "
+                f"pin is {page_1}. One of the two is now wrong."
+            )
+            assert V2_BUILT_PAGES[kind] == 1, kind
+        built = V2_BUILT_PAGES[kind]
+        assert f"| `{kind}` |" in body, f"§7 does not list {kind}"
+        assert f"| **{built}** |" in body, (
+            f"{kind} builds to {built} pages (page 1 holds {page_1}, "
+            f"continuation {per_page}); §7 says something else."
+        )
+    assert "**Ten pages saved across seven kinds**" in body
+    assert "**the galleries cost two**" in body, (
+        "the document no longer states that the gallery kinds cost pages. The "
+        "per-kind rows are each true and the sum is the finding — two of three "
+        "unchanged and `featured_listings` doubling."
+    )
+
+
+def test_the_net_saving_is_what_the_document_claims():
+    """The headline the decision rests on: eight pages saved, not one lost.
+
+    `closed` alone says +1. All three stated kinds say −8, because
+    `new_listings` moves off the analytics layout. A document that quotes only
+    the first would be true and misleading, which is the thing §0.6's
+    enumerate-the-parts rule is about.
+    """
+    doc = _doc_table_rows()
+    stated = [(o, t) for _, _, o, t in doc.values() if t is not None]
+    assert len(stated) == 3, f"{len(stated)} kinds carry a delta, expected 3"
+    ours, theirs = sum(o for o, _ in stated), sum(t for _, t in stated)
+    assert (ours, theirs) == (26, 18), (
+        f"the stated kinds now total ours={ours} theirs={theirs}; the document "
+        f"says 26 and 18, a saving of 8."
+    )
+    body = text()
+    assert "| **the three stated kinds** | | | **26** | **18** | **−8** |" in body
+    assert "**eight pages saved**" in body, (
+        "the document no longer states the net. The per-kind rows are true "
+        "individually and the sum is the finding."
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The measured answer — `docs/GALLERY_CONTINUATION_MEASURED_2026-10-07.md`.
+#
+# This replaced an ask. Jerry, 2026-10-07: measure it rather than spend a
+# fourth round asking Design for a number we can take ourselves. The document
+# is kept gated for the same reason the ask was: it is the record the gallery
+# page counts rest on, and §0.6 says its data is for the gate.
+# ─────────────────────────────────────────────────────────────────────────────
+
+MEASURED = REPO / "docs/GALLERY_CONTINUATION_MEASURED_2026-10-07.md"
+
+#: The geometry the answer rests on, from
+#: `scripts/measure_gallery_continuation_fit.py`. Pinned rather than re-derived
+#: because re-deriving needs a browser and CI has none — the same contract as
+#: `PAGE_1_CAPACITY`.
+CARD_PX, ROW_GAP_PX, BODY_PX = 258, 8, 9.67 * 96
+
+
+def test_the_gallery_arithmetic_holds():
+    """Three rows fit and four do not, recomputed from the pinned geometry.
+
+    The claim is not "9 per page" — it is that 9 is a consequence of a 258px
+    card in a 928px body. If the card changes, this says so before the page
+    counts quietly move.
+    """
+    three = 3 * CARD_PX + 2 * ROW_GAP_PX
+    four = 4 * CARD_PX + 3 * ROW_GAP_PX
+    assert three <= BODY_PX < four, (
+        f"three rows are {three}px and four are {four}px against a "
+        f"{BODY_PX:.0f}px body — the three-rows-fit conclusion no longer holds."
+    )
+    headroom = BODY_PX - three
+    body = MEASURED.read_text(encoding="utf-8")
+    assert f"| **{headroom:.0f}** — 0.53 of a card |" in body, (
+        f"headroom is {headroom:.0f}px ({headroom / CARD_PX:.2f} of a card); "
+        f"the document states something else."
+    )
+    assert f"{four:,} — **128px over**" in body or f"{four:,} — 128px over" in body
+
+
+def test_the_measurement_states_why_a_headless_render_is_faithful():
+    """The photo's reserved box is the whole reason, and it is checkable.
+
+    Remote photos do not load in this container. The measurement is only
+    trustworthy because the photo reserves its box in CSS regardless — so if
+    that rule changes to an intrinsic height, this conclusion is void and the
+    document would be asserting something it can no longer support.
+
+    THE RULE MOVED. The legacy card reserved `height: 180px` on
+    `.listing-photo` in `base.jinja2`; the re-measurement in this document was
+    taken on Design's card, whose `.gphoto` reserves its box from the column
+    width with `aspect-ratio`. The legacy page was deleted on 2026-10-28, so
+    this reads the rule the gallery kinds actually render.
+    """
+    import re
+    css = (REPO / "apps/worker/src/worker/templates/market/_v2/report.jinja2"
+           ).read_text(encoding="utf-8")
+    rule = re.search(r"^\s*\.gphoto\s*\{([^}]*)\}", css, re.M)
+    assert rule, "`.gphoto` rule not found in the `_v2` page"
+    decls = [d.strip() for d in rule.group(1).split(";")]
+    # DECLARATIONS, not substrings: `min-height` contains `height` (§0.6), and
+    # a minimum would make the box content-driven and void the measurement.
+    assert "aspect-ratio: 4 / 3" in decls, (
+        "`.gphoto` no longer reserves its box with `aspect-ratio: 4 / 3`. The "
+        "gallery measurement was taken without photos and is only faithful "
+        "because that space is reserved in CSS. Re-measure with images before "
+        "trusting the page counts.")
+    assert not any(d.split(":")[0].strip() in ("min-height", "height") for d in decls), decls
+    body = MEASURED.read_text(encoding="utf-8")
+    assert "sizes the photo from the column width" in body
+    assert "invariant to content" in body or "does not depend on content" in body
+
+
+def test_the_capacity_document_reports_the_answer_not_the_question():
+    """§6 was an ask; it is now a finding. A stale question is worse than none."""
+    body = text()
+    assert "Gallery continuation: measured, and it is three rows" in body
+    assert "One question back" not in body, (
+        "§6 still asks the gallery question, which has been measured and "
+        "answered. Leaving the ask in would send Design a question we have "
+        "already settled."
+    )

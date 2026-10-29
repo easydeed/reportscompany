@@ -1,0 +1,156 @@
+[
+  {
+    "name": "S1 a rep is found whichever company it belongs to (reassign, cancel, agents target)",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "          JOIN rep_seat_assignments s ON s.rep_account_id = a.id\n                                     AND s.company_account_id = %s::uuid\n                                     AND s.ended_at IS NULL\n          LEFT JOIN LATERAL (\n              SELECT u2.email_verified, u2.password_hash\n                FROM account_users au JOIN users u2 ON u2.id = au.user_id\n               WHERE au.account_id = a.id AND au.role = 'OWNER'\n               LIMIT 1\n          ) u ON true\n         WHERE a.id = %s::uuid AND a.parent_account_id = %s::uuid",
+    "new": "          JOIN rep_seat_assignments s ON s.rep_account_id = a.id\n                                     AND (s.company_account_id = %s::uuid OR TRUE)\n                                     AND s.ended_at IS NULL\n          LEFT JOIN LATERAL (\n              SELECT u2.email_verified, u2.password_hash\n                FROM account_users au JOIN users u2 ON u2.id = au.user_id\n               WHERE au.account_id = a.id AND au.role = 'OWNER'\n               LIMIT 1\n          ) u ON true\n         WHERE a.id = %s::uuid AND (a.parent_account_id = %s::uuid OR TRUE)",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_company_cannot_reassign_another_companys_rep apps/api/tests/test_rep_seats.py::test_a_company_cannot_send_its_agents_to_another_companys_rep apps/api/tests/test_rep_seats.py::test_a_company_cannot_cancel_another_companys_invite"
+  },
+  {
+    "name": "S2 seat history lists every company's seats",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "         WHERE s.company_account_id = %s::uuid\n         ORDER BY COALESCE(s.ended_at, s.started_at) DESC",
+    "new": "         WHERE (s.company_account_id = %s::uuid OR TRUE)\n         ORDER BY COALESCE(s.ended_at, s.started_at) DESC",
+    "test": "apps/api/tests/test_rep_seats.py::test_seat_history_is_only_the_callers"
+  },
+  {
+    "name": "S3 the company row is not locked, so two invites take the last seat",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "         WHERE id = %s::uuid AND account_type = 'TITLE_COMPANY'\n           FOR UPDATE\n",
+    "new": "         WHERE id = %s::uuid AND account_type = 'TITLE_COMPANY'\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_two_invites_for_the_last_seat_cannot_both_take_it"
+  },
+  {
+    "name": "S4 the cap lets one more invite through",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    if held >= total:\n        raise SeatsFull(total, held)",
+    "new": "    if held > total:\n        raise SeatsFull(total, held)",
+    "test": "apps/api/tests/test_rep_seats.py::test_an_invite_is_refused_when_every_seat_is_held"
+  },
+  {
+    "name": "S5 property reports are matched on the market table's spelling of finished",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "                    AND pr.status = 'complete'\n",
+    "new": "                    AND pr.status = 'completed'\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_property_report_alone_makes_a_rep_not_idle"
+  },
+  {
+    "name": "S6 the idle window is dropped, so any report ever counts",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "                    AND rg.generated_at >= NOW() - INTERVAL '{IDLE_DAYS} days'\n",
+    "new": "",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_rep_is_idle_until_an_agent_finishes_a_report_in_30_days"
+  },
+  {
+    "name": "S7 a pending invite counts as idle",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "{\"rep_id\": r[0], \"joined\": bool(r[1]), \"idle\": bool(r[1]) and not r[2]}",
+    "new": "{\"rep_id\": r[0], \"joined\": bool(r[1]), \"idle\": not r[2]}",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_pending_invite_is_pending_not_idle"
+  },
+  {
+    "name": "S8 the admin can set a count below the seats held",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    if rep_seats is not None and rep_seats < held:",
+    "new": "    if rep_seats is not None and rep_seats < 0:",
+    "test": "apps/api/tests/test_rep_seats.py::test_only_the_platform_admin_sets_the_seat_count"
+  },
+  {
+    "name": "S9 agents stay with the leaving rep",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "        (destination, from_rep_id),\n",
+    "new": "        (from_rep_id, from_rep_id),\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_agents_move_with_the_seat_and_are_told_who_their_rep_is"
+  },
+  {
+    "name": "S10 the leaving rep keeps signing in",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    open_seat(cur, company_id, successor_id)\n    _switch_off(cur, from_rep_id)\n",
+    "new": "    open_seat(cur, company_id, successor_id)\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_agents_move_with_the_seat_and_are_told_who_their_rep_is"
+  },
+  {
+    "name": "S11 a cancelled invite's link keeps working",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    cur.execute(\n        \"UPDATE signup_tokens SET used = TRUE WHERE account_id = %s::uuid AND used = FALSE\",\n        (account_id,),\n    )\n",
+    "new": "",
+    "test": "apps/api/tests/test_rep_seats.py::test_cancelling_a_pending_invite_frees_its_seat"
+  },
+  {
+    "name": "S12 a joined rep's seat can be cancelled, orphaning nothing visible",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    if rep[\"joined\"]:\n        raise SeatConflict",
+    "new": "    if False:\n        raise SeatConflict",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_joined_reps_seat_is_not_cancelled_it_is_reassigned"
+  },
+  {
+    "name": "S13 the backfill seats deactivated reps",
+    "file": "db/migrations/0060_rep_seats.sql",
+    "old": "          WHERE au.account_id = a.id AND au.role = 'OWNER' AND u.is_active = FALSE);",
+    "new": "          WHERE au.account_id = a.id AND au.role = 'OWNER' AND FALSE);",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_backfill_seats_every_current_rep_once_and_changes_no_account"
+  },
+  {
+    "name": "S14 the invite route takes no seat",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "            seats.reserve_seat(cur, company_id)\n            result = create_invited_user(",
+    "new": "            result = create_invited_user(",
+    "test": "apps/api/tests/test_rep_seats.py::test_an_invite_is_refused_when_every_seat_is_held"
+  },
+  {
+    "name": "S15 the overview still sends the agent count as seats",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "            \"active_agents_30d\": active_agents_30d,\n",
+    "new": "            \"active_agents_30d\": active_agents_30d,\n            \"total_agent_seats\": total_agents,\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_overview_seat_block_is_the_callers"
+  },
+  {
+    "name": "S16 the cancel route stops turning a foreign rep into a refusal",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "            conn.commit()\n    except seats.SeatNotFound:\n        raise HTTPException(status_code=404, detail=\"Rep not found under your company, or holds no seat.\")\n    except seats.SeatConflict as e:\n        raise HTTPException(status_code=409, detail=str(e))\n    return {\"ok\": True}\n",
+    "new": "            conn.commit()\n    except seats.SeatConflict as e:\n        raise HTTPException(status_code=409, detail=str(e))\n    return {\"ok\": True}\n",
+    "test": "tests/test_sponsor_routes_take_the_caller_from_the_token.py apps/api/tests/test_rep_seats.py::test_a_company_cannot_cancel_another_companys_invite"
+  },
+  {
+    "name": "H1 the leaving rep's schedules stay on the switched-off account",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "        \"UPDATE schedules SET account_id = %s::uuid WHERE account_id = %s::uuid RETURNING id\",",
+    "new": "        \"SELECT id FROM schedules WHERE %s::uuid IS NOT NULL AND account_id = %s::uuid\",",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_schedules_follow_the_agents_and_still_reach_everyone"
+  },
+  {
+    "name": "H2 the schedules move without the contacts and groups they resolve from",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    for table in (\"contacts\", \"contact_groups\", \"contact_group_members\"):",
+    "new": "    for table in ():",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_schedules_follow_the_agents_and_still_reach_everyone"
+  },
+  {
+    "name": "H3 unsubscribes are left behind, so opted-out recipients are mailed under the new name",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "        SELECT %s::uuid, email, reason FROM email_suppressions WHERE account_id = %s::uuid\n",
+    "new": "        SELECT %s::uuid, email, reason FROM email_suppressions WHERE FALSE AND account_id = %s::uuid\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_an_unsubscribe_follows_the_schedules"
+  },
+  {
+    "name": "H4 the schedules go to the new rep when the agents went to another",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "    schedules_moved = hand_over_book(cur, from_account_id=from_rep_id, to_account_id=destination)",
+    "new": "    schedules_moved = hand_over_book(cur, from_account_id=from_rep_id, to_account_id=successor_id)",
+    "test": "apps/api/tests/test_rep_seats.py::test_the_schedules_go_to_the_rep_the_agents_go_to"
+  },
+  {
+    "name": "H5 an old link's opt-out lands only on the switched-off rep",
+    "file": "apps/api/src/api/routes/unsubscribe.py",
+    "old": "        matched += book_successors(cur, matched)\n",
+    "new": "",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_link_sent_before_the_move_stops_the_sends_after_it"
+  },
+  {
+    "name": "H6 where the book went is not recorded",
+    "file": "apps/api/src/api/services/seats.py",
+    "old": "        (successor_id, actor_user_id, len(moved), destination, schedules_moved,\n",
+    "new": "        (successor_id, actor_user_id, len(moved), None, schedules_moved,\n",
+    "test": "apps/api/tests/test_rep_seats.py::test_a_link_sent_before_the_move_stops_the_sends_after_it"
+  }
+]

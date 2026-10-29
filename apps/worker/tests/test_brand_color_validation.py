@@ -155,5 +155,7 @@ def test_valid_colors_are_preserved(good):
 
 
 def test_a_valid_brand_color_still_reaches_the_email():
-    html = _render({"display_name": "Marisol Ridge Realty", "accent_color": "#1b365d"})
+    # `primary_color`, not `accent_color`: the email reads one brand colour since
+    # Design's 5th package, so a valid accent no longer reaches it by design.
+    html = _render({"display_name": "Marisol Ridge Realty", "primary_color": "#1b365d"})
     assert "#1b365d" in html

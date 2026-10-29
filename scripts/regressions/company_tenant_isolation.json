@@ -1,0 +1,37 @@
+[
+  {
+    "name": "R1 D-005 again: /reports trusts a foreign rep_id",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "another company's agents' reports. Compare as text: rep_ids holds\n        # UUID objects, rep_id is a query-string str.\n        if rep_id:\n            matched_rep = next((r for r in rep_ids if str(r) == rep_id), None)",
+    "new": "another company's agents' reports. Compare as text: rep_ids holds\n        # UUID objects, rep_id is a query-string str.\n        if rep_id:\n            matched_rep = rep_id",
+    "test": "apps/api/tests/test_company_tenant_isolation.py"
+  },
+  {
+    "name": "R2 /agents lists every company's agents",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "WHERE rep_acct.parent_account_id = %s::uuid",
+    "new": "WHERE (rep_acct.parent_account_id = %s::uuid OR true)",
+    "test": "apps/api/tests/test_company_tenant_isolation.py"
+  },
+  {
+    "name": "R3 the branding cascade reaches every company's reps",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "                      AND a.parent_account_id = %s::uuid\n                      AND a.account_type = 'INDUSTRY_AFFILIATE'\n                      AND COALESCE(ab.branding_override, false) = false",
+    "new": "                      AND (a.parent_account_id = %s::uuid OR true)\n                      AND a.account_type = 'INDUSTRY_AFFILIATE'\n                      AND COALESCE(ab.branding_override, false) = false",
+    "test": "apps/api/tests/test_company_tenant_isolation.py"
+  },
+  {
+    "name": "R4 rep-invite resend looks up any company's rep",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "                parent_account_id=company_id,\n                account_type=\"INDUSTRY_AFFILIATE\",",
+    "new": "                parent_account_id=None,\n                account_type=\"INDUSTRY_AFFILIATE\",",
+    "test": "apps/api/tests/test_company_tenant_isolation.py"
+  },
+  {
+    "name": "R5 a rep under no company counts as the company's",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "WHERE rep_acct.parent_account_id = %s::uuid",
+    "new": "WHERE (rep_acct.parent_account_id = %s::uuid OR rep_acct.parent_account_id IS NULL)",
+    "test": "apps/api/tests/test_company_tenant_isolation.py"
+  }
+]

@@ -1,120 +1,49 @@
 /**
  * Site-wide header. Used by the landing page AND every standalone content
- * route (legal, about, blog, careers, docs, 404).
+ * route (legal, about, blog, careers, docs, 404) — one header sitewide (M2).
  *
- * The legal pages previously shipped a different header, nav and tagline
- * than the landing page — Product / Pricing / Contact / Sign in versus
- * How It Works / Reports / Lead Capture / Contacts / Pricing / Log in. It
- * read as a different company's site.
+ * Design's `Landing v4` nav: logo, two section links, Log in, and an ink
+ * "Start free". Not sticky, a hairline underneath — the deck's.
  *
  * Section anchors are ROOT-RELATIVE ("/#pricing", not "#pricing") so they
- * navigate back to the landing page from any route. A bare "#pricing" is a
- * no-op everywhere except "/", which is the "no route back to the landing
- * page's sections" half of the original finding.
+ * navigate back to the landing page from any route that shares this header.
+ *
+ * On a phone the two section links go, and Log in and Start free stay: the
+ * four together do not fit at 390px beside the logo.
  */
-"use client";
-
-import { useEffect, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Logo } from "@/components/logo"
 
 export function SiteNav() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
   return (
-    <header
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-background/80 backdrop-blur-md shadow-sm"
-          : "bg-transparent"
-      }`}
-    >
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <nav className="border-b border-[#ECEAE3] bg-[#FAFAF7]">
+      <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-6 px-4 py-[18px] md:px-8">
         <a href="/">
-          <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
+          <Logo className="h-7" />
         </a>
-
-        <div className="hidden items-center gap-6 md:flex">
-          <a
-            href="/#how-it-works"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-          >
-            How It Works
-          </a>
+        <div className="flex items-center gap-5 md:gap-7">
           <a
             href="/#reports"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className="hidden text-[15px] font-medium text-[#334155] hover:text-[#0F172A] sm:inline"
           >
             Reports
           </a>
           <a
-            href="/#lead-capture"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-          >
-            Lead Capture
-          </a>
-          <a
-            href="/#contacts"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-          >
-            Contacts
-          </a>
-          <a
             href="/#pricing"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
+            className="hidden text-[15px] font-medium text-[#334155] hover:text-[#0F172A] sm:inline"
           >
             Pricing
           </a>
-          <a
-            href="/login"
-            className="text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
-          >
+          <a href="/login" className="text-[15px] font-medium text-[#334155] hover:text-[#0F172A]">
             Log in
           </a>
           <a
             href="/register"
-            className="inline-flex items-center rounded-full bg-[#6366F1] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#4F46E5]"
+            className="inline-flex h-10 items-center rounded-lg bg-[#0F172A] px-[18px] text-[15px] font-semibold text-white transition-colors hover:bg-[#1E293B]"
           >
             Start free
           </a>
         </div>
-
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded-lg p-2 text-foreground md:hidden"
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-        >
-          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-      </nav>
-
-      {mobileOpen && (
-        <div className="border-t border-border bg-background px-6 pb-6 pt-4 md:hidden">
-          <div className="flex flex-col gap-4">
-            <a href="/#how-it-works" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>How It Works</a>
-            <a href="/#reports" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Reports</a>
-            <a href="/#lead-capture" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Lead Capture</a>
-            <a href="/#contacts" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Contacts</a>
-            <a href="/#pricing" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Pricing</a>
-            <a href="/login" className="text-sm font-medium text-foreground/70" onClick={() => setMobileOpen(false)}>Log in</a>
-            <a
-              href="/register"
-              className="inline-flex items-center justify-center rounded-full bg-[#6366F1] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#4F46E5]"
-              onClick={() => setMobileOpen(false)}
-            >
-              Start free
-            </a>
-          </div>
-        </div>
-      )}
-    </header>
+      </div>
+    </nav>
   );
 }

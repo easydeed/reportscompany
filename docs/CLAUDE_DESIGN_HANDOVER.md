@@ -8,9 +8,37 @@ produced it is named, and it was re-run against `main` on the date above rather 
 from an earlier write-up. Two numbers in the defect list were wrong when re-derived this way;
 both are corrected below and in `DEFECT_LIST.md`.
 
+> ## THE THEME NAMES IN THIS DOCUMENT PREDATE THE 2026-10-13 RENAME
+>
+> *Added 2026-10-21, after a reader of this file concluded that `harbor` was a removed theme.*
+>
+> This document says the live themes are **bold, elegant and modern**. Those are their former
+> names. **Ids 2, 3 and 5 are unchanged and all three are live.**
+>
+> | in this document | live name | id | property template |
+> |---|---|---|---|
+> | `bold` | **`atlas`** | 5 | `atlas/atlas_report.jinja2` *(the default)* |
+> | `elegant` | **`linen`** | 3 | `linen/linen_report.jinja2` |
+> | `modern` | **`harbor`** | 2 | `harbor/harbor_report.jinja2` |
+>
+> `classic` (1) and `teal` (4) are the retired ones, cut 2026-10-05. **No theme has been retired
+> since**, and `atlas`, `linen` and `harbor` are new *names*, not new or removed designs.
+> `apps/worker/src/worker/themes.json` is canonical and says the same thing in its `renamed` block;
+> `renaming is not retiring` is the heading it does it under.
+>
+> **Why this box exists rather than a find-and-replace:** the old names appear below inside dated
+> quotations and measurements, and rewriting those would falsify the record. The mapping is stated
+> once, here, and the body is left as it was written.
+
 ---
 
 ## 0 · Read this first: there are two template trees and one of them renders nowhere
+
+> **UPDATED 2026-10-27 — THE DEAD TREE IS DELETED.** `templates/property/_base/` and the three
+> `<theme>/<theme>.jinja2` files are gone from the repository (D-131), after every report surface
+> rendered byte-identical without them. **There is now one property template tree:**
+> `_v2/report.jinja2` plus each theme's typography entry file, **0 dead lines**. Everything below
+> is the record of when there were two.
 
 **`<theme>/<theme>.jinja2` and everything in `templates/property/_base/` render nowhere. Do not read them, do not
 port them, do not take their copy as current.** (D-131.)
@@ -35,12 +63,26 @@ port them, do not take their copy as current.** (D-131.)
 > `_v2/report.jinja2`, shared. elegant (720) and modern (795) are still self-contained and move
 > next. The 1,549 in the table is those two plus bold's 34.
 
-**There is still more dead property-template code than live.** 5,570 lines against 2,284 —
+> **UPDATED 2026-10-26 — ALL THREE THEMES ARE ON YOUR ARCHITECTURE.** harbor and linen moved
+> onto `_v2/report.jinja2` too; each entry file is now 22 lines of typography from your
+> README's theme table. Live property templates: **861** lines across four files (the shared
+> 783 plus atlas 34, harbor 22, linen 22). The table above is the 2026-10-05 snapshot.
+
+**There is still more dead property-template code than live.** 5,570 lines against 861 —
+*(2,423 until 2026-10-26, when harbor and linen moved onto the shared architecture and their
+self-contained templates went)* —
+*(2,284 until 2026-10-07, when `display_ink` closed the one open [JERRY] decision in
+`_v2/report.jinja2` and the note recording why replaced the note recording that it was
+open; `tests/test_handover_numbers_are_current.py` refused the change until this line
+was updated, which is the mechanism working)* —
 the ratio got *worse*, because the cut deleted one live file and one dead file per retired
 theme while `templates/property/_base/` (2,821 lines, none of it rendered) stayed exactly where it was.
 
-> **`templates/market/_base/` IS LIVE and is a different directory.** `market/market.jinja2` is one
-> line — `{% extends '_base/base.jinja2' %}` — and that base imports `_base/macros.jinja2`. The two
+> **`templates/market/_base/` IS LIVE and is a different directory.** It holds the market
+> report's running head and foot (`page_header.jinja2`, `page_footer.jinja2`, which PDFShift repeats
+> on every page) and the 12-month trend chart macro that `_v2/report.jinja2` imports. The legacy
+> `market/market.jinja2` + `_base/base.jinja2` page was deleted on 2026-10-28, once every market
+> kind rendered Design's `_v2` page and every market surface rendered byte-identical without it. The two
 > builders give their Jinja loaders different directories, so the same string names two different
 > files depending on which surface is rendering. Every `_base/` in this document means the property
 > one. (`docs/design-corrections/00-SHARED.md` already had this right: its table is per surface and
@@ -61,9 +103,9 @@ thing to change deliberately, not to work around.
 
 ```
 apps/worker/src/worker/templates/property/_v2/report.jinja2          <- the six pages
-apps/worker/src/worker/templates/property/bold/bold_report.jinja2    <- bold's type only
-apps/worker/src/worker/templates/property/elegant/elegant_report.jinja2
-apps/worker/src/worker/templates/property/modern/modern_report.jinja2
+apps/worker/src/worker/templates/property/atlas/atlas_report.jinja2    <- bold's type only
+apps/worker/src/worker/templates/property/linen/linen_report.jinja2
+apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2
 ```
 
 ---

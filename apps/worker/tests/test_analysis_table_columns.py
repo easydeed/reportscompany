@@ -52,7 +52,7 @@ from worker.property_builder import (  # noqa: E402
 
 from test_property_production_render import COMPS, report_data  # noqa: E402
 
-from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES  # noqa: E402
+from _template_chain import SHARED_THEMES  # noqa: E402
 
 #: SELF-CONTAINED THEMES ONLY.
 #:
@@ -64,7 +64,7 @@ from _template_chain import SELF_CONTAINED_THEMES, SHARED_THEMES  # noqa: E402
 #: of zeros, and no comps prints nothing rather than zeros — all still matter,
 #: and are asserted on the new table in
 #: `test_the_compare_table_*` at the end of this file.
-THEMES = SELF_CONTAINED_THEMES
+THEMES = sorted(THEME_TEMPLATES)
 ALL_THEMES = sorted(THEME_TEMPLATES)
 
 
@@ -141,58 +141,6 @@ def _price_row(html):
     block = foot.group(0) if foot else html
     return [re.sub("<[^>]+>", "", c).strip()
             for c in re.findall(r"<td[^>]*>(.*?)</td>", block, re.S)]
-
-
-@pytest.mark.parametrize("theme", THEMES)
-def test_the_page_says_how_many_comps_the_table_summarises(theme):
-    """A three-column table beside a four-bar chart, with nothing saying
-    three of four, reads as the whole set."""
-    html = _render(theme, COMPS)
-    note = re.search(r'class="analysis-note"[^>]*>\s*([^<]*?)\s*<', html)
-    assert note, f"{theme} renders no count note"
-    assert str(len(COMPS)) in note.group(1), (
-        f"{theme}'s note does not name the {len(COMPS)} comps it summarised: "
-        f"{note.group(1)!r}"
-    )
-
-
-@pytest.mark.parametrize("theme", THEMES)
-def test_an_empty_column_is_empty_and_not_a_row_of_zeros(theme):
-    """Two comps have no median. The Medium column used to print `0`, `$0`
-    and a year built of `0` for a property that does not exist — D-137's
-    rule, in the one place `extract_comp_stats` could be handed `{}`."""
-    html = _render(theme, COMPS[:2])
-    cells = _price_row(html)
-    assert cells, f"{theme} rendered no price row"
-    assert "$0" not in cells, (
-        f"{theme}: a column with no listing behind it printed a price — {cells}"
-    )
-    assert ABSENT in cells, (
-        f"{theme}: the medium column of a two-comp report should be {ABSENT!r} "
-        f"— {cells}"
-    )
-
-
-@pytest.mark.parametrize("theme", THEMES)
-def test_no_comp_reaches_two_columns_of_the_rendered_table(theme):
-    """The same assertion as the unit test, through the render, because the
-    duplication was visible on the page rather than in the function."""
-    html = _render(theme, COMPS[:2])
-    prices = [c for c in _price_row(html)[2:] if c not in (ABSENT, "")]
-    assert len(prices) == len(set(prices)), (
-        f"{theme}: a price appears in two columns — {prices}"
-    )
-
-
-@pytest.mark.parametrize("theme", THEMES)
-def test_with_no_comps_at_all_the_table_prints_nothing_rather_than_zeros(theme):
-    html = _render(theme, [])
-    cells = _price_row(html)
-    assert "$0" not in cells, f"{theme}: a zero-comp report priced its columns — {cells}"
-    note = re.search(r'class="analysis-note"[^>]*>\s*([^<]*?)\s*<', html)
-    assert note and "No comparable sales" in note.group(1), (
-        f"{theme}: nothing on the page says the search returned nothing"
-    )
 
 
 # ── the same three properties, on Design's compare table ──────────────────

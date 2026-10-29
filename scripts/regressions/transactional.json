@@ -1,0 +1,37 @@
+[
+  {
+    "name": "T1 the inviter's name goes into the invite unescaped again (D-296)",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "    inviter, company = _e(inviter_name), _e(company_name)",
+    "new": "    inviter, company = inviter_name, _e(company_name)",
+    "test": "apps/api/tests/test_transactional_shell.py"
+  },
+  {
+    "name": "T2 body text loses its class: dark text on the dark card",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "    return _row(f'<p class=\"tr-body\" style=\"margin:0;font-size:15.5px;line-height:1.6;",
+    "new": "    return _row(f'<p style=\"margin:0;font-size:15.5px;line-height:1.6;",
+    "test": "apps/api/tests/test_transactional_shell.py"
+  },
+  {
+    "name": "T3 the worker's shell drifts from the API's",
+    "file": "apps/worker/src/worker/email/transactional.py",
+    "old": "    .tr-rule{{border-color:#374151 !important;}}\n",
+    "new": "",
+    "test": "apps/api/tests/test_transactional_shell.py"
+  },
+  {
+    "name": "T4 the footer prints Design's address",
+    "file": "apps/api/src/api/services/email.py",
+    "old": "TrendyReports · {_e(PLATFORM_POSTAL_ADDRESS)} · ",
+    "new": "TrendyReports · 18575 Jamboree Rd, Suite 300, Irvine, CA 92612 · ",
+    "test": "apps/api/tests/test_transactional_shell.py"
+  },
+  {
+    "name": "T5 the failure notice prints the raw error",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "{_e(brief_error)}</div>",
+    "new": "{brief_error}</div>",
+    "test": "apps/api/tests/test_transactional_shell.py"
+  }
+]

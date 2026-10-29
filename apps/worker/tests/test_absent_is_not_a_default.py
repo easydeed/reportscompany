@@ -64,12 +64,8 @@ PROPERTY_HOLDERS = ("sitex_data", "comp", "property", "stats", "area", "piq")
 
 #: Property-field defaults that are asserted anyway, each with its reason.
 ALLOWED = {
-    "Single Family":
-        "property_type's template fallback, in all three themes. It IS "
-        "produced by both paths (D-135), so the default is unreachable — "
-        "recorded rather than removed, because removing an unreachable "
-        "default is churn and leaving it undocumented is how the next reader "
-        "assumes it fires.",
+    # "Single Family" WAS EXCUSED HERE as property_type's template fallback.
+    # It lived in the nine-page harbor and linen templates, which are gone.
     # "Single Family Residential" WAS EXCUSED HERE as "teal spells it in
     # full". The theme cut deleted teal, so the only template writing the
     # long form is gone and this test said so on the first run after the
@@ -78,8 +74,8 @@ ALLOWED = {
         "comp status. Written by the API's projection AND the wizard's "
         "payload, so this is a genuine last resort rather than the only "
         "path — which is the whole distinction D-137 turns on.",
-    "Sold":
-        "comp.sold_date_label; set per comp from status on every path",
+    # "Sold" WAS EXCUSED HERE for comp.sold_date_label's fallback — a
+    # nine-page template default, retired with those templates.
     # "0.1 mi" / "0.5 mi" / "1.2 mi" WERE EXCUSED HERE, with the note "delete
     # the builder; do not launder the default". The builder is deleted
     # (D-136), so the excuse has nothing to excuse and this test says so —

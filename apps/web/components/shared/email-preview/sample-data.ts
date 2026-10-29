@@ -23,39 +23,6 @@ export const PREVIEW_CAPS: Record<PreviewReportType, number> = {
   price_bands: 8,
 }
 
-// Section labels mirror PDF_CONFIG[type].section_label in
-// apps/worker/src/worker/market_builder.py. Keep in sync.
-export const PDF_SECTION_LABELS: Record<PreviewReportType, string> = {
-  market_snapshot: "Recent Activity",
-  new_listings_gallery: "New Listings Gallery",
-  new_listings: "New Listings",
-  closed: "Recent Closed Sales",
-  inventory: "Active Inventory",
-  featured_listings: "Hand-Picked Highlights",
-  open_houses: "Open Houses This Week",
-  price_bands: "Example Listings by Price Band",
-}
-
-// Layout grouping for PDF preview rendering.
-// Mirrors LAYOUT_MAP in apps/worker/src/worker/market_builder.py.
-export type PDFLayoutType =
-  | "gallery"
-  | "market_narrative"
-  | "closed_inventory"
-  | "analytics"
-  | "pricebands"
-
-export const PDF_LAYOUT_MAP: Record<PreviewReportType, PDFLayoutType> = {
-  new_listings_gallery: "gallery",
-  featured_listings: "gallery",
-  open_houses: "gallery",
-  market_snapshot: "market_narrative",
-  closed: "closed_inventory",
-  inventory: "closed_inventory",
-  price_bands: "pricebands",
-  new_listings: "analytics",
-}
-
 export const SAMPLE_PHOTOS = [
   "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=280&h=200&fit=crop",
   "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=280&h=200&fit=crop",
@@ -185,9 +152,13 @@ export const PREVIEW_CONTENT: Record<PreviewReportType, PreviewContent> = {
     heroSub: "in the last 30 days",
     narrative:
       "Closed sales remained strong this period. Properties sold at near-asking prices with competitive days on market. The data confirms sustained buyer demand across most price tiers.",
+    // The same 42 sales in the same 30 days as market_snapshot, so the same
+    // median, trend and days on market. These said $1.08M / +2.1% / 18 while
+    // the snapshot said $925,000 / +4.2% / 24, and the landing page shows both
+    // previews side by side (D-228).
     stats: [
-      { label: "Median Sold", value: "$1.08M", sub: "+2.1%" },
-      { label: "Avg DOM", value: "18", sub: "-5 days" },
+      { label: "Median Sold", value: "$925K", sub: "+4.2%" },
+      { label: "Avg DOM", value: "24", sub: "-3 days" },
       { label: "Close-to-List", value: "98.2%" },
     ],
     listings: takeListings(PREVIEW_CAPS.closed, "Sold"),
@@ -196,7 +167,7 @@ export const PREVIEW_CONTENT: Record<PreviewReportType, PreviewContent> = {
       { address: "89 Maple Heights", beds: 3, baths: 2, sqft: "1,800", price: "$875K", dom: 21 },
       { address: "310 Sunset Blvd", beds: 4, baths: 3, sqft: "2,200", price: "$1.05M", dom: 8 },
     ],
-    quickTake: "42 homes sold at a median of $1.08M. Average DOM of 18 days with 98.2% close-to-list ratio. Sellers are getting strong offers quickly.",
+    quickTake: "42 homes sold at a median of $925K. Average DOM of 24 days with 98.2% close-to-list ratio. Sellers are getting strong offers quickly.",
     totalAvailable: 42,
   },
 

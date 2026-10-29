@@ -558,7 +558,7 @@ export default function RepsListPage() {
               <Label className="text-xs font-medium">Email</Label>
               <Input
                 type="email"
-                placeholder="rep@company.com"
+                placeholder="rep@example.com"
                 value={inviteForm.email}
                 onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
               />

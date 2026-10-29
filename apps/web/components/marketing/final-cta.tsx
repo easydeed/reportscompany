@@ -1,47 +1,65 @@
 "use client";
 
-import { motion } from "framer-motion";
+/**
+ * Closing band — Design's `Landing v4`, the ink-to-brand gradient.
+ *
+ * The deck's reassurance line was "Free for 1 area, monthly." Nothing limits
+ * the Free plan to monthly delivery (see pricing.tsx), so the first clause
+ * goes and the second, which is true, stays.
+ */
+import type { CSSProperties } from "react";
+import { useLandingTheme } from "./landing-primitives";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
+export function FinalCta({ onCity }: { onCity: (city: string) => void }) {
+  const { primary, city } = useLandingTheme();
+  const trimmed = city.trim();
 
-export function FinalCta() {
   return (
-    <section className="bg-[#EEF2FF] px-6 py-20 md:py-28">
-      <motion.div
-        className="mx-auto max-w-2xl text-center"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+    <section
+      className="text-white"
+      style={{
+        background: `linear-gradient(135deg, #0F172A 0%, color-mix(in oklch, #0F172A 55%, ${primary}) 100%)`,
+      }}
+    >
+      <div
+        className="mx-auto grid max-w-[1200px] items-center gap-10 px-4 py-20 md:px-8"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 420px), 1fr))" }}
       >
-        <motion.h2
-          variants={fadeUp}
-          className="text-4xl font-bold tracking-tight text-foreground md:text-5xl"
+        <h2
+          className="m-0 font-extrabold"
+          style={{
+            fontSize: "clamp(32px, 3.8vw, 48px)",
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
+            textWrap: "balance",
+          } as CSSProperties}
         >
-          Your sphere is waiting to hear from you.
-        </motion.h2>
-        <motion.p variants={fadeUp} className="mt-4 text-muted-foreground">
-          Set up takes 2 minutes. Your first report is on us.
-        </motion.p>
-        <motion.div variants={fadeUp} className="mt-8">
-          <a
-            href="/register"
-            className="inline-flex items-center rounded-full bg-[#6366F1] px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-[#6366F1]/25 transition-colors hover:bg-[#4F46E5]"
-          >
-            Start free
-          </a>
-        </motion.div>
-        <motion.p
-          variants={fadeUp}
-          className="mt-5 text-sm text-muted-foreground/70"
-        >
-          {/* G1b: Free is a permanent plan, not a 14-day trial. */}
-          {"Free plan, no time limit \u00B7 No credit card \u00B7 Upgrade any time"}
-        </motion.p>
-      </motion.div>
+          Your first report is two minutes away.
+        </h2>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <label className="min-w-[200px] flex-1">
+              <span className="sr-only">Your city</span>
+              <input
+                value={city}
+                onChange={(e) => onCity(e.target.value)}
+                placeholder="Your city"
+                autoComplete="address-level2"
+                className="h-[54px] w-full rounded-[10px] border border-[#334155] bg-[#1E293B] px-4 text-[17px] text-white outline-none placeholder:text-[#94A3B8]"
+              />
+            </label>
+            <a
+              href="/register"
+              className="inline-flex h-[54px] items-center justify-center whitespace-nowrap rounded-[10px] bg-white px-6 text-[17px] font-semibold text-[#0F172A] transition-colors hover:bg-[#E0E7FF]"
+            >
+              {trimmed ? `Get my ${trimmed} report` : "Get my free report"}
+            </a>
+          </div>
+          <span className="text-sm text-[#94A3B8]">
+            No credit card. Upgrade only when you want more.
+          </span>
+        </div>
+      </div>
     </section>
   );
 }

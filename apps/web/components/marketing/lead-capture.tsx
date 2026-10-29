@@ -1,178 +1,87 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { DEMO_AGENT, DEMO_MARKET } from "@/lib/demo-data";
-import { QrCode, FileInput, Bell, MapPin, Smartphone } from "lucide-react";
+/**
+ * "Lead capture" — Design's `Landing v4`, the home-value page on a phone.
+ *
+ * The arriving lead is a fixture contact rather than the deck's own name, so
+ * the person who asks for a value here is the same person the contacts
+ * preview below lists as a new lead.
+ */
+import type { CSSProperties } from "react";
+import { UserPlus } from "lucide-react";
+import { DEMO_AGENT, DEMO_CONTACTS, DEMO_LEAD } from "@/lib/demo-data";
+import {
+  AgentDisc,
+  DotField,
+  PhoneFrame,
+  SectionCopy,
+  SplitSection,
+  useLandingTheme,
+} from "./landing-primitives";
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
-
-const features = [
-  {
-    icon: QrCode,
-    title: "QR codes on every report",
-    description:
-      "Print the report, stick it on a flyer or yard sign. The QR code links directly to your branded landing page.",
-  },
-  {
-    icon: Smartphone,
-    title: "Branded landing pages",
-    description:
-      "Prospects see the property, your branding, and a simple contact form. No friction, no app to download.",
-  },
-  {
-    icon: FileInput,
-    title: "Instant lead capture",
-    description:
-      "Name, email, phone — captured and organized in your dashboard automatically. No copy-pasting from email.",
-  },
-  {
-    icon: Bell,
-    title: "Real-time notifications",
-    description:
-      "Get an email alert the moment someone submits. Follow up while the property is still on their mind.",
-  },
-];
+/** The contact who arrives as a lead — shared with the contacts preview. */
+export const LEAD_CONTACT = DEMO_CONTACTS[3];
 
 export function LeadCapture() {
+  const { primary, area } = useLandingTheme();
+
   return (
-    <section id="lead-capture" className="bg-background px-6 py-20 md:py-28">
-      <motion.div
-        className="mx-auto max-w-7xl"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
-      >
-        <motion.div variants={fadeUp} className="text-center">
-          <h2 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">
-            Turn every report into a lead source
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Every property report includes a QR code and a branded landing page.
-            Prospects scan, fill out a form, and you get notified instantly.
-          </p>
-        </motion.div>
+    <SplitSection white id="lead-capture">
+      <SectionCopy
+        eyebrow="Lead capture"
+        title="A home-value page with your name on it."
+        lede="Put the link in your reports, your signature, your open-house sign. Leads land in your inbox."
+      />
 
-        <div className="mt-14 grid items-center gap-12 lg:grid-cols-2">
-          {/* Left — Visual mockup */}
-          <motion.div
-            variants={fadeUp}
-            className="relative mx-auto flex w-full max-w-md items-center justify-center"
-          >
-            {/* Notification card (behind, offset) */}
-            <div className="absolute -right-4 top-8 z-0 w-72 rounded-2xl border border-border bg-card p-5 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EEF2FF]">
-                  <Bell className="h-5 w-5 text-[#6366F1]" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-foreground">New Lead!</p>
-                  <p className="text-xs text-muted-foreground">Just now</p>
-                </div>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                <span className="font-semibold text-foreground">
-                  {DEMO_AGENT.name}
-                </span>{" "}
-                viewed{" "}
-                <span className="font-semibold text-foreground">
-                  1205 Bayview Terrace
-                </span>{" "}
-                and requested more information.
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-[#F8FAFC] p-2.5">
-                  <p className="text-[10px] text-muted-foreground">Email</p>
-                  <p className="text-xs font-medium text-foreground">
-                    sarah@email.com
-                  </p>
-                </div>
-                <div className="rounded-lg bg-[#F8FAFC] p-2.5">
-                  <p className="text-[10px] text-muted-foreground">Phone</p>
-                  <p className="text-xs font-medium text-foreground">
-                    (949) 555-0142
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <div className="flex-1 rounded-lg bg-[#6366F1] py-2 text-center text-xs font-semibold text-white">
-                  Call Now
-                </div>
-                <div className="flex-1 rounded-lg border border-border py-2 text-center text-xs font-semibold text-foreground">
-                  Send Email
-                </div>
+      <div className="relative h-[600px] min-w-0 sm:h-[640px]">
+        <DotField />
+        <PhoneFrame tilt={3}>
+          <div className="flex flex-col gap-[18px] px-6 pt-6">
+            <div className="flex items-center gap-2.5">
+              <AgentDisc size={36} />
+              <div className="flex flex-col">
+                <span className="text-[13px] font-bold text-[#0F172A]">{DEMO_AGENT.name}</span>
+                <span className="text-[11px] text-[#64748B]">{DEMO_AGENT.brokerage}</span>
               </div>
             </div>
-
-            {/* Phone frame (front) */}
-            <div className="relative z-10 w-64 shrink-0 overflow-hidden rounded-3xl border-8 border-[#1E293B] bg-card shadow-2xl">
-              <div className="bg-gradient-to-br from-[#6366F1] to-[#818CF8] px-5 py-5">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-white/80" />
-                  <p className="text-xs font-medium text-white/70">
-                    Property Details
-                  </p>
-                </div>
-                <p className="mt-1 text-sm font-bold text-white">
-                  1205 Bayview Terrace
-                </p>
-                <p className="text-xs text-white/60">{DEMO_MARKET.cityState} {DEMO_MARKET.postalCode}</p>
-              </div>
-
-              <div className="h-28 overflow-hidden">
-                <img
-                  src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=256&h=112&fit=crop"
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              <div className="px-4 py-4">
-                <div className="rounded-lg bg-[#6366F1] px-4 py-2.5 text-center text-sm font-semibold text-white">
-                  Get More Information
-                </div>
-                <div className="mt-3 space-y-2">
-                  {["Full name", "Email address", "Phone number"].map(
-                    (placeholder) => (
-                      <div
-                        key={placeholder}
-                        className="rounded-lg border border-border px-3 py-2"
-                      >
-                        <p className="text-xs text-muted-foreground">
-                          {placeholder}
-                        </p>
-                      </div>
-                    ),
-                  )}
-                </div>
-                <div className="mt-3 rounded-lg bg-[#1E293B] px-4 py-2.5 text-center text-sm font-semibold text-white">
-                  Send Request
-                </div>
-              </div>
+            <div
+              className="text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em] text-[#0F172A]"
+              style={{ textWrap: "balance" } as CSSProperties}
+            >
+              What&apos;s your {area} home worth today?
             </div>
-          </motion.div>
+            <div className="text-sm text-[#64748B]">Based on this month&apos;s closed sales near you.</div>
+            <div className="flex h-[50px] items-center rounded-xl border-[1.5px] border-[#D6D3CB] px-4 text-[15px] text-[#0F172A]">
+              {DEMO_LEAD.address}
+            </div>
+            <div
+              className="flex h-[50px] items-center justify-center rounded-xl text-base font-semibold text-white"
+              style={{ background: primary }}
+            >
+              Get my estimate
+            </div>
+            <div className="text-center text-xs text-[#94A3B8]">Takes 10 seconds · No obligation</div>
+          </div>
+        </PhoneFrame>
 
-          {/* Right — Feature list */}
-          <motion.div variants={fadeUp} className="space-y-6">
-            {features.map((f) => (
-              <div key={f.title} className="flex gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#EEF2FF]">
-                  <f.icon className="h-5 w-5 text-[#6366F1]" />
-                </div>
-                <div>
-                  <p className="font-semibold text-foreground">{f.title}</p>
-                  <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
-                    {f.description}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </motion.div>
+        <div
+          className="absolute bottom-12 right-0 flex w-[280px] items-start gap-3.5 rounded-[14px] bg-white px-[18px] py-4 sm:w-[300px]"
+          style={{
+            transform: "rotate(-2deg)",
+            boxShadow: "0 24px 48px -16px rgba(15,23,42,0.35), 0 0 0 1px rgba(15,23,42,0.06)",
+          }}
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ECFDF5]">
+            <UserPlus className="h-[18px] w-[18px] text-[#059669]" />
+          </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-[15px] font-bold text-[#0F172A]">New lead · {DEMO_LEAD.address}</span>
+            <span className="text-[13px] text-[#64748B]">
+              {LEAD_CONTACT.name} · wants a value · just now
+            </span>
+          </div>
         </div>
-      </motion.div>
-    </section>
+      </div>
+    </SplitSection>
   );
 }

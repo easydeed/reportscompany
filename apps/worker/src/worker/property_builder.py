@@ -2,15 +2,14 @@
 Property Report Builder
 =======================
 
-Renders property reports (seller/buyer) using self-contained Jinja2 templates.
-All 5 themes use the same unified data contract.
+Renders property reports (seller/buyer) on Design's six-page architecture,
+`templates/property/_v2/report.jinja2`. The three themes differ only in
+typeface, weight, tracking, case and corner radius, set by each theme's entry
+file:
 
-Themes:
-- classic (1): Navy + Sky Blue, Merriweather + Source Sans Pro
-- modern (2): Coral + Midnight, Space Grotesk + DM Sans
-- elegant (3): Burgundy + Gold, Playfair Display + Montserrat
-- teal (4): Teal + Navy, Montserrat
-- bold (5): Navy + Gold, Oswald + Montserrat
+- harbor (2): Manrope 800 / Manrope, radius 14px
+- linen (3): Cormorant Garamond 500 / Geist, radius 0
+- atlas (5): Barlow Condensed 700 uppercase / Barlow, radius 4px
 
 Usage:
     builder = PropertyReportBuilder(report_data)
@@ -368,24 +367,56 @@ def _ensure_readable_on_dark(hex_color, dark_bg="#18235c") -> str:
     return fallback
 
 
-def _ensure_readable_on_light(hex_color: str, light_bg: str = "#ffffff") -> str:
+def _ensure_readable_on_light(hex_color: str, *light_bgs: str) -> str:
     """
-    A version of `hex_color` that clears 4.5:1 on `light_bg`, by mixing toward
-    black in 6% steps. The mirror of the above, with the same guarantees.
+    A version of `hex_color` that clears 4.5:1 on EVERY surface in `light_bgs`,
+    by mixing toward black in 6% steps. The mirror of `_ensure_readable_on_dark`
+    — which has always taken several surfaces — with the same guarantees.
+
+    D-177. THIS TOOK ONE SURFACE AND DEFAULTED IT TO WHITE, which is the defect
+    D-170 fixed in `themes._ink` and did not fix here. The two functions are two
+    implementations of "darken until readable"; only one was corrected, and this
+    is the one `compute_color_roles` calls for `theme_color_on_light` — the token
+    the market surface uses as Design's `accent_ink`.
+
+    Measured before the fix, accent_ink on the brand's own `tint`: Crimson 4.41,
+    Forest 4.39, lime 4.47, teal 4.38 — four of nine brands below 4.5, two of
+    them shipping presets, on a token whose definition is "readable on light
+    surfaces". Design's market spec puts accent text on the tint panel (the
+    over-asking Status column), so the next thing built would have rendered it.
+
+    A guarantee against one of the surfaces a token is used on is half a
+    guarantee, and the half that is missing never announces itself.
     """
+    surfaces = [normalize_hex_color(bg, "#ffffff")
+                for bg in (light_bgs or ("#ffffff",))]
     current = normalize_hex_color(hex_color)
-    bg = normalize_hex_color(light_bg, "#ffffff")
     for _ in range(_READABILITY_MAX_STEPS):
-        if _contrast(current, bg) >= AA_NORMAL:
+        if all(_contrast(current, bg) >= AA_NORMAL for bg in surfaces):
             return current
         stepped = _darken(current, _READABILITY_STEP)
         if stepped == current:
             break
         current = stepped
-    fallback = _best_of(("#14151a", "#ffffff"), bg)
-    achieved = _contrast(fallback, bg)
+    # UNREACHABLE FOR ANY HEX INPUT, AND KEPT ANYWAY. 64 steps of 6% darkening
+    # reaches near-black from anywhere: even `#ffffff` resolves to `#6d6d6d`
+    # inside the loop, so nothing arrives here. Measured, because a mutation
+    # that broke this branch did NOT fail the gate — the regression harness
+    # reported `DID NOT FIRE`, which is how an untestable path announces
+    # itself rather than passing as covered.
+    #
+    # Left in place: `_report_unreachable` is the only thing that would tell us
+    # if the step count or the step size ever stopped being enough, and D-112's
+    # audit counts those log lines (zero per 90 renders). But nothing below is
+    # exercised, so do not read it as a tested guarantee.
+    #
+    # The worst surface is the one to report and to pick against: a fallback
+    # chosen for the easiest background is not a fallback.
+    worst = min(surfaces, key=lambda bg: _contrast("#14151a", bg))
+    fallback = _best_of(("#14151a", "#ffffff"), worst)
+    achieved = min(_contrast(fallback, bg) for bg in surfaces)
     if achieved < AA_NORMAL:
-        _report_unreachable("on_light", hex_color, bg, achieved)
+        _report_unreachable("on_light", hex_color, worst, achieved)
     return fallback
 
 
@@ -562,26 +593,18 @@ def compute_color_roles(hex_color: str, dark_bg="#18235c") -> Dict[str, str]:
         "theme_color_light":    _lighten(hex_color, 0.35),
         "theme_color_dark":     _darken(hex_color, 0.25),
         "theme_color_on_dark":  _ensure_readable_on_dark(hex_color, dark_bg),
-        "theme_color_on_light": _ensure_readable_on_light(hex_color, "#ffffff"),
+        # D-177 — white AND the brand's own tint, which is the other light
+        # surface this token lands on. `derive_theme` owns the tint, so it is
+        # read from there rather than recomputed: a second tint derivation is
+        # exactly the shape that left this guarantee half-built.
+        "theme_color_on_light": _ensure_readable_on_light(
+            hex_color, "#ffffff", derive_theme(hex_color)["tint"]),
         "theme_color_text":     _text_on_accent(hex_color),
     }
 
-# Template directory - points to property/ for Jinja2 inheritance to work
-# This allows templates to use {% extends '_base/base.jinja2' %}
+# Template directory. Each theme's entry file sets its typography and
+# includes `_v2/report.jinja2`, the one page architecture they share.
 TEMPLATES_DIR = Path(__file__).parent / "templates" / "property"
-
-# Theme template paths (relative to templates/property/)
-# v3.0: Standalone self-contained templates (unique cover + CSS per theme)
-#: THE ORDER PAGES APPEAR IN THE DOCUMENT, which is fixed by the templates and
-#: is NOT the order of `page_set`. A caller can pass `selected_pages` in any
-#: order and the rendered sequence does not change — every theme renders these
-#: sections in this sequence, each wrapped in `{% if "<key>" in _pages %}`. So
-#: page numbers are this list filtered by what renders, never `page_set`
-#: enumerated.
-PAGE_ORDER = [
-    "cover", "overview", "contents", "aerial", "property",
-    "analysis", "market_trends", "comparables", "comparables_all", "range",
-]
 
 #: THE COMPARABLE SET. ONE NUMBER, ONE PLACE (D-159).
 #:
@@ -605,28 +628,6 @@ PAGE_ORDER = [
 #: changing what the ladder returns is a different decision from making the
 #: document honest about what it returned.
 COMP_SET_MAX = 15
-
-#: How many comp cards fit on the Sales Comparables page. MEASURED, NOT
-#: CHOSEN: the card is 1.8in of map plus a body, four fill the page with 101px
-#: to spare, and a fifth needs about 330px. Measured in Chromium at the real
-#: page size rather than estimated.
-#:
-#: This is why `[:4]` was in every template and why nothing told the prose
-#: that computes the analysis note about it. The rest of the set is not
-#: dropped now — it carries over to `comparables_all`, which is a list and
-#: fits fifteen on one page with 189px to spare at larger type than the
-#: cards' own stat grid.
-CARDS_PER_COMPARABLES_PAGE = 4
-
-#: Not listed on the contents page: the cover (the reader is holding it) and
-#: the contents page itself.
-#:
-#: `comparables_all` IS listed, deliberately. It is a page of the document a
-#: reader may want to turn to — it is the evidence behind the range — and
-#: omitting it from the contents would be the same omission D-159 is about,
-#: one level up.
-CONTENTS_OMITS = ("cover", "contents")
-
 
 def _analysis_columns(sorted_by_price):
     """Low / Medium / High for the Area Sales Analysis table. (D-119)
@@ -684,31 +685,6 @@ def _analysis_columns(sorted_by_price):
         f"page.")
 
 
-def paginate(page_set):
-    """`(page_numbers, contents_keys)` for one report's final page set. (D-121)
-
-    THE CONTENTS PAGE AND THE PAGE FOOTERS WERE BOTH HARDCODED, AND DISAGREED
-    WITH EACH OTHER AND WITH THE DOCUMENT. Every theme printed `03` on both
-    the overview page and the aerial page; contents claimed Market Trends at
-    page 07 in reports that contain no Market Trends page; the literals skip
-    `03` even when nothing is dropped. Three symptoms, one cause — two
-    independent hand-maintained copies of a number that is a property of the
-    render.
-
-    Both now come from here, so they cannot drift from each other: a theme
-    reads `page_numbers[key]` for its footer and loops `contents_keys` for its
-    contents rows. The number is the physical sheet index, 1-based and
-    counting the cover, because that is what a reader turning to page 7 is
-    counting.
-
-    `page_set` is membership, not sequence — see `PAGE_ORDER`.
-    """
-    rendered = [key for key in PAGE_ORDER if key in page_set]
-    page_numbers = {key: n for n, key in enumerate(rendered, start=1)}
-    contents_keys = [k for k in rendered if k not in CONTENTS_OMITS]
-    return page_numbers, contents_keys
-
-
 # Both re-exported from `theme_registry`, which reads `themes.json`. They were
 # literals here until the cut to three themes; the pairing is stated once now
 # because five copies of it existed and two disagreed on every id (D-163).
@@ -744,13 +720,12 @@ ABSENT = "-"
 
 class PropertyReportBuilder:
     """
-    Builds HTML property reports using the per-theme template system.
+    Builds HTML property reports.
 
-    The per-theme entry template (templates/property/<theme>/<theme>_report.jinja2,
-    e.g. teal/teal_report.jinja2, extending _base/base.jinja2) handles:
-    - Theme selection (numbers 1-5 mapped to bold/classic/elegant/modern/teal)
-    - Page set configuration (default 7-page set, or custom via selected_pages)
-    - Including all section templates
+    Each theme's entry file (templates/property/<theme>/<theme>_report.jinja2)
+    sets its typography and includes `_v2/report.jinja2`. The page set is the
+    six-page `V2_PAGE_ORDER`, or a selection translated onto it by
+    `normalize_page_set`.
     
     Expected report_data structure:
     {
@@ -818,19 +793,9 @@ class PropertyReportBuilder:
         # Legacy compatibility: keep self.theme as the number
         self.theme = self.theme_number
         
-        # Use selected_pages if provided, otherwise use default 7-page set
-        # All unified templates use the same 7-page layout
-        selected_pages = report_data.get("selected_pages")
-        if selected_pages and isinstance(selected_pages, list) and len(selected_pages) > 0:
-            self.page_set = selected_pages
-        elif self.theme_name in self.V2_THEMES:
-            # Six pages, not nine. `notes` is new and is NOT conditional —
-            # it carries the agent panel and the disclaimers, so a report
-            # without it is a report with no one to call and no statement
-            # that it is not an appraisal.
-            self.page_set = [p for p in self.V2_PAGE_ORDER]
-        else:
-            self.page_set = list(self.DEFAULT_PAGE_SET)
+        # Every theme renders the six-page architecture. What a caller asks
+        # for is translated onto it — see `normalize_page_set`.
+        self.page_set = self.normalize_page_set(report_data.get("selected_pages"))
 
         #: D-142: pages the caller asked for that the render could not produce.
         #: Set by `render_html`; empty until then, never `None`, so a caller
@@ -851,6 +816,28 @@ class PropertyReportBuilder:
         self.env.filters['format_number'] = _fmt_number
         self.env.filters['format_measure'] = _fmt_measure
         self.env.filters['truncate'] = _truncate_fn
+
+        # D-177, ONE SURFACE OVER. `theme_color_on_light` is derived against
+        # `#ffffff` and the property colour-role table uses it for "brand-coloured
+        # text on white/tint" — four grounds, one derivation. Measured over 38
+        # brands it clears 4.5 on white for all of them and fails on every tint:
+        # 6 of 38 on linen's cream, 14 on harbor's ghost, 34 on gold-light.
+        #
+        # That is D-177's own sentence ("accent_ink was guaranteed on white and
+        # used on a tint") on the surface its fix did not reach. The remedy is
+        # the function it left behind.
+        #
+        # EXPOSED AS A FILTER RATHER THAN AS MORE ROLES, because the ground is
+        # declared in the template and nowhere else. `theme_color_on_cream` in
+        # this file would put one template's neutral into the builder's
+        # vocabulary, and the next ground would need another.
+        #
+        #     color: {{ theme_color | ink_on('#FAF7F2') }};
+        self.env.filters['ink_on'] = ink_on
+        # And the counterpart for a DARK ground. `theme_color_on_dark` is derived
+        # against `#18235c`; harbor's `h3` sits on `#2b3045`, which is lighter, so
+        # 15 of 38 brands fail there. Same defect, same remedy, other direction.
+        self.env.filters['ink_on_dark'] = _ensure_readable_on_dark
         
     @staticmethod
     def _format_currency(value: Any) -> str:
@@ -1364,6 +1351,29 @@ class PropertyReportBuilder:
             ),
         }
 
+    @staticmethod
+    def _v2_comp_nouns(comps) -> Dict[str, str]:
+        """`comp_noun` (cover sentence), `comp_noun_short` (page heading) and
+        `comp_range_clause` (what the range is drawn from — closed sales only),
+        from the comps' own statuses — the same closed/active split as
+        `_comps_window`."""
+        closed = sum(1 for c in comps
+                     if str(c.get("status") or "Active").lower() not in ("active", "pending"))
+        active = len(comps) - closed
+        if comps and not active:
+            return {"comp_noun": "recent nearby sales", "comp_noun_short": "sales",
+                    "comp_range_clause": "is what those sales support"}
+        if comps and not closed:
+            return {"comp_noun": "nearby homes currently for sale",
+                    "comp_noun_short": "homes currently for sale",
+                    "comp_range_clause": "is drawn from closed sales only, and this search found none"}
+        if comps:
+            return {"comp_noun": "nearby sales and homes currently for sale",
+                    "comp_noun_short": "sales and current listings",
+                    "comp_range_clause": "is what the closed sales among them support"}
+        return {"comp_noun": "nearby sales", "comp_noun_short": "sales",
+                "comp_range_clause": "is what those sales support"}
+
     def _price_with_date(self, price, iso_date=None) -> str:
         """`$369,000 · Dec 2015`, or `$470,000`, or `N/A`. (D-118)"""
         if price is None:
@@ -1829,9 +1839,9 @@ class PropertyReportBuilder:
     #: rather than a theme — a lead page with no brand colour needs one, and
     #: changing what strangers see was not part of the theme cut.
     _THEME_DEFAULT_COLORS = {
-        "modern":  "#FF6B5B",
-        "bold":    "#15216E",
-        "elegant": "#1a1a1a",
+        "harbor":  "#FF6B5B",
+        "atlas":    "#15216E",
+        "linen": "#1a1a1a",
     }
 
     # Per-theme dark background colour — used by compute_color_roles() to
@@ -1845,9 +1855,9 @@ class PropertyReportBuilder:
     #: platform default dark that the market reports and the six picker
     #: presets are all measured against — not a theme's private value.
     _THEME_DARK_BG = {
-        "modern":  "#1A1F36",  # --midnight
-        "bold":    "#15216E",  # --navy
-        "elegant": "#1a1a1a",  # --charcoal
+        "harbor":  "#1A1F36",  # --midnight
+        "atlas":    "#15216E",  # --navy
+        "linen": "#1a1a1a",  # --charcoal
     }
 
     def _get_theme_color(self) -> str:
@@ -1899,9 +1909,7 @@ class PropertyReportBuilder:
     # ── The redesigned document (Design's 2026-10-05 package) ─────────────
     #
     # Everything below serves `_v2/report.jinja2`, the one page architecture
-    # that replaces the per-theme templates. It is ADDITIVE: elegant and modern
-    # still render their old self-contained files and never see these keys, so
-    # one theme can go end to end without the other two moving.
+    # every theme renders.
     #
     # The design's own logic class (`Property Report.dc.html`) computes these
     # values in JavaScript. Every number here is the same computation; where it
@@ -1914,66 +1922,60 @@ class PropertyReportBuilder:
     V2_PAGE_ORDER = ("cover", "property", "comparables", "range",
                      "market_trends", "notes")
 
-    #: THE MIGRATION SEAM, and it is temporary by construction.
-    #:
-    #: Design's package replaces nine pages with six. That is a BUILDER-level
-    #: change — the page set is shared — so migrating one theme at a time
-    #: means the default page set has to depend on which architecture the
-    #: theme renders. A theme in this set gets `V2_PAGE_ORDER`; a theme
-    #: outside it keeps `DEFAULT_PAGE_SET` and its own self-contained
-    #: template.
-    #:
-    #: Without this, wiring bold would have silently taken `contents`,
-    #: `aerial` and `analysis` away from elegant and modern — three pages
-    #: those two templates still render and three gates still assert on.
-    #:
-    #: DELETE THIS, and the branch below it, when the set is all three
-    #: themes. `test_the_migration_seam_is_still_needed` fails when it is,
-    #: so the seam cannot outlive its reason the way an excuse in an
-    #: allowed-list does.
-    V2_THEMES = frozenset({"bold"})
+    #: Pages a report always has, whatever was selected. `notes` is the one
+    #: that matters most: it carries the agent panel and the explainers, so a
+    #: report without it has no one to call and no account of where its
+    #: numbers came from. The wizard's page list predated it and never sent
+    #: it, so every atlas report from the wizard rendered five pages and no
+    #: notes page until this set existed.
+    REQUIRED_PAGES = frozenset({"cover", "property", "comparables", "notes"})
 
-    #: The nine-page set the un-migrated themes render.
-    DEFAULT_PAGE_SET = ["cover", "contents", "aerial", "property", "analysis",
-                        "comparables", "range"]
-
-    #: The two conditional pages of the nine-page architecture. The agent
-    #: wizard's default leaves them out — an agent picks pages — and the
-    #: consumer path includes them, because a stranger picks nothing and
-    #: should get everything the data supports.
-    CONDITIONAL_PAGES = ["market_trends", "overview"]
+    #: Page names from the retired nine-page architecture, and where their
+    #: content lives now. Saved `property_reports.selected_pages` rows and
+    #: any client still sending the old list hold these names; translating
+    #: them is what keeps a re-render of an old report from losing a page it
+    #: asked for. `None` is a page with no successor (the contents page —
+    #: six pages need no table of contents).
+    LEGACY_PAGES = {
+        "overview": "cover",          # the "In short" panel on the cover
+        "contents": None,
+        "aerial": "property",         # the aerial plate on the property page
+        "analysis": "range",          # the low/median/high table folded into the range page
+        "comparables_all": "comparables",
+    }
 
     @classmethod
-    def default_page_set(cls, theme, consumer: bool = False) -> List[str]:
-        """The pages this theme's architecture renders, as a MAXIMUM.
+    def normalize_page_set(cls, selected) -> List[str]:
+        """The pages to render, in document order, from whatever was asked for.
 
-        The one producer. `consumer_report_data.CONSUMER_PAGES` was a second
-        copy of the nine-page list, written before the architecture could
-        differ by theme — so the consumer path handed bold a `selected_pages`
-        containing `contents`, `aerial`, `analysis` and `overview`, which the
-        six-page architecture does not render, and NOT containing `notes`,
-        which it always does.
-
-        The visible failure was a four-page consumer report with no agent
-        panel and no disclaimer. It was caught by a test asserting the page
-        COUNT, not by anything looking at the list — and the list is where
-        the mistake was.
-
-        `consumer` exists because the two paths have DIFFERENT maxima on the
-        nine-page architecture: 7 for the agent, 9 for the consumer. Writing
-        one function and discovering that was the second half of the same
-        mistake — the first version returned the agent's set for both and
-        reported "7 pages, expected 9". The six-page architecture has one
-        maximum for both, because `overview` is a panel on the cover rather
-        than a page and `market_trends` is in the order already.
+        No selection means every page. A selection keeps its optional pages
+        (`range`, `market_trends`), translates retired names through
+        `LEGACY_PAGES`, ignores names it does not know, and always gains
+        `REQUIRED_PAGES`. The result is in `V2_PAGE_ORDER` order regardless of
+        the order asked for, because the document's order is not the caller's
+        to choose.
         """
-        name, _ = _registry.resolve(theme)
-        if name in cls.V2_THEMES:
+        if not selected or not isinstance(selected, list):
             return list(cls.V2_PAGE_ORDER)
-        pages = list(cls.DEFAULT_PAGE_SET)
-        if consumer:
-            pages += list(cls.CONDITIONAL_PAGES)
-        return pages
+        wanted = set(cls.REQUIRED_PAGES)
+        for page in selected:
+            page = cls.LEGACY_PAGES.get(page, page)
+            if page in cls.V2_PAGE_ORDER:
+                wanted.add(page)
+        return [p for p in cls.V2_PAGE_ORDER if p in wanted]
+
+    @classmethod
+    def default_page_set(cls, theme=None, consumer: bool = False) -> List[str]:
+        """The pages a report renders when nothing was selected, as a MAXIMUM.
+
+        `market_trends` is dropped at render time when its data does not
+        arrive, so this is six pages at most and five when SimplyRETS does
+        not answer. The same for every theme and both paths: `overview` is a
+        panel on the cover rather than a page, so the consumer path no longer
+        has a larger maximum than the agent's. `theme` and `consumer` stay in
+        the signature for the callers that pass them.
+        """
+        return list(cls.V2_PAGE_ORDER)
 
     #: The nearest N comps get a photo. All of them appear in "Each sale".
     V2_COMPS_PICTURED = 6
@@ -2480,6 +2482,13 @@ class PropertyReportBuilder:
             "pictured": pictured,
             "pictured_note": pictured_note,
             "comp_count": len(comps),
+            # WHAT THE COMPS ARE, IN WORDS. The wizard defaults to Active, and
+            # the page said "4 sales within 0.6 mi · active listings" and the
+            # cover "compares 4 recent nearby sales" over homes that have not
+            # sold — D-117's defect, on this architecture. The nine-page
+            # themes derived their wording from `_comps_window` and a gate
+            # held them to it; this is the same derivation.
+            **self._v2_comp_nouns(comps),
             # `stats.max_distance` is a bare number (0.6) and `_comps_window`
             # returns a DICT. The first render put `within 0.6` and the
             # repr of a five-key dict into the page — both because the
@@ -2586,35 +2595,46 @@ class PropertyReportBuilder:
     def _build_v2_market(self, trends: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Design's page 5, from `fetch_and_compute_market_trends`.
 
-        THREE OF THE FOUR STAT CELLS HAVE NO PRODUCER. `market_trends.py`
-        imports `compute_price_cut_stats`, `compute_dom_distribution` and
-        `compute_timeline_metrics` from `worker.report_builders`, where none of
-        them is defined — the import raises every time and is swallowed by a
-        bare `except (ImportError, Exception)` logging at `info`. So
-        `price_cut_stats`, `dom_distribution` and `timeline_metrics` are
-        always None, and have been since they were written. D-167.
+        THE FOUR STAT CELLS ARE THE FOUR METRICS THAT HAVE A PRODUCER (D-167).
+        Design's page asked for median sale price, days to contract, share
+        sold in 30 days and share that took a price cut. The last three have
+        no producer — `market_trends.py` imports their helpers from
+        `worker.report_builders`, where none is defined, and the import fails
+        every time — so atlas printed "no data" three times from 2026-10-06,
+        and harbor and linen would have joined it on the move to this page.
 
-        They are rendered as "no data" rather than omitted, because a cell
-        that disappears is indistinguishable from a page that never had it —
-        and a reader comparing two reports would see a different number of
-        cells with nothing saying why.
+        The nine-page themes showed days on market, sale-to-list ratio and
+        price per square foot, from `_compute_trends` over the last 90 days of
+        closed sales, with a prior-90-day comparison. Those are what the cells
+        show now, LABELLED AS WHAT THEY ARE: days on market runs from listing
+        to close, which is not "days to contract" (listing to pending), and
+        the old cell was taking its arrow from days on market while its
+        number was meant to be days to contract — two metrics in one cell.
+        Design's metrics can come back when something computes them.
+
+        A cell still says "no data" when its metric's `current` is None, so a
+        reader comparing two reports sees the same four cells and is told
+        why one is empty.
         """
         if not trends:
             return None
 
         median = trends.get("median_sale_price") or {}
-        timeline = trends.get("timeline_metrics") or {}
-        dom = trends.get("dom_distribution") or {}
-        cuts = trends.get("price_cut_stats") or {}
+        dom = trends.get("avg_days_on_market") or {}
+        ratio = trends.get("list_to_sale_ratio") or {}
+        ppsf = trends.get("price_per_sqft") or {}
 
         def _cell(value, label):
             return {"value": self.V2_NO_DATA if value in (None, "") else value,
                     "label": label}
 
-        marketing_days = timeline.get("avg_marketing_days")
-        under_30 = dom.get("under_30")
-        cut_rate = cuts.get("rate")
-        median_cut = cuts.get("median_cut")
+        def _points(metric):
+            # Sale-to-list is already a percentage, so its move is stated in
+            # points; a percent change of a percent reads as nonsense.
+            cur, prior = metric.get("current"), metric.get("prior")
+            if cur is None or prior is None or abs(cur - prior) < 0.1:
+                return ""
+            return f" · {'▲' if cur > prior else '▼'} {abs(cur - prior):.1f} pts"
 
         stats = [
             # `_v2_short_money`, not `formatted_current`: the cell is 44px
@@ -2623,40 +2643,21 @@ class PropertyReportBuilder:
             _cell(None if median.get("current") is None
                   else self._v2_short_money(median["current"]),
                   "Median sale price" + self._v2_delta(median, "%")),
-            _cell(None if marketing_days is None else str(round(marketing_days)),
-                  "Days to contract" + self._v2_delta(trends.get("avg_days_on_market"))),
-            _cell(None if under_30 is None else f"{round(under_30)}%",
-                  "Sold in 30 days or less"),
-            _cell(None if cut_rate is None else f"{round(cut_rate)}%",
-                  "Took a price cut" + (
-                      f" · median {_fmt_currency(median_cut)}" if median_cut else "")),
+            _cell(None if dom.get("current") is None else str(round(dom["current"])),
+                  "Days on market" + self._v2_delta(dom)),
+            _cell(None if ratio.get("current") is None else f"{ratio['current']:.1f}%",
+                  "Sale-to-list" + _points(ratio)),
+            _cell(None if ppsf.get("current") is None else _fmt_currency(ppsf["current"]),
+                  "Price per sq ft" + self._v2_delta(ppsf, "%")),
         ]
 
         # ── months of inventory ─────────────────────────────────────────
-        moi = (trends.get("months_of_inventory") or {}).get("current")
-        if moi is None:
-            headline = "Inventory is not measurable here"
-            note = ("There were not enough recent sales to work out how long "
-                    "the homes for sale would take to sell.")
-            cells = [False] * 8
-        else:
-            headline = ("It's a seller's market" if moi < 4
-                        else "The market is balanced" if moi <= 6
-                        else "Buyers have the edge")
-            months = f"{moi:.1f}".rstrip("0").rstrip(".")
-            note = (
-                f"{months} months of inventory. At this pace every home for sale "
-                f"in {self.report_data.get('property_city') or 'this area'} would "
-                f"be gone in "
-                + ("under three months." if moi < 3
-                   else "under six months." if moi < 6
-                   else "more than six months.")
-            )
-            # Eight cells, one a month. A market at 11 months fills all eight
-            # rather than overflowing the grid — the cap is stated here
-            # because the template cannot clamp what it is handed.
-            filled = max(0, min(8, round(moi)))
-            cells = [i < filled for i in range(8)]
+        # The words and the bar come from `compute.moi.headline`, shared with
+        # the market snapshot; the thresholds are `condition()`'s.
+        from worker.compute.moi import headline as _moi_headline
+        _moi = _moi_headline((trends.get("months_of_inventory") or {}).get("current"),
+                             self.report_data.get("property_city") or "this area")
+        headline, note, cells = _moi["headline"], _moi["note"], _moi["cells"]
 
         # ── the six-month chart ─────────────────────────────────────────
         series = trends.get("monthly_median")
@@ -2701,9 +2702,8 @@ class PropertyReportBuilder:
 
     def render_html(self) -> str:
         """
-        Render the complete HTML report using the unified template system.
-        
-        All 5 themes use self-contained templates with the same data contract.
+        Render the complete HTML report: the theme's entry file over the
+        shared six-page architecture.
         
         Returns:
             Complete HTML string ready for PDF generation
@@ -2726,16 +2726,7 @@ class PropertyReportBuilder:
         market_trends_data = self.report_data.get("market_trends_data") or None
 
         if market_trends_data is None and "market_trends" in page_set:
-            city     = self.report_data.get("property_city", "")
-            zip_code = self.report_data.get("property_zip", "")
-            state    = self.report_data.get("property_state", "")
-            logger.info("market_trends: auto-fetching for city=%s, zip=%s, state=%s", city, zip_code, state)
-            try:
-                from worker.compute.market_trends import fetch_and_compute_market_trends
-                market_trends_data = fetch_and_compute_market_trends(city, zip_code, state)
-                logger.info("market_trends: fetch returned %s", "data" if market_trends_data else "None")
-            except Exception as _mt_exc:
-                logger.warning("market_trends: fetch FAILED — %s", _mt_exc)
+            market_trends_data = self._fetch_market_trends()
 
         if market_trends_data is None and "market_trends" in page_set:
             page_set = [p for p in page_set if p != "market_trends"]
@@ -2768,10 +2759,6 @@ class PropertyReportBuilder:
             # one is asserted on the rendered output rather than trusted.
             "audience": self.report_data.get("audience") or "agent",
 
-            # D-159: the templates hold no comp-count literal any more. The
-            # cards page takes this many and `comparables_all` takes the rest,
-            # so the two cannot disagree about where the split is.
-            "cards_per_comparables_page": CARDS_PER_COMPARABLES_PAGE,
             "prepared_for": (self.report_data.get("prepared_for") or "").strip(),
 
             # Market trends data (None when page was dropped)
@@ -2805,21 +2792,17 @@ class PropertyReportBuilder:
             "cover_image_url": self.report_data.get("cover_image_url"),
         }
 
-        # ── AI Executive Summary (optional page) ──────────────────────────
+        # ── AI narrative: the cover's "In short" panel ────────────────────
         overview_text = self.report_data.get("overview_text")  # allow pre-injection
         # THE NARRATIVE OUTLIVED THE PAGE IT WAS WRITTEN FOR.
         #
-        # `overview` is a page in the nine-page set and a bounded panel on the
-        # six-page one ("In short", four lines, `max-height: 81px`). Gating
-        # generation on the PAGE being in the set left that panel empty on
-        # every v2 render — the first bold render had `<p class="inshort-text">
-        # </p>` and nothing failed, because an empty paragraph is valid HTML.
-        #
-        # `_wants_narrative` is the condition, not the page name.
-        _wants_narrative = (
-            "overview" in page_set or self.theme_name in self.V2_THEMES
-        )
-        if overview_text is None and _wants_narrative:
+        # `overview` was a page in the retired nine-page set; it is a bounded
+        # panel on the cover now ("In short", four lines, `max-height: 81px`).
+        # Gating generation on the PAGE being in the set left that panel empty
+        # on every v2 render — the first bold render had `<p class="inshort-
+        # text"></p>` and nothing failed, because an empty paragraph is valid
+        # HTML. Every report has a cover, so every report wants the narrative.
+        if overview_text is None:
             try:
                 from worker.ai_overview import generate_overview
                 overview_text = generate_overview(
@@ -2832,11 +2815,7 @@ class PropertyReportBuilder:
             except Exception as _ov_exc:
                 logger.warning("ai_overview: generation failed — %s", _ov_exc)
 
-        if overview_text is None and "overview" in page_set:
-            page_set = [p for p in page_set if p != "overview"]
-            context["page_set"] = page_set
-            logger.info("ai_overview: page removed from page_set (no API key or generation failed)")
-        elif overview_text is None and self.theme_name in self.V2_THEMES:
+        if overview_text is None:
             # No page to drop — the panel is on the cover, and a cover is not
             # optional. It renders the one thing that is true without the
             # model, which is where the numbers came from. Said rather than
@@ -2844,44 +2823,6 @@ class PropertyReportBuilder:
             logger.info("ai_overview: no narrative; the In short panel states the source")
 
         context["overview_text"] = overview_text or ""
-
-        # ── The comparables continuation page (D-159) ─────────────────────
-        # ADDED here, beside the two conditional drops and before `paginate`,
-        # for the same reason they are here: the page set must be final before
-        # a page number is computed from it. A report with four comps or fewer
-        # does not get the page, because the cards already are the whole set.
-        #
-        # The DECISION lives here and only here. The templates render the page
-        # when it is in the set and do not ask how many comps there are — one
-        # place deciding, which is the whole of what D-159 was about.
-        # NOT ON THE SHARED ARCHITECTURE. Design's page 4 lists every comp in
-        # "Each sale" with a bar each, 15 of them at the compressed row height,
-        # so there is nothing for a continuation page to continue. Adding it
-        # anyway put `comparables_all` in the page set, then dropped it again
-        # because `V2_PAGE_ORDER` has no such page — and the drop was reported
-        # as a page the reader asked for and did not get (D-142), which is a
-        # true statement about a page nobody asked for.
-        _comps = context.get("comparables") or []
-        _wants_continuation = (
-            self.theme_name not in self.V2_THEMES
-            and "comparables" in page_set
-            and len(_comps) > CARDS_PER_COMPARABLES_PAGE
-        )
-        if _wants_continuation:
-            page_set = page_set + ["comparables_all"]
-            context["page_set"] = page_set
-            logger.info(
-                "comparables_all: page ADDED — %d comps, %d fit on the cards page",
-                len(_comps), CARDS_PER_COMPARABLES_PAGE)
-
-        # D-121: AFTER both conditional drops, never before. `market_trends`
-        # and `overview` are removed above when their data did not arrive, and
-        # a number computed before that is a number for a document that is not
-        # the one being rendered — which is exactly how the hardcoded literals
-        # came to claim Market Trends at page 07 of a report without one.
-        page_numbers, contents_keys = paginate(page_set)
-        context["page_numbers"] = page_numbers
-        context["contents_keys"] = contents_keys
 
         # ── D-142: say that a page was dropped ────────────────────────────
         #
@@ -2921,10 +2862,9 @@ class PropertyReportBuilder:
                 self.theme_name,
             )
 
-        # ── the redesigned document ──────────────────────────────────────
-        # AFTER both conditional drops and the pagination, because `pages` is
-        # derived from the final page set — the same reason D-121 put
-        # `paginate` here. Additive: elegant and modern never read these keys.
+        # ── the document ─────────────────────────────────────────────────
+        # AFTER the conditional drop, because `doc.pages` — and so every page
+        # number — is derived from the final page set (D-121).
         context.update(derive_theme(theme_color))
         context["doc"] = self._build_v2_context(context, page_set)
         # Merged onto the trends dict rather than nested beside it, so the
@@ -2935,7 +2875,6 @@ class PropertyReportBuilder:
         context["generated_label"] = date.today().strftime("%b %-d, %Y")
 
         logger.info("Final page_set: %s", page_set)
-        logger.info("Pagination: %s", page_numbers)
         logger.info("Context comparables: %d, price_low: %s, price_high: %s",
             len(context.get("comparables", [])),
             context.get("stats", {}).get("price_low"),
@@ -2979,6 +2918,26 @@ class PropertyReportBuilder:
             logger.error("Failed to render report with theme %s: %s", self.theme_name, e)
             raise
     
+    def _fetch_market_trends(self) -> Optional[Dict[str, Any]]:
+        """The live SimplyRETS fetch behind the market trends page, or None.
+
+        Its own method so the test suites can replace this one network call
+        (the root `conftest.py` does) without replacing the market-trends
+        computation, which has tests of its own that call it directly.
+        """
+        city     = self.report_data.get("property_city", "")
+        zip_code = self.report_data.get("property_zip", "")
+        state    = self.report_data.get("property_state", "")
+        logger.info("market_trends: auto-fetching for city=%s, zip=%s, state=%s", city, zip_code, state)
+        try:
+            from worker.compute.market_trends import fetch_and_compute_market_trends
+            data = fetch_and_compute_market_trends(city, zip_code, state)
+            logger.info("market_trends: fetch returned %s", "data" if data else "None")
+            return data
+        except Exception as _mt_exc:
+            logger.warning("market_trends: fetch FAILED — %s", _mt_exc)
+            return None
+
     def render_preview(self, pages: List[str] = None) -> str:
         """
         Render a preview with limited pages.
@@ -2992,10 +2951,13 @@ class PropertyReportBuilder:
         """
         if pages is None:
             pages = ["cover", "property", "comparables"]
-        
-        # Temporarily override page_set
+
+        # Temporarily override page_set. A preview is deliberately partial, so
+        # unlike `normalize_page_set` this adds no required pages — it only
+        # translates retired names and puts the pages in document order.
+        wanted = {self.LEGACY_PAGES.get(p, p) for p in pages}
         original_page_set = self.page_set
-        self.page_set = pages
+        self.page_set = [p for p in self.V2_PAGE_ORDER if p in wanted]
         
         try:
             return self.render_html()

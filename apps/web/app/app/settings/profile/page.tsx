@@ -168,7 +168,7 @@ export default function ProfilePage() {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mx-auto mb-4" />
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--body)] mx-auto mb-4" />
           <p className="text-muted-foreground text-sm">Loading profile...</p>
         </div>
       </div>
@@ -208,7 +208,7 @@ export default function ProfilePage() {
             <div className="relative inline-block group mb-4">
               <Avatar className="w-28 h-28 border-4 border-background shadow-lg">
                 <AvatarImage src={formData.avatar_url || undefined} />
-                <AvatarFallback className="text-3xl font-semibold bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+                <AvatarFallback className="text-3xl font-semibold bg-[var(--agent-primary)] text-[var(--primary-foreground)]">
                   {getInitials()}
                 </AvatarFallback>
               </Avatar>
@@ -257,8 +257,8 @@ export default function ProfilePage() {
           {/* Email Status Card */}
           <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] p-5">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-                <Mail className="w-5 h-5 text-indigo-600" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+                <Mail className="w-5 h-5 text-[var(--body)]" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Email</p>
@@ -277,7 +277,7 @@ export default function ProfilePage() {
             )}
             <p className="text-[11px] text-muted-foreground mt-3 text-center">
               Change email in{" "}
-              <a href="/app/settings/security" className="text-indigo-600 hover:underline">
+              <a href="/app/settings/security" className="text-[var(--link)] hover:text-[var(--link-hover)] hover:underline">
                 Security settings
               </a>
             </p>
@@ -289,8 +289,8 @@ export default function ProfilePage() {
           {/* Personal Information */}
           <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
-                <User className="w-4 h-4 text-indigo-600" />
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center">
+                <User className="w-4 h-4 text-[var(--body)]" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Personal Information</h3>

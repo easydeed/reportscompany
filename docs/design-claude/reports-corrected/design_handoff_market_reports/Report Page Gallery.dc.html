@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap"></link>
+<style>body{margin:0;background:#E9E8E4;font-family:'Geist',system-ui,sans-serif;color:#14161A}a{color:#18235c}a:hover{color:#0d9488}</style>
+</helmet>
+<section style="padding:64px;display:flex;flex-direction:column;gap:40px">
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:1100px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;color:#5E636B">Market reports · all seven types</div>
+    <h1 style="margin:0;font-weight:600;font-size:40px;line-height:1.1;letter-spacing:-0.03em">One template, seven reports</h1>
+    <div style="font-size:14px;line-height:1.5;color:#3A3E45;max-width:760px;text-wrap:pretty">Each page is the same <a href="Report Page.dc.html">Report Page</a> with a different <span style="font-family:'Geist Mono',monospace">kind</span>. Brand colour and agent details follow the Tweaks on this file.</div>
+  </div>
+  <div style="display:flex;gap:32px;flex-wrap:wrap">
+    <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="7">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div data-screen-label="{{ k.name }}" style="width:816px;height:1056px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.08)">
+          <dc-import name="Report Page" kind="{{ k.kind }}" primary="{{ primary }}" accent="{{ accent }}" area="{{ area }}" brand-name="{{ brandName }}" agent-name="{{ agentName }}" hint-size="816px,1056px"></dc-import>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px"><span style="font-size:16px;font-weight:600">{{ k.name }}</span><span style="font-family:'Geist Mono',monospace;font-size:12px;color:#5E636B">{{ k.kind }}</span></div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;primary&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#18235c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#18235c&quot;,&quot;#4F46E5&quot;,&quot;#14532D&quot;,&quot;#7F1D1D&quot;]},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#0d9488&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;options&quot;:[&quot;#0d9488&quot;,&quot;#D97706&quot;,&quot;#CA8A04&quot;,&quot;#DB2777&quot;]},&quot;area&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Irvine&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;brandName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Coastline Realty&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Jordan Reyes&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    return {
+      primary: p.primary || "#18235c", accent: p.accent || "#0d9488", area: p.area || "Irvine", brandName: p.brandName || "Coastline Realty", agentName: p.agentName || "Jordan Reyes",
+      kinds: [["snapshot", "Market Snapshot"], ["listings", "New Listings"], ["closed", "Closed Sales"], ["inventory", "Active Inventory"], ["bands", "Price Bands"], ["featured", "Featured Listings"], ["gallery", "Open Houses"]].map(k => ({ kind: k[0], name: k[1] }))
+    };
+  }
+}
+</script>
+</body>
+</html>

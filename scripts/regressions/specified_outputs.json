@@ -1,0 +1,51 @@
+[
+  {
+    "name": "D-183's shape: the trend loses its report type while everything else survives",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "    TREND_SERIES = {\n        \"market_snapshot\": \"median\",\n    }",
+    "new": "    TREND_SERIES = {\n    }",
+    "test": "apps/worker/tests/test_specified_outputs_render.py"
+  },
+  {
+    "name": "a chart appears on a kind no §7.3 entry places it on",
+    "file": "apps/worker/src/worker/templates/market/_v2/report.jinja2",
+    "old": "<section class=\"band\">",
+    "new": "<div class=\"trend-chart\"><svg></svg></div>\n<section class=\"band\">",
+    "test": "apps/worker/tests/test_specified_outputs_render.py"
+  },
+  {
+    "name": "a marker is degraded to a bare class name, which matches the stylesheet",
+    "file": "apps/worker/tests/test_specified_outputs_render.py",
+    "old": "        \"marker\": '<div class=\"trend-chart',\n        \"mark\": \"svg\",\n        \"defect\": None,",
+    "new": "        \"marker\": 'trend-chart',\n        \"mark\": \"svg\",\n        \"defect\": None,",
+    "test": "apps/worker/tests/test_specified_outputs_render.py"
+  },
+  {
+    "name": "an absence cites a defect that is not on the board",
+    "file": "apps/worker/tests/test_specified_outputs_render.py",
+    "old": "        \"defect\": \"D-183\",",
+    "new": "        \"defect\": \"D-999\",",
+    "test": "apps/worker/tests/test_specified_outputs_render.py"
+  },
+  {
+    "name": "an absence quotes the plan for a sentence the plan does not contain",
+    "file": "apps/worker/tests/test_specified_outputs_render.py",
+    "old": "        \"open_in_spec\": \"**`closed`'s DOM distribution is NOT built**, and \"\n                        \"that is the §7.3 item that stays open.\",",
+    "new": "        \"open_in_spec\": \"the DOM distribution is out of scope for now.\",",
+    "test": "apps/worker/tests/test_specified_outputs_render.py"
+  },
+  {
+    "name": "the fixture stops feeding the producer, which must not read as a lost chart",
+    "file": "apps/worker/tests/test_specified_outputs_render.py",
+    "old": "def fixture_for(report_type):\n    data = report_data(report_type, 40)\n    data[\"closed_history\"] = _history()\n    return data",
+    "new": "def fixture_for(report_type):\n    data = report_data(report_type, 40)\n    data[\"closed_history\"] = []\n    return data",
+    "test": "apps/worker/tests/test_specified_outputs_render.py"
+  },
+  {
+    "name": "the defect holding an absence stops naming the gate that reports it",
+    "file": "docs/DEFECT_LIST.md",
+    "old": "`apps/worker/tests/test_specified_outputs_render.py` holds §7.3's charts against the kinds the plan",
+    "new": "A gate somewhere holds §7.3's charts against the kinds the plan",
+    "test": "apps/worker/tests/test_specified_outputs_render.py"
+  }
+]

@@ -29,11 +29,17 @@ import uuid
 
 import pytest
 
-DB_URL = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL")
+# DATABASE_URL ONLY. The app under test opens its pool on DATABASE_URL
+# (api/db.py), so the fixtures must seed that same database. This used to
+# prefer TEST_DATABASE_URL, which the worker suites use for an EMPTY
+# throwaway database: with both set, the fixtures wrote to one database while
+# the routes read another, and every test errored on a missing `accounts`
+# table. Caught when CI first set both (D-285).
+DB_URL = os.getenv("DATABASE_URL")
 
 psycopg = pytest.importorskip("psycopg", reason="psycopg is required for integration tests")
 pytestmark = pytest.mark.skipif(
-    not DB_URL, reason="Set DATABASE_URL (or TEST_DATABASE_URL) to run tenant-isolation tests"
+    not DB_URL, reason="Set DATABASE_URL to run tenant-isolation tests"
 )
 
 PASSWORD = "IsolationTest123!"
@@ -41,6 +47,9 @@ A_SECRET_CITY = "ISO-A1-CITY"
 A2_SECRET_CITY = "ISO-A2-CITY"
 B_SECRET_CITY = "ISO-B-SECRET-CITY"
 B_SECRET_SCHEDULE = "ISO-B-SECRET-SCHEDULE"
+B_REP_COLOR = "#0B0B0B"
+INDEP_CITY = "ISO-INDEP-CITY"
+A_PATCH_COLOR = "#123456"
 
 
 def _mk_id() -> str:
@@ -57,6 +66,8 @@ class Tenants:
         self.b_company = _mk_id()
         self.b_rep1 = _mk_id()
         self.b_agent = _mk_id()
+        self.indep_rep = _mk_id()     # an affiliate with no company
+        self.indep_agent = _mk_id()   # sponsored by that affiliate
         self.suffix = self.a_company[:8]
 
     @property
@@ -68,9 +79,13 @@ class Tenants:
         return f"iso-company-b-{self.suffix}@test-tenant.example.com"
 
     @property
+    def b_rep_email(self) -> str:
+        return f"iso-rep-b1-{self.suffix}@test-tenant.example.com"
+
+    @property
     def all_ids(self) -> list:
         return [self.a_company, self.a_rep1, self.a_rep2,
-                self.b_company, self.b_rep1, self.b_agent]
+                self.b_company, self.b_rep1, self.b_agent, self.indep_rep, self.indep_agent]
 
 
 def _account(cur, account_id, name, slug, account_type, plan, parent=None, sponsor=None):
@@ -144,8 +159,22 @@ def tenants():
             _account(cur, t.b_company, "ISO Company B", f"iso-co-b-{t.suffix}", "TITLE_COMPANY", "affiliate")
             _owner(cur, t.b_company, t.b_email)
             _account(cur, t.b_rep1, "ISO Rep B1", f"iso-rep-b1-{t.suffix}", "INDUSTRY_AFFILIATE", "affiliate", parent=t.b_company)
+            # B's rep has a login (for the resend probe) and a branding row in a
+            # colour nobody else uses (for the branding-cascade probe).
+            _owner(cur, t.b_rep1, t.b_rep_email)
+            cur.execute(
+                "INSERT INTO affiliate_branding (account_id, brand_display_name, primary_color, branding_override) "
+                "VALUES (%s, 'ISO Rep B1 brand', %s, false)",
+                (t.b_rep1, B_REP_COLOR),
+            )
             _account(cur, t.b_agent, "ISO Agent B", f"iso-agent-b-{t.suffix}", "REGULAR", "sponsored_free", sponsor=t.b_rep1)
             _report(cur, t.b_agent, B_SECRET_CITY, report_type="closed")
+
+            # An independent affiliate — a rep under no company — and its agent.
+            # No company's sponsorship reaches them.
+            _account(cur, t.indep_rep, "ISO Independent Rep", f"iso-indep-rep-{t.suffix}", "INDUSTRY_AFFILIATE", "affiliate")
+            _account(cur, t.indep_agent, "ISO Independent Agent", f"iso-indep-agent-{t.suffix}", "REGULAR", "sponsored_free", sponsor=t.indep_rep)
+            _report(cur, t.indep_agent, INDEP_CITY)
             _schedule(cur, t.b_agent, B_SECRET_SCHEDULE, B_SECRET_CITY)
         conn.commit()
 
@@ -277,3 +306,70 @@ def test_unknown_but_wellformed_rep_id_is_rejected(client, company_a_auth):
     """A syntactically valid rep_id belonging to nobody must 404."""
     resp = client.get(f"/v1/company/reports?rep_id={uuid.uuid4()}", headers=company_a_auth)
     assert resp.status_code == 404
+
+
+# ── Every other company route (added 2026-10-26) ─────────────────────────────
+#
+# The tests above cover the two routes D-005 lived on. These cover the other
+# eight, so "company.py is scoped" is a test result rather than a reading.
+# scripts/regressions/company_tenant_isolation.json removes one ownership check
+# at a time; each makes a test here fail.
+
+def _b_identifiers(t):
+    return (t.b_rep1, t.b_agent, "ISO Rep B1", "ISO Agent B", t.b_rep_email,
+            B_SECRET_CITY, B_SECRET_SCHEDULE)
+
+
+@pytest.mark.parametrize("path", [
+    "/v1/company/overview", "/v1/company/reps", "/v1/company/agents",
+    "/v1/company/metrics", "/v1/company/branding",
+])
+def test_every_company_read_excludes_the_other_tenant(client, tenants, company_a_auth, path):
+    resp = client.get(path, headers=company_a_auth)
+    assert resp.status_code == 200, f"{path} -> {resp.status_code}: {resp.text[:200]}"
+    for secret in _b_identifiers(tenants):
+        assert secret not in resp.text, f"{path} returned Company B's {secret!r}"
+
+
+def test_resend_rep_invite_refuses_another_companys_rep(client, tenants, company_a_auth):
+    resp = client.post("/v1/company/resend-rep-invite", headers=company_a_auth,
+                       json={"email": tenants.b_rep_email})
+    assert resp.status_code == 404, f"{resp.status_code}: {resp.text[:200]}"
+
+
+def _rep_color(rep_id):
+    with psycopg.connect(DB_URL) as conn, conn.cursor() as cur:
+        cur.execute("SELECT primary_color FROM affiliate_branding WHERE account_id = %s", (rep_id,))
+        row = cur.fetchone()
+        return row[0] if row else None
+
+
+def test_branding_cascade_stops_at_the_company(client, tenants, company_a_auth):
+    """Company A's branding save reaches A's reps and never B's."""
+    resp = client.patch("/v1/company/branding", headers=company_a_auth,
+                        # The name is sent because the page always sends it: a first
+                        # save without one is a 500 on a NOT NULL column (filed).
+                        json={"brand_display_name": "ISO Company A", "primary_color": A_PATCH_COLOR})
+    assert resp.status_code == 200, f"{resp.status_code}: {resp.text[:200]}"
+    assert _rep_color(tenants.b_rep1) == B_REP_COLOR, "Company A's branding reached Company B's rep"
+    # Control: the cascade did run, so the line above is not vacuous.
+    assert _rep_color(tenants.a_rep1) == A_PATCH_COLOR
+
+
+def test_owning_company_sees_its_own_rep_and_agent(client, tenants, company_b_auth):
+    for path, needle in (("/v1/company/reps", tenants.b_rep1), ("/v1/company/agents", tenants.b_agent)):
+        resp = client.get(path, headers=company_b_auth)
+        assert resp.status_code == 200 and needle in resp.text, f"{path} lost B's own row"
+
+
+def test_a_rep_under_no_company_is_outside_every_company(client, tenants, company_a_auth):
+    """The company bound is `parent_account_id = company`: an independent
+    affiliate and its agents belong to no company's views."""
+    for path in ("/v1/company/overview", "/v1/company/reps", "/v1/company/agents",
+                 "/v1/company/reports", "/v1/company/schedules", "/v1/company/metrics"):
+        r = client.get(path, headers=company_a_auth)
+        assert r.status_code == 200, path
+        for secret in (tenants.indep_rep, tenants.indep_agent, "ISO Independent", INDEP_CITY):
+            assert secret not in r.text, f"{path} shows the independent affiliate's {secret!r}"
+    r = client.get(f"/v1/company/reports?rep_id={tenants.indep_rep}", headers=company_a_auth)
+    assert r.status_code == 404

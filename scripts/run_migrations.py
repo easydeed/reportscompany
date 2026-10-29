@@ -56,6 +56,12 @@ and has no ordering surprise.
 scripts/migrate.sh implements the same contract against the same table; the
 table and that contract are defined in db/schema_migrations.sql.
 
+THE SKIP IS LOAD-BEARING FOR MORE THAN SPEED. `0012_seed_plans.sql` and
+`0056_seed_free_plan.sql` seed rows unconditionally with `ON CONFLICT DO
+NOTHING` — which guards duplicates, not re-creation after a deliberate delete.
+They are correct only because this loop never re-executes a recorded file. If
+that ever changes, read those two first (D-189).
+
 Each file is executed whole, in one transaction. It is not split on semicolons:
 splitting breaks DO $$ ... $$ blocks and silently dropped any statement that
 followed a comment line.

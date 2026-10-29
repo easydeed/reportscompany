@@ -200,6 +200,7 @@ function WelcomeContent() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 placeholder="Enter your password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -220,6 +221,7 @@ function WelcomeContent() {
               <Input
                 id="confirmPassword"
                 type="password"
+                autoComplete="new-password"
                 placeholder="Confirm your password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}

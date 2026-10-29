@@ -65,7 +65,6 @@ export interface Theme {
   /** Suggested accent colors that pair well with this theme */
   suggestedColors: string[];
   pageCount: number;
-  compact: boolean;
   /** Preview image path (JPG) — used in theme gallery */
   previewImage?: string;
 }
@@ -93,38 +92,35 @@ export interface PropertyReportResponse {
 export const THEMES: Theme[] = [
   {
     id: 2,
-    name: "Modern",
+    name: "Harbor",
     style: "Clean & Contemporary",
-    displayFont: "'DM Sans', sans-serif",
+    displayFont: "'Manrope', sans-serif",
     gradient: "linear-gradient(135deg, #1A1F36 0%, #FF6B5B 100%)",
     accentDefault: "#FF6B5B",
     suggestedColors: ["#FF6B5B", "#6366F1", "#10B981", "#F59E0B", "#EC4899"],
-    pageCount: 9,
-    compact: false,
+    pageCount: 6,
     previewImage: "/previews/2.jpg",
   },
   {
     id: 3,
-    name: "Elegant",
+    name: "Linen",
     style: "Sophisticated & Refined",
-    displayFont: "'Playfair Display', serif",
+    displayFont: "'Cormorant Garamond', serif",
     gradient: "linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #C9A962 100%)",
     accentDefault: "#C9A962",
     suggestedColors: ["#C9A962", "#7B8EA8", "#9B6B5E", "#A080B0", "#6B8E6B"],
-    pageCount: 9,
-    compact: false,
+    pageCount: 6,
     previewImage: "/previews/3.jpg",
   },
   {
     id: 5,
-    name: "Bold",
+    name: "Atlas",
     style: "Impactful & Striking",
-    displayFont: "'Clash Display', sans-serif",
+    displayFont: "'Barlow Condensed', sans-serif",
     gradient: "linear-gradient(135deg, #15216E 0%, #1a3a7a 50%, #D69649 100%)",
     accentDefault: "#D69649",
     suggestedColors: ["#D69649", "#4F9BDA", "#E05A47", "#6BBF59", "#C77DBA"],
-    pageCount: 9,
-    compact: true,
+    pageCount: 6,
     previewImage: "/previews/5.jpg",
   },
 ];
@@ -134,35 +130,26 @@ export const THEMES: Theme[] = [
 // ============================================
 
 // -----------------------------------------------------------------------------
-// PAGE ID CONTRACT — must match the keys used in base.jinja2 page_set checks.
-// Template page order: cover → contents → aerial → property → analysis →
-//                      market_trends → comparables → range
+// PAGE ID CONTRACT — the six pages of the shared property architecture,
+// in document order: `PropertyReportBuilder.V2_PAGE_ORDER` in
+// apps/worker/src/worker/property_builder.py. Every theme renders these and
+// only these. `required` mirrors the builder's `REQUIRED_PAGES`: the builder
+// adds a required page even if it is not sent, so the lock here is the truth
+// about the document, not a UI preference.
+//
+// This replaced FULL_PAGES and COMPACT_PAGES, two copies of the retired
+// nine-page set. Neither listed `notes`, so every atlas report from the wizard
+// rendered without its notes page (agent panel and explainers).
+// `tests/test_wizard_pages_match_the_builder.py` asserts this list against
+// the builder by parsing both files.
 // -----------------------------------------------------------------------------
-
-// NOTE: FULL_PAGES and COMPACT_PAGES map to the standalone *_report.jinja2
-// template pages. market_trends is now ported to all 5 standalone templates.
-export const FULL_PAGES: ReportPage[] = [
-  { id: "cover",           name: "Cover",               required: false },
-  { id: "overview",        name: "Executive Summary",   required: false },
-  { id: "contents",        name: "Table of Contents",   required: false },
-  { id: "aerial",          name: "Aerial View",         required: false },
-  { id: "property",        name: "Property Details",    required: true  },
-  { id: "analysis",        name: "Area Sales Analysis", required: false },
-  { id: "market_trends",   name: "Market Trends",       required: false },
-  { id: "comparables",     name: "Sales Comparables",   required: true  },
-  { id: "range",           name: "Range of Sales",      required: false },
-];
-
-export const COMPACT_PAGES: ReportPage[] = [
-  { id: "cover",           name: "Cover",               required: false },
-  { id: "overview",        name: "Executive Summary",   required: false },
-  { id: "contents",        name: "Table of Contents",   required: false },
-  { id: "aerial",          name: "Aerial View",         required: false },
-  { id: "property",        name: "Property Details",    required: true  },
-  { id: "analysis",        name: "Area Sales Analysis", required: false },
-  { id: "market_trends",   name: "Market Trends",       required: false },
-  { id: "comparables",     name: "Sales Comparables",   required: true  },
-  { id: "range",           name: "Range of Sales",      required: false },
+export const REPORT_PAGES: ReportPage[] = [
+  { id: "cover",         name: "Cover & summary",   required: true  },
+  { id: "property",      name: "Your home",         required: true  },
+  { id: "comparables",   name: "Comparable sales",  required: true  },
+  { id: "range",         name: "Range of value",    required: false },
+  { id: "market_trends", name: "Market trends",     required: false },
+  { id: "notes",         name: "Agent & notes",     required: true  },
 ];
 
 // ============================================

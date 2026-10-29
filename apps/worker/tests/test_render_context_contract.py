@@ -40,8 +40,6 @@ OPTIONAL = {
     "accent_color": "set by tasks.py from the theme, not by a report builder",
     "branding": "set by tasks.py from the affiliate row",
     "report_type": "set by tasks.py after the builder returns",
-    "ai_insights": "set by tasks.py from the narrative generator, and the "
-                   "report is complete without it",
     "agent_name": "read out of `branding`, not out of report_data's top level",
     "company_name": "as agent_name",
 }

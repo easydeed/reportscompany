@@ -1,0 +1,30 @@
+[
+  {
+    "name": "D-177 reverts: accent_ink guaranteed against white only",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "        \"theme_color_on_light\": _ensure_readable_on_light(\n            hex_color, \"#ffffff\", derive_theme(hex_color)[\"tint\"]),",
+    "new": "        \"theme_color_on_light\": _ensure_readable_on_light(hex_color, \"#ffffff\"),",
+    "test": "tests/test_market_token_mapping.py"
+  },
+  {
+    "name": "the multi-surface loop checks only the first surface",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "        if all(_contrast(current, bg) >= AA_NORMAL for bg in surfaces):",
+    "new": "        if _contrast(current, surfaces[0]) >= AA_NORMAL:",
+    "test": "tests/test_market_token_mapping.py"
+  },
+  {
+    "name": "the pre-fix measurement is dropped from the mapping document",
+    "file": "docs/MARKET_TOKEN_MAPPING_2026-10-07.md",
+    "old": "Crimson 4.41, Forest 4.39, lime 4.47, teal 4.38, two of them shipping presets.",
+    "new": "several brands, two of them shipping presets.",
+    "test": "tests/test_market_token_mapping.py"
+  },
+  {
+    "name": "a derived role disappears from TOKENS",
+    "file": "apps/worker/src/worker/themes.py",
+    "old": "          \"primary_on_dark\", \"display_ink\")",
+    "new": "          \"primary_on_dark\")",
+    "test": "tests/test_market_token_mapping.py"
+  }
+]

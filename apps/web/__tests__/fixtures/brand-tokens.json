@@ -1,0 +1,1602 @@
+[
+ {
+  "primary": "#18235c",
+  "primaryInk": "#18235c",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f2f5",
+  "primaryOnDark": "#5d76ff",
+  "input": "#18235c"
+ },
+ {
+  "primary": "#f59e0b",
+  "primaryInk": "#9f6708",
+  "onPrimary": "#14151a",
+  "tint": "#fef9f0",
+  "primaryOnDark": "#f59e0b",
+  "input": "#F59E0B"
+ },
+ {
+  "primary": "#84cc16",
+  "primaryInk": "#517c0e",
+  "onPrimary": "#14151a",
+  "tint": "#f8fcf1",
+  "primaryOnDark": "#84cc16",
+  "input": "#84CC16"
+ },
+ {
+  "primary": "#dc2626",
+  "primaryInk": "#cf2424",
+  "onPrimary": "#ffffff",
+  "tint": "#fdf2f2",
+  "primaryOnDark": "#fa2c2c",
+  "input": "#DC2626"
+ },
+ {
+  "primary": "#0d9488",
+  "primaryInk": "#0a7b71",
+  "onPrimary": "#14151a",
+  "tint": "#f0f9f8",
+  "primaryOnDark": "#0d9488",
+  "input": "#0D9488"
+ },
+ {
+  "primary": "#0e7490",
+  "primaryInk": "#0e7490",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f7f8",
+  "primaryOnDark": "#118cae",
+  "input": "#0E7490"
+ },
+ {
+  "primary": "#7c3aed",
+  "primaryInk": "#7c3aed",
+  "onPrimary": "#ffffff",
+  "tint": "#f7f3fe",
+  "primaryOnDark": "#9e66ff",
+  "input": "#7C3AED"
+ },
+ {
+  "primary": "#4f46e5",
+  "primaryInk": "#4f46e5",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f4fd",
+  "primaryOnDark": "#766cff",
+  "input": "#4F46E5"
+ },
+ {
+  "primary": "#7f1d1d",
+  "primaryInk": "#7f1d1d",
+  "onPrimary": "#ffffff",
+  "tint": "#f7f1f1",
+  "primaryOnDark": "#f73535",
+  "input": "#7F1D1D"
+ },
+ {
+  "primary": "#14532d",
+  "primaryInk": "#14532d",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f5f2",
+  "primaryOnDark": "#229957",
+  "input": "#14532D"
+ },
+ {
+  "primary": "#1d4ed8",
+  "primaryInk": "#1d4ed8",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f4fd",
+  "primaryOnDark": "#4979ff",
+  "input": "#1D4ED8"
+ },
+ {
+  "primary": "#ffffff",
+  "primaryInk": "#727272",
+  "onPrimary": "#14151a",
+  "tint": "#ffffff",
+  "primaryOnDark": "#ffffff",
+  "input": "#ffffff"
+ },
+ {
+  "primary": "#000000",
+  "primaryInk": "#000000",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f0f0",
+  "primaryOnDark": "#828282",
+  "input": "#000000"
+ },
+ {
+  "primary": "#808080",
+  "primaryInk": "#717171",
+  "onPrimary": "#14151a",
+  "tint": "#f7f7f7",
+  "primaryOnDark": "#808080",
+  "input": "#808080"
+ },
+ {
+  "primary": "#03374f",
+  "primaryInk": "#03374f",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f3f4",
+  "primaryOnDark": "#038bc7",
+  "input": "#03374f"
+ },
+ {
+  "primary": "#ff0000",
+  "primaryInk": "#d40000",
+  "onPrimary": "#14151a",
+  "tint": "#fff0f0",
+  "primaryOnDark": "#ff0a0a",
+  "input": "#ff0000"
+ },
+ {
+  "primary": "#00ff00",
+  "primaryInk": "#008100",
+  "onPrimary": "#14151a",
+  "tint": "#f0fff0",
+  "primaryOnDark": "#00ff00",
+  "input": "#00ff00"
+ },
+ {
+  "primary": "#0000ff",
+  "primaryInk": "#0000ff",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f0ff",
+  "primaryOnDark": "#6e6eff",
+  "input": "#0000ff"
+ },
+ {
+  "primary": "#ffff00",
+  "primaryInk": "#797900",
+  "onPrimary": "#14151a",
+  "tint": "#fffff0",
+  "primaryOnDark": "#ffff00",
+  "input": "#ffff00"
+ },
+ {
+  "primary": "#f26b2b",
+  "primaryInk": "#b14f20",
+  "onPrimary": "#14151a",
+  "tint": "#fef6f2",
+  "primaryOnDark": "#f26b2b",
+  "input": "#f26b2b"
+ },
+ {
+  "primary": "#fde047",
+  "primaryInk": "#807124",
+  "onPrimary": "#14151a",
+  "tint": "#fffdf4",
+  "primaryOnDark": "#fde047",
+  "input": "#fde047"
+ },
+ {
+  "primary": "#a3e635",
+  "primaryInk": "#577c1d",
+  "onPrimary": "#14151a",
+  "tint": "#f9fef3",
+  "primaryOnDark": "#a3e635",
+  "input": "#a3e635"
+ },
+ {
+  "primary": "#38bdf8",
+  "primaryInk": "#257ba1",
+  "onPrimary": "#14151a",
+  "tint": "#f3fbff",
+  "primaryOnDark": "#38bdf8",
+  "input": "#38bdf8"
+ },
+ {
+  "primary": "#f472b6",
+  "primaryInk": "#a84f7d",
+  "onPrimary": "#14151a",
+  "tint": "#fef7fb",
+  "primaryOnDark": "#f472b6",
+  "input": "#f472b6"
+ },
+ {
+  "primary": "#e5e7eb",
+  "primaryInk": "#757577",
+  "onPrimary": "#14151a",
+  "tint": "#fdfefe",
+  "primaryOnDark": "#e5e7eb",
+  "input": "#e5e7eb"
+ },
+ {
+  "primary": "#1742cb",
+  "primaryInk": "#1742cb",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f4fc",
+  "primaryOnDark": "#4e7aff",
+  "input": "#1742cb"
+ },
+ {
+  "primary": "#6c9d40",
+  "primaryInk": "#557b32",
+  "onPrimary": "#14151a",
+  "tint": "#f6f9f4",
+  "primaryOnDark": "#6c9d40",
+  "input": "#6c9d40"
+ },
+ {
+  "primary": "#133fb9",
+  "primaryInk": "#133fb9",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f3fb",
+  "primaryOnDark": "#4c7cff",
+  "input": "#133fb9"
+ },
+ {
+  "primary": "#ff9de6",
+  "primaryInk": "#9b608c",
+  "onPrimary": "#14151a",
+  "tint": "#fff9fe",
+  "primaryOnDark": "#ff9de6",
+  "input": "#ff9de6"
+ },
+ {
+  "primary": "#48ae64",
+  "primaryInk": "#358049",
+  "onPrimary": "#14151a",
+  "tint": "#f4faf6",
+  "primaryOnDark": "#48ae64",
+  "input": "#48ae64"
+ },
+ {
+  "primary": "#8694d0",
+  "primaryInk": "#626d99",
+  "onPrimary": "#14151a",
+  "tint": "#f8f9fc",
+  "primaryOnDark": "#8694d0",
+  "input": "#8694d0"
+ },
+ {
+  "primary": "#03b317",
+  "primaryInk": "#038412",
+  "onPrimary": "#14151a",
+  "tint": "#f0faf1",
+  "primaryOnDark": "#03b317",
+  "input": "#03b317"
+ },
+ {
+  "primary": "#eb32fc",
+  "primaryInk": "#b827c5",
+  "onPrimary": "#14151a",
+  "tint": "#fef3ff",
+  "primaryOnDark": "#eb32fc",
+  "input": "#eb32fc"
+ },
+ {
+  "primary": "#7765f5",
+  "primaryInk": "#6959d8",
+  "onPrimary": "#14151a",
+  "tint": "#f7f6fe",
+  "primaryOnDark": "#7c69ff",
+  "input": "#7765f5"
+ },
+ {
+  "primary": "#6ed1b4",
+  "primaryInk": "#3f7767",
+  "onPrimary": "#14151a",
+  "tint": "#f6fcfa",
+  "primaryOnDark": "#6ed1b4",
+  "input": "#6ed1b4"
+ },
+ {
+  "primary": "#110151",
+  "primaryInk": "#110151",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f0f5",
+  "primaryOnDark": "#8c6fff",
+  "input": "#110151"
+ },
+ {
+  "primary": "#00acb5",
+  "primaryInk": "#007e85",
+  "onPrimary": "#14151a",
+  "tint": "#f0fafb",
+  "primaryOnDark": "#00acb5",
+  "input": "#00acb5"
+ },
+ {
+  "primary": "#6cfec4",
+  "primaryInk": "#378163",
+  "onPrimary": "#14151a",
+  "tint": "#f6fffb",
+  "primaryOnDark": "#6cfec4",
+  "input": "#6cfec4"
+ },
+ {
+  "primary": "#eb1cb9",
+  "primaryInk": "#c4179a",
+  "onPrimary": "#14151a",
+  "tint": "#fef1fb",
+  "primaryOnDark": "#eb1cb9",
+  "input": "#eb1cb9"
+ },
+ {
+  "primary": "#d08571",
+  "primaryInk": "#996253",
+  "onPrimary": "#14151a",
+  "tint": "#fcf8f6",
+  "primaryOnDark": "#d08571",
+  "input": "#d08571"
+ },
+ {
+  "primary": "#b4a7a5",
+  "primaryInk": "#756d6b",
+  "onPrimary": "#14151a",
+  "tint": "#fafafa",
+  "primaryOnDark": "#b4a7a5",
+  "input": "#b4a7a5"
+ },
+ {
+  "primary": "#687fa6",
+  "primaryInk": "#5c7093",
+  "onPrimary": "#14151a",
+  "tint": "#f6f7fa",
+  "primaryOnDark": "#6e87b0",
+  "input": "#687fa6"
+ },
+ {
+  "primary": "#6de1f5",
+  "primaryInk": "#3a7984",
+  "onPrimary": "#14151a",
+  "tint": "#f6fdfe",
+  "primaryOnDark": "#6de1f5",
+  "input": "#6de1f5"
+ },
+ {
+  "primary": "#ed75bf",
+  "primaryInk": "#a45184",
+  "onPrimary": "#14151a",
+  "tint": "#fef7fb",
+  "primaryOnDark": "#ed75bf",
+  "input": "#ed75bf"
+ },
+ {
+  "primary": "#2c2841",
+  "primaryInk": "#2c2841",
+  "onPrimary": "#ffffff",
+  "tint": "#f2f2f4",
+  "primaryOnDark": "#8776c3",
+  "input": "#2c2841"
+ },
+ {
+  "primary": "#6b848d",
+  "primaryInk": "#5f757d",
+  "onPrimary": "#14151a",
+  "tint": "#f6f8f8",
+  "primaryOnDark": "#6b848d",
+  "input": "#6b848d"
+ },
+ {
+  "primary": "#13595e",
+  "primaryInk": "#13595e",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f5f5",
+  "primaryOnDark": "#1f959a",
+  "input": "#13595e"
+ },
+ {
+  "primary": "#2ab9ea",
+  "primaryInk": "#1b7898",
+  "onPrimary": "#14151a",
+  "tint": "#f2fbfe",
+  "primaryOnDark": "#2ab9ea",
+  "input": "#2ab9ea"
+ },
+ {
+  "primary": "#646c1a",
+  "primaryInk": "#646c1a",
+  "onPrimary": "#ffffff",
+  "tint": "#f6f6f1",
+  "primaryOnDark": "#7f8a20",
+  "input": "#646c1a"
+ },
+ {
+  "primary": "#f9b205",
+  "primaryInk": "#8f6605",
+  "onPrimary": "#14151a",
+  "tint": "#fffaf0",
+  "primaryOnDark": "#f9b205",
+  "input": "#f9b205"
+ },
+ {
+  "primary": "#1cff1f",
+  "primaryInk": "#0f8111",
+  "onPrimary": "#14151a",
+  "tint": "#f1fff2",
+  "primaryOnDark": "#1cff1f",
+  "input": "#1cff1f"
+ },
+ {
+  "primary": "#b1848d",
+  "primaryInk": "#8a676f",
+  "onPrimary": "#14151a",
+  "tint": "#faf8f8",
+  "primaryOnDark": "#b1848d",
+  "input": "#b1848d"
+ },
+ {
+  "primary": "#4fc42c",
+  "primaryInk": "#347f1d",
+  "onPrimary": "#14151a",
+  "tint": "#f4fbf2",
+  "primaryOnDark": "#4fc42c",
+  "input": "#4fc42c"
+ },
+ {
+  "primary": "#4fb584",
+  "primaryInk": "#377d5b",
+  "onPrimary": "#14151a",
+  "tint": "#f4fbf8",
+  "primaryOnDark": "#4fb584",
+  "input": "#4fb584"
+ },
+ {
+  "primary": "#487488",
+  "primaryInk": "#487488",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f7f8",
+  "primaryOnDark": "#578fa6",
+  "input": "#487488"
+ },
+ {
+  "primary": "#c9d570",
+  "primaryInk": "#6d733c",
+  "onPrimary": "#14151a",
+  "tint": "#fcfcf6",
+  "primaryOnDark": "#c9d570",
+  "input": "#c9d570"
+ },
+ {
+  "primary": "#5a16bf",
+  "primaryInk": "#5a16bf",
+  "onPrimary": "#ffffff",
+  "tint": "#f5f1fb",
+  "primaryOnDark": "#9e58ff",
+  "input": "#5a16bf"
+ },
+ {
+  "primary": "#7e6a34",
+  "primaryInk": "#7e6a34",
+  "onPrimary": "#ffffff",
+  "tint": "#f7f6f3",
+  "primaryOnDark": "#9c8540",
+  "input": "#7e6a34"
+ },
+ {
+  "primary": "#fc6a2a",
+  "primaryInk": "#b94e1f",
+  "onPrimary": "#14151a",
+  "tint": "#fff6f2",
+  "primaryOnDark": "#fc6a2a",
+  "input": "#fc6a2a"
+ },
+ {
+  "primary": "#57f58a",
+  "primaryInk": "#2f844b",
+  "onPrimary": "#14151a",
+  "tint": "#f5fef8",
+  "primaryOnDark": "#57f58a",
+  "input": "#57f58a"
+ },
+ {
+  "primary": "#792d4a",
+  "primaryInk": "#792d4a",
+  "onPrimary": "#ffffff",
+  "tint": "#f7f2f4",
+  "primaryOnDark": "#dd5586",
+  "input": "#792d4a"
+ },
+ {
+  "primary": "#95443f",
+  "primaryInk": "#95443f",
+  "onPrimary": "#ffffff",
+  "tint": "#f9f4f3",
+  "primaryOnDark": "#d16257",
+  "input": "#95443f"
+ },
+ {
+  "primary": "#c57cb6",
+  "primaryInk": "#915b85",
+  "onPrimary": "#14151a",
+  "tint": "#fcf7fb",
+  "primaryOnDark": "#c57cb6",
+  "input": "#c57cb6"
+ },
+ {
+  "primary": "#d5cd02",
+  "primaryInk": "#7a7602",
+  "onPrimary": "#14151a",
+  "tint": "#fcfcf0",
+  "primaryOnDark": "#d5cd02",
+  "input": "#d5cd02"
+ },
+ {
+  "primary": "#9cef82",
+  "primaryInk": "#507942",
+  "onPrimary": "#14151a",
+  "tint": "#f9fef8",
+  "primaryOnDark": "#9cef82",
+  "input": "#9cef82"
+ },
+ {
+  "primary": "#bc6305",
+  "primaryInk": "#a65705",
+  "onPrimary": "#14151a",
+  "tint": "#fbf6f0",
+  "primaryOnDark": "#c66805",
+  "input": "#bc6305"
+ },
+ {
+  "primary": "#534036",
+  "primaryInk": "#534036",
+  "onPrimary": "#ffffff",
+  "tint": "#f5f4f3",
+  "primaryOnDark": "#a3806e",
+  "input": "#534036"
+ },
+ {
+  "primary": "#76fdf6",
+  "primaryInk": "#3b807c",
+  "onPrimary": "#14151a",
+  "tint": "#f7fffe",
+  "primaryOnDark": "#76fdf6",
+  "input": "#76fdf6"
+ },
+ {
+  "primary": "#aa1a26",
+  "primaryInk": "#aa1a26",
+  "onPrimary": "#ffffff",
+  "tint": "#faf1f2",
+  "primaryOnDark": "#fa2a36",
+  "input": "#aa1a26"
+ },
+ {
+  "primary": "#3318b9",
+  "primaryInk": "#3318b9",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f1fb",
+  "primaryOnDark": "#886fff",
+  "input": "#3318b9"
+ },
+ {
+  "primary": "#abe45e",
+  "primaryInk": "#5c7b33",
+  "onPrimary": "#14151a",
+  "tint": "#fafdf5",
+  "primaryOnDark": "#abe45e",
+  "input": "#abe45e"
+ },
+ {
+  "primary": "#f8b6c1",
+  "primaryInk": "#8e686f",
+  "onPrimary": "#14151a",
+  "tint": "#fffbfb",
+  "primaryOnDark": "#f8b6c1",
+  "input": "#f8b6c1"
+ },
+ {
+  "primary": "#d4762e",
+  "primaryInk": "#a55c24",
+  "onPrimary": "#14151a",
+  "tint": "#fcf7f2",
+  "primaryOnDark": "#d4762e",
+  "input": "#d4762e"
+ },
+ {
+  "primary": "#3b7e25",
+  "primaryInk": "#3b7e25",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f7f2",
+  "primaryOnDark": "#45922b",
+  "input": "#3b7e25"
+ },
+ {
+  "primary": "#23516e",
+  "primaryInk": "#23516e",
+  "onPrimary": "#ffffff",
+  "tint": "#f2f5f6",
+  "primaryOnDark": "#3889b4",
+  "input": "#23516e"
+ },
+ {
+  "primary": "#fca98a",
+  "primaryInk": "#9a6755",
+  "onPrimary": "#14151a",
+  "tint": "#fffaf8",
+  "primaryOnDark": "#fca98a",
+  "input": "#fca98a"
+ },
+ {
+  "primary": "#9c53eb",
+  "primaryInk": "#8a49d0",
+  "onPrimary": "#ffffff",
+  "tint": "#f9f5fe",
+  "primaryOnDark": "#aa5bff",
+  "input": "#9c53eb"
+ },
+ {
+  "primary": "#443ed1",
+  "primaryInk": "#443ed1",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f3fc",
+  "primaryOnDark": "#7a74ff",
+  "input": "#443ed1"
+ },
+ {
+  "primary": "#1b89c4",
+  "primaryInk": "#1772a3",
+  "onPrimary": "#14151a",
+  "tint": "#f1f8fb",
+  "primaryOnDark": "#1b89c4",
+  "input": "#1b89c4"
+ },
+ {
+  "primary": "#0de488",
+  "primaryInk": "#08834e",
+  "onPrimary": "#14151a",
+  "tint": "#f0fdf8",
+  "primaryOnDark": "#0de488",
+  "input": "#0de488"
+ },
+ {
+  "primary": "#990eef",
+  "primaryInk": "#990eef",
+  "onPrimary": "#ffffff",
+  "tint": "#f9f1fe",
+  "primaryOnDark": "#bc4bff",
+  "input": "#990eef"
+ },
+ {
+  "primary": "#5f68f2",
+  "primaryInk": "#5962e3",
+  "onPrimary": "#ffffff",
+  "tint": "#f5f6fe",
+  "primaryOnDark": "#6e77ff",
+  "input": "#5f68f2"
+ },
+ {
+  "primary": "#b41437",
+  "primaryInk": "#b41437",
+  "onPrimary": "#ffffff",
+  "tint": "#faf1f3",
+  "primaryOnDark": "#fa1b4c",
+  "input": "#b41437"
+ },
+ {
+  "primary": "#451038",
+  "primaryInk": "#451038",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f1f3",
+  "primaryOnDark": "#e530b8",
+  "input": "#451038"
+ },
+ {
+  "primary": "#98c8a0",
+  "primaryInk": "#5c7a62",
+  "onPrimary": "#14151a",
+  "tint": "#f9fcf9",
+  "primaryOnDark": "#98c8a0",
+  "input": "#98c8a0"
+ },
+ {
+  "primary": "#06f1b7",
+  "primaryInk": "#068262",
+  "onPrimary": "#14151a",
+  "tint": "#f0fefb",
+  "primaryOnDark": "#06f1b7",
+  "input": "#06f1b7"
+ },
+ {
+  "primary": "#382ff5",
+  "primaryInk": "#382ff5",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f3fe",
+  "primaryOnDark": "#766dff",
+  "input": "#382ff5"
+ },
+ {
+  "primary": "#850aa5",
+  "primaryInk": "#850aa5",
+  "onPrimary": "#ffffff",
+  "tint": "#f8f0fa",
+  "primaryOnDark": "#d127ff",
+  "input": "#850aa5"
+ },
+ {
+  "primary": "#cef803",
+  "primaryInk": "#687d03",
+  "onPrimary": "#14151a",
+  "tint": "#fcfff0",
+  "primaryOnDark": "#cef803",
+  "input": "#cef803"
+ },
+ {
+  "primary": "#d6fdd0",
+  "primaryInk": "#667863",
+  "onPrimary": "#14151a",
+  "tint": "#fdfffc",
+  "primaryOnDark": "#d6fdd0",
+  "input": "#d6fdd0"
+ },
+ {
+  "primary": "#a868ae",
+  "primaryInk": "#955c9a",
+  "onPrimary": "#14151a",
+  "tint": "#faf6fa",
+  "primaryOnDark": "#b26eb8",
+  "input": "#a868ae"
+ },
+ {
+  "primary": "#c33668",
+  "primaryInk": "#c33668",
+  "onPrimary": "#ffffff",
+  "tint": "#fbf3f6",
+  "primaryOnDark": "#eb427c",
+  "input": "#c33668"
+ },
+ {
+  "primary": "#8d9eb6",
+  "primaryInk": "#626e7d",
+  "onPrimary": "#14151a",
+  "tint": "#f8f9fb",
+  "primaryOnDark": "#8d9eb6",
+  "input": "#8d9eb6"
+ },
+ {
+  "primary": "#710bf6",
+  "primaryInk": "#710bf6",
+  "onPrimary": "#ffffff",
+  "tint": "#f6f0fe",
+  "primaryOnDark": "#a55bff",
+  "input": "#710bf6"
+ },
+ {
+  "primary": "#b3bb4b",
+  "primaryInk": "#6e722e",
+  "onPrimary": "#14151a",
+  "tint": "#fafbf4",
+  "primaryOnDark": "#b3bb4b",
+  "input": "#b3bb4b"
+ },
+ {
+  "primary": "#4ef5d1",
+  "primaryInk": "#277c69",
+  "onPrimary": "#14151a",
+  "tint": "#f4fefc",
+  "primaryOnDark": "#4ef5d1",
+  "input": "#4ef5d1"
+ },
+ {
+  "primary": "#06255d",
+  "primaryInk": "#06255d",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f2f5",
+  "primaryOnDark": "#347bff",
+  "input": "#06255d"
+ },
+ {
+  "primary": "#b52293",
+  "primaryInk": "#b52293",
+  "onPrimary": "#ffffff",
+  "tint": "#fbf2f9",
+  "primaryOnDark": "#e72cbb",
+  "input": "#b52293"
+ },
+ {
+  "primary": "#4f23a4",
+  "primaryInk": "#4f23a4",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f2fa",
+  "primaryOnDark": "#985dff",
+  "input": "#4f23a4"
+ },
+ {
+  "primary": "#cc4a99",
+  "primaryInk": "#b44287",
+  "onPrimary": "#14151a",
+  "tint": "#fcf4f9",
+  "primaryOnDark": "#d64ea1",
+  "input": "#cc4a99"
+ },
+ {
+  "primary": "#e76969",
+  "primaryInk": "#b45252",
+  "onPrimary": "#14151a",
+  "tint": "#fef6f6",
+  "primaryOnDark": "#e76969",
+  "input": "#e76969"
+ },
+ {
+  "primary": "#3dbc49",
+  "primaryInk": "#2a8233",
+  "onPrimary": "#14151a",
+  "tint": "#f3fbf4",
+  "primaryOnDark": "#3dbc49",
+  "input": "#3dbc49"
+ },
+ {
+  "primary": "#9c0f94",
+  "primaryInk": "#9c0f94",
+  "onPrimary": "#ffffff",
+  "tint": "#f9f1f9",
+  "primaryOnDark": "#e216da",
+  "input": "#9c0f94"
+ },
+ {
+  "primary": "#13513b",
+  "primaryInk": "#13513b",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f5f3",
+  "primaryOnDark": "#21976c",
+  "input": "#13513b"
+ },
+ {
+  "primary": "#1e44c4",
+  "primaryInk": "#1e44c4",
+  "onPrimary": "#ffffff",
+  "tint": "#f2f4fb",
+  "primaryOnDark": "#517bff",
+  "input": "#1e44c4"
+ },
+ {
+  "primary": "#37d66b",
+  "primaryInk": "#228342",
+  "onPrimary": "#14151a",
+  "tint": "#f3fdf6",
+  "primaryOnDark": "#37d66b",
+  "input": "#37d66b"
+ },
+ {
+  "primary": "#20c6e2",
+  "primaryInk": "#147889",
+  "onPrimary": "#14151a",
+  "tint": "#f2fcfd",
+  "primaryOnDark": "#20c6e2",
+  "input": "#20c6e2"
+ },
+ {
+  "primary": "#609080",
+  "primaryInk": "#50776a",
+  "onPrimary": "#14151a",
+  "tint": "#f5f8f7",
+  "primaryOnDark": "#609080",
+  "input": "#609080"
+ },
+ {
+  "primary": "#c32796",
+  "primaryInk": "#c32796",
+  "onPrimary": "#ffffff",
+  "tint": "#fbf2f9",
+  "primaryOnDark": "#eb2fb6",
+  "input": "#c32796"
+ },
+ {
+  "primary": "#69fd58",
+  "primaryInk": "#35802d",
+  "onPrimary": "#14151a",
+  "tint": "#f6fff5",
+  "primaryOnDark": "#69fd58",
+  "input": "#69fd58"
+ },
+ {
+  "primary": "#b575e4",
+  "primaryInk": "#8d5bb2",
+  "onPrimary": "#14151a",
+  "tint": "#fbf7fd",
+  "primaryOnDark": "#b575e4",
+  "input": "#b575e4"
+ },
+ {
+  "primary": "#8fb23c",
+  "primaryInk": "#627b29",
+  "onPrimary": "#14151a",
+  "tint": "#f8faf3",
+  "primaryOnDark": "#8fb23c",
+  "input": "#8fb23c"
+ },
+ {
+  "primary": "#cd9088",
+  "primaryInk": "#8d635e",
+  "onPrimary": "#14151a",
+  "tint": "#fcf8f8",
+  "primaryOnDark": "#cd9088",
+  "input": "#cd9088"
+ },
+ {
+  "primary": "#8f3bab",
+  "primaryInk": "#8f3bab",
+  "onPrimary": "#ffffff",
+  "tint": "#f8f3fa",
+  "primaryOnDark": "#bc4fdd",
+  "input": "#8f3bab"
+ },
+ {
+  "primary": "#e5bdac",
+  "primaryInk": "#846d62",
+  "onPrimary": "#14151a",
+  "tint": "#fdfbfa",
+  "primaryOnDark": "#e5bdac",
+  "input": "#e5bdac"
+ },
+ {
+  "primary": "#859392",
+  "primaryInk": "#687372",
+  "onPrimary": "#14151a",
+  "tint": "#f8f9f8",
+  "primaryOnDark": "#859392",
+  "input": "#859392"
+ },
+ {
+  "primary": "#43997b",
+  "primaryInk": "#347760",
+  "onPrimary": "#14151a",
+  "tint": "#f4f9f7",
+  "primaryOnDark": "#43997b",
+  "input": "#43997b"
+ },
+ {
+  "primary": "#c72e7a",
+  "primaryInk": "#c72e7a",
+  "onPrimary": "#ffffff",
+  "tint": "#fcf2f7",
+  "primaryOnDark": "#ef3692",
+  "input": "#c72e7a"
+ },
+ {
+  "primary": "#7890f0",
+  "primaryInk": "#5869b0",
+  "onPrimary": "#14151a",
+  "tint": "#f7f8fe",
+  "primaryOnDark": "#7890f0",
+  "input": "#7890f0"
+ },
+ {
+  "primary": "#6e82fc",
+  "primaryInk": "#5666c5",
+  "onPrimary": "#14151a",
+  "tint": "#f6f8ff",
+  "primaryOnDark": "#6e82fc",
+  "input": "#6e82fc"
+ },
+ {
+  "primary": "#373a94",
+  "primaryInk": "#373a94",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f3f9",
+  "primaryOnDark": "#6c6fff",
+  "input": "#373a94"
+ },
+ {
+  "primary": "#70b1db",
+  "primaryInk": "#48738e",
+  "onPrimary": "#14151a",
+  "tint": "#f6fafd",
+  "primaryOnDark": "#70b1db",
+  "input": "#70b1db"
+ },
+ {
+  "primary": "#a205ea",
+  "primaryInk": "#a205ea",
+  "onPrimary": "#ffffff",
+  "tint": "#f9f0fe",
+  "primaryOnDark": "#c341ff",
+  "input": "#a205ea"
+ },
+ {
+  "primary": "#3daee3",
+  "primaryInk": "#2a789c",
+  "onPrimary": "#14151a",
+  "tint": "#f3fafd",
+  "primaryOnDark": "#3daee3",
+  "input": "#3daee3"
+ },
+ {
+  "primary": "#022695",
+  "primaryInk": "#022695",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f2f9",
+  "primaryOnDark": "#4879ff",
+  "input": "#022695"
+ },
+ {
+  "primary": "#c6c6df",
+  "primaryInk": "#717180",
+  "onPrimary": "#14151a",
+  "tint": "#fcfcfd",
+  "primaryOnDark": "#c6c6df",
+  "input": "#c6c6df"
+ },
+ {
+  "primary": "#315313",
+  "primaryInk": "#315313",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f5f1",
+  "primaryOnDark": "#558f1f",
+  "input": "#315313"
+ },
+ {
+  "primary": "#9879bf",
+  "primaryInk": "#7e659f",
+  "onPrimary": "#14151a",
+  "tint": "#f9f7fb",
+  "primaryOnDark": "#9879bf",
+  "input": "#9879bf"
+ },
+ {
+  "primary": "#4ddafb",
+  "primaryInk": "#2c7d90",
+  "onPrimary": "#14151a",
+  "tint": "#f4fdff",
+  "primaryOnDark": "#4ddafb",
+  "input": "#4ddafb"
+ },
+ {
+  "primary": "#6b73b0",
+  "primaryInk": "#656ca5",
+  "onPrimary": "#ffffff",
+  "tint": "#f6f7fa",
+  "primaryOnDark": "#7781c4",
+  "input": "#6b73b0"
+ },
+ {
+  "primary": "#29c998",
+  "primaryInk": "#197b5c",
+  "onPrimary": "#14151a",
+  "tint": "#f2fcf9",
+  "primaryOnDark": "#29c998",
+  "input": "#29c998"
+ },
+ {
+  "primary": "#89f37a",
+  "primaryInk": "#467b3e",
+  "onPrimary": "#14151a",
+  "tint": "#f8fef7",
+  "primaryOnDark": "#89f37a",
+  "input": "#89f37a"
+ },
+ {
+  "primary": "#e73d8f",
+  "primaryInk": "#c03376",
+  "onPrimary": "#14151a",
+  "tint": "#fef3f8",
+  "primaryOnDark": "#e73d8f",
+  "input": "#e73d8f"
+ },
+ {
+  "primary": "#68007b",
+  "primaryInk": "#68007b",
+  "onPrimary": "#ffffff",
+  "tint": "#f6f0f7",
+  "primaryOnDark": "#dd00fd",
+  "input": "#68007b"
+ },
+ {
+  "primary": "#087b7c",
+  "primaryInk": "#087b7c",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f7f7",
+  "primaryOnDark": "#0a8f90",
+  "input": "#087b7c"
+ },
+ {
+  "primary": "#01d6da",
+  "primaryInk": "#017b7d",
+  "onPrimary": "#14151a",
+  "tint": "#f0fdfd",
+  "primaryOnDark": "#01d6da",
+  "input": "#01d6da"
+ },
+ {
+  "primary": "#319c0a",
+  "primaryInk": "#288208",
+  "onPrimary": "#14151a",
+  "tint": "#f3f9f0",
+  "primaryOnDark": "#319c0a",
+  "input": "#319c0a"
+ },
+ {
+  "primary": "#3fd872",
+  "primaryInk": "#268446",
+  "onPrimary": "#14151a",
+  "tint": "#f3fdf7",
+  "primaryOnDark": "#3fd872",
+  "input": "#3fd872"
+ },
+ {
+  "primary": "#8620cc",
+  "primaryInk": "#8620cc",
+  "onPrimary": "#ffffff",
+  "tint": "#f8f2fc",
+  "primaryOnDark": "#b648ff",
+  "input": "#8620cc"
+ },
+ {
+  "primary": "#41f3a7",
+  "primaryInk": "#23835a",
+  "onPrimary": "#14151a",
+  "tint": "#f4fefa",
+  "primaryOnDark": "#41f3a7",
+  "input": "#41f3a7"
+ },
+ {
+  "primary": "#f674b8",
+  "primaryInk": "#a9507f",
+  "onPrimary": "#14151a",
+  "tint": "#fef7fb",
+  "primaryOnDark": "#f674b8",
+  "input": "#f674b8"
+ },
+ {
+  "primary": "#e47952",
+  "primaryInk": "#a7593c",
+  "onPrimary": "#14151a",
+  "tint": "#fdf7f5",
+  "primaryOnDark": "#e47952",
+  "input": "#e47952"
+ },
+ {
+  "primary": "#98a59e",
+  "primaryInk": "#68726e",
+  "onPrimary": "#14151a",
+  "tint": "#f9faf9",
+  "primaryOnDark": "#98a59e",
+  "input": "#98a59e"
+ },
+ {
+  "primary": "#607b3a",
+  "primaryInk": "#5a7437",
+  "onPrimary": "#ffffff",
+  "tint": "#f5f7f3",
+  "primaryOnDark": "#708f44",
+  "input": "#607b3a"
+ },
+ {
+  "primary": "#759093",
+  "primaryInk": "#5b7073",
+  "onPrimary": "#14151a",
+  "tint": "#f7f8f9",
+  "primaryOnDark": "#759093",
+  "input": "#759093"
+ },
+ {
+  "primary": "#290fe7",
+  "primaryInk": "#290fe7",
+  "onPrimary": "#ffffff",
+  "tint": "#f2f1fe",
+  "primaryOnDark": "#7f6bff",
+  "input": "#290fe7"
+ },
+ {
+  "primary": "#5e0486",
+  "primaryInk": "#5e0486",
+  "onPrimary": "#ffffff",
+  "tint": "#f5f0f8",
+  "primaryOnDark": "#c540ff",
+  "input": "#5e0486"
+ },
+ {
+  "primary": "#ae98a7",
+  "primaryInk": "#786874",
+  "onPrimary": "#14151a",
+  "tint": "#faf9fa",
+  "primaryOnDark": "#ae98a7",
+  "input": "#ae98a7"
+ },
+ {
+  "primary": "#e40682",
+  "primaryInk": "#d6067a",
+  "onPrimary": "#ffffff",
+  "tint": "#fdf0f8",
+  "primaryOnDark": "#f8068e",
+  "input": "#e40682"
+ },
+ {
+  "primary": "#ed439d",
+  "primaryInk": "#c53783",
+  "onPrimary": "#14151a",
+  "tint": "#fef4f9",
+  "primaryOnDark": "#ed439d",
+  "input": "#ed439d"
+ },
+ {
+  "primary": "#67186d",
+  "primaryInk": "#67186d",
+  "onPrimary": "#ffffff",
+  "tint": "#f6f1f6",
+  "primaryOnDark": "#df30e5",
+  "input": "#67186d"
+ },
+ {
+  "primary": "#02a658",
+  "primaryInk": "#028245",
+  "onPrimary": "#14151a",
+  "tint": "#f0faf5",
+  "primaryOnDark": "#02a658",
+  "input": "#02a658"
+ },
+ {
+  "primary": "#50305c",
+  "primaryInk": "#50305c",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f3f5",
+  "primaryOnDark": "#b367ca",
+  "input": "#50305c"
+ },
+ {
+  "primary": "#0785af",
+  "primaryInk": "#07769a",
+  "onPrimary": "#14151a",
+  "tint": "#f0f8fa",
+  "primaryOnDark": "#078db9",
+  "input": "#0785af"
+ },
+ {
+  "primary": "#b671dc",
+  "primaryInk": "#8e58ac",
+  "onPrimary": "#14151a",
+  "tint": "#fbf6fd",
+  "primaryOnDark": "#b671dc",
+  "input": "#b671dc"
+ },
+ {
+  "primary": "#fa06bb",
+  "primaryInk": "#d0069b",
+  "onPrimary": "#14151a",
+  "tint": "#fff0fb",
+  "primaryOnDark": "#fa06bb",
+  "input": "#fa06bb"
+ },
+ {
+  "primary": "#e5d145",
+  "primaryInk": "#7c7025",
+  "onPrimary": "#14151a",
+  "tint": "#fdfcf4",
+  "primaryOnDark": "#e5d145",
+  "input": "#e5d145"
+ },
+ {
+  "primary": "#5ac9d5",
+  "primaryInk": "#377b82",
+  "onPrimary": "#14151a",
+  "tint": "#f5fcfc",
+  "primaryOnDark": "#5ac9d5",
+  "input": "#5ac9d5"
+ },
+ {
+  "primary": "#e42f17",
+  "primaryInk": "#d62c16",
+  "onPrimary": "#ffffff",
+  "tint": "#fdf3f1",
+  "primaryOnDark": "#f83319",
+  "input": "#e42f17"
+ },
+ {
+  "primary": "#5c5b1a",
+  "primaryInk": "#5c5b1a",
+  "onPrimary": "#ffffff",
+  "tint": "#f5f5f1",
+  "primaryOnDark": "#8e8d29",
+  "input": "#5c5b1a"
+ },
+ {
+  "primary": "#ec48fa",
+  "primaryInk": "#ad35b8",
+  "onPrimary": "#14151a",
+  "tint": "#fef4ff",
+  "primaryOnDark": "#ec48fa",
+  "input": "#ec48fa"
+ },
+ {
+  "primary": "#a06c59",
+  "primaryInk": "#966654",
+  "onPrimary": "#ffffff",
+  "tint": "#f9f6f5",
+  "primaryOnDark": "#aa735f",
+  "input": "#a06c59"
+ },
+ {
+  "primary": "#189039",
+  "primaryInk": "#167f33",
+  "onPrimary": "#14151a",
+  "tint": "#f1f8f3",
+  "primaryOnDark": "#1a9a3d",
+  "input": "#189039"
+ },
+ {
+  "primary": "#f28aa7",
+  "primaryInk": "#9c5a6d",
+  "onPrimary": "#14151a",
+  "tint": "#fef8fa",
+  "primaryOnDark": "#f28aa7",
+  "input": "#f28aa7"
+ },
+ {
+  "primary": "#0a652f",
+  "primaryInk": "#0a652f",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f6f3",
+  "primaryOnDark": "#0f9748",
+  "input": "#0a652f"
+ },
+ {
+  "primary": "#45bf93",
+  "primaryInk": "#2d7c60",
+  "onPrimary": "#14151a",
+  "tint": "#f4fbf9",
+  "primaryOnDark": "#45bf93",
+  "input": "#45bf93"
+ },
+ {
+  "primary": "#181b5a",
+  "primaryInk": "#181b5a",
+  "onPrimary": "#ffffff",
+  "tint": "#f1f1f5",
+  "primaryOnDark": "#7174ff",
+  "input": "#181b5a"
+ },
+ {
+  "primary": "#a97280",
+  "primaryInk": "#956571",
+  "onPrimary": "#14151a",
+  "tint": "#faf7f7",
+  "primaryOnDark": "#a97280",
+  "input": "#a97280"
+ },
+ {
+  "primary": "#c81bff",
+  "primaryInk": "#b118e2",
+  "onPrimary": "#14151a",
+  "tint": "#fcf1ff",
+  "primaryOnDark": "#cc2fff",
+  "input": "#c81bff"
+ },
+ {
+  "primary": "#b2b38c",
+  "primaryInk": "#74755b",
+  "onPrimary": "#14151a",
+  "tint": "#fafaf8",
+  "primaryOnDark": "#b2b38c",
+  "input": "#b2b38c"
+ },
+ {
+  "primary": "#fed9eb",
+  "primaryInk": "#816e77",
+  "onPrimary": "#14151a",
+  "tint": "#fffdfe",
+  "primaryOnDark": "#fed9eb",
+  "input": "#fed9eb"
+ },
+ {
+  "primary": "#0a2448",
+  "primaryInk": "#0a2448",
+  "onPrimary": "#ffffff",
+  "tint": "#f0f2f4",
+  "primaryOnDark": "#1c7efc",
+  "input": "#0a2448"
+ },
+ {
+  "primary": "#d46c41",
+  "primaryInk": "#a55533",
+  "onPrimary": "#14151a",
+  "tint": "#fcf6f4",
+  "primaryOnDark": "#d46c41",
+  "input": "#d46c41"
+ },
+ {
+  "primary": "#e8dcfe",
+  "primaryInk": "#766f81",
+  "onPrimary": "#14151a",
+  "tint": "#fefdff",
+  "primaryOnDark": "#e8dcfe",
+  "input": "#e8dcfe"
+ },
+ {
+  "primary": "#acdd53",
+  "primaryInk": "#5c772d",
+  "onPrimary": "#14151a",
+  "tint": "#fafdf5",
+  "primaryOnDark": "#acdd53",
+  "input": "#acdd53"
+ },
+ {
+  "primary": "#8b43a7",
+  "primaryInk": "#8b43a7",
+  "onPrimary": "#ffffff",
+  "tint": "#f8f4fa",
+  "primaryOnDark": "#bb5be3",
+  "input": "#8b43a7"
+ },
+ {
+  "primary": "#f4f6e3",
+  "primaryInk": "#75756c",
+  "onPrimary": "#14151a",
+  "tint": "#fefefd",
+  "primaryOnDark": "#f4f6e3",
+  "input": "#f4f6e3"
+ },
+ {
+  "primary": "#218ee4",
+  "primaryInk": "#196fb2",
+  "onPrimary": "#14151a",
+  "tint": "#f2f8fd",
+  "primaryOnDark": "#218ee4",
+  "input": "#218ee4"
+ },
+ {
+  "primary": "#ff2d8e",
+  "primaryInk": "#c7236f",
+  "onPrimary": "#14151a",
+  "tint": "#fff2f8",
+  "primaryOnDark": "#ff2d8e",
+  "input": "#ff2d8e"
+ },
+ {
+  "primary": "#38bbec",
+  "primaryInk": "#257999",
+  "onPrimary": "#14151a",
+  "tint": "#f3fbfe",
+  "primaryOnDark": "#38bbec",
+  "input": "#38bbec"
+ },
+ {
+  "primary": "#99a9f5",
+  "primaryInk": "#636e9f",
+  "onPrimary": "#14151a",
+  "tint": "#f9fafe",
+  "primaryOnDark": "#99a9f5",
+  "input": "#99a9f5"
+ },
+ {
+  "primary": "#2a7c90",
+  "primaryInk": "#277587",
+  "onPrimary": "#ffffff",
+  "tint": "#f2f7f8",
+  "primaryOnDark": "#308ea4",
+  "input": "#2a7c90"
+ },
+ {
+  "primary": "#618289",
+  "primaryInk": "#567379",
+  "onPrimary": "#14151a",
+  "tint": "#f6f8f8",
+  "primaryOnDark": "#688c93",
+  "input": "#618289"
+ },
+ {
+  "primary": "#311950",
+  "primaryInk": "#311950",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f1f4",
+  "primaryOnDark": "#a058ff",
+  "input": "#311950"
+ },
+ {
+  "primary": "#4123b6",
+  "primaryInk": "#4123b6",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f2fb",
+  "primaryOnDark": "#8e6eff",
+  "input": "#4123b6"
+ },
+ {
+  "primary": "#24b978",
+  "primaryInk": "#188053",
+  "onPrimary": "#14151a",
+  "tint": "#f2fbf7",
+  "primaryOnDark": "#24b978",
+  "input": "#24b978"
+ },
+ {
+  "primary": "#c74b1b",
+  "primaryInk": "#bb4619",
+  "onPrimary": "#ffffff",
+  "tint": "#fcf4f1",
+  "primaryOnDark": "#e5571e",
+  "input": "#c74b1b"
+ },
+ {
+  "primary": "#c8b913",
+  "primaryInk": "#7a710b",
+  "onPrimary": "#14151a",
+  "tint": "#fcfbf1",
+  "primaryOnDark": "#c8b913",
+  "input": "#c8b913"
+ },
+ {
+  "primary": "#c72bcc",
+  "primaryInk": "#bb28c0",
+  "onPrimary": "#ffffff",
+  "tint": "#fcf2fc",
+  "primaryOnDark": "#db2fe0",
+  "input": "#c72bcc"
+ },
+ {
+  "primary": "#925b85",
+  "primaryInk": "#925b85",
+  "onPrimary": "#ffffff",
+  "tint": "#f8f5f8",
+  "primaryOnDark": "#b06da0",
+  "input": "#925b85"
+ },
+ {
+  "primary": "#cbf1ee",
+  "primaryInk": "#617371",
+  "onPrimary": "#14151a",
+  "tint": "#fcfefe",
+  "primaryOnDark": "#cbf1ee",
+  "input": "#cbf1ee"
+ },
+ {
+  "primary": "#2f6921",
+  "primaryInk": "#2f6921",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f6f2",
+  "primaryOnDark": "#43912d",
+  "input": "#2f6921"
+ },
+ {
+  "primary": "#363578",
+  "primaryInk": "#363578",
+  "onPrimary": "#ffffff",
+  "tint": "#f3f3f7",
+  "primaryOnDark": "#7271f0",
+  "input": "#363578"
+ },
+ {
+  "primary": "#15b9c8",
+  "primaryInk": "#0e7882",
+  "onPrimary": "#14151a",
+  "tint": "#f1fbfc",
+  "primaryOnDark": "#15b9c8",
+  "input": "#15b9c8"
+ },
+ {
+  "primary": "#b97821",
+  "primaryInk": "#9a641b",
+  "onPrimary": "#14151a",
+  "tint": "#fbf7f2",
+  "primaryOnDark": "#b97821",
+  "input": "#b97821"
+ },
+ {
+  "primary": "#4b23f9",
+  "primaryInk": "#4b23f9",
+  "onPrimary": "#ffffff",
+  "tint": "#f4f2ff",
+  "primaryOnDark": "#856aff",
+  "input": "#4b23f9"
+ },
+ {
+  "primary": "#61c76e",
+  "primaryInk": "#3f8147",
+  "onPrimary": "#14151a",
+  "tint": "#f6fcf6",
+  "primaryOnDark": "#61c76e",
+  "input": "#61c76e"
+ },
+ {
+  "primary": "#947e0c",
+  "primaryInk": "#836f0a",
+  "onPrimary": "#14151a",
+  "tint": "#f9f7f0",
+  "primaryOnDark": "#9e870d",
+  "input": "#947e0c"
+ },
+ {
+  "primary": "#a6e749",
+  "primaryInk": "#5a7c27",
+  "onPrimary": "#14151a",
+  "tint": "#fafef4",
+  "primaryOnDark": "#a6e749",
+  "input": "#a6e749"
+ },
+ {
+  "primary": "#a9eb82",
+  "primaryInk": "#5b7f46",
+  "onPrimary": "#14151a",
+  "tint": "#fafef8",
+  "primaryOnDark": "#a9eb82",
+  "input": "#a9eb82"
+ }
+]

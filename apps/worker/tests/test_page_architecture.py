@@ -69,14 +69,11 @@ def test_the_header_slot_carries_the_running_head_and_not_the_masthead():
     )
 
 
-def test_the_masthead_is_body_content():
-    base = (MARKET / "base.jinja2").read_text(encoding="utf-8")
-    macros = (MARKET / "macros.jinja2").read_text(encoding="utf-8")
-    assert "{% macro report_masthead(" in macros
-    assert "macros.report_masthead(" in base, (
-        "nothing renders the masthead. It lives in the body now; if it is not "
-        "called there, reports have no masthead at all."
-    )
+# `test_the_masthead_is_body_content` WAS HERE: it held that `base.jinja2` called
+# `macros.report_masthead`. The legacy page and the macro were deleted on
+# 2026-10-28; Design's `_v2` page draws its own band in the body, and
+# `test_the_header_slot_carries_the_running_head_and_not_the_masthead` above
+# still keeps a masthead out of the repeating header slot.
 
 
 @pytest.mark.parametrize("slot,inches", sorted(RESERVED.items()))
@@ -166,37 +163,9 @@ def test_the_running_head_falls_back_to_the_agent_then_to_the_title():
 
 # ── what still varies on page 1 ──────────────────────────────────────────────
 
-def test_the_masthead_title_cannot_wrap():
-    """The inverse of the test that used to live here, and the reason it flipped.
-
-    This started as a PINNED DEFECT: it asserted the title was free to wrap and
-    was to fail the day anyone bounded it, as the signal to re-measure
-    PAGE_1_CAPACITY. That day arrived. The bound is now the thing to protect.
-
-    What it protects: the title is the report type plus the CITY, and cities are
-    unbounded. At 24px a long one wrapped to a second line and moved page 1 by
-    0.300in, so page-1 capacity depended on which city an affiliate reported
-    (D-102). One line in a fixed-height box removes that, for every city at
-    once.
-    """
-    css = (MARKET / "base.jinja2").read_text(encoding="utf-8")
-    for selector, expect_px in (("masthead-title", "29px"), ("masthead-subtitle", "17px")):
-        rule = re.search(rf"\.{selector}\s*\{{(.*?)\}}", css, re.S)
-        assert rule, f".{selector} rule not found"
-        body = rule.group(1)
-        # The DECLARATION, not the substring: `line-height:` contains `height:`,
-        # which is what the first version of this file matched (§0.6).
-        height = re.search(r"(?:^|;)\s*height\s*:\s*([\d.]+px)", body)
-        assert height and height.group(1) == expect_px, (
-            f".{selector} must have a fixed pixel height ({expect_px}); found "
-            f"{height.group(1) if height else 'none'}. A height in `em` would "
-            f"move with the title's step-down and put the variability back."
-        )
-        assert re.search(r"white-space\s*:\s*nowrap", body), f".{selector} can wrap"
-        assert "text-overflow: ellipsis" in body, (
-            f".{selector} clips without an ellipsis — cropping mid-word reads as "
-            f"a rendering fault, where an ellipsis says a value was too long"
-        )
+# `test_the_masthead_title_cannot_wrap` WAS HERE: it read the legacy
+# `.masthead-title` / `.masthead-subtitle` rules in `base.jinja2`, deleted on
+# 2026-10-28. The `_v2` band's title has its own fit, gated with that page.
 
 
 def test_the_title_ladder_steps_down_for_a_long_city():

@@ -148,11 +148,16 @@ def test_an_empty_band_is_kept_and_counted_as_zero():
     assert all(b["count"] is not None for b in built["bands"])
 
 
-def test_the_empty_band_reaches_the_rendered_chart():
+def test_the_empty_band_reaches_the_rendered_page():
     """
-    The path, not just the data. `band_distribution_chart` draws "none" for a
-    zero band — added when it was unreachable, and this is the first test that
-    renders one.
+    The path, not just the data: a band computed with a count of 0 must appear
+    on the page a reader gets.
+
+    `price_bands` moved to Design's `_v2` page on 2026-10-08, so the marker
+    changed — the old chart printed the word "none" beside a zero-width bar
+    because a chart row with no bar reads as a missing row; the `_v2` row
+    carries a label, a median, days and $/sq ft, so it prints "0". What is
+    asserted is unchanged: the band is on the page and says zero.
     """
     from worker.market_builder import MarketReportBuilder
     prices = [620_000, 640_000, 660_000, 3_800_000]
@@ -163,11 +168,17 @@ def test_the_empty_band_reaches_the_rendered_chart():
         {"city": "Irvine", "lookback_days": 30,
          "closed_history": history(market(600, 600_000, 4_000_000, seed=10))},
     )
-    assert any(b["count"] == 0 for b in result["price_bands"])
+    empty = [b for b in result["price_bands"] if b["count"] == 0]
+    assert empty
     html = MarketReportBuilder({**result, "report_type": "price_bands",
                                 "branding": {}}).render_html()
-    assert ">none<" in html.replace(" ", "").replace("\n", "") or "none" in html, (
-        "the empty band rendered nothing at all"
+    for band in empty:
+        assert band["label"] in html, (
+            f"the empty band {band['label']!r} is not on the page at all"
+        )
+    assert '<span class="bcount">0</span>' in html, (
+        "no band rendered a count of zero, so the empty band is on the page "
+        "without saying it is empty"
     )
 
 
@@ -190,16 +201,33 @@ def test_too_little_history_falls_back_and_says_so_on_the_page():
     assert plenty["note"] is None
 
 
-def test_the_caveat_reaches_the_chart_caption():
+def test_the_caveat_reaches_the_rendered_page():
+    """D-111's disclosure, asserted on the PAGE and not on its producer.
+
+    This test called `_band_chart_note()` and asserted the string it returned.
+    That method's only consumer was `band_distribution_chart`, reached only
+    from `pricebands_layout` — so when `price_bands` moved to the `_v2` page
+    the caveat stopped reaching any reader and this test stayed green, because
+    a producer with no consumer still produces.
+
+    §0.6: a gate on a document must assert its claims, not its text. The
+    document here is the page, so the assertion renders it.
+    """
     from worker.market_builder import MarketReportBuilder
     rows = listings([700_000, 800_000, 1_100_000], days_on_market=9,
                     price_per_sqft=500, city="Irvine", street_address="1 A St")
     thin = build_result_json("price_bands", rows,
                              {"city": "Irvine", "lookback_days": 30,
                               "closed_history": history([900_000])})
-    note = MarketReportBuilder({**thin, "report_type": "price_bands",
-                                "branding": {}})._band_chart_note()
-    assert "may shift between reports" in note
+    builder = MarketReportBuilder({**thin, "report_type": "price_bands",
+                                   "branding": {}})
+    assert "may shift between reports" in builder._band_chart_note()
+    html = builder.render_html()
+    assert "may shift between reports" in html, (
+        "the boundaries came from this period's results and the page does not "
+        "say so — bands that may move look identical to bands that will not, "
+        "which is the defect D-111's rebuild exists to prevent"
+    )
 
 
 def test_a_listing_outside_the_years_range_still_lands_in_a_band():

@@ -1,266 +1,109 @@
 "use client"
 
+// /register — App v3. Same endpoint and payload ({ name, email, password }),
+// same router.push("/app") on success — which lands on the dashboard's
+// first-run state (dashboard-content.tsx) and from there into onboarding.
+//
+// What changed:
+// - AuthFrame replaces the two-panel layout. The benefits list and the dark
+//   panel are gone: the person on this page has already decided; the landing
+//   page made the case. The one line that matters ("Free plan, no time limit,
+//   no card") is the description.
+// - Terms checkbox → sentence under the button. The checkbox wasn't enforced
+//   (unchecked still submitted), so it was a required-looking control that
+//   wasn't required. Submitting IS the agreement; say so.
+// - Password hint tells the truth: the only rule the code enforces is 8+
+//   characters. The old hint demanded "a number and symbol" nothing checked.
+
 import * as React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Eye, EyeOff, ArrowRight, Check, AlertCircle } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-
-const benefits = [
-  // M3-T2: was "Unlimited market reports from live MLS data". This list is
-  // shown to someone signing up, and signup lands them on `free`, which is
-  // capped at 3 market reports a month. Only Growth Plus (`pro`) is unlimited,
-  // so the word promised the top tier's allowance to everyone reading it.
-  "Market reports from live MLS data",
-  "Branded email and PDF delivery on autopilot",
-  "Lead capture pages with QR code integration",
-  "Contact management with group segmentation",
-  "7 report types \u2014 one click each",
-]
+import { AuthFrame, AuthError, AuthSubmit, authLabel, authInput, authLink } from "@/components/auth/auth-frame"
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [showPassword, setShowPassword] = useState(false)
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.")
-      return
-    }
-
+    if (password.length < 8) { setError("Password needs at least 8 characters."); return }
     setLoading(true)
     try {
-      const fullName = [firstName, lastName].filter(Boolean).join(" ")
       const res = await fetch("/api/proxy/v1/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ name: fullName, email, password }),
+        body: JSON.stringify({ name: [firstName, lastName].filter(Boolean).join(" "), email, password }),
       })
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setError(
-          data?.detail ||
-            data?.message ||
-            "We couldn't create your account. Please check your details and try again."
-        )
+        setError(data?.detail || data?.message || "We couldn't create your account. Check your details and try again.")
         setLoading(false)
         return
       }
-
-      // On success, take new agent straight into the app
       router.push("/app")
-    } catch (err) {
-      console.error("Register error", err)
+    } catch {
       setError("Something went wrong. Please try again.")
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left — Branded visual panel */}
-      <div className="hidden flex-1 flex-col justify-between bg-[#1E293B] p-12 lg:flex xl:p-16">
-        <div>
-          <Link href="/">
-            <img src="/white.png" alt="TrendyReports" className="h-7 w-auto" />
-          </Link>
-          <h2 className="mt-12 text-balance text-4xl font-bold leading-tight text-white">
-            Start creating beautiful
-            <br />
-            market reports today.
-          </h2>
-          <p className="mt-4 text-lg text-[#94A3B8]">
-            {/* G1b: Free is a permanent plan, not a trial. */}
-            Free plan, no time limit. No credit card required.
-          </p>
+    <AuthFrame
+      title="Create your account"
+      description="Free plan, no time limit. No credit card."
+      footer={<>Already have an account? <Link href="/login" className={authLink}>Sign in</Link></>}
+    >
+      <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+        {error && <AuthError>{error}</AuthError>}
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="first-name" className={authLabel}>First name</Label>
+            <Input id="first-name" autoComplete="given-name" className={authInput} value={firstName} onChange={(e) => setFirstName(e.target.value)} required disabled={loading} autoFocus />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="last-name" className={authLabel}>Last name</Label>
+            <Input id="last-name" autoComplete="family-name" className={authInput} value={lastName} onChange={(e) => setLastName(e.target.value)} required disabled={loading} />
+          </div>
         </div>
 
-        {/* Benefits */}
-        <div className="space-y-5">
-          {benefits.map((b) => (
-            <div key={b} className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6366F1]">
-                <Check className="h-3.5 w-3.5 text-white" />
-              </div>
-              <p className="text-[#E2E8F0]">{b}</p>
-            </div>
-          ))}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="reg-email" className={authLabel}>Email</Label>
+          <Input id="reg-email" type="email" autoComplete="email" placeholder="you@example.com" className={authInput} value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} />
         </div>
 
-        {/* G2: the social-proof block is deleted, not softened.
-            It carried "4.9/5 from 500+ agents" over a five-star row, plus an
-            avatar strip ending in "+495" — the same unsourced 500 encoded a
-            second time, so trimming the caption alone would have left the
-            claim standing in the graphic. Neither figure names a source, and
-            /login's adjacent "2,000+ agents" contradicted it.
-            Restore only with a real, citable number. */}
-      </div>
-
-      {/* Right — Form panel */}
-      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16 xl:px-24">
-        <div className="mx-auto w-full max-w-md">
-          {/* Mobile logo */}
-          <Link href="/" className="lg:hidden">
-            <img src="/indigo.png" alt="TrendyReports" className="h-7 w-auto" />
-          </Link>
-
-          <h1 className="mt-10 text-3xl font-bold tracking-tight text-foreground lg:mt-0">
-            Create your account
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            {/* G1b: Free is a permanent plan, not a trial. */}
-            Start on the free plan. No credit card needed.
-          </p>
-
-          {/* Error Display */}
-          {error && (
-            <div className="mt-6 rounded-lg bg-red-50 border border-red-200 p-3 flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-900">Registration failed</p>
-                <p className="text-sm text-red-700 mt-1">{error}</p>
-              </div>
-            </div>
-          )}
-
-          {/* M3-T6: the "Register with email" divider is gone, not just the
-              "with email" qualifier — it divided the heading from the form with
-              nothing above it, and its only content implied sign-up
-              alternatives that do not exist. Restore if SSO ships. */}
-
-          {/* Form */}
-          <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="first-name">First name</Label>
-                <Input
-                  id="first-name"
-                  type="text"
-                  autoComplete="given-name"
-                  placeholder="Sarah"
-                  className="h-12 rounded-lg"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="last-name">Last name</Label>
-                <Input
-                  id="last-name"
-                  type="text"
-                  autoComplete="family-name"
-                  placeholder="Johnson"
-                  className="h-12 rounded-lg"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="reg-email">Email address</Label>
-              <Input
-                id="reg-email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@company.com"
-                className="h-12 rounded-lg"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="reg-password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="reg-password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  placeholder="Create a strong password"
-                  className="h-12 rounded-lg pr-12"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={loading}
-                  minLength={8}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters with a number and symbol.
-              </p>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Checkbox id="terms" className="mt-0.5" disabled={loading} />
-              <Label
-                htmlFor="terms"
-                className="text-sm font-normal leading-relaxed text-muted-foreground"
-              >
-                {"I agree to the "}
-                <Link href="/terms" className="text-[#6366F1] hover:text-[#4F46E5]">
-                  Terms of Service
-                </Link>
-                {" and "}
-                <Link href="/privacy" className="text-[#6366F1] hover:text-[#4F46E5]">
-                  Privacy Policy
-                </Link>
-              </Label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#6366F1] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#4F46E5] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "Creating account..." : "Create account"}
-              {!loading && <ArrowRight className="h-4 w-4" />}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="reg-password" className={authLabel}>Password</Label>
+          <div className="relative">
+            <Input id="reg-password" type={showPassword ? "text" : "password"} autoComplete="new-password" minLength={8} className={`${authInput} pr-12`}
+              value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} />
+            <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-1/2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--placeholder)] hover:bg-[var(--muted)] hover:text-foreground">
+              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
-          </form>
+          </div>
+          <p className="text-[13px] text-muted-foreground">At least 8 characters.</p>
+        </div>
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              href="/login"
-              className="font-semibold text-[#6366F1] hover:text-[#4F46E5]"
-            >
-              Sign in
-            </Link>
+        <div className="flex flex-col gap-3">
+          <AuthSubmit loading={loading} busy="Creating account…">Create account</AuthSubmit>
+          <p className="text-center text-[13px] leading-relaxed text-muted-foreground [text-wrap:pretty]">
+            By creating an account you agree to the <Link href="/terms" className="font-medium text-[var(--link)] hover:text-[var(--link-hover)]">Terms</Link> and <Link href="/privacy" className="font-medium text-[var(--link)] hover:text-[var(--link-hover)]">Privacy Policy</Link>.
           </p>
         </div>
-      </div>
-    </div>
+      </form>
+    </AuthFrame>
   )
 }
