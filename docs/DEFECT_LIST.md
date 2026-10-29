@@ -59,14 +59,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 58 | Observed, not yet triaged |
-| `open` | 78 | Real, unfixed |
-| `fixed` | 160 | Corrected in code, with the branch or PR named on the entry |
+| `recorded` | 61 | Observed, not yet triaged |
+| `open` | 79 | Real, unfixed |
+| `fixed` | 161 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **303** | D-001 … D-303, contiguous, no duplicates |
+| **Total** | **308** | D-001 … D-308, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -15681,6 +15681,41 @@ as a duplicate, the file goes with it rather than being ported.
 
 **Severity:** WRONG · found adopting Design's 5th-package market email. The truncation note took `showing` from the caller (the email cap, e.g. 8 for featured listings), while the adaptive gallery layouts drew their own number: the 2×2 layout drew 4 cards under "Showing 8 of N", the stacked one up to 3. The note now counts the listings the email actually renders, and every layout renders all it is given. Pinned by `test_the_note_counts_what_the_email_drew` (M10 in `scripts/regressions/market_email.json`).
 **Status:** `fixed` — feat/market-email-5th-package.
+
+---
+
+### D-304 — the consumer report page names the record owner to whoever has the link
+
+**Severity:** BROKEN · found building the home-value email. D-116 took the assessor-roll owner block off the property report and D-155 took the owner's name out of the email, both because the person who requests a home-value report is often not the owner: a neighbour, a buyer, another agent. The page both the email and the SMS link to, `/r/{id}`, is rendered from the public, unauthenticated `GET /v1/r/{id}/data`, and it still returned `property.owner_name`. The viewer printed it twice: "Owner: <name>" under the address, and an "Owner" row in Property Details. `owner_name` stays in `consumer_reports.property_data` for the agent path. Red-to-green: `apps/api/tests/test_consumer_report_does_not_name_the_owner.py`.
+**Status:** `fixed` — fix/consumer-viewer-owner-name.
+
+---
+
+### D-305 — the consumer report's link preview prints the estimate
+
+**Severity:** WRONG · found with D-304. `app/r/[id]/page.tsx` `generateMetadata` writes "Estimated value: $X - $Y" into the page's description and Open Graph tags, so the SMS, iMessage, Slack or email link preview shows the range before anyone opens the report. On 2026-10-28 the owner decided the home-value email carries no estimate, because a number without the sales beside it reads like an appraisal. The preview is that number without the sales. **Decision for Jerry:** drop the range from the metadata (the page still shows it in context), or keep it in previews.
+**Status:** `recorded`
+
+---
+
+### D-306 — the consumer report's agent block could belong to another user on the account
+
+**Severity:** WRONG · found building the home-value email. `process_consumer_report` loaded the agent's photo, email, job title and licence number with `JOIN users u ON u.account_id = a.id ... LIMIT 1`, with no filter on the report's own `agent_id` and no ORDER BY. On an account with more than one user, the PDF and the delivery email could carry another user's identity. Scoped to `u.id = agent_id` by feat/home-value-email; pinned by `test_the_brand_lookup_is_the_reports_own_agent`, and mutation HV4 makes it fire.
+**Status:** `open` — fixed by feat/home-value-email when it merges.
+
+---
+
+### D-307 — the market path picks "the agent" as any user on the account
+
+**Severity:** FRAGILE · found with D-306. Three more lookups in `tasks.py` take an account's agent as `LIMIT 1` over `users` with no ORDER BY: `_build_regular_brand` (the market email's agent block), the market PDF's branding context, and the agent CC on a manual send (which does `ORDER BY created_at`). A market schedule belongs to an account, not a user, so there is no agent id to scope by. Correct while every REGULAR account has one user (true locally; production unchecked), and nondeterministic the day one has two. Needs a rule ("the account owner") before a fix.
+**Status:** `recorded`
+
+---
+
+### D-308 — the self-signup welcome email promises 5 reports a month; Free allows 3
+
+**Severity:** WRONG · found keeping the account emails' wording inside Design's shell. `send_regular_agent_welcome_email` says "Your Free plan includes 5 reports per month." That 5 is `plans.monthly_report_limit`, the legacy column. The market-report gate reads `market_reports_limit`, which is **3** for `free` (and 3 for `sponsored_free`, whose legacy value is the 10 in Design's mocks). Kept as written in the shell PR because the owner asked for the current wording until Design's copy is fixed; marked with a TODO at the line. **Decision for Jerry:** say 3, or read the number from the plan at send time.
+**Status:** `recorded`
 
 ---
 
