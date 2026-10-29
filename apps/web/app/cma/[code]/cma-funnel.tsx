@@ -1,695 +1,417 @@
-'use client';
+"use client"
 
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  MapPin, Home, Check, Loader2,
-  ChevronRight, Search, CheckCircle2, Phone, Mail,
-} from 'lucide-react';
-import { useGooglePlaces, PlaceResult } from '@/hooks/useGooglePlaces';
+// /cma/[code] — public homeowner funnel. Six steps, one question per screen.
+// Spec: ../../../../../README.md §Home Value Page. Design: Home Value Page.dc.html.
+// Everything the homeowner sees is in the agent's name: no product logo, no
+// sign-up, no estimate number (that lives in the PDF — it is the reason to
+// leave a contact). The server page (page.tsx) loads the agent by `code` and
+// renders <CmaFunnel agent=… api=… />.
 
-interface Props {
-  agentCode: string;
-  themeColor: string;
-  agentName: string;
-  agentPhone: string | null;
-  agentEmail: string | null;
-  prefillAddress?: string;
-  isDemo?: boolean;
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { ArrowRight, Check, Download, House, MapPin, MessageCircle, Phone } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+// ── Consent copy ─────────────────────────────────────────────────────────────
+// Required before launch. Provided by the brokerage (TCPA). The slot holds up
+// to three lines at 14px; the checkbox is required regardless of wording.
+export const CONSENT_COPY = "" // TODO(legal): e.g. "Send me my report and let {agent} follow up about my home."
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export type Agent = {
+  name: string; brokerage: string; dre?: string | null
+  phone: string            // E.164 or 10 digits; used for tel:/sms: and display
+  photoUrl?: string | null
+  /** The agent's theme_color. The page has no brand-name enum to pass. */
+  color: string
+  /** Omitted when the landing payload has no city. */
+  city?: string
 }
 
-type Step = 'address' | 'confirm' | 'contact' | 'processing' | 'success';
-type DeliveryMethod = 'sms' | 'email';
+export type Suggestion = { address: string; locality: string } // "14 Cartwheel" / "Irvine, CA"
 
-interface Property {
-  apn: string;
-  fips: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  owner_name?: string;
-  bedrooms?: number;
-  bathrooms?: number;
-  sqft?: number;
-  year_built?: number;
-  latitude?: number;
-  longitude?: number;
-  property_type?: string;
+export type Record_ = {
+  address: string; city: string; state: string; zip: string; type: string // "Single family"
+  beds: number | null; baths: number | null; sqft: number | null; yearBuilt: number | null
 }
 
-const SEARCH_STAGES = [
-  { id: 'locating', label: 'Locating property...' },
-  { id: 'verifying', label: 'Verifying records...' },
-  { id: 'fetching', label: 'Fetching property details...' },
-];
-
-const REPORT_STAGES = [
-  { id: 'analyzing', label: 'Analyzing market data...' },
-  { id: 'comparables', label: 'Finding comparable homes...' },
-  { id: 'generating', label: 'Generating your report...' },
-  { id: 'sending', label: 'Delivering your report...' },
-];
-
-export function CmaFunnel({
-  agentCode, themeColor, agentName, agentPhone, agentEmail, prefillAddress, isDemo = false,
-}: Props) {
-  const [step, setStep] = useState<Step>('address');
-  const [address, setAddress] = useState(prefillAddress || '');
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
-
-  // Contact capture state
-  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>('sms');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [consent, setConsent] = useState(false);
-
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState('');
-  const [searchStage, setSearchStage] = useState(0);
-  const [reportStage, setReportStage] = useState(0);
-
-  // Google Places
-  const [inputElement, setInputElement] = useState<HTMLInputElement | null>(null);
-  const addressInputRef = useRef<HTMLInputElement | null>(null);
-  const [selectedPlace, setSelectedPlace] = useState<PlaceResult | null>(null);
-
-  const setAddressInputRef = useCallback((node: HTMLInputElement | null) => {
-    addressInputRef.current = node;
-    setInputElement(node);
-  }, []);
-
-  const handlePlaceSelect = useCallback((place: PlaceResult) => {
-    setSelectedPlace(place);
-    setAddress(place.fullAddress);
-  }, []);
-
-  const { isLoaded: googleLoaded, error: placesError } = useGooglePlaces(
-    addressInputRef,
-    { onPlaceSelect: handlePlaceSelect },
-  );
-
-  useEffect(() => {
-    if (inputElement && googleLoaded && window.google?.maps?.places) {
-      // autocomplete binds automatically via hook
-    }
-  }, [inputElement, googleLoaded]);
-
-  useEffect(() => {
-    if (selectedPlace && step === 'address') {
-      searchFromPlace(selectedPlace);
-    }
-  }, [selectedPlace]);
-
-  // Search stage animation
-  useEffect(() => {
-    if (!searching) { setSearchStage(0); return; }
-    const interval = setInterval(() => {
-      setSearchStage(prev => (prev < SEARCH_STAGES.length - 1 ? prev + 1 : prev));
-    }, 800);
-    return () => clearInterval(interval);
-  }, [searching]);
-
-  // Report stage animation
-  useEffect(() => {
-    if (step !== 'processing') return;
-    const interval = setInterval(() => {
-      setReportStage(prev => (prev < REPORT_STAGES.length - 1 ? prev + 1 : prev));
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [step]);
-
-  // ------- Handlers -------
-
-  const formatPhone = (value: string) => {
-    const digits = value.replace(/\D/g, '').slice(0, 10);
-    if (digits.length >= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-    if (digits.length >= 3) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-    return digits;
-  };
-
-  // Fake property used in demo mode so reps can walk through the full
-  // funnel without hitting SiteX or burning property-search credits.
-  const buildDemoProperty = (input: string, city = 'San Diego', state = 'CA'): Property => ({
-    apn: 'DEMO-0000',
-    fips: '00000',
-    address: input || '742 Evergreen Terrace',
-    city,
-    state,
-    zip: '92101',
-    owner_name: 'Sample Homeowner',
-    bedrooms: 4,
-    bathrooms: 2.5,
-    sqft: 2150,
-    year_built: 1998,
-    property_type: 'Single Family',
-  });
-
-  const searchFromPlace = async (place: PlaceResult) => {
-    setSearching(true);
-    setSearchStage(0);
-    setError('');
-    try {
-      if (isDemo) {
-        // Brief stage animation then jump to confirm with demo data.
-        await new Promise(r => setTimeout(r, 1800));
-        handleSearchResults([buildDemoProperty(place.address, place.city, place.state)]);
-        return;
-      }
-      const res = await fetch(`/api/proxy/v1/cma/${agentCode}/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: place.address, city: place.city, state: place.state }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.detail || 'Search failed');
-      }
-      const data = await res.json();
-      handleSearchResults(data);
-    } catch (err: any) {
-      setError(err.message || 'Could not search. Please try again.');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleManualSearch = async () => {
-    if (!address.trim()) { setError('Please enter your property address'); return; }
-    setSearching(true);
-    setSearchStage(0);
-    setError('');
-    try {
-      if (isDemo) {
-        await new Promise(r => setTimeout(r, 1800));
-        handleSearchResults([buildDemoProperty(address)]);
-        return;
-      }
-      const res = await fetch(`/api/proxy/v1/cma/${agentCode}/search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.detail || 'Search failed');
-      }
-      handleSearchResults(await res.json());
-    } catch (err: any) {
-      setError(err.message || 'Could not search. Please try again.');
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const handleSearchResults = (data: Property[]) => {
-    setProperties(data);
-    if (data.length === 0) {
-      setError('No properties found. Please check the address and try again.');
-    } else if (data.length === 1) {
-      setSelectedProperty(data[0]);
-      setStep('confirm');
-    }
-  };
-
-  const handleConfirm = () => {
-    setError('');
-    setStep('contact');
-  };
-
-  const handleSubmit = async () => {
-    if (deliveryMethod === 'sms') {
-      const digits = phone.replace(/\D/g, '');
-      if (digits.length !== 10) { setError('Please enter a valid 10-digit phone number'); return; }
-    } else {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) { setError('Please enter a valid email address'); return; }
-    }
-    if (!consent) { setError('Please agree to the terms to continue'); return; }
-
-    setStep('processing');
-    setReportStage(0);
-    setError('');
-
-    if (isDemo) {
-      // Run the processing animation but never submit. Reps see the
-      // exact homeowner success screen without creating a real lead.
-      setTimeout(() => setStep('success'), 5500);
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/proxy/v1/cma/${agentCode}/request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: deliveryMethod === 'sms' ? phone.replace(/\D/g, '') : null,
-          email: deliveryMethod === 'email' ? email.trim() : null,
-          delivery_method: deliveryMethod,
-          name: name.trim() || null,
-          property_apn: selectedProperty!.apn,
-          property_fips: selectedProperty!.fips,
-          property_address: selectedProperty!.address,
-          property_city: selectedProperty!.city,
-          property_state: selectedProperty!.state,
-          property_zip: selectedProperty!.zip,
-          consent_given: consent,
-          owner_name: selectedProperty!.owner_name,
-          bedrooms: selectedProperty!.bedrooms,
-          bathrooms: selectedProperty!.bathrooms,
-          sqft: selectedProperty!.sqft,
-          year_built: selectedProperty!.year_built,
-          latitude: selectedProperty!.latitude,
-          longitude: selectedProperty!.longitude,
-          property_type: selectedProperty!.property_type,
-        }),
-      });
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}));
-        throw new Error(d.detail || 'Request failed');
-      }
-      setTimeout(() => setStep('success'), 3000);
-    } catch (err: any) {
-      setStep('contact');
-      setError(err.message || 'Something went wrong. Please try again.');
-    }
-  };
-
-  // ------- Render -------
-
-  const anim = {
-    initial: { opacity: 0, x: 20 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -20 },
-  };
-
-  return (
-    <div>
-      <AnimatePresence mode="wait">
-        {/* ========== STEP 1: ADDRESS SEARCH ========== */}
-        {step === 'address' && (
-          <motion.div key="address" {...anim} className="space-y-4">
-            <StepIndicator current={1} total={3} color={themeColor} />
-
-            <div className="flex items-center gap-2 mb-1">
-              <StepIcon color={themeColor}><MapPin className="w-4 h-4" /></StepIcon>
-              <span className="font-medium text-slate-700">Enter Your Address</span>
-            </div>
-
-            {searching ? (
-              <ProgressStages stages={SEARCH_STAGES} current={searchStage} color={themeColor} icon={<Search className="w-5 h-5" />} />
-            ) : (
-              <>
-                <div className="relative">
-                  <Input
-                    ref={setAddressInputRef}
-                    type="text"
-                    placeholder="Start typing your address..."
-                    value={address}
-                    onChange={e => setAddress(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleManualSearch()}
-                    className="text-base h-12 pr-12"
-                    autoComplete="off"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleManualSearch}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg hover:bg-slate-100"
-                  >
-                    <Search className="w-5 h-5 text-slate-400" />
-                  </button>
-                </div>
-
-                <p className="text-xs text-slate-500">
-                  {!googleLoaded && !placesError && 'Loading address suggestions...'}
-                  {googleLoaded && !placesError && 'Start typing to see address suggestions'}
-                  {placesError && 'Enter your full address'}
-                </p>
-
-                {properties.length > 1 && (
-                  <div className="space-y-2 mt-2">
-                    <p className="text-sm text-slate-600 font-medium">Select your property:</p>
-                    {properties.map((prop, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setSelectedProperty(prop); setStep('confirm'); }}
-                        className="w-full p-3 text-left border rounded-xl hover:border-slate-400 hover:bg-slate-50 transition"
-                      >
-                        <p className="font-medium text-slate-900">{prop.address}</p>
-                        <p className="text-sm text-slate-500">
-                          {prop.city}, {prop.state} {prop.zip}
-                          {prop.owner_name && ` · ${prop.owner_name}`}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-          </motion.div>
-        )}
-
-        {/* ========== STEP 2: PROPERTY CONFIRMATION ========== */}
-        {step === 'confirm' && selectedProperty && (
-          <motion.div key="confirm" {...anim} className="space-y-4">
-            <StepIndicator current={2} total={3} color={themeColor} />
-
-            <div className="flex items-center gap-2 mb-1">
-              <StepIcon color={themeColor}><Home className="w-4 h-4" /></StepIcon>
-              <span className="font-medium text-slate-700">We Found Your Property</span>
-            </div>
-
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <p className="font-semibold text-slate-900 text-lg">{selectedProperty.address}</p>
-              <p className="text-slate-600 text-sm">
-                {selectedProperty.city}, {selectedProperty.state} {selectedProperty.zip}
-              </p>
-
-              {(selectedProperty.bedrooms || selectedProperty.bathrooms || selectedProperty.sqft || selectedProperty.year_built) && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-                  {selectedProperty.bedrooms != null && (
-                    <StatBadge label="Beds" value={String(selectedProperty.bedrooms)} color={themeColor} />
-                  )}
-                  {selectedProperty.bathrooms != null && (
-                    <StatBadge label="Baths" value={String(selectedProperty.bathrooms)} color={themeColor} />
-                  )}
-                  {selectedProperty.sqft != null && (
-                    <StatBadge label="Sq Ft" value={selectedProperty.sqft.toLocaleString()} color={themeColor} />
-                  )}
-                  {selectedProperty.year_built != null && (
-                    <StatBadge label="Built" value={String(selectedProperty.year_built)} color={themeColor} />
-                  )}
-                </div>
-              )}
-
-              {selectedProperty.owner_name && (
-                <p className="text-slate-500 text-sm mt-3">Owner: {selectedProperty.owner_name}</p>
-              )}
-            </div>
-
-            <p className="text-center text-sm text-slate-600">Is this your property?</p>
-
-            <Button
-              onClick={handleConfirm}
-              className="w-full h-12 text-base text-white"
-              style={{ backgroundColor: themeColor }}
-            >
-              Yes, Get My Report <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-
-            <button
-              onClick={() => { setStep('address'); setSelectedProperty(null); setProperties([]); setSelectedPlace(null); }}
-              className="text-sm text-slate-500 hover:text-slate-700 w-full text-center py-1"
-            >
-              ← Not my property, search again
-            </button>
-          </motion.div>
-        )}
-
-        {/* ========== STEP 3: CONTACT CAPTURE ========== */}
-        {step === 'contact' && (
-          <motion.div key="contact" {...anim} className="space-y-4">
-            <StepIndicator current={3} total={3} color={themeColor} />
-
-            <div className="text-center mb-2">
-              <h3 className="text-lg font-semibold text-slate-900">Your Report Is Almost Ready</h3>
-              <p className="text-sm text-slate-600 mt-1">Where should we send it?</p>
-            </div>
-
-            {/* Report preview */}
-            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <p className="text-sm font-medium text-slate-700 mb-2">Your report will include:</p>
-              <ul className="space-y-1.5 text-sm text-slate-600">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: themeColor }} /> Estimated home value</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: themeColor }} /> Recent comparable sales</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: themeColor }} /> Neighborhood market trends</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: themeColor }} /> Professional PDF report</li>
-              </ul>
-            </div>
-
-            {/* Delivery method toggle */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setDeliveryMethod('sms')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
-                  deliveryMethod === 'sms' ? 'text-white' : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                }`}
-                style={deliveryMethod === 'sms' ? { backgroundColor: themeColor, borderColor: themeColor } : undefined}
-              >
-                <Phone className="w-4 h-4" /> Text Message
-              </button>
-              <button
-                onClick={() => setDeliveryMethod('email')}
-                className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
-                  deliveryMethod === 'email' ? 'text-white' : 'border-slate-200 text-slate-600 hover:border-slate-300'
-                }`}
-                style={deliveryMethod === 'email' ? { backgroundColor: themeColor, borderColor: themeColor } : undefined}
-              >
-                <Mail className="w-4 h-4" /> Email
-              </button>
-            </div>
-
-            {/* Name (optional) */}
-            <Input
-              type="text"
-              placeholder="Your name (optional)"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              autoComplete="name"
-              className="h-11"
-            />
-
-            {/* Contact input */}
-            {deliveryMethod === 'sms' ? (
-              <Input
-                type="tel"
-                placeholder="(555) 555-5555"
-                value={phone}
-                onChange={e => setPhone(formatPhone(e.target.value))}
-                autoComplete="tel"
-                className="text-lg text-center h-12"
-                autoFocus
-              />
-            ) : (
-              <Input
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                autoComplete="email"
-                className="text-base h-12"
-                autoFocus
-              />
-            )}
-
-            {/* Consent */}
-            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl">
-              <Checkbox
-                checked={consent}
-                onCheckedChange={v => setConsent(v as boolean)}
-                id="consent"
-                className="mt-0.5"
-              />
-              <label htmlFor="consent" className="text-sm text-slate-600 leading-tight cursor-pointer">
-                I agree to receive my report and to be contacted by {agentName} about my property.
-              </label>
-            </div>
-
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-            <Button
-              onClick={handleSubmit}
-              disabled={!consent}
-              className="w-full h-12 text-base text-white"
-              style={{ backgroundColor: themeColor, opacity: consent ? 1 : 0.5 }}
-            >
-              Generate My Free Report
-            </Button>
-
-            <button
-              onClick={() => setStep('confirm')}
-              className="text-sm text-slate-500 hover:text-slate-700 w-full text-center py-1"
-            >
-              ← Back
-            </button>
-          </motion.div>
-        )}
-
-        {/* ========== PROCESSING ========== */}
-        {step === 'processing' && (
-          <motion.div
-            key="processing"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="py-6"
-          >
-            <ProgressStages stages={REPORT_STAGES} current={reportStage} color={themeColor} icon={<Home className="w-7 h-7 animate-pulse" />} large />
-            <p className="text-center text-xs text-slate-500 mt-4">Takes about 15-30 seconds</p>
-          </motion.div>
-        )}
-
-        {/* ========== SUCCESS ========== */}
-        {step === 'success' && (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="py-6 text-center"
-          >
-            <div className="relative inline-block mb-4">
-              <div
-                className="w-16 h-16 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: `${themeColor}20` }}
-              >
-                <Check className="w-8 h-8" style={{ color: themeColor }} />
-              </div>
-              <div
-                className="absolute inset-0 w-16 h-16 rounded-full border-2 animate-ping"
-                style={{ borderColor: `${themeColor}40` }}
-              />
-            </div>
-
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">Your Report Is Ready!</h3>
-            <p className="text-slate-600 mb-4">
-              {deliveryMethod === 'sms'
-                ? 'Check your text messages for a link to download your free property report.'
-                : 'Check your email for your free property report.'}
-            </p>
-
-            <div className="bg-slate-50 rounded-xl p-4 text-sm mb-6">
-              <p className="text-slate-500">Sent to:</p>
-              <p className="font-medium text-slate-900">
-                {deliveryMethod === 'sms' ? phone : email}
-              </p>
-            </div>
-
-            {/* Agent CTA */}
-            <div className="bg-slate-50 rounded-xl p-5 text-left">
-              <p className="text-sm font-medium text-slate-700 mb-3">
-                Questions about your home&apos;s value?
-              </p>
-              <div className="flex flex-col gap-2">
-                {agentPhone && (
-                  <a
-                    href={`tel:${agentPhone}`}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-white text-sm font-medium"
-                    style={{ backgroundColor: themeColor }}
-                  >
-                    <Phone className="w-4 h-4" /> Call {agentName.split(' ')[0]}
-                  </a>
-                )}
-                {agentEmail && (
-                  <a
-                    href={`mailto:${agentEmail}`}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    <Mail className="w-4 h-4" /> Email {agentName.split(' ')[0]}
-                  </a>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+export type Lead = {
+  record: Record_
+  method: "sms" | "email"
+  contact: string          // digits only for sms
+  firstName?: string
+  consent: true
+  consentText: string      // CONSENT_COPY as shown — store it with the lead
 }
 
-
-// ========== Shared sub-components ==========
-
-function StepIndicator({ current, total, color }: { current: number; total: number; color: string }) {
-  return (
-    <div className="flex items-center justify-center gap-2 mb-4">
-      {Array.from({ length: total }).map((_, i) => (
-        <div
-          key={i}
-          className={`h-1.5 rounded-full transition-all ${i + 1 <= current ? 'w-8' : 'w-4'}`}
-          style={{ backgroundColor: i + 1 <= current ? color : '#E5E7EB' }}
-        />
-      ))}
-    </div>
-  );
+export type Api = {
+  suggest: (q: string) => Promise<Suggestion[]>
+  lookup: (s: Suggestion | string) => Promise<Record_ | null>
+  submit: (lead: Lead) => Promise<{ reportUrl?: string }>
 }
 
-function StepIcon({ color, children }: { color: string; children: React.ReactNode }) {
-  return (
-    <div
-      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ backgroundColor: `${color}20`, color }}
-    >
-      {children}
-    </div>
-  );
-}
+type Step = "address" | "looking" | "confirm" | "contact" | "processing" | "success"
 
-function StatBadge({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div className="text-center p-2 rounded-lg" style={{ backgroundColor: `${color}08` }}>
-      <p className="text-base font-bold text-slate-900">{value}</p>
-      <p className="text-xs text-slate-500">{label}</p>
-    </div>
-  );
-}
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-function ProgressStages({
-  stages,
-  current,
-  color,
-  icon,
-  large,
-}: {
-  stages: { id: string; label: string }[];
-  current: number;
-  color: string;
-  icon: React.ReactNode;
-  large?: boolean;
+const initials = (n: string) => n.split(" ").filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+const fmtPhone = (d: string) => d.length >= 6 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : d.length >= 3 ? `(${d.slice(0, 3)}) ${d.slice(3)}` : d
+const masked = (d: string) => `(${d.slice(0, 3)}) ••• ${d.slice(6)}`
+const dash = (v: number | null | undefined, f: (n: number) => string = String) => (v == null ? "—" : f(v))
+const firstName = (n: string) => n.split(" ")[0]
+const digitsOf = (p: string) => p.replace(/\D/g, "").replace(/^1(\d{10})$/, "$1")
+
+const LOOK = ["Matching your address", "Reading the county record", "Checking the MLS for your street"]
+
+// ── Component ────────────────────────────────────────────────────────────────
+
+export default function CmaFunnel({ agent, api, cover, initialAddress = "" }: {
+  agent: Agent
+  api: Api
+  /** Renders the property cover for the current record. Receives the live
+   *  requester name so "Prepared for" updates as they type. Pinned to 816×1056
+   *  and transform-scaled here (same move as components/shared/report-thumb). */
+  cover: (p: { record: Record_ | null; requesterName: string }) => ReactNode
+  /** `?address=` on the landing URL. The page already reads it. */
+  initialAddress?: string
 }) {
-  const size = large ? 'w-20 h-20' : 'w-16 h-16';
+  const hex = agent.color
+  const first = firstName(agent.name)
+  const tel = digitsOf(agent.phone)
+
+  const [step, setStep] = useState<Step>("address")
+  const [addr, setAddr] = useState(initialAddress)
+  const [sugs, setSugs] = useState<Suggestion[]>([])
+  const [picked, setPicked] = useState<Suggestion | null>(null)
+  const [record, setRecord] = useState<Record_ | null>(null)
+  const [fix, setFix] = useState(false)
+  const [method, setMethod] = useState<"sms" | "email">("sms")
+  const [contact, setContact] = useState("")
+  const [name, setName] = useState("")
+  const [consent, setConsent] = useState(false)
+  const [prog, setProg] = useState(0)
+  const [reportUrl, setReportUrl] = useState<string | undefined>()
+  const [error, setError] = useState<string | null>(null)
+  const addrRef = useRef<HTMLInputElement>(null)
+
+  // typeahead — ≥2 chars, three suggestions
+  useEffect(() => {
+    const q = addr.trim()
+    if (q.length < 2 || picked) { setSugs([]); return }
+    let live = true
+    const t = setTimeout(() => api.suggest(q).then((r) => live && setSugs(r.slice(0, 3))).catch(() => live && setSugs([])), 150)
+    return () => { live = false; clearTimeout(t) }
+  }, [addr, picked, api])
+
+  // stage ticker for the two waiting steps; the real call runs alongside and
+  // the step advances when BOTH the last stage and the response have landed.
+  const tick = (n: number) => {
+    setProg(0)
+    return new Promise<void>((res) => {
+      let i = 0
+      const id = setInterval(() => { i += 1; setProg(i); if (i >= n) { clearInterval(id); res() } }, 1000)
+    })
+  }
+
+  const findHome = async (s: Suggestion | string) => {
+    setError(null); setStep("looking")
+    const [rec] = await Promise.all([api.lookup(s).catch(() => null), tick(LOOK.length)])
+    if (!rec) { setStep("address"); setError("We couldn't find that address. Try the full street address."); setTimeout(() => addrRef.current?.focus(), 0); return }
+    setRecord(rec); setStep("confirm")
+  }
+
+  const restart = () => {
+    setStep("address"); setAddr(""); setPicked(null); setRecord(null); setFix(false)
+    setContact(""); setConsent(false); setProg(0); setError(null)
+    setTimeout(() => addrRef.current?.focus(), 0)
+  }
+
+  const digits = contact.replace(/\D/g, "")
+  const contactOk = method === "sms" ? digits.length === 10 : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)
+  const canSubmit = contactOk && consent && !!record
+  const build = ["Finding your home in county records", "Pulling nearby sales from the MLS", "Writing your report",
+    method === "sms" ? `Texting the link to ${fmtPhone(digits)}` : `Emailing the link to ${contact}`]
+
+  const submit = async () => {
+    if (!canSubmit || !record) return
+    setError(null); setStep("processing")
+    const lead: Lead = { record, method, contact: method === "sms" ? digits : contact.trim(), firstName: name.trim() || undefined, consent: true, consentText: CONSENT_COPY }
+    const [res] = await Promise.all([api.submit(lead).catch(() => null), tick(build.length)])
+    if (!res) { setStep("contact"); setError("Something went wrong sending your report. Try again."); return }
+    setReportUrl(res.reportUrl); setStep("success")
+  }
+
+  const dotStep = step === "address" || step === "looking" ? 0 : step === "confirm" ? 1 : 2
+  const veiled = step === "address" || step === "looking"
+  const fullAddr = record?.address ?? picked?.address ?? addr.trim()
+  const requester = name.trim()
+
   return (
-    <div>
-      <div className="flex justify-center mb-5">
-        <div className="relative">
-          <div className={`${size} rounded-full border-4`} style={{ borderColor: `${color}30` }} />
-          <div className={`absolute inset-0 ${size} rounded-full border-4 border-transparent animate-spin`} style={{ borderTopColor: color }} />
-          <div className="absolute inset-0 flex items-center justify-center" style={{ color }}>{icon}</div>
+    <div className="flex min-h-screen flex-col bg-[#FAFAF7] text-[#0F172A] antialiased">
+      {/* Header — the agent, not the product */}
+      <header className="border-b border-[#ECEAE3] bg-white">
+        <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-4 px-5 py-[14px]">
+          <div className="flex min-w-0 items-center gap-3">
+            <AgentAvatar agent={agent} size={42} />
+            <div className="flex min-w-0 flex-col leading-[1.25]">
+              <span className="truncate text-[15px] font-bold">{agent.name}</span>
+              <span className="truncate text-[13px] text-[#64748B]">{agent.brokerage}{agent.dre ? ` · DRE #${agent.dre}` : ""}</span>
+            </div>
+          </div>
+          <a href={`tel:${tel}`} aria-label={`Call ${first}`}
+            className="inline-flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[#D6D3CB] bg-white px-[14px] text-[14px] font-semibold">
+            <Phone size={15} /> <span className="hidden sm:inline">{fmtPhone(tel)}</span>
+          </a>
         </div>
-      </div>
-      <div className="space-y-2">
-        {stages.map((stage, i) => (
-          <motion.div
-            key={stage.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: i <= current ? 1 : 0.3, x: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className={`flex items-center gap-3 p-2 rounded-lg transition-all duration-300 ${
-              i < current ? 'text-green-600' : i === current ? '' : 'text-slate-400'
-            }`}
-            style={{
-              backgroundColor: i === current ? `${color}15` : 'transparent',
-              color: i === current ? color : undefined,
-            }}
-          >
-            <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
-              {i < current ? (
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-              ) : i === current ? (
-                <Loader2 className="w-5 h-5 animate-spin" style={{ color }} />
-              ) : (
-                <div className="w-2 h-2 rounded-full bg-current opacity-50" />
+      </header>
+
+      <main className="mx-auto grid w-full max-w-[1080px] flex-1 grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] items-start gap-9 px-5 pb-14 pt-7">
+        {/* Artifact */}
+        <section className="flex min-w-0 flex-col items-center gap-3">
+          <div className="relative w-[min(100%,400px)] overflow-hidden rounded-lg transition-[height] duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+            style={{ height: veiled ? 260 : "auto" }}>
+            <div className="relative aspect-[816/1056] w-[min(100%,400px)] overflow-hidden rounded-lg bg-white transition-transform duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]"
+              style={{ boxShadow: "0 30px 60px -22px rgba(15,23,42,0.35),0 0 0 1px rgba(15,23,42,0.06)", transform: step === "success" ? "rotate(-2deg)" : "none", filter: step === "address" ? "saturate(0.6)" : "none" }}>
+              <CoverFrame>{cover({ record, requesterName: requester })}</CoverFrame>
+              {veiled && (
+                <div className="absolute inset-0 flex items-end justify-center p-7"
+                  style={{ background: "linear-gradient(180deg,rgba(250,250,247,0) 30%,rgba(250,250,247,0.92) 70%)" }}>
+                  <span className="text-balance text-center text-[14px] font-semibold text-[#334155]">
+                    {step === "address" ? "Your report starts with your address" : "Pulling your home's record…"}
+                  </span>
+                </div>
               )}
             </div>
-            <span className="text-sm font-medium">{stage.label}</span>
-          </motion.div>
-        ))}
-      </div>
+          </div>
+          <span className="text-center text-[13px] text-[#64748B]">
+            {step === "address" ? "A real report, like this one, for your home" : `Your report · ${fullAddr}`}
+          </span>
+        </section>
+
+        {/* Controls */}
+        <section className="flex w-full max-w-[460px] min-w-0 flex-col gap-6 justify-self-center">
+          <div className="flex gap-[6px]" aria-hidden>
+            {[0, 1, 2].map((i) => <span key={i} className="h-1 flex-1 rounded-sm transition-colors" style={{ background: i <= dotStep ? hex : "#E4E2DA" }} />)}
+          </div>
+
+          {step === "address" && (
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-[10px]">
+                <h1 className="text-balance text-[clamp(30px,5vw,40px)] font-extrabold leading-[1.05] tracking-[-0.035em]">{agent.city ? `What's your ${agent.city} home worth today?` : "What's your home worth today?"}</h1>
+                <p className="text-pretty text-[17px] text-[#475569]">Based on this month's closed sales near you. Free, from {first} — no sign-up.</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="relative">
+                  <House size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
+                  <input ref={addrRef} value={addr} onChange={(e) => { setAddr(e.target.value); setPicked(null) }}
+                    onKeyDown={(e) => e.key === "Enter" && addr.trim() && findHome(picked ?? addr.trim())}
+                    placeholder="Your street address" autoComplete="street-address" aria-label="Street address"
+                    className="h-[58px] w-full rounded-xl border-[1.5px] border-[#D6D3CB] bg-white pl-[46px] pr-4 text-[18px] outline-none focus:border-[#0F172A]" />
+                </div>
+                {sugs.length > 0 && (
+                  <ul className="flex flex-col overflow-hidden rounded-xl border border-[#ECEAE3] bg-white" style={{ boxShadow: "0 12px 32px -16px rgba(15,23,42,0.25)" }}>
+                    {sugs.map((g) => (
+                      <li key={g.address + g.locality}>
+                        <button type="button" onClick={() => { setPicked(g); setAddr(`${g.address}, ${g.locality}`); findHome(g) }}
+                          className="flex w-full items-center gap-3 border-b border-[#F1F1EE] px-4 py-[13px] text-left text-[15px] hover:bg-[#FAFAF7]">
+                          <MapPin size={15} className="shrink-0 text-[#94A3B8]" /><span className="font-semibold">{g.address}</span><span className="text-[#64748B]">{g.locality}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {error && <p role="alert" className="text-[14px] text-[#B91C1C]">{error}</p>}
+              </div>
+              <Cta hex={hex} disabled={!addr.trim()} onClick={() => findHome(picked ?? addr.trim())}>Find my home</Cta>
+              <div className="flex flex-wrap gap-x-4 gap-y-[6px] text-[13px] text-[#64748B]"><span>Takes 10 seconds</span><span>·</span><span>No obligation</span><span>·</span><span>Only {first} sees your details</span></div>
+            </div>
+          )}
+
+          {step === "looking" && (
+            <div className="flex flex-col gap-[18px]">
+              <h1 className="text-[30px] font-extrabold leading-[1.1] tracking-[-0.03em]">Finding your home…</h1>
+              <Stages items={LOOK} prog={prog} />
+            </div>
+          )}
+
+          {step === "confirm" && record && (
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <span className="text-[12px] font-bold uppercase tracking-[0.12em]" style={{ color: hex }}>Found it</span>
+                <h1 className="text-[30px] font-extrabold leading-[1.1] tracking-[-0.03em]">Is this your home?</h1>
+              </div>
+              <div className="flex flex-col gap-[14px] rounded-[14px] border border-[#ECEAE3] bg-white px-5 py-[18px]">
+                <div className="flex flex-col">
+                  <span className="text-[19px] font-bold">{record.address}</span>
+                  <span className="text-[14px] text-[#64748B]">{record.city}, {record.state} {record.zip} · {record.type}</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <Fact k="Beds" v={record.beds} lock={!fix} hex={hex} onChange={(n) => setRecord({ ...record, beds: n })} />
+                  <Fact k="Baths" v={record.baths} lock={!fix} hex={hex} onChange={(n) => setRecord({ ...record, baths: n })} />
+                  <Fact k="Sq ft" v={record.sqft} lock={!fix} hex={hex} fmt={(n) => n.toLocaleString()} onChange={(n) => setRecord({ ...record, sqft: n })} />
+                  <Fact k="Built" v={record.yearBuilt} lock={!fix} hex={hex} onChange={(n) => setRecord({ ...record, yearBuilt: n })} />
+                </div>
+                <span className="text-[13px] text-[#64748B]">{fix ? "Tap a number to change it." : missingNote(record)}</span>
+              </div>
+              <Cta hex={hex} onClick={() => { setFix(false); setStep("contact") }}>Yes, that's it</Cta>
+              <div className="flex justify-center gap-[22px] text-[14px]">
+                <button type="button" onClick={() => setFix((f) => !f)} className="font-semibold text-[#334155]">{fix ? "Done fixing" : "Something's off"}</button>
+                <button type="button" onClick={restart} className="font-semibold text-[#64748B]">Not my home</button>
+              </div>
+            </div>
+          )}
+
+          {step === "contact" && (
+            <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-[30px] font-extrabold leading-[1.1] tracking-[-0.03em]">Where should it go?</h1>
+                <p className="text-[16px] text-[#475569]">It's a PDF of the sales near your home. We'll send the link.</p>
+              </div>
+              <div role="radiogroup" className="flex gap-[6px] rounded-xl bg-[#ECEAE3] p-1">
+                {(["sms", "email"] as const).map((m) => (
+                  <button key={m} type="button" role="radio" aria-checked={method === m} onClick={() => { setMethod(m); setContact("") }}
+                    className={cn("h-[42px] flex-1 rounded-[9px] text-[15px] font-semibold", method === m ? "bg-white text-[#0F172A] shadow-[0_1px_3px_rgba(15,23,42,0.12)]" : "text-[#64748B]")}>
+                    {m === "sms" ? "Text me" : "Email me"}
+                  </button>
+                ))}
+              </div>
+              <input value={contact} aria-label={method === "sms" ? "Mobile number" : "Email address"}
+                onChange={(e) => setContact(method === "sms" ? fmtPhone(e.target.value.replace(/\D/g, "").slice(0, 10)) : e.target.value)}
+                placeholder={method === "sms" ? "(555) 555-5555" : "you@email.com"} inputMode={method === "sms" ? "tel" : "email"} autoComplete={method === "sms" ? "tel" : "email"}
+                className="h-[58px] w-full rounded-xl border-[1.5px] border-[#D6D3CB] bg-white px-4 text-center text-[20px] tabular-nums tracking-[0.01em] outline-none focus:border-[#0F172A]" />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name (optional)" autoComplete="given-name" aria-label="Your name"
+                className="h-[50px] w-full rounded-xl border border-[#E4E2DA] bg-white px-4 text-[16px] outline-none focus:border-[#0F172A]" />
+              <label className="flex cursor-pointer items-start gap-3 text-[14px] leading-[1.45] text-[#475569]">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="peer sr-only" required />
+                <span aria-hidden className={cn("mt-[1px] flex size-[22px] shrink-0 items-center justify-center rounded-md border-[1.5px] peer-focus-visible:ring-2 peer-focus-visible:ring-[#0F172A]/40", consent ? "border-[#0F172A] bg-[#0F172A]" : "border-[#CBD5E1] bg-white")}>
+                  {consent && <Check size={13} className="text-white" />}
+                </span>
+                <span className={cn(!CONSENT_COPY && "italic text-[#94A3B8]")}>{CONSENT_COPY || `[Consent wording — ${first} can contact me about my home]`}</span>
+              </label>
+              {error && <p role="alert" className="text-[14px] text-[#B91C1C]">{error}</p>}
+              <Cta hex={hex} disabled={!canSubmit} onClick={submit}>{method === "sms" ? "Text me my report" : "Email me my report"}</Cta>
+              <button type="button" onClick={() => setStep("confirm")} className="self-center text-[14px] font-semibold text-[#64748B]">← Back</button>
+            </div>
+          )}
+
+          {step === "processing" && (
+            <div className="flex flex-col gap-[18px]">
+              <div className="flex flex-col gap-2">
+                <h1 className="text-[30px] font-extrabold leading-[1.1] tracking-[-0.03em]">Building your report…</h1>
+                <p className="text-[15px] text-[#64748B]">About 20 seconds. You can close this — the link still arrives.</p>
+              </div>
+              <Stages items={build} prog={prog} />
+            </div>
+          )}
+
+          {step === "success" && (
+            <div className="flex flex-col gap-[22px]">
+              <div className="flex flex-col gap-[10px]">
+                <span className="flex size-12 items-center justify-center rounded-full bg-[#D1FAE5]"><Check size={22} className="text-[#047857]" /></span>
+                <h1 className="text-balance text-[30px] font-extrabold leading-[1.1] tracking-[-0.03em]">
+                  {method === "sms" ? `On its way to ${masked(digits)}.` : "It's in your inbox."}
+                </h1>
+                <p className="text-pretty text-[16px] text-[#475569]">
+                  {method === "sms" ? "The text has a link to your PDF. It works for 30 days." : `Sent to ${contact}. The link works for 30 days.`}
+                </p>
+              </div>
+              {reportUrl && (
+                <a href={reportUrl} target="_blank" rel="noreferrer" className="flex h-[58px] items-center justify-center gap-2 rounded-xl bg-[#0F172A] text-[17px] font-semibold text-white">
+                  <Download size={16} /> Open my report now
+                </a>
+              )}
+              <div className="flex flex-col gap-[14px] rounded-[14px] border border-[#ECEAE3] bg-white px-5 py-[18px]">
+                <div className="flex items-center gap-3">
+                  <AgentAvatar agent={agent} size={44} />
+                  <div className="flex flex-col leading-[1.3]">
+                    <span className="text-[15px] font-bold">{agent.name}</span>
+                    <span className="text-[14px] text-[#64748B]">Questions about the report? I'm happy to walk through it.</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <a href={`tel:${tel}`} className="flex h-12 items-center justify-center gap-2 rounded-[10px] text-[15px] font-semibold text-white" style={{ background: hex }}><Phone size={15} /> Call {first}</a>
+                  <a href={`sms:${tel}`} className="flex h-12 items-center justify-center gap-2 rounded-[10px] border border-[#D6D3CB] text-[15px] font-semibold"><MessageCircle size={15} /> Text</a>
+                </div>
+              </div>
+              <button type="button" onClick={restart} className="self-center text-[14px] font-semibold text-[#64748B]">Check another address</button>
+            </div>
+          )}
+        </section>
+      </main>
+
+      <footer className="border-t border-[#ECEAE3]">
+        <div className="mx-auto flex max-w-[1080px] flex-wrap items-center justify-between gap-3 px-5 py-[18px] text-[12px] text-[#94A3B8]">
+          <span>From recent MLS sales. Not an appraisal.</span>
+          <span>{agent.brokerage}{agent.dre ? ` · DRE #${agent.dre}` : ""}</span>
+        </div>
+      </footer>
     </div>
-  );
+  )
+}
+
+// ── Pieces ───────────────────────────────────────────────────────────────────
+
+function AgentAvatar({ agent, size }: { agent: Agent; size: number }) {
+  return agent.photoUrl
+    ? <img src={agent.photoUrl} alt="" width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
+    : <span className="flex shrink-0 items-center justify-center rounded-full text-[14px] font-bold text-white" style={{ width: size, height: size, background: agent.color }}>{initials(agent.name)}</span>
+}
+
+function Cta({ hex, disabled, onClick, children }: { hex: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" disabled={disabled} onClick={onClick}
+      className="flex h-[58px] items-center justify-center gap-2 rounded-xl text-[17px] font-semibold disabled:cursor-not-allowed"
+      style={{ background: disabled ? "#E4E2DA" : hex, color: disabled ? "#94A3B8" : "#fff" }}>
+      {children}<ArrowRight size={16} />
+    </button>
+  )
+}
+
+function Stages({ items, prog }: { items: string[]; prog: number }) {
+  return (
+    <ol className="flex flex-col border-t-[1.5px] border-[#0F172A]" aria-live="polite">
+      {items.map((t, i) => {
+        const done = i < prog, active = i === prog
+        return (
+          <li key={t} className={cn("flex items-center gap-[14px] border-b border-[#ECEAE3] py-[13px] text-[15px]", done || active ? "text-[#0F172A]" : "text-[#94A3B8]", active ? "font-semibold" : "font-medium")}>
+            <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-full", done ? "bg-[#047857]" : active ? "animate-spin border-2 border-dashed border-[#0F172A]" : "border-[1.5px] border-[#CBD5E1]")}
+              style={active ? { animationDuration: "1.4s" } : undefined}>
+              {done && <Check size={11} className="text-white" />}
+            </span>
+            {t}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function Fact({ k, v, lock, hex, fmt, onChange }: { k: string; v: number | null; lock: boolean; hex: string; fmt?: (n: number) => string; onChange: (n: number | null) => void }) {
+  return (
+    <label className="flex flex-col gap-[2px] rounded-[10px] bg-[#FAFAF7] px-2 py-[10px] text-center">
+      <input value={lock ? dash(v, fmt) : v ?? ""} readOnly={lock} inputMode="numeric" aria-label={k}
+        onChange={(e) => { const n = e.target.value.replace(/\D/g, ""); onChange(n ? Number(n) : null) }}
+        className="w-full bg-transparent p-0 text-center text-[17px] font-bold outline-none"
+        style={{ color: v == null && lock ? "#5E636B" : "#0F172A", borderBottom: lock ? "1.5px solid transparent" : `1.5px solid ${hex}` }} />
+      <span className="text-[11px] text-[#64748B]">{k}</span>
+    </label>
+  )
+}
+
+function missingNote(r: Record_) {
+  const miss = ([["beds", "Beds"], ["baths", "Baths"], ["sqft", "Sq ft"], ["yearBuilt", "Year built"]] as const).filter(([key]) => r[key] == null).map(([, l]) => l)
+  if (!miss.length) return "From the county record."
+  return `From the county record. ${miss.join(" and ")} ${miss.length > 1 ? "weren't" : "wasn't"} listed — that's fine.`
+}
+
+/** Pins the cover at 816×1056 and scales it to the frame width (ResizeObserver). */
+function CoverFrame({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(400 / 816)
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    const ro = new ResizeObserver(([e]) => setScale(e.contentRect.width / 816)); ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return <div ref={ref} className="absolute inset-0"><div style={{ width: 816, height: 1056, transform: `scale(${scale})`, transformOrigin: "0 0" }}>{children}</div></div>
 }
