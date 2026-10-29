@@ -274,15 +274,17 @@ def test_no_usage_bar_draws_a_fraction_of_an_undefined_whole():
     # it is the same component under a new name, so it still counts. Four since
     # Design's sponsor dashboard (2026-10-23): /app/company draws no usage bars —
     # the company's own report limit is not the number that page is about. One
-    # fewer copy, which is the direction D-195 asks for.
+    # fewer copy, which is the direction D-195 asks for. Three since the rep's
+    # agent page was rebuilt (D-324): it states reports against the plan as a
+    # sentence, not a bar.
     defs = sorted(
         p for p in WEB.rglob("*.tsx")
         if _is_source(p)
         and ("function UsageBar(" in p.read_text(encoding="utf-8")
              or "function UsageRow(" in p.read_text(encoding="utf-8"))
     )
-    assert len(defs) == 4, (
-        f"UsageBar/UsageRow is defined {len(defs)} times, not 4. D-195's point is that "
+    assert len(defs) == 3, (
+        f"UsageBar/UsageRow is defined {len(defs)} times, not 3. D-195's point is that "
         f"the count is the mechanism; re-read the entry before editing this."
     )
     unguarded = []

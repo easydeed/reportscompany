@@ -1,51 +1,51 @@
 [
-  {
-    "name": "R1 a tinted account-type tag back in the rail's account row",
-    "file": "apps/web/app/app-layout.tsx",
-    "old": "<span className=\"text-[12px] text-muted-foreground\">{roleLabel}</span>",
-    "new": "<span className=\"rounded-full bg-indigo-50 text-indigo-600 text-[12px] px-2\">{roleLabel}</span>",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R2 a tinted panel in a component, reachable only through the import closure",
-    "file": "apps/web/components/v0-styling/AffiliateDashboardShell.tsx",
-    "old": "<Card className=\"border-border bg-card\">",
-    "new": "<Card className=\"border-indigo-200 bg-indigo-50\">",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R3 a tint in a file the answer never ruled on",
-    "file": "apps/web/app/page.tsx",
-    "old": "export default function",
-    "new": "const UNRULED = \"bg-indigo-100\"\n\nexport default function",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R4 the answer's dead-admin count left at the stale line figure",
-    "file": "docs/TINT_RAMP_FOR_DESIGN_2026-10-15.md",
-    "old": "| `app/admin/**` | 19 |",
-    "new": "| `app/admin/**` | 14 |",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R5 branding-form gains a consumer, so its four tints are live",
-    "file": "apps/web/app/app/settings/branding/page.tsx",
-    "old": "import { cn } from \"@/lib/utils\"",
-    "new": "import { cn } from \"@/lib/utils\"\nimport { BrandingForm } from \"@/components/branding-form\"",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R6 the avatar exception is dropped from beside the constraint it breaks",
-    "file": "apps/web/app/globals.css",
-    "old": "     ONE EXCEPTION, sanctioned by Design in the same answer:",
-    "new": "     The avatar, somewhere else, undocumented:",
-    "test": "tests/test_tint_answer_is_current.py"
-  },
-  {
-    "name": "R7 D-195 back: a 20%-wide fill against an unlimited allowance",
-    "file": "apps/web/app/app/affiliate/agents/[agentId]/page.tsx",
-    "old": "      {!isUnlimited && (\n        <div className=\"h-1.5 bg-muted rounded-full overflow-hidden\">",
-    "new": "      {(\n        <div className=\"h-1.5 bg-muted rounded-full overflow-hidden\">",
-    "test": "tests/test_tint_answer_is_current.py"
-  }
+ {
+  "name": "R1 a tinted account-type tag back in the rail's account row",
+  "file": "apps/web/app/app-layout.tsx",
+  "old": "<span className=\"text-[12px] text-muted-foreground\">{roleLabel}</span>",
+  "new": "<span className=\"rounded-full bg-indigo-50 text-indigo-600 text-[12px] px-2\">{roleLabel}</span>",
+  "test": "tests/test_tint_answer_is_current.py"
+ },
+ {
+  "name": "R2 a tinted panel in a component, reachable only through the import closure",
+  "file": "apps/web/components/v0-styling/AffiliateDashboardShell.tsx",
+  "old": "<Card className=\"border-border bg-card\">",
+  "new": "<Card className=\"border-indigo-200 bg-indigo-50\">",
+  "test": "tests/test_tint_answer_is_current.py"
+ },
+ {
+  "name": "R3 a tint in a file the answer never ruled on",
+  "file": "apps/web/app/page.tsx",
+  "old": "export default function",
+  "new": "const UNRULED = \"bg-indigo-100\"\n\nexport default function",
+  "test": "tests/test_tint_answer_is_current.py"
+ },
+ {
+  "name": "R4 the answer's dead-admin count left at the stale line figure",
+  "file": "docs/TINT_RAMP_FOR_DESIGN_2026-10-15.md",
+  "old": "| `app/admin/**` | 19 |",
+  "new": "| `app/admin/**` | 14 |",
+  "test": "tests/test_tint_answer_is_current.py"
+ },
+ {
+  "name": "R5 branding-form gains a consumer, so its four tints are live",
+  "file": "apps/web/app/app/settings/branding/page.tsx",
+  "old": "import { cn } from \"@/lib/utils\"",
+  "new": "import { cn } from \"@/lib/utils\"\nimport { BrandingForm } from \"@/components/branding-form\"",
+  "test": "tests/test_tint_answer_is_current.py"
+ },
+ {
+  "name": "R6 the avatar exception is dropped from beside the constraint it breaks",
+  "file": "apps/web/app/globals.css",
+  "old": "     ONE EXCEPTION, sanctioned by Design in the same answer:",
+  "new": "     The avatar, somewhere else, undocumented:",
+  "test": "tests/test_tint_answer_is_current.py"
+ },
+ {
+  "name": "R7 D-195 back: a 20%-wide fill against an unlimited allowance (billing's copy; the rep agent page's went with D-324)",
+  "file": "apps/web/app/app/settings/billing/page.tsx",
+  "old": "      {!isUnlimited && (\n        <div className=\"h-1.5 bg-muted rounded-full overflow-hidden\">",
+  "new": "      {(\n        <div className=\"h-1.5 bg-muted rounded-full overflow-hidden\">",
+  "test": "tests/test_tint_answer_is_current.py"
+ }
 ]

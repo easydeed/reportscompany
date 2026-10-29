@@ -1051,12 +1051,6 @@ def get_all_agent_schedules(account_id: str = Depends(require_account_id)):
 
 # ── Agent visibility endpoints (rep views agent data) ────────────────────────
 
-def _in_book(cur, rep_id: str, agent_id: str) -> bool:
-    cur.execute("SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid",
-                (agent_id, rep_id))
-    return cur.fetchone() is not None
-
-
 #: Where a lead came from, as the rep's pages say it. `qr_scan` and
 #: `direct_link` both mean the agent's property-report page: its lead form
 #: sends `qr_scan` whichever way the visitor arrived (D-325), so the two are
@@ -1073,7 +1067,10 @@ def get_book_agent(agent_account_id: str, account_id: str = Depends(require_acco
     with db_conn() as (conn, cur):
         if not verify_affiliate_account(cur, account_id):
             raise HTTPException(403, detail="Not an affiliate account")
-        if not _in_book(cur, account_id, agent_account_id):
+        # In the caller's book, or nothing: the id is bounded here, in the route.
+        cur.execute("SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid",
+                    (agent_account_id, account_id))
+        if not cur.fetchone():
             raise HTTPException(403, detail="This agent is not in your book")
         cur.execute("""
             SELECT a.id::text, a.name, a.created_at,
@@ -1133,8 +1130,11 @@ def get_book_leads(agent: str | None = None, account_id: str = Depends(require_a
     with db_conn() as (conn, cur):
         if not verify_affiliate_account(cur, account_id):
             raise HTTPException(403, detail="Not an affiliate account")
-        if agent and not _in_book(cur, account_id, agent):
-            raise HTTPException(403, detail="This agent is not in your book")
+        if agent:
+            cur.execute("SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid",
+                        (agent, account_id))
+            if not cur.fetchone():
+                raise HTTPException(403, detail="This agent is not in your book")
         cur.execute("""
             SELECT a.id::text,
                    COALESCE(NULLIF(TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')), ''), a.name),

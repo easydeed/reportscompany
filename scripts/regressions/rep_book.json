@@ -16,7 +16,7 @@
  {
   "name": "R3 an agent outside the book can be named",
   "file": "apps/api/src/api/routes/affiliates.py",
-  "old": "        if agent and not _in_book(cur, account_id, agent):\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n",
+  "old": "        if agent:\n            cur.execute(\"SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid\",\n                        (agent, account_id))\n            if not cur.fetchone():\n                raise HTTPException(403, detail=\"This agent is not in your book\")\n",
   "new": "",
   "test": "apps/api/tests/test_rep_book_api.py"
  },
@@ -37,8 +37,8 @@
  {
   "name": "R6 a non-rep can read an agent",
   "file": "apps/api/src/api/routes/affiliates.py",
-  "old": "        if not verify_affiliate_account(cur, account_id):\n            raise HTTPException(403, detail=\"Not an affiliate account\")\n        if not _in_book(cur, account_id, agent_account_id):\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n        cur.execute(\"\"\"\n            SELECT a.id::text, a.name, a.created_at,",
-  "new": "        cur.execute(\"\"\"\n            SELECT a.id::text, a.name, a.created_at,",
+  "old": "        if not verify_affiliate_account(cur, account_id):\n            raise HTTPException(403, detail=\"Not an affiliate account\")\n        # In the caller's book, or nothing: the id is bounded here, in the route.\n        cur.execute(\"SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid\",\n                    (agent_account_id, account_id))\n        if not cur.fetchone():\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n",
+  "new": "",
   "test": "apps/api/tests/test_rep_book_api.py"
  },
  {
