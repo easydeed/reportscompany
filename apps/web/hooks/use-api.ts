@@ -95,6 +95,7 @@ export const queryKeys = {
       ["company", "agents", filters ?? {}] as const,
     branding: ["company", "branding"] as const,
     seats: ["company", "seats"] as const,
+    settings: ["company", "settings"] as const,
     reports: (rep: string | null, limit: number) => ["company", "reports", rep ?? "all", limit] as const,
     schedules: (rep: string | null) => ["company", "schedules", rep ?? "all"] as const,
   },
@@ -299,6 +300,15 @@ export function useCompanySchedules(rep: string | null) {
   return useQuery({
     queryKey: queryKeys.company.schedules(rep),
     queryFn: () => apiFetchRQ(`/v1/company/schedules${rep ? `?rep_id=${encodeURIComponent(rep)}` : ""}`),
+    retry: false,
+  })
+}
+
+/** The company's details and who is on the account. */
+export function useCompanySettings() {
+  return useQuery({
+    queryKey: queryKeys.company.settings,
+    queryFn: () => apiFetchRQ("/v1/company/settings"),
     retry: false,
   })
 }

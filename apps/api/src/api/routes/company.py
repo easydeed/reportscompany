@@ -1081,6 +1081,57 @@ def get_branding(company: dict = Depends(get_company_member)):
     }
 
 
+# ── 6b. GET /settings ───────────────────────────────────────────────────────
+
+#: account_users.role as the company's Settings page says it (D-280).
+_ROLE_LABEL = {"OWNER": "admin"}
+
+
+@router.get("/settings")
+def get_settings(company: dict = Depends(get_company_member)):
+    """The company's details and everyone on the account, for Settings.
+
+    Read-only for everyone on the account. `postal_address` is shown, never
+    set here (B5 is gated: the slot exists, the value comes from elsewhere).
+    Adding or removing people has no endpoint yet, so none is offered.
+    """
+    company_id = company["company_account_id"]
+    with db_conn() as (conn, cur):
+        set_rls(cur, company_id)
+        cur.execute(
+            """
+            SELECT a.name, ab.website_url, ab.postal_address
+              FROM accounts a
+              LEFT JOIN affiliate_branding ab ON ab.account_id = a.id
+             WHERE a.id = %s::uuid
+            """,
+            (company_id,),
+        )
+        name, website, postal = cur.fetchone() or (None, None, None)
+        cur.execute(
+            """
+            SELECT u.id::text, TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')),
+                   u.email, au.role
+              FROM account_users au
+              JOIN users u ON u.id = au.user_id
+             WHERE au.account_id = %s::uuid
+             ORDER BY (au.role = 'OWNER') DESC, u.email
+            """,
+            (company_id,),
+        )
+        people = [
+            {"id": r[0], "name": r[1] or "", "email": r[2],
+             "role": _ROLE_LABEL.get(r[3], "viewer")}
+            for r in cur.fetchall()
+        ]
+    return {
+        "company": {"name": name, "website_url": website, "postal_address": postal},
+        "people": people,
+        "you": company.get("id"),
+        "can_manage": company["is_company_admin"],
+    }
+
+
 # ── 7. PATCH /branding ──────────────────────────────────────────────────────
 
 @router.patch("/branding")

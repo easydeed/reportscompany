@@ -80,7 +80,7 @@ export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored
         { name: "Activity", href: "/app/company/activity", icon: FileText, also: ["/app/company/reports", "/app/company/schedules"] },
         { name: "Branding", href: "/app/company/branding", icon: Palette },
         { name: "Plan & Seats", href: "/app/company/plan", icon: CreditCard },
-        settings,
+        { name: "Settings", href: "/app/company/settings", icon: Settings },
       ] },
     ]
   }

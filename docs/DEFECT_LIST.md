@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 56 | Observed, not yet triaged |
+| `recorded` | 57 | Observed, not yet triaged |
 | `open` | 79 | Real, unfixed |
 | `fixed` | 178 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **320** | D-001 … D-320, contiguous, no duplicates |
+| **Total** | **321** | D-001 … D-321, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
 
@@ -15819,6 +15819,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** WRONG · found 2026-10-29 rebuilding the page. `app/app/company/branding/page.tsx` held `default_theme_id` in state and drew three theme cards, but its PATCH body never carried it, and `PATCH /v1/company/branding` has no theme field — every pick reverted on reload. Its two `ImageUpload`s carry a Remove (×) that sets the logo to `null`; the PATCH upserts with `COALESCE(EXCLUDED.x, existing)`, so a null is kept as the old logo and the page said "Branding Saved". Design's copy for the replacement also said the brand colour "is never changed to fix contrast"; the market report's `_masthead_band` darkens it under white text (D-112).
 **Status:** `fixed` — feat/company-pages. The page is rebuilt on Design's rule list: name, logo on the colour, logo on white, two colours, with a live report page beside them. Replace, never Remove; no theme; only the changed fields are sent, never a rep's photo, contact lines or website; only the admin gets controls (D-280); the contrast sentence says what the report does. The admin's own name, title and photo, which the old page also saved, move to Settings; the test-email and email-preview panels are not carried over. `tests/test_company_brand_reads_what_the_api_returns.py` (7, all red on main — the sentence check also fails if the builder stops darkening) and `__tests__/CompanyBrand.test.ts`; `scripts/regressions/company_brand.json`: 9/9.
+
+---
+
+### D-321 — the rail labels every user on a company account "Company admin", including a viewer who can change nothing
+
+**Severity:** ROUGH · found 2026-10-29 rendering the company pages as a MEMBER (D-280). `app-layout.tsx` sets the footer's role label from `tier.isCompanyAdmin`, which follows the account type, not the user's role on it; since D-280 a MEMBER is read-only. The pages themselves gate on `can_manage` and say so; only the label is wrong.
+**Status:** `recorded` — the fix reads `can_manage` (or the role) into the layout's tier; no company user other than the owner exists in production today, because no code path adds one.
 
 ---
 
