@@ -9,7 +9,8 @@ name. This does.
 For every route in `company.py` and `affiliates.py`:
 
   1. the caller comes from exactly one approved token dependency —
-     `Depends(get_company_admin)` or `Depends(require_account_id)`; and
+     `Depends(get_company_admin)`, `Depends(get_company_member)` or
+     `Depends(require_account_id)`; and
   2. every other parameter that names an account (path, query, or a field of
      the request body) is in `ALLOWED`, with a reason, and the route's body
      contains the ownership predicate that bounds it.
@@ -29,7 +30,9 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 ROUTES = REPO / "apps/api/src/api/routes"
 
-CALLER_DEPENDENCIES = {"get_company_admin", "require_account_id"}
+#: `get_company_member` (D-280) is `get_company_admin` without the role check —
+#: the same token-derived company, for the read-only views.
+CALLER_DEPENDENCIES = {"get_company_admin", "get_company_member", "require_account_id"}
 
 #: Client-supplied ids that are allowed, each with why, and the text the route
 #: must contain to bound it to the caller — one of several, where a check can

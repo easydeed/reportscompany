@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 56 | Observed, not yet triaged |
+| `recorded` | 55 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 173 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 174 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **314** | D-001 … D-314, contiguous, no duplicates |
@@ -15526,7 +15526,7 @@ as a duplicate, the file goes with it rather than being ported.
 ### D-280 — `get_company_admin` checks only that the account is a TITLE_COMPANY, not the user's role: any user on a company account is its admin
 
 **Severity:** FRAGILE · filed during the sponsor-views inventory: `apps/api/src/api/deps/company.py`.
-**Status:** `recorded`
+**Status:** `fixed` — fix/company-admin-role. The user's own role on the company account (`account_users.role`) decides: OWNER is the company's admin; any other user on the account reads every company view (`get_company_member`) and is refused the five admin actions — invite rep, resend invite, replace (reassign), cancel invite, change the brand (`get_company_admin`). A user with no role on the account is refused outright, never treated as its admin. `can_manage` on the overview, reps and branding responses tells the page; People hides the invite form, Resend and the row menu from a non-admin. `apps/api/tests/test_company_admin_role.py`: a MEMBER reads all eight views, is refused each action with nothing changed and nothing sent; 7 of its 17 tests are red on main. `scripts/regressions/company_admin_role.json`: 7/7 fire.
 
 ---
 

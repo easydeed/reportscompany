@@ -98,3 +98,17 @@ def test_every_menu_item_in_the_company_pages_does_something():
             if not re.search(r"\b(onSelect|onClick)=|\basChild\b", attrs):
                 dead.append(f"{page.relative_to(ROOT)}:{src[:m.start()].count(chr(10)) + 1}")
     assert not dead, f"menu items with no handler (D-302): {dead}"
+
+
+def test_people_offers_admin_actions_only_to_the_admin():
+    """D-280: the API refuses a non-admin; the page must not offer them the
+    button. Its actions are gated on `can_manage`, which /v1/company/reps
+    returns."""
+    src = (PAGES / "reps/page.tsx").read_text(encoding="utf-8")
+    assert "repsData?.can_manage === true" in src
+    assert "{canManage && <ConsequenceMenu" in src
+    assert "{canManage && <div" in src, "the invite form is not gated"
+    assert "canManage ? repActions(r) : []" in src, "Resend is not gated"
+    tree = ast.parse(COMPANY.read_text(encoding="utf-8"))
+    fn = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "list_reps")
+    assert "can_manage" in ast.unparse(fn), "list_reps does not say who can act"

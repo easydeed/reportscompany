@@ -51,6 +51,8 @@ export default function PeoplePage() {
   const [notice, setNotice] = useState<string | null>(null)
 
   const reps: Rep[] = repsData?.reps ?? []
+  // D-280: only the company's admin acts; everyone else on the account reads.
+  const canManage: boolean = repsData?.can_manage === true
   const seats: SeatSummary | null = seatsData?.seats ?? null
   const byRep = useMemo(() => agentsByRep((agentsData?.agents ?? []) as Agent[]), [agentsData])
   const totalAgents = reps.reduce((n, r) => n + r.agent_count, 0)
@@ -120,7 +122,11 @@ export default function PeoplePage() {
         description={isLoading ? undefined : `${reps.length} rep${reps.length === 1 ? "" : "s"} · ${totalAgents} agent${totalAgents === 1 ? "" : "s"}. Open a rep to see their agents.`}
       />
 
-      <div className="flex flex-col gap-[10px]">
+      {!canManage && !isLoading && (
+        <p className="text-[14px] text-muted-foreground">You can see everyone here. Only your company&rsquo;s admin can invite, replace or cancel reps.</p>
+      )}
+
+      {canManage && <div className="flex flex-col gap-[10px]">
         <form className="flex flex-wrap items-center gap-[10px]" onSubmit={(e) => { e.preventDefault(); void invite(e.currentTarget) }}>
           <input name="name" required placeholder="Their name" autoComplete="off" disabled={busy} className={`${field} min-w-[200px] flex-1`} />
           <input name="email" type="email" required placeholder="Their email" autoComplete="off" disabled={busy} className={`${field} min-w-[240px] flex-[1.4]`} />
@@ -129,7 +135,8 @@ export default function PeoplePage() {
         {notice
           ? <p className="text-[14px] font-medium text-[var(--success-foreground)]">{notice}</p>
           : <p className="text-[14px] text-muted-foreground">They get your logo and colour on day one and start inviting their own agents.{seatLine(seats) ? ` ${seatLine(seats)}.` : ""}</p>}
-      </div>
+      </div>}
+      {!canManage && seatLine(seats) && <p className="text-[14px] text-muted-foreground">{seatLine(seats)}.</p>}
 
       <RuleList>
         {reps.map((r) => {
@@ -137,7 +144,7 @@ export default function PeoplePage() {
           const agents = byRep[r.id] ?? []
           const isOpen = !!open[r.id]
           const Chev = isOpen ? ChevronDown : ChevronRight
-          const actions = repActions(r)
+          const actions = canManage ? repActions(r) : []
           return (
             <div key={r.id} className="flex flex-col border-b border-[var(--border-subtle)]">
               <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1.5fr)_auto] items-center gap-5 py-[14px]">
@@ -154,11 +161,11 @@ export default function PeoplePage() {
                   {actions.includes("resend") && (
                     <RowButton onClick={() => void run("Resending", () => post("/v1/company/resend-rep-invite", { email: r.email }), `Invite resent to ${r.email}.`)}>Resend invite</RowButton>
                   )}
-                  <ConsequenceMenu items={menuFor(r)} />
+                  {canManage && <ConsequenceMenu items={menuFor(r)} />}
                 </span>
               </div>
 
-              {replacing === r.id && (
+              {canManage && replacing === r.id && (
                 <ReplacePanel
                   rep={r}
                   others={reps.filter((o) => o.id !== r.id && o.holds_seat && o.status === "active")}
