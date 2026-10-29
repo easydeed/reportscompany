@@ -58,8 +58,11 @@ def public_search(monkeypatch):
 
     from fastapi.testclient import TestClient
     from api.main import app
-    with TestClient(app) as client:
-        yield lambda: client.post("/v1/cma/ABC123/search", json={"address": "14 Cartwheel"})
+    # Not `with TestClient(app)`: the context manager runs the app's shutdown,
+    # which closes the shared database pool, and every database test after
+    # this file then fails (29 of them, in CI on the first push).
+    client = TestClient(app)
+    yield lambda: client.post("/v1/cma/ABC123/search", json={"address": "14 Cartwheel"})
 
 
 def test_the_public_search_returns_none_of_the_owner_data(public_search):
