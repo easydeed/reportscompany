@@ -45,8 +45,8 @@ JS = r"""
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
 (async () => {
-  const [dir, scheme] = process.argv.slice(2);
-  const b = await chromium.launch();
+  const [dir, scheme, exePath] = process.argv.slice(2);
+  const b = await chromium.launch(exePath ? { executablePath: exePath } : {});
   const page = await b.newPage({ viewport: { width: 680, height: 900 }, colorScheme: scheme });
   const out = {};
   for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.html')).sort()) {
@@ -120,10 +120,25 @@ def _measure(docs, scheme):
             Path(d, f"{name}.html").write_text(html, encoding="utf-8")
         js = Path(d, "measure.cjs")
         js.write_text(JS)
-        res = subprocess.run(["node", str(js), d, scheme], cwd=str(ROOT),
+        # The script lives in a temp dir, so `require('playwright')` must be
+        # pointed at the repo's node_modules, and Chromium found the way the
+        # pixel gate finds it — CI has no global Playwright and no default
+        # browser.
+        env = {**os.environ, "NODE_PATH": os.pathsep.join(
+            p for p in (str(ROOT / "node_modules"), os.environ.get("NODE_PATH", "")) if p)}
+        res = subprocess.run(["node", str(js), d, scheme, _chromium()], cwd=str(ROOT), env=env,
                              capture_output=True, text=True, timeout=300)
     assert res.returncode == 0, res.stderr[-2000:]
     return json.loads(res.stdout.strip().splitlines()[-1])
+
+
+def _chromium():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_measure_contrast_by_pixel", ROOT / "scripts/measure_contrast_by_pixel.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.find_chromium()
 
 
 def _boundary(row):
