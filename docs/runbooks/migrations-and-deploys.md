@@ -33,8 +33,33 @@ check is back on. Remove it once the migration is applied.
 
 - A database it cannot reach at startup: the service starts and logs a
   warning, so a database blip does not become a crash loop.
-- Render's behaviour on a failed start depends on the service settings.
-  Confirm each service keeps the previous version running when a deploy fails
-  (zero-downtime deploys). For a background worker without it, a refused start
-  means the worker is down until the migration is applied; that is loud,
-  where running ahead of the schema failed one request at a time.
+- A database it cannot reach at startup is the only case it lets through.
+
+## When a deploy fails, the old version keeps running
+
+Checked 2026-10-29 for every service. The API is a web service with Health
+Check Path `/health`; the worker, the ticker and the consumer bridge are
+Background Workers. Render's deploy docs (render.com/docs/deploys): if the
+build, pre-deploy or start command fails or times out, "the entire deploy
+fails" and the service keeps running its last successful deploy; this
+zero-downtime sequence "applies to web services, private services, background
+workers, and cron jobs". Seen in production the same day: the bridge's deploy
+of `09c8b71` failed and Render kept `229ee8b` live.
+
+So a refused start never takes a service down. **The cost is that it is
+silent**: a service whose deploy failed keeps serving the older code, and
+nothing tells you. On 2026-10-29 the worker and ticker ran `09c8b71` while the
+bridge sat on `229ee8b`.
+
+After every merge to `main`, and after every "Deploy latest commit":
+
+1. In Render, check that each of the four services' **newest** deploy reads
+   Live, not Failed, and that all four show the same commit.
+2. API: `GET /health` returns the `schema` the code needs.
+3. A Failed deploy: open it and read the last lines of its log.
+   - `refusing to start: this code needs NNNN_….sql` — the schema guard;
+     apply the migration (above), then deploy again.
+   - A build error (dependency install, out of memory, timeout) — fix or
+     re-run the build; the code was never started.
+   - `Exited with status …` after the service's own output — the start
+     command or the code failed; the lines above it say which.
