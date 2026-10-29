@@ -53,15 +53,31 @@ class PropertySearchRequest(BaseModel):
     state: Optional[str] = None
 
 
+#: Fields the PUBLIC search never returns (D-309, owner decision 2026-10-29).
+#: `/v1/cma/{code}/search` needs no login: anyone can type any address into an
+#: agent's lead page. Returning the assessor's owner name, the assessed value,
+#: the tax bill and the last sale for it made the page a free public-records
+#: lookup, and put the owner's name in every visitor's browser even though the
+#: page never shows it — D-116's data, leaving through the lookup instead of
+#: the report. The agent's signed-in search (`/v1/property/search`) keeps them.
+#: Listed so the exclusion is a decision a test can hold, not an absence.
+PUBLIC_SEARCH_EXCLUDED = (
+    "owner_name",
+    "assessed_value", "land_value", "improvement_value", "tax_amount", "tax_year",
+    "last_sale_price", "last_sale_date", "last_sale_price_per_sqft",
+)
+
+
 class PropertySearchResult(BaseModel):
-    """Property from SiteX search."""
+    """What the public lead-page search returns: enough to recognise the
+    house and pre-fill its facts, nothing about who owns it or what it cost.
+    See PUBLIC_SEARCH_EXCLUDED."""
     apn: str
     fips: str
     address: str
     city: str
     state: str
     zip: str
-    owner_name: Optional[str] = None
     bedrooms: Optional[int] = None
     bathrooms: Optional[float] = None
     sqft: Optional[int] = None
@@ -70,27 +86,8 @@ class PropertySearchResult(BaseModel):
     longitude: Optional[float] = None
     property_type: Optional[str] = None
     lot_size: Optional[int] = None
-    # D-139. Measured after D-138: the whole parcel and tax family was
-    # missing too, so the consumer report's Parcel & Legal block rendered
-    # blank and its Tax & Assessment block rendered $0 — on every consumer
-    # report ever generated. `lot_size` and the last-sale fields were not the
-    # exceptions; they were the two somebody happened to trip over.
     county: Optional[str] = None
     legal_description: Optional[str] = None
-    assessed_value: Optional[int] = None
-    land_value: Optional[int] = None
-    improvement_value: Optional[int] = None
-    tax_amount: Optional[float] = None
-    tax_year: Optional[int] = None
-    # D-118. This is a HAND-COPIED projection of PropertyData, so a field
-    # added there does not appear here — it is silently dropped, the consumer
-    # wizard reads `undefined`, and the report's price row falls back to N/A
-    # with no error anywhere. That is what happened to these three when they
-    # were added yesterday; `tsc` passed because the frontend declares them
-    # optional. A test now asserts the two models agree.
-    last_sale_price: Optional[int] = None
-    last_sale_date: Optional[str] = None
-    last_sale_price_per_sqft: Optional[float] = None
 
 
 class ReportRequestPayload(BaseModel):
@@ -267,7 +264,6 @@ async def search_property(
             city=property_data.city or "",
             state=property_data.state or "CA",
             zip=property_data.zip_code or "",
-            owner_name=property_data.owner_name,
             bedrooms=property_data.bedrooms,
             bathrooms=property_data.bathrooms,
             sqft=property_data.sqft,
@@ -278,14 +274,6 @@ async def search_property(
             lot_size=property_data.lot_size,
             county=property_data.county or None,
             legal_description=property_data.legal_description or None,
-            assessed_value=property_data.assessed_value,
-            land_value=property_data.land_value,
-            improvement_value=property_data.improvement_value,
-            tax_amount=property_data.tax_amount,
-            tax_year=property_data.tax_year,
-            last_sale_price=property_data.last_sale_price,
-            last_sale_date=property_data.last_sale_date,
-            last_sale_price_per_sqft=property_data.last_sale_price_per_sqft,
         )]
         
     except Exception as e:

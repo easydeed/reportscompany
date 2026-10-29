@@ -17,7 +17,8 @@ covering a consumer — on code written the same day the rule was written down.
 WHAT IS ASSERTED
 ----------------
 1. The fields survive `PropertySearchResponse`, which the agent wizard reads.
-2. `PropertySearchResult` covers every field the consumer wizard sends onward.
+2. `PropertySearchResult` carries none of them: since D-309 the public search
+   returns no owner, tax, assessment or sale data. Only the agent's does.
 3. `ReportRequestPayload` accepts every field that projection can produce.
 4. The TypeScript that reads them names them identically.
 
@@ -32,7 +33,7 @@ from pathlib import Path
 
 import pytest
 
-from api.routes.lead_pages import PropertySearchResult, ReportRequestPayload
+from api.routes.lead_pages import PUBLIC_SEARCH_EXCLUDED, PropertySearchResult, ReportRequestPayload
 from api.routes.property import PropertySearchResponse
 from api.services.sitex import PropertyData
 
@@ -78,13 +79,16 @@ def test_the_search_response_carries_the_last_sale_to_the_agent_wizard():
 
 # ── 2 · the consumer path, which is where it actually broke ───────────────
 
-def test_the_cma_search_result_carries_the_last_sale():
+def test_the_public_search_result_carries_none_of_the_owner_data():
+    """D-309 reverses D-138 for this path, by owner decision. The public search
+    needs no login, so what it returns is a public-records lookup for any
+    address. The last sale, the tax bill, the assessed values and the owner's
+    name stay on the agent's signed-in search (asserted above) and nowhere
+    else. The endpoint itself is tested in test_public_search_strips_owner_data."""
     fields = set(PropertySearchResult.model_fields)
-    missing = [f for f in LAST_SALE if f not in fields]
-    assert not missing, (
-        f"/v1/cma/{{code}}/search drops {missing}. The consumer wizard reads "
-        f"them, gets undefined, and the report says N/A with no error anywhere."
-    )
+    present = sorted(fields & set(PUBLIC_SEARCH_EXCLUDED))
+    assert not present, f"/v1/cma/{{code}}/search can return {present} again (D-309)"
+    assert set(LAST_SALE) <= set(PUBLIC_SEARCH_EXCLUDED)
 
 
 def test_the_report_request_accepts_everything_the_search_can_return():
@@ -119,9 +123,11 @@ def _reads_dot_fields(path: Path, receiver: str) -> set:
     return set(re.findall(rf"{re.escape(receiver)}!?\.([a-zA-Z_][\w]*)", src))
 
 
+# `lead-pages/ConsumerLandingWizard.tsx` was checked here too. Nothing imports
+# it (the live page is apps/web/app/cma/[code]), and since D-309 the search it
+# would read returns none of these fields, so it is no longer a consumer.
 @pytest.mark.parametrize("tsx,receiver", [
     ("property-wizard/step-generate.tsx", "property"),
-    ("lead-pages/ConsumerLandingWizard.tsx", "selectedProperty"),
 ])
 def test_the_frontend_spells_the_fields_the_way_the_api_does(tsx, receiver):
     path = WEB / tsx
@@ -133,15 +139,6 @@ def test_the_frontend_spells_the_fields_the_way_the_api_does(tsx, receiver):
         f"A camelCase or misspelt name typechecks against an optional field "
         f"and silently sends undefined."
     )
-
-
-def test_the_consumer_wizard_forwards_them_to_the_request_endpoint():
-    """Reading them is not sending them — the bug would survive a rename of
-    the outgoing key alone."""
-    src = (WEB / "lead-pages/ConsumerLandingWizard.tsx").read_text(encoding="utf-8")
-    body = src[src.index("/request`"):]
-    for f in LAST_SALE:
-        assert re.search(rf"\b{f}\s*:", body), f"{f} is read but never sent"
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -185,6 +182,10 @@ CONSUMER_EXCLUDED = {
     # landing page searches whole addresses.
     "unit_number": "unit-level, not reachable from the consumer search",
     "unit_type": "as unit_number",
+    # D-309: the public search is a lookup anyone can run on any address.
+    # The agent's signed-in search keeps these; the public one returns none.
+    **{f: "public-records lookup on a public page (D-309)"
+       for f in PUBLIC_SEARCH_EXCLUDED if f != "owner_name"},
     # Renamed on the way through, and asserted present under the new name.
     "street": "renamed to `address`",
     "zip_code": "renamed to `zip`",

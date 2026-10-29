@@ -1,0 +1,38 @@
+[
+  {
+    "name": "S1 the public search model carries the owner name again",
+    "file": "apps/api/src/api/routes/lead_pages.py",
+    "old": "    zip: str\n    bedrooms: Optional[int] = None\n    bathrooms: Optional[float] = None\n    sqft: Optional[int] = None\n    year_built: Optional[int] = None\n    latitude: Optional[float] = None",
+    "new": "    zip: str\n    owner_name: Optional[str] = None\n    bedrooms: Optional[int] = None\n    bathrooms: Optional[float] = None\n    sqft: Optional[int] = None\n    year_built: Optional[int] = None\n    latitude: Optional[float] = None",
+    "test": "apps/api/tests/test_public_search_strips_owner_data.py"
+  },
+  {
+    "name": "S2 the public search model declares the last sale price again",
+    "file": "apps/api/src/api/routes/lead_pages.py",
+    "old": "    legal_description: Optional[str] = None\n\n\nclass ReportRequestPayload",
+    "new": "    legal_description: Optional[str] = None\n    last_sale_price: Optional[int] = None\n\n\nclass ReportRequestPayload",
+    "test": "apps/api/tests/test_public_search_strips_owner_data.py"
+  },
+  {
+    "name": "S3 the strip takes the house with it",
+    "file": "apps/api/src/api/routes/lead_pages.py",
+    "old": "            bedrooms=property_data.bedrooms,\n            bathrooms=property_data.bathrooms,\n            sqft=property_data.sqft,\n            year_built=property_data.year_built,\n            latitude=property_data.latitude,",
+    "new": "            bathrooms=property_data.bathrooms,\n            sqft=property_data.sqft,\n            year_built=property_data.year_built,\n            latitude=property_data.latitude,",
+    "test": "apps/api/tests/test_public_search_strips_owner_data.py"
+  },
+  {
+    "name": "S4 the agent's search loses the owner record too",
+    "file": "apps/api/src/api/routes/property.py",
+    "old": "        result = await lookup_property(payload.address, payload.city_state_zip)\n        \n        if result:\n            return PropertySearchResponse(success=True, data=result)",
+    "new": "        result = await lookup_property(payload.address, payload.city_state_zip)\n        \n        if result:\n            return PropertySearchResponse(success=True, data=result.model_copy(update={'owner_name': None, 'tax_amount': None}))",
+    "test": "apps/api/tests/test_public_search_strips_owner_data.py"
+  },
+  {
+    "name": "S5 the lead request forwards an owner name again",
+    "file": "apps/web/lib/cma-lead.ts",
+    "old": "    consent_given: true,\n    bedrooms: fact(lead.beds, property.bedrooms),",
+    "new": "    consent_given: true,\n    ...((property as { owner_name?: string }).owner_name ? { owner_name: (property as { owner_name?: string }).owner_name } : {}),\n    bedrooms: fact(lead.beds, property.bedrooms),",
+    "test": "__tests__/CmaLead.test.ts",
+    "runner": "jest"
+  }
+]
