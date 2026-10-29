@@ -283,7 +283,8 @@ WEB_THEME_LISTS = (
     ("apps/web/components/property-wizard/types.ts", "export const THEMES"),
     ("apps/web/lib/property-report-assets.ts", "export const THEMES"),
     ("apps/web/app/app/settings/branding/page.tsx", "const THEMES"),
-    ("apps/web/app/app/company/branding/page.tsx", "const THEMES"),
+    # apps/web/app/app/company/branding/page.tsx had one until D-320: its
+    # picker was never saved, and the rebuilt page has no theme.
 )
 
 

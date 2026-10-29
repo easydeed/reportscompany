@@ -299,7 +299,7 @@ export function useCompanyReports(rep: string | null, limit: number) {
 export function useCompanySchedules(rep: string | null) {
   return useQuery({
     queryKey: queryKeys.company.schedules(rep),
-    queryFn: () => apiFetchRQ(`/v1/company/schedules${rep ? `?rep_id=${encodeURIComponent(rep)}` : ""}`),
+    queryFn: () => apiFetchRQ(`/v1/company/schedules?${new URLSearchParams(rep ? { rep_id: rep } : {})}`),
     retry: false,
   })
 }

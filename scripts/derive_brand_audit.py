@@ -29,12 +29,13 @@ sys.path.insert(0, str(ROOT / "apps/worker/src"))
 
 from worker.themes import NEAR_BLACK, WHITE, contrast, derive_theme  # noqa: E402
 
-#: The two files that hold the picker. Both are read and they must agree: a
+#: The files that hold the picker. Every one is read and they must agree: a
 #: preset list in two places is two answers waiting to diverge, and this is the
-#: only reader that would notice.
+#: only reader that would notice. The company Branding page had a second copy
+#: until it was rebuilt on Design's rule list (D-320), which takes a hex and
+#: offers no presets.
 PRESET_FILES = (
     "apps/web/app/app/settings/branding/page.tsx",
-    "apps/web/app/app/company/branding/page.tsx",
 )
 
 #: Design's sample, from the market README's colour-role table. Named here
