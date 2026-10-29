@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 55 | Observed, not yet triaged |
+| `recorded` | 56 | Observed, not yet triaged |
 | `open` | 78 | Real, unfixed |
-| `fixed` | 174 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 175 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **314** | D-001 … D-314, contiguous, no duplicates |
+| **Total** | **316** | D-001 … D-316, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 31. (Sums to 78, the open total.)
 
@@ -15777,6 +15777,20 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** BROKEN · found 2026-10-29 building the company People page, whose seat calls had the same gap. The `/api/proxy` layer is one route file per endpoint, not a catch-all, and nothing checked that a path the web app calls has one. `app/app/admin/leads/actions.tsx` (`DELETE /v1/admin/leads/{id}`), `admin/leads/filters.tsx` (`GET /v1/admin/leads/export`), `admin/property-reports/actions.tsx` (`POST …/{id}/retry`) and `components/mobile-report/MobileReportViewer.tsx` (`GET /v1/r/{id}/pdf/status`) all had working API endpoints and no route between them and the browser: the admin buttons did nothing, and a consumer's "Download PDF" spun forever whenever the PDF was not ready on the first try (its poll called `.json()` on Next's 404 page and stopped). #224's seat endpoints (`/v1/company/seats`, `/reps/{id}/reassign`, `/reps/{id}/cancel-invite`) were in the same state, unused until now.
 **Status:** `fixed` — feat/company-people. Proxy routes for the three admin calls and the three seat calls; the mobile viewer polls the existing `r/[id]/pdf` GET, which is the status check. `tests/test_every_proxied_call_has_a_route.py` reads every literal `/v1/…` path the web app passes to fetch / apiFetch / apiFetchRQ / post and requires a matching route directory — red on main with these seven.
+
+---
+
+### D-315 — a title company's "Plan & Seats" link opened the agent billing page, which listed the Free plan's features under the company's plan name
+
+**Severity:** WRONG · found 2026-10-29 building the company Plan & Seats page. The rail sent a company admin to `/app/settings/billing`. That page shows the features of the plan whose slug is in its own typed list, and fell back to `plans[0]` — Free — for any other slug: a company, a title rep and a sponsored agent each saw "3 Market Reports / month · 1 Automated Schedule · 1 Property Report / month · CMA Lead Page" under their own plan's name. For a company the numbers that matter — its rep seats — were nowhere.
+**Status:** `fixed` — feat/company-pages. `/app/company/plan` reads `GET /v1/company/seats`, which now also returns `agent_plan` from the `plans` row agents are put on; the rail points there; the billing page sends a `TITLE_COMPANY` to it and shows no features for a plan it has no list for. `apps/api/tests/test_company_plan_api.py` changes the plan row and watches the answer move; `tests/test_company_plan_reads_what_the_api_returns.py` holds the page's types to the API's keys — 9 of 10 red on main. `scripts/regressions/company_plan.json`: 9/9.
+
+---
+
+### D-316 — the billing page's plan cards are typed into the page: names, prices and limits that duplicate the `plans` table and Stripe
+
+**Severity:** FRAGILE · found 2026-10-29 alongside D-315. `apps/web/app/app/settings/billing/page.tsx` declares three plans by hand — name, `$` price and a features list with each limit as text. The limits match the table today (Starter 25 / 3 / 5, Pro unlimited / unlimited / 25), but the names already disagree with it ("Growth" for `starter`, "Growth Plus" for `pro`; the table says Starter and Pro), the prices are not read from Stripe, and "CMA Lead Page" is listed on every plan while `plans.lead_capture_enabled` is false on all of them. A change to the table or to Stripe changes what an agent is charged and allowed without changing what this page promises.
+**Status:** `recorded` — not changed in this branch. The fix is to read names and limits from `plans` (as the account emails do since #243) and prices from the Stripe price ids; whether "CMA Lead Page" is gated by `lead_capture_enabled` needs checking first.
 
 ---
 

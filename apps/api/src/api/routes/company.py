@@ -879,13 +879,17 @@ def resend_rep_invite(
 
 @router.get("/seats")
 def get_seats(company: dict = Depends(get_company_member)):
-    """The seat count, who holds what, and every past reassignment."""
+    """The seat count, who holds what, every past reassignment, and the
+    plan the company's agents are on."""
     company_id = company["company_account_id"]
     with db_conn() as (conn, cur):
         set_rls(cur, company_id)
         return {
             "seats": seats.seat_summary(cur, company_id),
             "history": seats.seat_history(cur, company_id),
+            # What an agent gets, for Plan & Seats: agents take no seat.
+            "agent_plan": seats.agent_plan(cur),
+            "can_manage": company["is_company_admin"],
         }
 
 

@@ -72,15 +72,14 @@ export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored
   }
   if (isCompanyAdmin) {
     // The rail Jerry approved (2026-10-28): Dashboard · People · Activity ·
-    // Branding · Plan & Seats · Settings. Activity and Plan & Seats point at
-    // the existing reports and billing pages until their own builds land.
+    // Branding · Plan & Seats · Settings.
     return [
       { label: "Company", items: [
         { name: "Dashboard", href: "/app/company", icon: Building, exact: true },
         { name: "People", href: "/app/company/reps", icon: Users, also: ["/app/company/agents"] },
         { name: "Activity", href: "/app/company/reports", icon: FileText, also: ["/app/company/schedules"] },
         { name: "Branding", href: "/app/company/branding", icon: Palette },
-        { name: "Plan & Seats", href: "/app/settings/billing", icon: CreditCard },
+        { name: "Plan & Seats", href: "/app/company/plan", icon: CreditCard },
         settings,
       ] },
     ]

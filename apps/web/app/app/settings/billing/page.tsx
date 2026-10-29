@@ -125,6 +125,13 @@ export default function BillingPage() {
     }
   }, [searchParams, toast, router])
 
+  // D-315: a title company's plan is its rep seats, on its own page. This page
+  // is an agent's, and showed the Free plan's features under a company's name.
+  const isCompany = billingData?.account?.account_type === "TITLE_COMPANY"
+  useEffect(() => {
+    if (isCompany) router.replace("/app/company/plan")
+  }, [isCompany, router])
+
   async function checkout(planSlug: string) {
     setBillingLoading(true)
     try {
@@ -193,7 +200,7 @@ export default function BillingPage() {
     })
   }
 
-  if (isLoading) {
+  if (isLoading || isCompany) {
     return (
       <div className="flex items-center justify-center py-24">
         <div className="text-center">
@@ -247,7 +254,7 @@ export default function BillingPage() {
 
               {/* Plan features */}
               <div className="space-y-1.5 mb-4">
-                {(plans.find(p => p.slug === currentPlanSlug)?.features || plans[0].features).map((feature, i) => (
+                {(plans.find(p => p.slug === currentPlanSlug)?.features ?? []).map((feature, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Check className="w-3.5 h-3.5 text-emerald-500" />
                     {feature}
