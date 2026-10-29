@@ -84,6 +84,12 @@ export const queryKeys = {
     overview: ["affiliate", "overview"] as const,
     accounts: ["affiliate", "accounts"] as const,
     detail: (id: string) => ["affiliate", "detail", id] as const,
+    reports: (limit: number) => ["affiliate", "reports", limit] as const,
+    schedules: ["affiliate", "schedules"] as const,
+    agent: (id: string) => ["affiliate", "agent", id] as const,
+    agentReports: (id: string) => ["affiliate", "agent", id, "reports"] as const,
+    agentSchedules: (id: string) => ["affiliate", "agent", id, "schedules"] as const,
+    leads: (agent: string | null) => ["affiliate", "leads", agent ?? "all"] as const,
   },
 
   // Company (Title Company Admin)
@@ -247,6 +253,43 @@ export function useAffiliateOverview(options?: { enabled?: boolean }) {
     queryFn: () => apiFetchRQ("/v1/affiliate/overview"),
     retry: false, // Don't retry 403 (not affiliate)
     enabled: options?.enabled !== false,
+  })
+}
+
+/** The rep's feed: their agents' reports and their own, newest first. */
+export function useRepReports(limit: number) {
+  return useQuery({
+    queryKey: queryKeys.affiliate.reports(limit),
+    queryFn: () => apiFetchRQ(`/v1/affiliate/all-reports?${new URLSearchParams({ limit: String(limit) })}`),
+    retry: false,
+    placeholderData: (prev) => prev,
+  })
+}
+
+/** Every schedule in the rep's book, and the rep's own. */
+export function useRepSchedules() {
+  return useQuery({ queryKey: queryKeys.affiliate.schedules, queryFn: () => apiFetchRQ("/v1/affiliate/all-schedules"), retry: false })
+}
+
+/** One agent in the rep's book. */
+export function useBookAgent(id: string) {
+  return useQuery({ queryKey: queryKeys.affiliate.agent(id), queryFn: () => apiFetchRQ(`/v1/affiliate/agents/${id}`), retry: false })
+}
+
+export function useBookAgentReports(id: string) {
+  return useQuery({ queryKey: queryKeys.affiliate.agentReports(id), queryFn: () => apiFetchRQ(`/v1/affiliate/agents/${id}/reports`), retry: false })
+}
+
+export function useBookAgentSchedules(id: string) {
+  return useQuery({ queryKey: queryKeys.affiliate.agentSchedules(id), queryFn: () => apiFetchRQ(`/v1/affiliate/agents/${id}/schedules`), retry: false })
+}
+
+/** The book's homeowner leads: counts per agent and a feed. No contact details. */
+export function useBookLeads(agent: string | null) {
+  return useQuery({
+    queryKey: queryKeys.affiliate.leads(agent),
+    queryFn: () => apiFetchRQ(`/v1/affiliate/leads?${new URLSearchParams(agent ? { agent } : {})}`),
+    retry: false,
   })
 }
 

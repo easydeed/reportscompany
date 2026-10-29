@@ -158,6 +158,10 @@ NETWORK_SCHEDULES = [
     (1, "Tustin monthly", "new_listings", "Tustin", "monthly", 1, 9, True, True),
     (0, "Costa Mesa closed", "closed", "Costa Mesa", "weekly", 4, 7, False, None),
 ]
+#: The network's homeowner leads, for the rep's Leads page: agent index,
+#: source, days ago. Never shown to the rep by name — the fixture still uses
+#: obviously fake ones.
+NETWORK_LEADS = [(0, "qr_scan", 1), (0, "direct_link", 4), (0, "cma_page", 9), (1, "qr_scan", 35)]
 #: Seat rows this script opens carry this start date, so `down` removes its own
 #: and leaves any the 0060 backfill made.
 SEAT_SENTINEL = "2001-01-01T00:00:00+00:00"
@@ -411,6 +415,11 @@ def network_up(cur):
                    VALUES (gen_random_uuid(), %s, 'market_snapshot', %s, 'completed', %s, %s::jsonb, 30, true)""",
                 (aid, [CITIES[i % len(CITIES)]], NOW - timedelta(days=(days_ago or 0) + i),
                  psycopg.types.json.Json({"_fixture": TAG})))
+    for idx, source, days in NETWORK_LEADS:
+        cur.execute(
+            """INSERT INTO leads (account_id, name, email, source, status, created_at, updated_at)
+               VALUES (%s, 'Fixture Homeowner', 'homeowner.fixture@example.com', %s, 'new', %s, %s)""",
+            (NETWORK_AGENTS[idx][0], source, NOW - timedelta(days=days), NOW - timedelta(days=days)))
     for idx, name, kind, city, cadence, day, hour, active, due_in in NETWORK_SCHEDULES:
         cur.execute(
             """INSERT INTO schedules (id, account_id, name, report_type, city, cadence, weekly_dow, monthly_dom,
@@ -427,6 +436,7 @@ def network_down(cur):
     ids = [a[0] for a in NETWORK_AGENTS] + [PENDING_REP[0]]
     cur.execute("DELETE FROM report_generations WHERE account_id = ANY(%s::uuid[])", (ids,))
     cur.execute("DELETE FROM schedules WHERE account_id = ANY(%s::uuid[])", (ids,))
+    cur.execute("DELETE FROM leads WHERE account_id = ANY(%s::uuid[])", (ids,))
     cur.execute("DELETE FROM rep_seat_assignments WHERE rep_account_id = ANY(%s::uuid[]) OR started_at = %s",
                 (ids, SEAT_SENTINEL))
     cur.execute("DELETE FROM account_users WHERE account_id = ANY(%s::uuid[])", (ids,))

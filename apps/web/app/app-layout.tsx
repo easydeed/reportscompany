@@ -12,7 +12,7 @@ import { Logo } from "@/components/logo"
 import {
   LayoutDashboard, FileText, Calendar, Users, Settings, Building2, Building, Home,
   UserCheck, MessageSquare, Link2, Palette, CreditCard, Plus, CircleHelp, Mail,
-  BarChart3, Server, Shield, BookUser, Menu, LogOut, Lock,
+  BarChart3, Server, Shield, BookUser, Menu, LogOut, Lock, Inbox,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import {
@@ -96,6 +96,8 @@ export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored
         { name: "My agents", href: "/app/affiliate", icon: Users, exact: true },
         { name: "Agent reports", href: "/app/affiliate/reports", icon: FileText },
         { name: "Agent schedules", href: "/app/affiliate/schedules", icon: Calendar },
+        // The homeowner leads the book's agents bring in: counts and a feed, no contact details.
+        { name: "Leads", href: "/app/affiliate/leads", icon: Inbox },
       ] },
       { label: "My work", items: [...reports, { name: "Contacts", href: "/app/people", icon: BookUser }] },
       { label: "Account", items: [

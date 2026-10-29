@@ -59,12 +59,12 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 59 | Observed, not yet triaged |
+| `recorded` | 60 | Observed, not yet triaged |
 | `open` | 79 | Real, unfixed |
-| `fixed` | 178 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 179 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| **Total** | **323** | D-001 … D-323, contiguous, no duplicates |
+| **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 31. (Sums to 79, the open total.)
 
@@ -15811,7 +15811,7 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-319 — agent, admin and rep report lists send `generated_at` without a time zone (the D-318 defect outside the company pages)
 
 **Severity:** WRONG · found 2026-10-29 by grep after D-318. `routes/usage.py:102-103` (an agent's report list), `routes/reports.py` (`generated_at::text`), `routes/admin.py:399` and `routes/affiliates.py:991,1079` (the rep's feeds) each send `generated_at` with no zone. Not verified in a browser for each page; the API side is the same as D-318's.
-**Status:** `open` — the rep feeds (`affiliates.py`) are fixed with the rep-side build; the agent and admin lists need the same one-line change and a test.
+**Status:** `open` — the rep's half is fixed in feat/rep-side (`all-reports` and `/agents/{id}/reports` mark it UTC through the shared `services/timefmt.utc_iso`; `test_rep_report_times_are_marked_utc`). The agent (`usage.py`, `reports.py`) and admin (`admin.py:399`) lists still send it bare.
 
 ---
 
@@ -15840,6 +15840,20 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** ROUGH · found 2026-10-29 by pyflakes in `routes/branding_tools.py` (present on main). The `/v1/branding/sample-jpg` handler's `except httpx.TimeoutException` logs `{preview_url}`, which is never defined, so a timeout raises `NameError` and the caller gets a 500 instead of the intended 504 "timed out".
 **Status:** `recorded`.
+
+---
+
+### D-324 — the rep's Reports, Schedules and agent pages read fields the API never returns (the rep twin of D-317)
+
+**Severity:** BROKEN · found 2026-10-29 rendering the rep side before rebuilding it. `app/app/affiliate/reports/page.tsx` typed rows as `{status: "complete" | …, created_at, zip_codes, is_scheduled}` against `GET /v1/affiliate/all-reports` (`generated_at`, `status: "completed"`): every report read "Generating", with no agent and no date. `schedules/page.tsx` showed no agent, no area and no run count. `agents/[agentId]/page.tsx` read the agent's name, email and status from `/agents/{id}/usage`, which returns plan usage and none of those, so its header was blank and every report row had no status or date.
+**Status:** `fixed` — feat/rep-side. The three pages are rebuilt on the company Activity vocabulary and typed from `lib/rep-book.ts`; the agent's header reads the new `GET /v1/affiliate/agents/{id}`; schedules carry `weekly_dow` / `monthly_dom`. A Leads page is added (`GET /v1/affiliate/leads`: a count per agent and a feed, never a homeowner's name, email, phone, message or address). `tests/test_rep_pages_read_what_the_api_returns.py` and `apps/api/tests/test_rep_book_api.py` — 14 of 14 red before; `scripts/regressions/rep_book.json` 11/11.
+
+---
+
+### D-325 — the property-report lead form records every lead as a QR scan
+
+**Severity:** WRONG · found 2026-10-29 building the rep's leads feed. `app/p/[code]/lead-capture-form.tsx` posts `source: "qr_scan"` whichever way the visitor reached the page, so `leads.source` cannot tell a QR scan from a shared link, and the agent's own Leads page and `property_stats` (`leads_from_qr` / `leads_from_direct`) split them on a value that is always the same.
+**Status:** `recorded` — the rep's feed says "from their property report page" for both and does not pretend to know which. The fix is to carry how the visitor arrived (the QR code's URL can say so) into the form.
 
 ---
 

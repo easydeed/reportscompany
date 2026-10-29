@@ -7,7 +7,6 @@ and metrics for Title Company administrators.
 
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel, EmailStr, constr, field_validator
-from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 import logging
@@ -17,6 +16,7 @@ from ..verification import block_unverified_send
 from ..deps.company import get_company_admin, get_company_member
 from ..services.email import send_rep_change_notice_email, send_role_invite_email
 from ..services import seats
+from ..services.timefmt import utc_iso
 from ..services.usage import get_full_plan_usage
 from ..services.invite_service import (
     copy_branding_to_child,
@@ -94,14 +94,8 @@ class UpdateBrandingRequest(BaseModel):
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _utc_iso(ts: Optional[datetime]) -> Optional[str]:
-    """`report_generations.generated_at` is `timestamp without time zone`,
-    written by NOW() on a UTC database. Sent bare, a browser reads it as its
-    own local time — seven or eight hours late in California, so a report
-    made last night reads "Today". Say it is UTC."""
-    if ts is None:
-        return None
-    return (ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts).isoformat()
+#: D-318. One definition, shared with the rep's routes (services/timefmt.py).
+_utc_iso = utc_iso
 
 
 def _get_company_rep_ids(cur, company_id: str) -> list[str]:
