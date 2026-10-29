@@ -8,7 +8,7 @@
  },
  {
   "name": "A2 report times go out bare again",
-  "file": "apps/api/src/api/routes/company.py",
+  "file": "apps/api/src/api/services/timefmt.py",
   "old": "    return (ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts).isoformat()",
   "new": "    return ts.isoformat()",
   "test": "apps/api/tests/test_company_activity_api.py"

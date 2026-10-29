@@ -1,558 +1,112 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useParams } from 'next/navigation'
+// /app/affiliate/agents/[agentId] — one agent in the rep's book. Design's rep
+// Person (Sponsor v4): who they are and where they stand as one sentence,
+// three plain numbers, what they've been doing, what goes out on its own,
+// and the homeowner leads their pages brought in.
+//
+// The page it replaces read a name, email and status from
+// /agents/{id}/usage, which returns plan usage and none of those, so its
+// header was blank, and its rows read fields the reports and schedules
+// endpoints never returned (D-324). The header now reads GET
+// /v1/affiliate/agents/{id}. Leads are counts and where they came from: who
+// the homeowner is stays with the agent. A finished report keeps its PDF
+// link (Jerry: keep).
+
+import { useParams } from "next/navigation"
+import Link from "next/link"
+import { useBookAgent, useBookAgentReports, useBookAgentSchedules, useBookLeads } from "@/hooks/use-api"
+import { RuleList } from "@/components/ui/list"
+import { ActivityRow, Avatar, H2, Sentence, StatCell, whenLabel } from "@/components/sponsor/shared"
+import { FileText, Send, UserPlus } from "lucide-react"
 import {
-  ArrowLeft,
-  FileText,
-  Calendar,
-  Download,
-  AlertCircle,
-  Loader2,
-  CheckCircle2,
-  Clock,
-  XCircle,
-  Zap,
-} from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  agentSentence, cameFrom, madeLine, pdfFor, reportState, reportsOfPlan, scheduleNext, scheduleWhat, scheduleWhen,
+  type AgentReport, type AgentSchedule, type BookAgent, type BookLead, type LeadCounts,
+} from "@/lib/rep-book"
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+export default function BookAgentPage() {
+  const { agentId } = useParams<{ agentId: string }>()
+  const { data, isLoading, error } = useBookAgent(agentId)
+  const { data: reportsData } = useBookAgentReports(agentId)
+  const { data: schedulesData } = useBookAgentSchedules(agentId)
+  const { data: leadsData } = useBookLeads(agentId)
 
-interface AgentUsage {
-  agent: {
-    id: string
-    name: string
-    email: string
-    phone?: string | null
-    status: 'active' | 'pending' | 'deactivated'
-    plan_slug: string
+  if (error) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Link href="/app/affiliate" className="self-start text-[14px] font-semibold text-[var(--link)]">← My agents</Link>
+        <p className="text-[16px] text-muted-foreground">{String(error).includes("403") ? "This agent isn't in your book." : "Couldn't load this agent right now."}</p>
+      </div>
+    )
   }
-  limits: {
-    market_reports: { used: number; limit: number }
-    schedules: { used: number; limit: number }
-    property_reports: { used: number; limit: number }
-  }
-}
 
-interface AgentReport {
-  id: string
-  report_type: string
-  city: string | null
-  zip_codes: string[] | null
-  status: 'complete' | 'failed' | 'generating' | 'pending'
-  created_at: string
-  pdf_url: string | null
-  is_scheduled: boolean
-}
-
-interface AgentSchedule {
-  id: string
-  name: string
-  report_type: string
-  city: string | null
-  zip_codes: string[] | null
-  cadence: 'daily' | 'weekly' | 'monthly'
-  send_hour: number
-  send_minute: number
-  timezone: string
-  active: boolean
-  run_count: number
-  next_run_at: string | null
-}
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function formatRelativeTime(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return 'Just now'
-  if (mins < 60) return `${mins}m ago`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h ago`
-  const days = Math.floor(hrs / 24)
-  if (days === 1) return 'Yesterday'
-  if (days < 7) return `${days} days ago`
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function formatNextRun(dateStr: string | null): string {
-  if (!dateStr) return '—'
-  const diff = new Date(dateStr).getTime() - Date.now()
-  if (diff < 0) return 'Overdue'
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 60) return `In ${mins}m`
-  const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `In ${hrs}h`
-  const days = Math.floor(hrs / 24)
-  return `In ${days} day${days !== 1 ? 's' : ''}`
-}
-
-function formatTime12h(hour: number, minute: number): string {
-  const ampm = hour >= 12 ? 'PM' : 'AM'
-  const h = hour % 12 || 12
-  const m = minute.toString().padStart(2, '0')
-  return `${h}:${m} ${ampm}`
-}
-
-function formatReportType(slug: string): string {
-  return slug
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-function formatArea(city: string | null, zips: string[] | null): string {
-  if (city) return city
-  if (zips && zips.length > 0) {
-    return zips.length === 1 ? zips[0] : `${zips[0]} +${zips.length - 1}`
-  }
-  return '—'
-}
-
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
-function UsageBar({ label, used, limit }: { label: string; used: number; limit: number }) {
-  const isUnlimited = limit >= 99999
-  const pct = isUnlimited ? 0 : Math.min((used / Math.max(limit, 1)) * 100, 100)
-  const color = pct >= 100 ? 'bg-red-500' : pct >= 80 ? 'bg-amber-500' : 'bg-primary'
+  const a: BookAgent | undefined = data?.agent
+  const leads: LeadCounts | undefined = data?.leads
+  const reports: AgentReport[] = reportsData?.reports ?? []
+  const schedules: AgentSchedule[] = schedulesData?.schedules ?? []
+  const leadRows: BookLead[] = leadsData?.leads ?? []
+  const s = a ? agentSentence(a) : null
+  const first = a?.name.split(" ")[0] || "this agent"
 
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[12px]">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium tabular-nums">
-          {isUnlimited ? `${used} / ∞` : `${used} / ${limit}`}
-        </span>
+    <div className="flex flex-col gap-9">
+      <Link href="/app/affiliate" className="self-start text-[14px] font-semibold text-[var(--link)]">← My agents</Link>
+
+      <div className="flex items-center gap-4">
+        <Avatar name={a?.name || "?"} size={56} />
+        <div className="flex min-w-0 flex-col gap-1">
+          <h1 className="truncate text-[30px] font-extrabold leading-[1.1] tracking-[-0.03em] text-foreground">{isLoading ? " " : a?.name}</h1>
+          {a?.email && <a href={`mailto:${a.email}`} className="truncate text-[15px] text-[var(--link)]">{a.email}</a>}
+        </div>
       </div>
-      {/* No bar for an unlimited allowance (D-195, Design 2026-10-19): a
-          fraction of an undefined whole is not a measurement. This rendered a
-          20%-wide fill against infinity. */}
-      {!isUnlimited && (
-        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${color}`}
-            style={{ width: `${pct}%` }}
-          />
+
+      {s && <div className="rounded-xl bg-[var(--surface-cream)] px-5 py-4"><Sentence tone={s.tone} size={17}>{s.text}</Sentence></div>}
+
+      {a && a.status !== "pending" && (
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+          <StatCell label="Reports this month" value={String(a.market_reports_used)} sub={reportsOfPlan(a)} />
+          <StatCell label="Last report" value={a.last_report_at ? whenLabel(a.last_report_at) : "None yet"} />
+          <StatCell label="Homeowner leads this month" value={String(leads?.this_month ?? 0)}
+            sub={leads ? `${leads.last_month} last month · ${leads.total} in all` : undefined} subTone={leads && leads.this_month > 0 ? "good" : "muted"} />
         </div>
       )}
-    </div>
-  )
-}
 
-function ReportStatusBadge({ status }: { status: AgentReport['status'] }) {
-  switch (status) {
-    case 'complete':
-      return (
-        <Badge className="bg-green-50 text-green-700 border-green-200 gap-1">
-          <CheckCircle2 className="w-3 h-3" />
-          Complete
-        </Badge>
-      )
-    case 'failed':
-      return (
-        <Badge className="bg-red-50 text-red-700 border-red-200 gap-1">
-          <XCircle className="w-3 h-3" />
-          Failed
-        </Badge>
-      )
-    case 'generating':
-    case 'pending':
-      return (
-        <Badge className="bg-amber-50 text-amber-700 border-amber-200 gap-1">
-          <Clock className="w-3 h-3" />
-          Generating
-        </Badge>
-      )
-  }
-}
-
-function AgentStatusBadge({ status }: { status: string }) {
-  if (status === 'active') {
-    return (
-      <Badge className="bg-green-50 text-green-700 border-green-200">Active</Badge>
-    )
-  }
-  if (status === 'pending') {
-    return (
-      <Badge className="bg-yellow-50 text-yellow-800 border-yellow-200">Pending</Badge>
-    )
-  }
-  return (
-    <Badge className="bg-gray-100 text-gray-600 border-gray-200">Deactivated</Badge>
-  )
-}
-
-// ─── Skeleton loaders ────────────────────────────────────────────────────────
-
-function HeaderSkeleton() {
-  return (
-    <div className="space-y-3">
-      <Skeleton className="h-4 w-24" />
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-6 w-16 rounded-full" />
+      <div className="flex flex-col gap-[14px]">
+        <H2>What {first} has been doing</H2>
+        <RuleList>
+          {reports.map((r) => { const st = reportState(r.status); const pdf = pdfFor(r); return (
+            <ActivityRow key={r.id} icon={r.is_scheduled ? <Send /> : <FileText />}
+              text={<span className="flex flex-wrap items-center gap-x-3">{madeLine(r)}{st.text !== "Made" && <Sentence tone={st.tone}>{st.text}</Sentence>}{pdf && <a href={pdf} target="_blank" rel="noopener noreferrer" className="text-[14px] font-semibold text-[var(--link)]">PDF</a>}</span>}
+              when={whenLabel(r.generated_at)} />
+          )})}
+          {a?.joined_at && a.status !== "pending" && <ActivityRow icon={<UserPlus />} text="Joined" when={whenLabel(a.joined_at)} />}
+          {reportsData && reports.length === 0 && <p className="border-b border-[var(--border-subtle)] py-[13px] text-[14px] text-muted-foreground">No reports yet.</p>}
+        </RuleList>
       </div>
-      <Skeleton className="h-4 w-40" />
-    </div>
-  )
-}
 
-function UsageSkeleton() {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <Skeleton className="h-4 w-24" />
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Skeleton className="h-6 w-full" />
-        <Skeleton className="h-6 w-full" />
-        <Skeleton className="h-6 w-full" />
-      </CardContent>
-    </Card>
-  )
-}
-
-function TableSkeleton({ rows = 4 }: { rows?: number }) {
-  return (
-    <div className="space-y-2 p-4">
-      {Array.from({ length: rows }).map((_, i) => (
-        <Skeleton key={i} className="h-10 w-full" />
-      ))}
-    </div>
-  )
-}
-
-// ─── Main page ───────────────────────────────────────────────────────────────
-
-export default function AgentDetailPage() {
-  const params = useParams()
-  const agentId = params.agentId as string
-
-  const [usage, setUsage] = useState<AgentUsage | null>(null)
-  const [usageLoading, setUsageLoading] = useState(true)
-  const [usageError, setUsageError] = useState<string | null>(null)
-
-  const [reports, setReports] = useState<AgentReport[]>([])
-  const [reportsLoading, setReportsLoading] = useState(true)
-
-  const [schedules, setSchedules] = useState<AgentSchedule[]>([])
-  const [schedulesLoading, setSchedulesLoading] = useState(false)
-  const [schedulesLoaded, setSchedulesLoaded] = useState(false)
-
-  useEffect(() => {
-    async function fetchUsage() {
-      try {
-        const res = await fetch(`/api/proxy/v1/affiliate/agents/${agentId}/usage`, {
-          credentials: 'include',
-        })
-        if (!res.ok) {
-          const d = await res.json().catch(() => ({}))
-          setUsageError(
-            res.status === 403
-              ? "You don't have access to this agent's data."
-              : d.detail || 'Failed to load agent data'
-          )
-          return
-        }
-        setUsage(await res.json())
-      } catch {
-        setUsageError('Network error — please try again')
-      } finally {
-        setUsageLoading(false)
-      }
-    }
-
-    async function fetchReports() {
-      try {
-        const res = await fetch(`/api/proxy/v1/affiliate/agents/${agentId}/reports`, {
-          credentials: 'include',
-        })
-        if (res.ok) {
-          const d = await res.json()
-          setReports(d.reports ?? d ?? [])
-        }
-      } catch {
-        // non-critical
-      } finally {
-        setReportsLoading(false)
-      }
-    }
-
-    fetchUsage()
-    fetchReports()
-  }, [agentId])
-
-  async function loadSchedules() {
-    if (schedulesLoaded) return
-    setSchedulesLoading(true)
-    try {
-      const res = await fetch(`/api/proxy/v1/affiliate/agents/${agentId}/schedules`, {
-        credentials: 'include',
-      })
-      if (res.ok) {
-        const d = await res.json()
-        setSchedules(d.schedules ?? d ?? [])
-      }
-    } catch {
-      // non-critical
-    } finally {
-      setSchedulesLoading(false)
-      setSchedulesLoaded(true)
-    }
-  }
-
-  if (usageError) {
-    return (
-      <div className="max-w-3xl mx-auto py-16 text-center space-y-4">
-        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-          <AlertCircle className="w-6 h-6 text-red-500" />
+      {schedules.length > 0 && (
+        <div className="flex flex-col gap-[14px]">
+          <H2>Going out on its own</H2>
+          <RuleList>
+            {schedules.map((sc) => { const nx = scheduleNext(sc); return (
+              <div key={sc.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_150px] items-center gap-5 border-b border-[var(--border-subtle)] py-[13px]">
+                <span className="flex min-w-0 flex-col leading-[1.3]"><span className="truncate text-[15px] text-foreground">{scheduleWhat(sc)}</span><span className="truncate text-[13px] text-muted-foreground">To {sc.recipient_count} {sc.recipient_count === 1 ? "recipient" : "recipients"}</span></span>
+                <span className="text-[14px] text-[var(--body)]">{scheduleWhen(sc)}</span>
+                <Sentence tone={nx.tone}>{nx.text}</Sentence>
+              </div>
+            )})}
+          </RuleList>
         </div>
-        <h2 className="text-lg font-semibold">Access Denied</h2>
-        <p className="text-sm text-muted-foreground">{usageError}</p>
-        <Button asChild variant="outline">
-          <Link href="/app/affiliate">← Back to My Agents</Link>
-        </Button>
+      )}
+
+      <div className="flex flex-col gap-[14px]">
+        <H2>Homeowner leads</H2>
+        <RuleList>
+          {leadRows.map((l) => <ActivityRow key={l.id} icon={<UserPlus />} tone="good" text={`A homeowner lead ${cameFrom(l.came_from)}`} when={whenLabel(l.created_at)} />)}
+          {leadsData && leadRows.length === 0 && <p className="border-b border-[var(--border-subtle)] py-[13px] text-[14px] text-muted-foreground">No leads yet.</p>}
+        </RuleList>
+        <p className="text-[14px] text-muted-foreground">You see that reports went out and leads came in. Who the homeowners are stays with {first}.</p>
       </div>
-    )
-  }
-
-  const agent = usage?.agent
-
-  return (
-    <div className="max-w-5xl mx-auto space-y-5">
-      {/* Back link + header */}
-      <div>
-        <Link
-          href="/app/affiliate"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          My Agents
-        </Link>
-
-        {usageLoading ? (
-          <HeaderSkeleton />
-        ) : (
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-foreground">{agent?.name}</h1>
-              {agent?.status && <AgentStatusBadge status={agent.status} />}
-            </div>
-            <div className="flex items-center gap-3 text-sm text-muted-foreground flex-wrap">
-              {agent?.email && <span>{agent.email}</span>}
-              {agent?.phone && <span>· {agent.phone}</span>}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Usage card */}
-      {usageLoading ? (
-        <UsageSkeleton />
-      ) : usage?.limits ? (
-        <Card className="border-border shadow-[var(--shadow-card)]">
-          <div className="px-5 py-3 border-b border-border bg-muted/30">
-            <h3 className="text-sm font-semibold text-foreground">Plan Usage</h3>
-          </div>
-          <CardContent className="p-5 space-y-3">
-            <UsageBar
-              label="Market Reports"
-              used={usage.limits.market_reports.used}
-              limit={usage.limits.market_reports.limit}
-            />
-            <UsageBar
-              label="Schedules"
-              used={usage.limits.schedules.used}
-              limit={usage.limits.schedules.limit}
-            />
-            <UsageBar
-              label="Property Reports"
-              used={usage.limits.property_reports.used}
-              limit={usage.limits.property_reports.limit}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* Tabs */}
-      <Tabs defaultValue="reports" onValueChange={(v) => v === 'schedules' && loadSchedules()}>
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Reports
-          </TabsTrigger>
-          <TabsTrigger value="schedules" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Schedules
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Reports tab */}
-        <TabsContent value="reports" className="mt-4">
-          <Card className="border-border shadow-[var(--shadow-card)]">
-            <div className="px-5 py-3 border-b border-border bg-muted/30">
-              <h3 className="text-sm font-semibold text-foreground">Reports</h3>
-            </div>
-            {reportsLoading ? (
-              <TableSkeleton rows={5} />
-            ) : reports.length === 0 ? (
-              <div className="text-center py-14 px-4">
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                  <FileText className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <p className="text-sm font-medium text-foreground">No reports generated yet</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Reports will appear here once the agent generates them.
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Report Type</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Area</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Status</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Generated</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Type</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">PDF</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reports.map((report) => (
-                    <TableRow key={report.id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium text-sm">
-                        {formatReportType(report.report_type)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatArea(report.city, report.zip_codes)}
-                      </TableCell>
-                      <TableCell>
-                        <ReportStatusBadge status={report.status} />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatRelativeTime(report.created_at)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={report.is_scheduled
-                            ? 'bg-accent text-accent-foreground border-transparent text-[11px] gap-1'
-                            : 'bg-muted text-muted-foreground text-[11px]'}
-                        >
-                          {report.is_scheduled ? (
-                            <><Calendar className="w-3 h-3" />Scheduled</>
-                          ) : (
-                            <><Zap className="w-3 h-3" />Manual</>
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {report.pdf_url ? (
-                          <a
-                            href={report.pdf_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-[var(--link)] hover:text-[var(--link-hover)] hover:underline"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            Download
-                          </a>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Card>
-        </TabsContent>
-
-        {/* Schedules tab */}
-        <TabsContent value="schedules" className="mt-4">
-          <Card className="border-border shadow-[var(--shadow-card)]">
-            <div className="px-5 py-3 border-b border-border bg-muted/30">
-              <h3 className="text-sm font-semibold text-foreground">Schedules</h3>
-            </div>
-            {schedulesLoading ? (
-              <TableSkeleton rows={3} />
-            ) : !schedulesLoaded ? (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : schedules.length === 0 ? (
-              <div className="text-center py-14 px-4">
-                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
-                  <Calendar className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <p className="text-sm font-medium text-foreground">No schedules created yet</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Schedules will appear here once the agent sets up automated reports.
-                </p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Schedule Name</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Report Type</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Area</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Cadence</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Time</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Status</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em] text-right">Runs</TableHead>
-                    <TableHead className="text-[11px] font-semibold uppercase tracking-[0.05em]">Next Run</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {schedules.map((schedule) => (
-                    <TableRow key={schedule.id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium text-sm">{schedule.name}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatReportType(schedule.report_type)}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatArea(schedule.city, schedule.zip_codes)}
-                      </TableCell>
-                      <TableCell className="text-sm capitalize">{schedule.cadence}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatTime12h(schedule.send_hour, schedule.send_minute)}
-                      </TableCell>
-                      <TableCell>
-                        {schedule.active ? (
-                          <Badge className="bg-green-50 text-green-700 border-green-200 text-[11px]">Active</Badge>
-                        ) : (
-                          <Badge className="bg-gray-100 text-gray-600 border-gray-200 text-[11px]">Paused</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-sm">
-                        {schedule.run_count}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatNextRun(schedule.next_run_at)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }

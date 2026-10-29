@@ -1,0 +1,82 @@
+[
+ {
+  "name": "R1 the feed hands the rep the homeowner's email",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "            {\"id\": r[0], \"agent_account_id\": r[1], \"agent_name\": names.get(r[1], \"\"),",
+  "new": "            {\"id\": r[0], \"email\": \"secret.homeowner@example.com\", \"agent_account_id\": r[1], \"agent_name\": names.get(r[1], \"\"),",
+  "test": "apps/api/tests/test_rep_book_api.py"
+ },
+ {
+  "name": "R2 the feed reads another company's agents",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "                 WHERE l.account_id = ANY(%s::uuid[])\n",
+  "new": "                 WHERE l.account_id = ANY(%s::uuid[]) OR true\n",
+  "test": "apps/api/tests/test_rep_book_api.py"
+ },
+ {
+  "name": "R3 an agent outside the book can be named",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "        if agent:\n            cur.execute(\"SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid\",\n                        (agent, account_id))\n            if not cur.fetchone():\n                raise HTTPException(403, detail=\"This agent is not in your book\")\n",
+  "new": "",
+  "test": "apps/api/tests/test_rep_book_api.py"
+ },
+ {
+  "name": "R4 qr_scan and direct_link are told apart, which the form cannot",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "LEAD_CAME_FROM = {\"qr_scan\": \"property_page\", \"direct_link\": \"property_page\", \"cma_page\": \"home_value_page\"}",
+  "new": "LEAD_CAME_FROM = {\"qr_scan\": \"property_page\", \"direct_link\": \"link\", \"cma_page\": \"home_value_page\"}",
+  "test": "apps/api/tests/test_rep_book_api.py"
+ },
+ {
+  "name": "R5 rep report times go out bare (D-319)",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "                \"generated_at\": utc_iso(r[3]),\n                \"city\": r[4], \"pdf_url\": r[5],\n                \"user_name\": (r[6] or \"\").strip(),",
+  "new": "                \"generated_at\": r[3].isoformat() if r[3] else None,\n                \"city\": r[4], \"pdf_url\": r[5],\n                \"user_name\": (r[6] or \"\").strip(),",
+  "test": "apps/api/tests/test_rep_book_api.py"
+ },
+ {
+  "name": "R6 a non-rep can read an agent",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "        if not verify_affiliate_account(cur, account_id):\n            raise HTTPException(403, detail=\"Not an affiliate account\")\n        # In the caller's book, or nothing: the id is bounded here, in the route.\n        cur.execute(\"SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid\",\n                    (agent_account_id, account_id))\n        if not cur.fetchone():\n            raise HTTPException(403, detail=\"This agent is not in your book\")\n",
+  "new": "",
+  "test": "apps/api/tests/test_rep_book_api.py"
+ },
+ {
+  "name": "R7 schedules lose their day",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "                \"source\": r[14],\n                \"weekly_dow\": r[15], \"monthly_dom\": r[16],",
+  "new": "                \"source\": r[14],",
+  "test": "tests/test_rep_pages_read_what_the_api_returns.py"
+ },
+ {
+  "name": "R8 the rail loses Leads",
+  "file": "apps/web/app/app-layout.tsx",
+  "old": "        { name: \"Leads\", href: \"/app/affiliate/leads\", icon: Inbox },\n",
+  "new": "",
+  "test": "tests/test_rep_pages_read_what_the_api_returns.py"
+ },
+ {
+  "name": "R9 '4 of 3' comes back",
+  "file": "apps/web/lib/rep-book.ts",
+  "old": "return a.market_reports_used > lim ? `${a.market_reports_used - lim} over the ${a.plan_name} plan's ${lim}` : `of ${lim} on the ${a.plan_name} plan`",
+  "new": "return `of ${lim} on the ${a.plan_name} plan`",
+  "test": "__tests__/RepBook.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "R10 an unknown source is guessed as the property page",
+  "file": "apps/web/lib/rep-book.ts",
+  "old": "  return \"from somewhere else\"",
+  "new": "  return \"from their property report page\"",
+  "test": "__tests__/RepBook.test.ts",
+  "runner": "jest"
+ },
+ {
+  "name": "R11 'Mine' shows the agents' reports",
+  "file": "apps/web/lib/rep-book.ts",
+  "old": "(f === \"mine\" ? r.source === \"You\" : r.source === \"Agent\")",
+  "new": "(f === \"mine\" ? r.source === \"Agent\" : r.source === \"Agent\")",
+  "test": "__tests__/RepBook.test.ts",
+  "runner": "jest"
+ }
+]

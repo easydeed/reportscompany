@@ -33,6 +33,7 @@ from ..services.invite_service import (
     regenerate_invite_token,
 )
 from .reports import require_account_id
+from ..services.timefmt import utc_iso
 
 logger = logging.getLogger(__name__)
 
@@ -988,7 +989,7 @@ def get_all_agent_reports(
         reports = [
             {
                 "id": r[0], "report_type": r[1], "status": r[2],
-                "generated_at": r[3].isoformat() if r[3] else None,
+                "generated_at": utc_iso(r[3]),
                 "city": r[4], "pdf_url": r[5],
                 "user_name": (r[6] or "").strip(),
                 "agent_account_id": r[7], "source": r[8],
@@ -1020,7 +1021,8 @@ def get_all_agent_schedules(account_id: str = Depends(require_account_id)):
                    u.first_name || ' ' || COALESCE(u.last_name, '') AS user_name,
                    a.id::text AS agent_account_id,
                    (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs,
-                   CASE WHEN s.account_id = %s::uuid THEN 'You' ELSE 'Agent' END AS source
+                   CASE WHEN s.account_id = %s::uuid THEN 'You' ELSE 'Agent' END AS source,
+                   s.weekly_dow, s.monthly_dom
             FROM schedules s
             JOIN accounts a ON a.id = s.account_id
             LEFT JOIN account_users au ON au.account_id = a.id AND au.role = 'OWNER'
@@ -1039,6 +1041,7 @@ def get_all_agent_schedules(account_id: str = Depends(require_account_id)):
                 "user_name": (r[11] or "").strip(),
                 "agent_account_id": r[12], "total_runs": r[13],
                 "source": r[14],
+                "weekly_dow": r[15], "monthly_dom": r[16],
             }
             for r in cur.fetchall()
         ]
@@ -1047,6 +1050,132 @@ def get_all_agent_schedules(account_id: str = Depends(require_account_id)):
 
 
 # ── Agent visibility endpoints (rep views agent data) ────────────────────────
+
+#: Where a lead came from, as the rep's pages say it. `qr_scan` and
+#: `direct_link` both mean the agent's property-report page: its lead form
+#: sends `qr_scan` whichever way the visitor arrived (D-325), so the two are
+#: one place, not two. `cma_page` is the agent's home-value page
+#: (`lead_pages.py`). Anything else is said as "other", never guessed.
+LEAD_CAME_FROM = {"qr_scan": "property_page", "direct_link": "property_page", "cma_page": "home_value_page"}
+
+
+@router.get("/agents/{agent_account_id}")
+def get_book_agent(agent_account_id: str, account_id: str = Depends(require_account_id)):
+    """One agent in the rep's book: who they are, where they stand, how many
+    reports and homeowner leads. No lead's name, email, phone, message or
+    address — the lead belongs to the agent."""
+    with db_conn() as (conn, cur):
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(403, detail="Not an affiliate account")
+        # In the caller's book, or nothing: the id is bounded here, in the route.
+        cur.execute("SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid",
+                    (agent_account_id, account_id))
+        if not cur.fetchone():
+            raise HTTPException(403, detail="This agent is not in your book")
+        cur.execute("""
+            SELECT a.id::text, a.name, a.created_at,
+                   TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')),
+                   u.email, u.is_active, u.email_verified, u.password_hash IS NOT NULL,
+                   (SELECT MAX(rg.generated_at) FROM report_generations rg
+                     WHERE rg.account_id = a.id AND rg.status IN ('completed', 'processing')),
+                   (SELECT COUNT(*) FROM leads l WHERE l.account_id = a.id
+                     AND l.created_at >= date_trunc('month', NOW())),
+                   (SELECT COUNT(*) FROM leads l WHERE l.account_id = a.id
+                     AND l.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')
+                     AND l.created_at <  date_trunc('month', NOW())),
+                   (SELECT COUNT(*) FROM leads l WHERE l.account_id = a.id)
+              FROM accounts a
+              LEFT JOIN LATERAL (
+                  SELECT u2.first_name, u2.last_name, u2.email, u2.is_active,
+                         u2.email_verified, u2.password_hash
+                    FROM account_users au JOIN users u2 ON u2.id = au.user_id
+                   WHERE au.account_id = a.id AND au.role = 'OWNER' LIMIT 1
+              ) u ON true
+             WHERE a.id = %s::uuid
+        """, (agent_account_id,))
+        r = cur.fetchone()
+        from ..services.usage import get_full_plan_usage
+        usage = get_full_plan_usage(cur, agent_account_id)
+
+    if r[5] is False:
+        status = "deactivated"
+    elif r[6] and r[7]:
+        status = "active"
+    else:
+        status = "pending"
+    return {
+        "agent": {
+            "id": r[0],
+            "name": r[3] or r[1] or r[4] or "",
+            "email": r[4] or "",
+            "status": status,
+            "joined_at": r[2].isoformat() if r[2] else None,
+            "last_report_at": utc_iso(r[8]),
+            "plan_slug": usage["plan"]["plan_slug"],
+            "plan_name": usage["plan"]["plan_name"],
+            "market_reports_used": usage["usage"]["market_reports_used"],
+            "market_reports_limit": usage["plan"]["market_reports_limit"],
+        },
+        "leads": {"this_month": r[9], "last_month": r[10], "total": r[11]},
+    }
+
+
+@router.get("/leads")
+def get_book_leads(agent: str | None = None, account_id: str = Depends(require_account_id)):
+    """Homeowner leads the agents in the rep's book have brought in: a count
+    per agent and a feed, newest first. A READ of rows the agents' own pages
+    wrote (`leads.py`, `lead_pages.py`); nothing is captured here. Each row
+    says whose lead it is, where it came from and when — never who the lead
+    is: the lead belongs to the agent."""
+    with db_conn() as (conn, cur):
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(403, detail="Not an affiliate account")
+        if agent:
+            cur.execute("SELECT 1 FROM accounts WHERE id = %s::uuid AND sponsor_account_id = %s::uuid",
+                        (agent, account_id))
+            if not cur.fetchone():
+                raise HTTPException(403, detail="This agent is not in your book")
+        cur.execute("""
+            SELECT a.id::text,
+                   COALESCE(NULLIF(TRIM(COALESCE(u.first_name, '') || ' ' || COALESCE(u.last_name, '')), ''), a.name),
+                   COUNT(l.id) FILTER (WHERE l.created_at >= date_trunc('month', NOW())),
+                   COUNT(l.id) FILTER (WHERE l.created_at >= date_trunc('month', NOW() - INTERVAL '1 month')
+                                         AND l.created_at <  date_trunc('month', NOW())),
+                   COUNT(l.id)
+              FROM accounts a
+              LEFT JOIN leads l ON l.account_id = a.id
+              LEFT JOIN LATERAL (
+                  SELECT u2.first_name, u2.last_name FROM account_users au JOIN users u2 ON u2.id = au.user_id
+                   WHERE au.account_id = a.id AND au.role = 'OWNER' LIMIT 1
+              ) u ON true
+             WHERE a.sponsor_account_id = %s::uuid
+             GROUP BY a.id, a.name, u.first_name, u.last_name
+             ORDER BY 3 DESC, 5 DESC, 2
+        """, (account_id,))
+        agents = [{"agent_account_id": r[0], "agent_name": r[1], "this_month": r[2],
+                   "last_month": r[3], "total": r[4]} for r in cur.fetchall()]
+        names = {a["agent_account_id"]: a["agent_name"] for a in agents}
+        ids = [agent] if agent else list(names)
+        rows = []
+        if ids:
+            cur.execute("""
+                SELECT l.id::text, l.account_id::text, l.source, l.created_at
+                  FROM leads l
+                 WHERE l.account_id = ANY(%s::uuid[])
+                 ORDER BY l.created_at DESC
+                 LIMIT 100
+            """, (ids,))
+            rows = cur.fetchall()
+    return {
+        "this_month": sum(a["this_month"] for a in agents),
+        "last_month": sum(a["last_month"] for a in agents),
+        "agents": agents,
+        "leads": [
+            {"id": r[0], "agent_account_id": r[1], "agent_name": names.get(r[1], ""),
+             "came_from": LEAD_CAME_FROM.get(r[2], "other"), "created_at": utc_iso(r[3])}
+            for r in rows
+        ],
+    }
 
 @router.get("/agents/{agent_account_id}/reports")
 def get_agent_reports(agent_account_id: str, account_id: str = Depends(require_account_id)):
@@ -1076,7 +1205,7 @@ def get_agent_reports(agent_account_id: str, account_id: str = Depends(require_a
         reports = [
             {
                 "id": r[0], "report_type": r[1], "status": r[2],
-                "generated_at": r[3].isoformat() if r[3] else None,
+                "generated_at": utc_iso(r[3]),
                 "city": r[4], "pdf_url": r[5], "is_scheduled": r[6],
             }
             for r in cur.fetchall()
@@ -1106,7 +1235,7 @@ def get_agent_schedules(agent_account_id: str, account_id: str = Depends(require
                    s.active, s.last_run_at, s.next_run_at,
                    s.created_at,
                    (SELECT COUNT(*) FROM schedule_runs sr WHERE sr.schedule_id = s.id) AS total_runs,
-                   s.recipients
+                   s.recipients, s.weekly_dow, s.monthly_dom
             FROM schedules s
             WHERE s.account_id = %s::uuid
             ORDER BY s.created_at DESC
@@ -1122,6 +1251,7 @@ def get_agent_schedules(agent_account_id: str, account_id: str = Depends(require
                 "created_at": r[11].isoformat() if r[11] else None,
                 "total_runs": r[12],
                 "recipient_count": len(r[13]) if r[13] else 0,
+                "weekly_dow": r[14], "monthly_dom": r[15],
             }
             for r in cur.fetchall()
         ]
