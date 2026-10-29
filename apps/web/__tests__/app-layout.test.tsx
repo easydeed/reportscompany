@@ -16,7 +16,7 @@
  * and matrix are identical to what was requested for Vitest.
  */
 
-import { isBuilderRoute } from "../app/app-layout"
+import { getNavGroups, isActivePath, isBuilderRoute } from "../app/app-layout"
 
 describe("isBuilderRoute", () => {
   it("returns false for list views", () => {
@@ -53,5 +53,24 @@ describe("isBuilderRoute", () => {
 
   it("returns false for null pathname", () => {
     expect(isBuilderRoute(null)).toBe(false)
+  })
+})
+
+
+describe("the company admin's rail is the one Jerry approved", () => {
+  const groups = getNavGroups({ isAdmin: false, isCompanyAdmin: true, isAffiliate: false, isSponsored: false })
+  const items = groups.flatMap((g) => g.items)
+
+  it("is Dashboard · People · Activity · Branding · Plan & Seats · Settings, in that order", () => {
+    expect(items.map((i) => i.name)).toEqual(["Dashboard", "People", "Activity", "Branding", "Plan & Seats", "Settings"])
+  })
+
+  it("keeps People lit on the agents overflow, and Activity on the schedules feed", () => {
+    const people = items.find((i) => i.name === "People")!
+    const activity = items.find((i) => i.name === "Activity")!
+    expect(isActivePath("/app/company/agents", people)).toBe(true)
+    expect(isActivePath("/app/company/reps", people)).toBe(true)
+    expect(isActivePath("/app/company/schedules", activity)).toBe(true)
+    expect(isActivePath("/app/company", people)).toBe(false)
   })
 })

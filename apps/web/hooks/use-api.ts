@@ -94,6 +94,7 @@ export const queryKeys = {
     agents: (filters?: Record<string, string>) =>
       ["company", "agents", filters ?? {}] as const,
     branding: ["company", "branding"] as const,
+    seats: ["company", "seats"] as const,
   },
 } as const
 
@@ -275,6 +276,15 @@ export function useCompanyAgents(filters?: Record<string, string>) {
   return useQuery({
     queryKey: queryKeys.company.agents(filters),
     queryFn: () => apiFetchRQ(`/v1/company/agents${params}`),
+    retry: false,
+  })
+}
+
+/** Company rep seats: `{ seats: {total, held, open, pending, idle} | null, history }` */
+export function useCompanySeats() {
+  return useQuery({
+    queryKey: queryKeys.company.seats,
+    queryFn: () => apiFetchRQ("/v1/company/seats"),
     retry: false,
   })
 }
