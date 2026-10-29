@@ -41,10 +41,9 @@ def test_the_rep_welcome_names_the_company():
     html = sent["html"]
     assert "{company}" not in html, "an unsubstituted placeholder reached the reader"
     assert "{name}" not in html
-    assert html.count("Pacific Title") >= 3, (
-        "the company name should appear in the intro and in both step rows "
-        "that mention it"
-    )
+    # Since the 2026-10-29 copy the company is named once, in the step that
+    # says its logo and colour are already on the rep's account.
+    assert "Pacific Title&rsquo;s logo and colour are already on your account" in html
 
 
 def test_the_rep_welcome_falls_back_when_no_company_is_known():
@@ -57,8 +56,8 @@ def test_the_rep_welcome_falls_back_when_no_company_is_known():
         company_name="",
     )
     assert "{company}" not in sent["html"]
-    assert "your company" in sent["html"]
-    assert "Welcome aboard, there!" in sent["html"]
+    assert "your company&rsquo;s logo and colour" in sent["html"]
+    assert "Start inviting your agents." in sent["html"]
 
 
 def test_the_company_admin_welcome_has_no_stray_placeholders():

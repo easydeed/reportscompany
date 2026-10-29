@@ -954,6 +954,51 @@ def _send_and_log_report_email(
 
 # ==================== Failure Notification ====================
 
+#: A schedule pauses itself after this many failed runs in a row
+#: (`_record_generation_failure`). The failure notice says how many are left,
+#: from the same number.
+AUTO_PAUSE_AFTER = 3
+
+#: In every `email_log` subject for a failure notice, sent or suppressed; the
+#: 24-hour dedup finds earlier notices by it.
+FAILURE_NOTICE_TAG = "report failed"
+
+
+def _failure_notice(*, schedule_name: str, area: str, brief_error: str, active: bool,
+                    consecutive_failures: int, schedule_url: str) -> tuple[str, str, str]:
+    """(subject, content_html, preheader) for a failed scheduled send.
+
+    No retry exists: a failed run is not sent again, and the email says so.
+    It is sent after `_record_generation_failure`, so `active` and
+    `consecutive_failures` are the schedule's state after this failure —
+    including the run that paused it.
+    """
+    from .email.transactional import _callout, _cta_button, _e, _h1, _note, _p
+    name = _e(schedule_name)
+    lead = (f"The report for {_e(area)} failed to generate, so nothing was sent for this run, "
+            f"and it won&rsquo;t be re-sent.")
+    if active:
+        left = max(AUTO_PAUSE_AFTER - consecutive_failures, 1)
+        state = (f"The schedule is still on, and its next run goes out as planned. If it fails "
+                 f"{left} more time{'' if left == 1 else 's'} in a row, it pauses itself.")
+    else:
+        state = (f"It has failed {consecutive_failures} time{'' if consecutive_failures == 1 else 's'} "
+                 f"in a row, so it has paused itself. Turn it back on from Schedules once the "
+                 f"problem is fixed.")
+    content = (
+        _h1(f"Your {name} didn&rsquo;t go out.")
+        + _p(lead)
+        + _callout('<div style="font-size:11px;font-weight:700;text-transform:uppercase;'
+                   'letter-spacing:.05em;margin-bottom:4px;">What happened</div>'
+                   f'<div style="font-family:monospace;font-size:13px;word-break:break-all;">{_e(brief_error)}</div>',
+                   "red")
+        + _p(state)
+        + _cta_button(schedule_url, "View the schedule")
+        + _note("If this keeps happening, reply to this email and we&rsquo;ll look.")
+    )
+    return f"Your {schedule_name} didn't go out", content, f"Your {name} didn&rsquo;t go out."
+
+
 def _send_failure_notification(
     account_id: str,
     schedule_id: str | None,
@@ -1031,10 +1076,10 @@ def _send_failure_notification(
                 cur.execute("""
                     SELECT 1 FROM email_log
                     WHERE schedule_id = %s::uuid
-                      AND subject LIKE '%%report failed%%'
+                      AND subject LIKE %s
                       AND created_at >= NOW() - INTERVAL '24 hours'
                     LIMIT 1
-                """, (schedule_id,))
+                """, (schedule_id, f"%{FAILURE_NOTICE_TAG}%"))
                 if cur.fetchone():
                     logger.info(f"Skipping failure notification for schedule {schedule_id} — already sent within 24h")
                     return
@@ -1055,44 +1100,31 @@ def _send_failure_notification(
                 owner_email = owner[0]
                 first_name = owner[1] or "there"
 
-                # Get schedule name
+                # Name and state AFTER this failure was recorded: whether this
+                # run paused it, and how many failures in a row it has.
                 cur.execute("""
-                    SELECT name FROM schedules WHERE id = %s::uuid
+                    SELECT name, active, consecutive_failures FROM schedules WHERE id = %s::uuid
                 """, (schedule_id,))
                 sched_row = cur.fetchone()
                 schedule_name = sched_row[0] if sched_row else report_type.replace("_", " ").title()
+                sched_active = bool(sched_row[1]) if sched_row else True
+                sched_failures = int(sched_row[2] or 0) if sched_row else 0
 
                 area = city or "your area"
                 brief_error = (error_msg or "Unknown error")[:200]
                 app_base = os.environ.get("APP_BASE", "https://reportscompany-web.vercel.app")
                 schedule_url = f"{app_base}/app/schedules"
 
-                subject = f"\u26a0\ufe0f Your scheduled report failed \u2014 {schedule_name}"
-
-                # Design's 5th-package account-email shell, mirrored from the
-                # API (worker/email/transactional.py). The wording is the
-                # current wording; Design's version promised a retry in an
-                # hour, which does not exist. Every value is escaped: the
-                # schedule name and city are typed, and the error is raw.
-                from .email.transactional import (
-                    _callout, _cta_button, _e, _email_base, _h1, _note, _p,
+                from .email.transactional import _email_base, _plain
+                subject, content_html, preheader = _failure_notice(
+                    schedule_name=schedule_name, area=area, brief_error=brief_error,
+                    active=sched_active, consecutive_failures=sched_failures,
+                    schedule_url=schedule_url,
                 )
-                content_html = (
-                    _h1(f"Hi {_e(first_name)},")
-                    + _p(f"Your scheduled report &ldquo;{_e(schedule_name)}&rdquo; for {_e(area)} failed to generate. "
-                         f"We&rsquo;ll automatically retry on the next scheduled run.")
-                    + _p("If this continues, please contact support.")
-                    + _callout('<div style="font-size:11px;font-weight:700;text-transform:uppercase;'
-                               'letter-spacing:.05em;margin-bottom:4px;">Error details</div>'
-                               f'<div style="font-family:monospace;font-size:13px;word-break:break-all;">{_e(brief_error)}</div>',
-                               "red")
-                    + _cta_button(schedule_url, "View Schedules")
-                    + _note("This is an automated notification from TrendyReports.")
-                )
-                html_body = _email_base(
-                    content_html,
-                    preheader=f"Your scheduled report &ldquo;{_e(schedule_name)}&rdquo; failed to generate.",
-                )
+                reason = ("Sent to the account owner when a scheduled send fails, "
+                          "at most once a day for each schedule.")
+                html_body = _email_base(content_html, preheader=preheader, reason=reason)
+                text_body = _plain(content_html) + "\n" + reason + "\n"
 
                 # Send via Resend
                 resp = httpx.post(
@@ -1106,6 +1138,7 @@ def _send_failure_notification(
                         "to": [owner_email],
                         "subject": subject,
                         "html": html_body,
+                        "text": text_body,
                     },
                     timeout=15.0,
                 )
@@ -1114,7 +1147,10 @@ def _send_failure_notification(
                 cur.execute("""
                     INSERT INTO email_log (account_id, schedule_id, provider, to_emails, subject, response_code, status)
                     VALUES (%s::uuid, %s::uuid, 'resend', %s, %s, %s, %s)
-                """, (account_id, schedule_id, [owner_email], subject, resp.status_code,
+                """, (account_id, schedule_id, [owner_email],
+                      # The tag is what the 24-hour dedup above matches; the
+                      # subject a person reads no longer contains it.
+                      f"[{FAILURE_NOTICE_TAG}] {subject}", resp.status_code,
                       'sent' if resp.status_code in (200, 201) else 'failed'))
 
                 if resp.status_code in (200, 201):
@@ -2113,8 +2149,8 @@ def _record_generation_failure(run_id, account_id, schedule_id, error_msg):
                     consecutive_failures = result[0]
                     print(f"⚠️  Schedule {schedule_id} failure count: {consecutive_failures}")
                     
-                    # Auto-pause after 3 consecutive failures
-                    if consecutive_failures >= 3:
+                    # Auto-pause after AUTO_PAUSE_AFTER consecutive failures
+                    if consecutive_failures >= AUTO_PAUSE_AFTER:
                         cur.execute("""
                             UPDATE schedules
                             SET active = false

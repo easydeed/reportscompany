@@ -241,7 +241,7 @@ def test_retries_are_not_enabled_while_the_bookkeeping_counts_every_attempt():
     )
 
 
-@pytest.mark.parametrize("threshold_marker", ["consecutive_failures >= 3"])
+@pytest.mark.parametrize("threshold_marker", ["consecutive_failures >= AUTO_PAUSE_AFTER"])
 def test_the_auto_pause_threshold_is_where_this_test_thinks_it_is(threshold_marker):
     """
     The argument above rests on the schedule pausing at 3. If that number or
@@ -249,6 +249,8 @@ def test_the_auto_pause_threshold_is_where_this_test_thinks_it_is(threshold_mark
     silently continuing to cite a threshold that moved.
     """
     src = ast.get_source_segment(TASKS, _fn("_record_generation_failure")) or ""
+    # The number now has a name, because the failure notice counts down to it.
+    assert "\nAUTO_PAUSE_AFTER = 3\n" in TASKS, "the auto-pause threshold moved off 3"
     assert threshold_marker in src, (
         f"the auto-pause threshold is no longer {threshold_marker!r}; D-071's "
         f"reasoning about retries quadrupling the count needs revisiting"

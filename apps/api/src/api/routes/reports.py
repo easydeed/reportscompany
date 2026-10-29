@@ -60,14 +60,16 @@ def _check_and_notify_limit(account_id: str, info: dict):
         if ratio >= 1.0:
             cache_key = f"limit_notify:{account_id}:{month_key}:100"
             if not r.get(cache_key):
-                send_limit_reached_email(email, first_name, limit)
+                send_limit_reached_email(email, first_name, limit, count=count,
+                                         plan_name=plan.get("plan_name"))
                 r.setex(cache_key, 30 * 86400, "1")
                 _logger.info(f"Sent 100%% limit notification to {email} for account {account_id}")
 
         elif ratio >= 0.8:
             cache_key = f"limit_notify:{account_id}:{month_key}:80"
             if not r.get(cache_key):
-                send_limit_warning_email(email, first_name, count, limit)
+                send_limit_warning_email(email, first_name, count, limit,
+                                         plan_name=plan.get("plan_name"))
                 r.setex(cache_key, 30 * 86400, "1")
                 _logger.info(f"Sent 80%% limit notification to {email} for account {account_id}")
 
