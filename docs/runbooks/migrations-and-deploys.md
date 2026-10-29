@@ -33,7 +33,6 @@ check is back on. Remove it once the migration is applied.
 
 - A database it cannot reach at startup: the service starts and logs a
   warning, so a database blip does not become a crash loop.
-- A database it cannot reach at startup is the only case it lets through.
 
 ## When a deploy fails, the old version keeps running
 
