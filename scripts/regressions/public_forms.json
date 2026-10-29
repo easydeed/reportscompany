@@ -16,8 +16,8 @@
   {
     "name": "R3 the CMA funnel loses its phone autofill",
     "file": "apps/web/app/cma/[code]/cma-funnel.tsx",
-    "old": "                autoComplete=\"tel\"\n                className=\"text-lg text-center h-12\"",
-    "new": "                className=\"text-lg text-center h-12\"",
+    "old": " inputMode={method === \"sms\" ? \"tel\" : \"email\"} autoComplete={method === \"sms\" ? \"tel\" : \"email\"}",
+    "new": " inputMode={method === \"sms\" ? \"tel\" : \"email\"}",
     "test": "tests/test_public_forms_are_fillable.py"
   },
   {

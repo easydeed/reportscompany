@@ -101,9 +101,18 @@ def fillable_inputs():
         src = p.read_text(encoding="utf-8")
         for attrs, off in elements(src):
             t = re.search(r"type=\{?[\"']?(\w+)", attrs)
-            if not t or t.group(1) not in FILLABLE:
+            kind = t.group(1) if t else None
+            if kind not in FILLABLE:
+                # A type chosen by an expression — `type={sms ? "tel" : "email"}`,
+                # as the home value funnel's contact field is. Without this the
+                # scanner read the type as "sms" and the field fell out of scope:
+                # #238 lost its autofill coverage and nothing said so.
+                expr = re.search(r"type=\{([^}]*)\}", attrs)
+                quoted = re.findall(r"[\"'](\w+)[\"']", expr.group(1)) if expr else []
+                kind = next((q for q in quoted if q in FILLABLE), None)
+            if kind is None:
                 continue
-            out.append((r, t.group(1), src[:off].count("\n") + 1,
+            out.append((r, kind, src[:off].count("\n") + 1,
                         "autoComplete" in attrs))
     return out
 
@@ -126,6 +135,18 @@ def test_the_scans_find_something():
     """
     assert len(fillable_inputs()) >= 8, "the public-form scan found almost nothing"
     assert len(placeholder_emails()) >= 15, "the placeholder scan found almost nothing"
+
+
+def test_the_scan_sees_the_home_value_contact_field():
+    """
+    A count floor cannot tell which field went missing. #238 rewrote the home
+    value funnel and its contact field dropped out of this scan — no `type=`,
+    then a type the scanner could not read — with the floor still met. The one
+    field every homeowner fills is named here, so losing it is a failure.
+    """
+    kinds = {(path, kind) for path, kind, _line, _ok in fillable_inputs()}
+    assert ("app/cma/[code]/cma-funnel.tsx", "tel") in kinds, (
+        "the scan no longer sees the home value page's phone/email field")
 
 
 def test_every_placeholder_email_uses_a_reserved_domain():
