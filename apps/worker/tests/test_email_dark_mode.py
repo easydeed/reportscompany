@@ -163,3 +163,31 @@ def test_the_dark_palette_is_actually_applied():
     assert "#1f2937" in backdrops, (
         f"no text sits on the dark card (#1F2937) under a dark colour scheme — "
         f"the dark-mode rules are not applying. Backdrops seen: {sorted(backdrops)[:8]}")
+
+
+# ── the home-value email ───────────────────────────────────────────────────
+
+def _home_value_corpus():
+    from worker.email.home_value import home_value_email_html
+    docs = {}
+    for brand, primary in DARK_MODE_BRANDS:
+        docs[f"{brand}__home_value"] = home_value_email_html(
+            report_url="https://www.trendyreports.io/r/abc", address="14 Sandpiper Ln",
+            city="Irvine", requester_first_name="Tom", agent_name="Dana Ortiz",
+            agent_title="Broker Associate", company_name="Marisol Ridge Realty",
+            agent_phone="(626) 555-0134", agent_email="dana@example.test",
+            primary_color=primary)
+    return docs
+
+
+@pytest.mark.parametrize("scheme", ["light", "dark"])
+def test_the_home_value_email_is_readable(scheme):
+    """
+    Design's Call / Text buttons had no dark-mode class and measured 1.22:1 on
+    the dark card in the review. Every run, both schemes, every brand.
+    """
+    corpus = _home_value_corpus()
+    rows = _measure(corpus, scheme)
+    assert len(rows) >= len(corpus) * 15, "the measurement found almost no text"
+    fails = _failures(rows)
+    assert not fails, f"home-value, {scheme}: {len(fails)} run(s) below AA:\n" + _report(fails)

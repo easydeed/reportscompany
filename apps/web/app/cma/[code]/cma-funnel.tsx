@@ -289,7 +289,7 @@ export default function CmaFunnel({ agent, api, cover, initialAddress = "" }: {
               </div>
               <input value={contact} aria-label={method === "sms" ? "Mobile number" : "Email address"}
                 onChange={(e) => setContact(method === "sms" ? fmtPhone(e.target.value.replace(/\D/g, "").slice(0, 10)) : e.target.value)}
-                placeholder={method === "sms" ? "(555) 555-5555" : "you@email.com"} inputMode={method === "sms" ? "tel" : "email"} autoComplete={method === "sms" ? "tel" : "email"}
+                placeholder={method === "sms" ? "(555) 555-5555" : "you@email.com"} type={method === "sms" ? "tel" : "email"} inputMode={method === "sms" ? "tel" : "email"} autoComplete={method === "sms" ? "tel" : "email"}
                 className="h-[58px] w-full rounded-xl border-[1.5px] border-[#D6D3CB] bg-white px-4 text-center text-[20px] tabular-nums tracking-[0.01em] outline-none focus:border-[#0F172A]" />
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name (optional)" autoComplete="given-name" aria-label="Your name"
                 className="h-[50px] w-full rounded-xl border border-[#E4E2DA] bg-white px-4 text-[16px] outline-none focus:border-[#0F172A]" />

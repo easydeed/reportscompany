@@ -2468,6 +2468,12 @@ def process_consumer_report(self, report_id: str):
                 company_name = ""
                 account_name = ""
                 agent_email_addr = ""
+                # Defaults for the email, which is built after this block and
+                # whether or not it succeeds: these used to be assigned only
+                # inside the `try`, so a failure there left them unbound.
+                primary_color = None
+                brand_logo = email_logo = None
+                job_title = license_number = agent_photo = None
                 try:
                     cur.execute("""
                         SELECT
@@ -2480,9 +2486,12 @@ def process_consumer_report(self, report_id: str):
                             u.company_name, u.email
                         FROM accounts a
                         JOIN users u ON u.account_id = a.id
-                        WHERE a.id = %s::uuid
-                        LIMIT 1
-                    """, (account_id,))
+                        WHERE a.id = %s::uuid AND u.id = %s::uuid
+                    """, (account_id, agent_id))
+                    # D-306: THE REPORT'S OWN AGENT. This was `LIMIT 1` over
+                    # every user on the account, so on an account with more
+                    # than one user the PDF and the email could carry another
+                    # user's photo, email and licence number.
                     brand_row = cur.fetchone()
 
                     if brand_row:
@@ -2681,85 +2690,29 @@ def process_consumer_report(self, report_id: str):
                         # report on 123 Oak St received "Hi Gerardo,". That is
                         # D-116's defect in the envelope rather than the
                         # document: the owner block came off the report and
-                        # the email kept carrying the name. No fallback; an
-                        # unnamed requester gets "Hi,".
+                        # the email kept carrying the name. No fallback.
+                        # An unnamed requester gets "Your report is ready."
                         lead_name = requester_first_name(property_data)
-                        greeting = f"Hi {lead_name}," if lead_name else "Hi,"
-                        _co = company_name or account_name or ""
-                        _ae = agent_email_addr or ""
-
-                        agent_lines = ""
-                        if agent_phone:
-                            agent_lines += f'<p style="margin:0 0 4px;font-size:14px;color:#374151;">\U0001f4f1 {agent_phone}</p>'
-                        if _ae:
-                            agent_lines += f'<p style="margin:0;font-size:14px;color:#374151;">\u2709\ufe0f <a href="mailto:{_ae}" style="color:#4F46E5;text-decoration:underline;">{_ae}</a></p>'
-
-                        prepared_by = f"{agent_name}"
-                        if _co:
-                            prepared_by += f" at {_co}"
-
-                        cta_btn = f'''<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:28px 0;">
-                          <tr><td align="center">
-                            <a href="{report_url}" target="_blank" style="display:inline-block;background-color:#4F46E5;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;padding:14px 32px;border-radius:8px;">
-                              View My Report
-                            </a>
-                          </td></tr>
-                        </table>'''
-
-                        content_html = f'''<p style="margin:0 0 20px;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#111827;">
-                            {greeting}
-                          </p>
-                          <p style="margin:0 0 8px;font-size:15px;line-height:1.7;color:#374151;">
-                            Your personalized property report for <strong>{prop_address}</strong> is ready.
-                          </p>
-                          {cta_btn}
-                          <p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#374151;">
-                            This report was prepared by <strong>{prepared_by}</strong>.
-                          </p>
-                          <div style="background-color:#F9FAFB;border-radius:8px;padding:16px 20px;margin:20px 0;">
-                            <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#111827;">Questions? Contact {agent_name}:</p>
-                            {agent_lines}
-                          </div>
-                          <p style="margin:0;font-size:13px;line-height:1.6;color:#6b7280;">
-                            This is an automated report from TrendyReports.
-                          </p>'''
-
-                        email_html = f'''<!DOCTYPE html>
-<html lang="en"><head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta name="color-scheme" content="light only">
-  <title>Your Home Value Report</title>
-  <style>
-    body,table,td,p,a{{ -webkit-text-size-adjust:100%; }}
-    body{{ margin:0!important;padding:0!important; }}
-    @media (prefers-color-scheme:dark){{ .email-outer{{ background-color:#232323!important; }} }}
-    @media screen and (max-width:600px){{ .email-wrapper{{ width:100%!important; }} .content-pad{{ padding:24px 20px!important; }} }}
-  </style>
-</head>
-<body style="margin:0;padding:0;background-color:#F8FAFC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F8FAFC;" class="email-outer"><tr>
-    <td align="center" style="padding:32px 16px;">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="email-wrapper" style="max-width:600px;width:100%;">
-        <tr><td align="center" style="background:linear-gradient(135deg,#4F46E5 0%,#6366F1 50%,#818CF8 100%);background-color:#4F46E5;padding:28px 24px 20px;border-radius:12px 12px 0 0;">
-          <img src="https://www.trendyreports.io/white.png" width="160" alt="TrendyReports" style="display:block;max-height:40px;width:auto;height:auto;">
-        </td></tr>
-        <tr><td style="background-color:#ffffff;padding:32px;" class="content-pad">
-          {content_html}
-        </td></tr>
-        <tr><td style="background-color:#ffffff;border-top:1px solid #EEF2FF;padding:20px 32px;border-radius:0 0 12px 12px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-            <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#6366F1;">TrendyReports</p>
-            <p style="margin:0 0 12px;font-size:12px;color:#9ca3af;">Branded Real Estate Reports</p>
-            <p style="margin:0;font-size:11px;color:#9ca3af;">
-              <a href="mailto:support@trendyreports.io" style="color:#6b7280;text-decoration:underline;">Contact Support</a>
-              &nbsp;&bull;&nbsp; &copy; 2026 TrendyReports
-            </p>
-          </td></tr></table>
-        </td></tr>
-      </table>
-    </td>
-  </tr></table>
-</body></html>'''
+                        # Design's 5th package; markup and every departure
+                        # from it in templates/email/home_value.jinja2. No
+                        # estimate in the email (owner decision 2026-10-28).
+                        from .email.home_value import home_value_email_html
+                        _branding = _fetch_affiliate_branding(cur, str(account_id)) or {}
+                        email_html = home_value_email_html(
+                            report_url=report_url,
+                            address=prop_address,
+                            city=prop_city,
+                            requester_first_name=lead_name,
+                            agent_name=agent_name,
+                            agent_title=job_title,
+                            company_name=company_name or account_name or None,
+                            agent_phone=agent_phone,
+                            agent_email=agent_email_addr or None,
+                            agent_photo_url=agent_photo,
+                            primary_color=primary_color,
+                            logo_url=email_logo or brand_logo,
+                            postal_address=_branding.get("postal_address"),
+                        )
 
                         try:
                             from_addr = os.environ.get("EMAIL_FROM_ADDRESS", "TrendyReports <noreply@trendyreports.io>")
