@@ -1,0 +1,16 @@
+# EVERY FILE UNDER apps/web/public THAT AN EMAIL HAS EVER LOADED. APPEND ONLY.
+#
+# A sent email keeps its HTML forever, in every inbox it reached, and loads
+# these by URL each time it is opened. Deleting or renaming one breaks the
+# image in every past email that used it — emails we can no longer change.
+# So an asset joins this list the first time an email references it, and
+# never leaves. To stop using one, stop referencing it; keep the file.
+#
+# Enforced by tests/test_permanent_email_assets.py, which fails if a listed
+# file is missing, or if an email references a public file that is not listed.
+#
+# path under apps/web/public        first referenced by
+white.png                           # account emails, failure notice, home-value email (2026-04-10 on)
+logo-white.png                      # account emails, 2026-04-10 07:08–11:40; the file never existed until 2026-10-28
+email/trendy-lockup-light@3x.png    # account-email header, #236
+email/trendy-lockup-dark@3x.png     # account-email header, dark mode, #236
