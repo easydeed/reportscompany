@@ -72,10 +72,9 @@ COVER_CLASSES = ("cover-agent-title", "agent-role")
 #:
 #: DESIGN'S PACKAGE DROPS IT. The redesigned cover is report kind, brand,
 #: street, city, four stats, hero photo, "Prepared for" and "In short" — and
-#: no agent role. The agent appears on page 6 as name, brand and licence. So
-#: `agent.title` renders NOWHERE on a theme using the shared architecture,
-#: while `_build_agent_context` still computes it and still defaults it to
-#: "Real Estate Agent" (D-169).
+#: no agent role. The agent appears on page 6 as name, the title they entered
+#: (D-169, Jerry 2026-10-30 — no default), brand and licence. So `agent.title`
+#: is on no cover of a theme using the shared architecture.
 #:
 #: FOUND by looking for the line, not by listing which themes are on which
 #: architecture — a theme that regains a role line is covered without this
@@ -266,37 +265,34 @@ def test_the_licence_still_appears_when_there_is_one(theme):
     assert "•" in text, "the separator disappeared along with the empty case"
 
 
-def test_a_theme_without_a_cover_role_line_does_not_print_one_anyway():
+def test_a_theme_without_a_cover_role_line_prints_the_title_once_under_the_name():
     """The other side of the architecture change, asserted on the RENDER.
 
-    A theme whose template has no `agent.title` must also not have the title
-    reach the page some other way — through the narrative, the footer, or a
-    context key a later edit wires up. Checked by rendering and looking for
-    the value, because the structural half above can only say the line is not
-    in the template.
+    D-169 (Jerry, 2026-10-30): the agent's job title shows under their name if
+    they entered one. Design's cover has no role line, so it shows exactly
+    once, in page 6's agent panel — not on the cover, the narrative or the
+    footer — and an agent who entered none gets no line and no default.
 
-    `agent.title` defaults to "Real Estate Agent" in `_build_agent_context`,
-    so this asserts on a DISTINCTIVE title rather than the default: finding
-    the words "Real Estate Agent" would prove nothing, since the disclaimer
-    and the explainers are full of ordinary prose.
+    Asserted on a DISTINCTIVE title: the words "Real Estate Agent" would prove
+    nothing, since the disclaimer and the explainers are full of ordinary prose.
     """
     if not NO_COVER_LINE_THEMES:
         pytest.skip("every theme still carries a cover role line")
     from test_property_production_render import report_data
     for theme in NO_COVER_LINE_THEMES:
         # THE WHOLE DOCUMENT, not `_render_cover` — that helper renders the
-        # cover LINE, and a theme with no cover line has none to render. The
-        # first version of this test called it and failed with "expected
-        # exactly one cover title line, found 0", which is the helper
-        # reporting the premise of the test it was being used to run.
+        # cover LINE, and a theme with no cover line has none to render.
         data = dict(report_data(theme))
         data["agent"] = {**(data.get("agent") or {}), "title": "Broker Associate"}
         rendered = PropertyReportBuilder(data).render_html()
-        assert "Broker Associate" not in rendered, (
-            f"{theme} has no cover role line in its templates and still "
-            f"renders the agent's title. If that is intended, the line has "
-            f"come back and D-066's REALTOR mark rule applies to it again."
-        )
+        assert rendered.count("Broker Associate") == 1, (
+            f"{theme}: the agent's title should appear once, under their name")
+        assert '<span class="agentpanel-title">Broker Associate</span>' in rendered
+
+        data["agent"] = {**data["agent"], "title": "   "}
+        rendered = PropertyReportBuilder(data).render_html()
+        assert "agentpanel-title" not in rendered.split("</style>", 1)[1], (
+            f"{theme}: an agent with no title got a title line anyway")
 
 
 @pytest.mark.parametrize("theme", COVER_LINE_THEMES)
