@@ -71,6 +71,11 @@ PACE_LABEL = f"at the last {SALES_RATE_WINDOW_DAYS} days' sales pace"
 # What to say instead of a number. Not "0", not "N/A", not a blank.
 INSUFFICIENT_DATA_LABEL = "Not enough recent sales to estimate"
 
+# The other reason there is no number, and the opposite situation (D-078): a
+# fetch hit its row limit, so a count is a floor. A busy market used to be
+# told it had too few sales.
+TOO_MANY_TO_COUNT_LABEL = "Too many listings to count exactly"
+
 
 def months_of_supply(
     active_count: int,
@@ -204,16 +209,22 @@ def condition(moi: Optional[float]) -> Optional[str]:
     return CONDITION_BUYERS
 
 
-def describe(moi: Optional[float]) -> Dict[str, Any]:
+def describe(moi: Optional[float], too_many_to_count: bool = False) -> Dict[str, Any]:
     """
     The render-ready shape. One place decides how "no number" looks, so the
     surfaces cannot disagree about it the way the two formulas did.
+
+    `too_many_to_count` is the caller saying the None came from a truncated
+    fetch, not from too few sales (D-078). `months_of_supply` returns a bare
+    None for both, so the reason has to come from the caller, which knows it.
     """
     if moi is None:
         return {
             "current": None,
             "gauge_pct": None,
-            "formatted_current": INSUFFICIENT_DATA_LABEL,
+            "formatted_current": (TOO_MANY_TO_COUNT_LABEL if too_many_to_count
+                                  else INSUFFICIENT_DATA_LABEL),
+            "reason": "too_many_to_count" if too_many_to_count else "not_enough_sales",
             "pace_label": PACE_LABEL,
             "has_estimate": False,
         }

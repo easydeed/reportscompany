@@ -31,5 +31,5 @@
 {%- elif piece == 'filter_blurb' -%}
           <tr><td class="tr-pad" style="padding:10px 28px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><span class="tr-muted" style="font-size:13px;line-height:1.5;color:#64748B;">{{ text }}</span></td></tr>
 {%- elif piece == 'truncation_note' -%}
-          <tr><td align="center" class="tr-pad" style="padding:16px 28px 0;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><span class="tr-muted" style="font-size:13px;color:#64748B;">Showing {{ showing }} of {{ total_available }}.{% if pdf_has_all %} All of them are in the report.{% endif %}</span></td></tr>
+          <tr><td align="center" class="tr-pad" style="padding:16px 28px 0;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;"><span class="tr-muted" style="font-size:13px;color:#64748B;">Showing {{ showing }} of {{ total_available }}{% if of_what %} {{ of_what }}{% endif %}.{% if pdf_has_all %} All of them are in the report.{% endif %}</span></td></tr>
 {%- endif %}
