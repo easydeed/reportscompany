@@ -1,0 +1,30 @@
+[
+  {
+    "name": "D-109 reverts: unknown bedrooms become 0 (a Studio)",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "            \"bedrooms\": _known(sitex_data.get(\"bedrooms\")),",
+    "new": "            \"bedrooms\": sitex_data.get(\"bedrooms\") or 0,",
+    "test": "apps/worker/tests/test_unknown_is_not_zero.py"
+  },
+  {
+    "name": "D-109 reverts: unknown sqft in the stats becomes 0",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "            \"sqft\": _safe_num(sitex_data.get(\"sqft\"), None),",
+    "new": "            \"sqft\": _safe_num(sitex_data.get(\"sqft\"), 0),",
+    "test": "apps/worker/tests/test_unknown_is_not_zero.py"
+  },
+  {
+    "name": "D-086 reverts: the median of nothing is 0.0",
+    "file": "apps/worker/src/worker/report_builders.py",
+    "old": "    return statistics.median(vals) if vals else None",
+    "new": "    return statistics.median(vals) if vals else 0.0",
+    "test": "apps/worker/tests/test_unknown_is_not_zero.py"
+  },
+  {
+    "name": "D-086 reverts: a market with no sales sold at asking (100.0)",
+    "file": "apps/worker/src/worker/report_builders.py",
+    "old": "    # Close-to-list ratio (from closed sales)\n    ctl_ratios = [l[\"close_to_list_ratio\"] for l in closed if l.get(\"close_to_list_ratio\")]\n    # D-086: was `else 100.0` — \"sold at asking\" for a market with no sales.\n    ctl = _average(ctl_ratios)",
+    "new": "    # Close-to-list ratio (from closed sales)\n    ctl_ratios = [l[\"close_to_list_ratio\"] for l in closed if l.get(\"close_to_list_ratio\")]\n    ctl = _average(ctl_ratios) if ctl_ratios else 100.0",
+    "test": "apps/worker/tests/test_unknown_is_not_zero.py"
+  }
+]
