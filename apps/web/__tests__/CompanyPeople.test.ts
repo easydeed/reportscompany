@@ -1,7 +1,7 @@
 import { agentSentence, agentsByRep, repActions, seatLine, splitName, type Agent, type Rep } from "@/lib/company-people"
 
 const rep = (over: Partial<Rep> = {}): Rep => ({
-  id: "r1", name: "Ben Carter", email: "ben@x.test", office: "", status: "active",
+  id: "r1", name: "Ben Carter", email: "ben@x.test", status: "active",
   agent_count: 2, reports_this_month: 3, last_active: null, idle: false, holds_seat: true, ...over,
 })
 

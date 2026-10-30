@@ -322,7 +322,7 @@ def _b_identifiers(t):
 
 @pytest.mark.parametrize("path", [
     "/v1/company/overview", "/v1/company/reps", "/v1/company/agents",
-    "/v1/company/metrics", "/v1/company/branding",
+    "/v1/company/branding",
 ])
 def test_every_company_read_excludes_the_other_tenant(client, tenants, company_a_auth, path):
     resp = client.get(path, headers=company_a_auth)
@@ -366,7 +366,7 @@ def test_a_rep_under_no_company_is_outside_every_company(client, tenants, compan
     """The company bound is `parent_account_id = company`: an independent
     affiliate and its agents belong to no company's views."""
     for path in ("/v1/company/overview", "/v1/company/reps", "/v1/company/agents",
-                 "/v1/company/reports", "/v1/company/schedules", "/v1/company/metrics"):
+                 "/v1/company/reports", "/v1/company/schedules"):
         r = client.get(path, headers=company_a_auth)
         assert r.status_code == 200, path
         for secret in (tenants.indep_rep, tenants.indep_agent, "ISO Independent", INDEP_CITY):

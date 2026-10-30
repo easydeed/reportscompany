@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 77 | Real, unfixed |
-| `fixed` | 181 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 74 | Real, unfixed |
+| `fixed` | 184 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 29. (Sums to 77, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 26. (Sums to 74, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -622,7 +622,7 @@ Related to D-021, which is the same class of mismatch observed from the other di
 
 ### D-024 — `/v1/affiliate/all-reports` is gated differently from every sibling endpoint
 **Severity:** ROUGH · **Affects:** REGULAR
-**Status:** `open`
+**Status:** `fixed` — fix/sponsor-api-tidy. `all-reports` and `all-schedules` refuse a non-rep with 403 `not_affiliate_account`, like every sibling. `apps/api/tests/test_sponsor_api_tidy.py`; `scripts/regressions/sponsor_api_tidy.json`.
 
 Every other affiliate endpoint refuses a non-affiliate caller with `403 {"error":"not_affiliate_account"}` via `verify_affiliate_account`. `GET /v1/affiliate/all-reports` instead returns `200 {"reports":[],"total":0}` (`apps/api/src/api/routes/affiliates.py:879`), because it derives its account set from `sponsor_account_id = <caller>` and a non-affiliate sponsors nobody.
 
@@ -646,13 +646,13 @@ Related and worth checking in the same pass: `db/migrations/0050_pct_to_title_co
 
 ### D-010 — `office_location` is accepted by the invite API and silently discarded
 **Severity:** ROUGH · **Affects:** TITLE_COMPANY
-**Status:** `open`
+**Status:** `fixed` — fix/sponsor-api-tidy. `InviteRepRequest` forbids unknown fields, so `office_location` is a 422 that names it instead of a silent discard; the always-empty `office` key is gone from the rep rows and from the web types. Same test file.
 
 `InviteRepRequest` accepts `office_location` (`apps/api/src/api/routes/company.py:32-39`) but no handler persists it, and `office` is hardcoded to `""` in every response (`:144`, `:392`). The rep table's "Office" column is therefore permanently blank.
 
 ### D-011 — `/v1/company/metrics` is fully wired but unreachable from the product
 **Severity:** ROUGH · **Affects:** TITLE_COMPANY
-**Status:** `open`
+**Status:** `fixed` — fix/sponsor-api-tidy. The endpoint and its proxy route are deleted; the dashboard reads `/overview`. Same test file.
 
 > **STALE FILE REFERENCE, corrected 2026-09-29.** This entry names
 > `apps/api/migrations/phase4_indexes.sql`, which no longer exists. That is consistent rather
