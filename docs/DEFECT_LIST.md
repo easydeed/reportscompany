@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 65 | Real, unfixed |
-| `fixed` | 193 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 64 | Real, unfixed |
+| `fixed` | 194 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 17. (Sums to 65, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 16. (Sums to 64, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
