@@ -69,7 +69,9 @@ __all__ = [
     "normalize_hex",
     "WHITE",
     "NEAR_BLACK",
+    "BLACK",
     "AA_NORMAL",
+    "text_on",
 ]
 
 # The two candidates for text on a primary fill. #14151A rather than #000000:
@@ -77,6 +79,13 @@ __all__ = [
 # under 4%.
 WHITE = "#ffffff"
 NEAR_BLACK = "#14151a"
+
+# THE THIRD CANDIDATE (D-098, D-210 — Jerry, 2026-10-30). White and #14151a
+# both fall short of 4.5:1 on a fill whose luminance is between 0.184 and
+# 0.209 (worst 4.27:1); pure black clears every one of them, and the worst
+# fill for white-or-black is 4.58:1. So black is used only there, where
+# neither of the two clears, and every brand that passed keeps its text.
+BLACK = "#000000"
 
 #: WCAG 1.4.3's large-text threshold. The display text this gates is 26-32px at
 #: weight 600, which is large text by either of the spec's two definitions
@@ -302,6 +311,22 @@ def _ink(value: str) -> str:
     return NEAR_BLACK
 
 
+def text_on(*surfaces: str) -> str:
+    """Text for a fill, or for every stop of a band: white or near-black,
+    whichever scores higher, as it always was; pure black only when neither of
+    those clears AA and black does better (D-098, D-210).
+
+    The fill is never moved to get there — that is the 2026-09-23 decision on
+    D-098: contrast is satisfied by choosing the text, never the brand.
+    """
+    stops = [normalize_hex(s) for s in surfaces]
+    worst = lambda c: min(contrast(c, s) for s in stops)  # noqa: E731
+    best = WHITE if worst(WHITE) >= worst(NEAR_BLACK) else NEAR_BLACK
+    if worst(best) < AA_NORMAL and worst(BLACK) > worst(best):
+        return BLACK
+    return best
+
+
 @lru_cache(maxsize=512)
 def _derive(primary: str) -> Tuple[Tuple[str, str], ...]:
     """
@@ -314,8 +339,7 @@ def _derive(primary: str) -> Tuple[Tuple[str, str], ...]:
         ("primary", p),
         ("primary_dark", _scale(p, 0.78)),
         ("primary_ink", _ink(p)),
-        ("on_primary",
-         WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p) else NEAR_BLACK),
+        ("on_primary", text_on(p)),
         ("tint", _flatten_over_white(p, _TINT_ALPHA)),
         ("primary_on_dark", _on_dark(p)),
         # Design, 2026-10-06, replacing an exception with a derivation.
@@ -338,9 +362,7 @@ def _derive(primary: str) -> Tuple[Tuple[str, str], ...]:
         # premise was wrong. The two tokens differ exactly where white is
         # adequate but not optimal, and that difference is the decision.
         ("display_ink",
-         WHITE if contrast(WHITE, p) >= _DISPLAY_MIN
-         else (WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p)
-               else NEAR_BLACK)),
+         WHITE if contrast(WHITE, p) >= _DISPLAY_MIN else text_on(p)),
     )
 
 

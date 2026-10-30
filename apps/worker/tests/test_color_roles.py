@@ -145,15 +145,6 @@ def test_the_dark_surfaces_match_the_builder():
 #: 0.196, and both score 4.27:1 there.
 TEXT_ACHIEVABLE = 4.25
 
-#: §0.6's two-way link. D-098 already gates the token layer's version of this;
-#: it gates the PDF path's too, because both make the same binary choice against
-#: a fill that has been decided must not move.
-_D098_GATED = pytest.mark.xfail(
-    strict=True,
-    reason="D-098 — `theme_color_text` picks white or near-black against a fill "
-           "that may not be adjusted, so 4.5:1 is unreachable for ~5% of sRGB; "
-           "measured 278 of 5000 (5.6%), worst 4.27:1",
-)
 
 
 def test_the_two_surface_roles_hold_for_5000_random_brands():
@@ -172,17 +163,13 @@ def test_the_two_surface_roles_hold_for_5000_random_brands():
     assert not bad, f"{len(bad)} failures, first five: {bad[:5]}"
 
 
-@_D098_GATED
 def test_text_on_accent_clears_aa_for_5000_random_brands():
     """
-    The same ceiling as the token layer's `on_primary`, arrived at independently
-    on the PDF path — which is worth stating, because D-098 reads like a fact
-    about `themes.py` and is actually a fact about any binary choice of text
-    against a fill that may not be adjusted. Both derivations have it.
-
-    Left strict rather than relaxed to 4.27, for the reason on the entry: the
-    fill is the affiliate's colour and does not move, so this is unreachable BY
-    DESIGN and the build should say so the day that changes.
+    The PDF path's half of D-098. A binary choice of white or near-black against
+    a fill that may not move tops out at 4.27:1, on this path as on the token
+    layer's `on_primary`. Both now ask `themes.text_on`, which adds pure black
+    where neither clears (D-210, Jerry 2026-10-30), so both clear 4.5:1 for
+    every fill. A strict xfail until then; the defect's gate now.
     """
     bad = [h for h in random_hexes(5000)
            if contrast(_text_on_accent(h), h) < AA_NORMAL]
@@ -411,9 +398,11 @@ def test_text_on_accent_picks_the_better_candidate():
     for hexv in random_hexes(2000):
         got = _text_on_accent(hexv)
         best = max(("#ffffff", "#14151a"), key=lambda c: contrast(c, hexv))
-        assert got == best, f"{hexv}: chose {got}, {best} scores higher"
+        # Pure black only where neither of the two clears AA (D-210).
+        want = best if contrast(best, hexv) >= 4.5 else "#000000"
+        assert got == want, f"{hexv}: chose {got}, expected {want}"
         seen.add(got)
-    assert seen == {"#ffffff", "#14151a"}, "one branch is dead"
+    assert seen == {"#ffffff", "#14151a", "#000000"}, "a branch is dead"
 
 
 def test_the_modern_themes_coral_no_longer_carries_white():

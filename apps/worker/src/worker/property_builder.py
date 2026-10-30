@@ -26,7 +26,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from worker import theme_registry as _registry
-from worker.themes import derive_theme
+from worker.themes import derive_theme, text_on
 from worker.template_filters import (
     format_currency as _fmt_currency,
     format_currency_short as _fmt_currency_short,
@@ -517,7 +517,7 @@ def text_on_surfaces(surfaces) -> str:
     """
     stops = _surfaces(surfaces)
     worst = lambda c: min(_contrast(c, b) for b in stops)  # noqa: E731
-    best = max(("#ffffff", "#14151a"), key=worst)
+    best = text_on(*stops)  # black where neither white nor near-black clears (D-210)
     achieved = worst(best)
     if achieved < AA_NORMAL:
         _report_unreachable("on_band", best, "/".join(stops), achieved)
@@ -549,8 +549,14 @@ def _text_on_accent(hex_color: str) -> str:
 
     #14151a rather than #1a1a1a: it is what `worker.themes` uses for the same
     role, and having one near-black in the product is worth the 0.4% of contrast.
+
+    AND PURE BLACK WHERE NEITHER CLEARS (D-210, Jerry 2026-10-30). Against
+    `#000000` the near-black trade costs 15% at the worst fill, not 0.4%, and
+    leaves a band of brand luminance (0.184–0.209) where both candidates miss.
+    `themes.text_on` adds black for exactly that band and nowhere else, so this
+    and `on_primary` are one decision rather than two that agree.
     """
-    return _best_of(("#ffffff", "#14151a"), normalize_hex_color(hex_color))
+    return text_on(normalize_hex_color(hex_color))
 
 
 def _tri_state_bool(value):
