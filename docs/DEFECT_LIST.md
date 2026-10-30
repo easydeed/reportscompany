@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 66 | Real, unfixed |
-| `fixed` | 192 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 65 | Real, unfixed |
+| `fixed` | 193 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 18. (Sums to 66, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 17. (Sums to 65, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -3985,7 +3985,7 @@ correctly. The defect is that nothing would tell you if that stopped being true.
 ### D-083 — `email_log.status`'s COMMENT documents four of its six values
 
 **Severity:** ROUGH · **Affects:** anyone reading the schema to find out what the column means
-**Status:** `open`
+**Status:** `fixed` — `fix/email-log-status-comment`: migration `0062_email_log_status_comment.sql` replaces 0027's COMMENT with one that names all seven values the code writes. Deliveries: sending, sent, failed. Non-deliveries: suppressed, duplicate_suppressed, blocked_unverified, queued. Historical: unknown. Both `REQUIRED_MIGRATION`s are bumped. Applied locally, and `col_description` reads it back. **Merged only after Jerry applies 0062 to production.** Gate: `tests/test_email_log_status_comment.py` fails if a status literal is written in an `email_log` statement that the newest COMMENT does not name (red on main). Mutations: `scripts/regressions/email_log_status_comment.json`.
 
 `db/migrations/0027_fix_email_log_and_schedule_indexes.sql:16` says:
 

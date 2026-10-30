@@ -1,0 +1,16 @@
+[
+  {
+    "name": "D-083 reverts: the comment drops a non-delivery status",
+    "file": "db/migrations/0062_email_log_status_comment.sql",
+    "old": "'duplicate_suppressed (a redelivery refused), blocked_unverified (unverified account email), '",
+    "new": "'blocked_unverified (unverified account email), '",
+    "test": "tests/test_email_log_status_comment.py"
+  },
+  {
+    "name": "a new status is written that nothing documents",
+    "file": "apps/api/src/api/routes/company.py",
+    "old": "VALUES (%s::uuid, 'sendgrid', %s, %s, 'queued') RETURNING id",
+    "new": "VALUES (%s::uuid, 'sendgrid', %s, %s, 'pending') RETURNING id",
+    "test": "tests/test_email_log_status_comment.py"
+  }
+]
