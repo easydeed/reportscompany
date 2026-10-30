@@ -11,9 +11,9 @@
 //     does nothing);
 //   * no "Email me" toggles: there are no company notification settings to
 //     save them to;
-//   * Address is shown, never edited here — TODO(B5): the company postal
-//     address is gated on a business decision. Until it is set, the emails
-//     carry TrendyReports' address, and the page says that;
+//   * Address is the company's own postal address (D-079), set by the admin
+//     through PUT /v1/account/postal-address — the company's reps send with
+//     it. Empty clears it, and the emails then carry TrendyReports' address;
 //   * Website saves through PATCH /v1/company/branding (reps' emails show it);
 //     the PATCH keeps a field sent empty, so it can be replaced, not cleared;
 //   * your name, title, phone and photo moved here from Branding: they are
@@ -28,6 +28,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { useCompanySettings, useMe, queryKeys } from "@/hooks/use-api"
 import { Avatar, H2, RowButton } from "@/components/sponsor/shared"
 import { personRole, profilePatch, websitePatch, type CompanySettings, type Profile } from "@/lib/company-settings"
+import { addressPut, cleanAddress } from "@/lib/postal-address"
 
 const field = "h-10 rounded-[9px] border-[1.5px] border-[var(--border-strong)] bg-white px-3 text-[15px] text-foreground outline-none focus:border-[var(--link)] focus:ring-[3px] focus:ring-[var(--link)]/20"
 const ink = "h-10 rounded-[9px] bg-primary px-4 text-[14px] font-semibold text-primary-foreground transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-50"
@@ -42,7 +43,7 @@ function Row({ label, sub, children, action }: { label: string; sub?: string; ch
   )
 }
 
-async function send(path: string, method: "PATCH", body: unknown) {
+async function send(path: string, method: "PATCH" | "PUT", body: unknown) {
   const res = await fetch(`/api/proxy${path}`, { method, credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "That didn't save.")
@@ -58,6 +59,7 @@ export default function CompanySettingsPage() {
   const canManage = s?.can_manage === true
 
   const [website, setWebsite] = useState("")
+  const [address, setAddress] = useState("")
   const savedProfile: Profile = {
     first_name: me?.first_name ?? "", last_name: me?.last_name ?? "", job_title: me?.job_title ?? "",
     phone: me?.phone ?? "", avatar_url: me?.avatar_url ?? null,
@@ -66,12 +68,14 @@ export default function CompanySettingsPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const photo = useRef<HTMLInputElement>(null)
   useEffect(() => setWebsite(s?.company.website_url ?? ""), [s?.company.website_url])
+  useEffect(() => setAddress(s?.company.postal_address ?? ""), [s?.company.postal_address])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => setProfile(savedProfile), [me])
 
   if (error) return <p className="text-[16px] text-muted-foreground">{String(error).includes("403") ? "This account isn't on a title company." : "Couldn't load your settings right now."}</p>
 
   const site = websitePatch(s?.company.website_url ?? null, website)
+  const addr = addressPut(s?.company.postal_address ?? null, address)
   const prof = profilePatch(savedProfile, profile)
 
   async function run(key: string, fn: () => Promise<unknown>, done: string, invalidate: readonly unknown[]) {
@@ -130,11 +134,19 @@ export default function CompanySettingsPage() {
               ? <input aria-label="Website" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://" className={`${field} w-full max-w-[360px]`} />
               : (s?.company.website_url || "Not set")}
           </Row>
-          {/* TODO(B5): the company's postal address is gated on a business decision. Shown, never set here. */}
-          <Row label="Address" sub="On your reps' emails">
-            {s?.company.postal_address
-              ? s.company.postal_address
-              : !isLoading && <span className="text-muted-foreground">Not set. Until it is, your reps&apos; emails carry TrendyReports&apos; postal address.</span>}
+          <Row label="Address" sub="On your reps' emails" action={canManage && addr && (
+            <button type="button" className={ink} disabled={busy === "address"} onClick={() => run("address", () => send("/v1/account/postal-address", "PUT", addr), addr.postal_address ? "Address saved" : "Address cleared", queryKeys.company.settings)}>
+              {busy === "address" ? "Saving…" : "Save"}
+            </button>
+          )}>
+            {canManage
+              ? <span className="flex w-full flex-col gap-1">
+                  <input aria-label="Address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street, city, state ZIP" className={`${field} w-full max-w-[360px]`} />
+                  {!cleanAddress(address) && <span className="text-[13px] text-muted-foreground">Empty: your reps&apos; emails carry TrendyReports&apos; postal address.</span>}
+                </span>
+              : s?.company.postal_address
+                ? s.company.postal_address
+                : !isLoading && <span className="text-muted-foreground">Not set. Until it is, your reps&apos; emails carry TrendyReports&apos; postal address.</span>}
           </Row>
         </RuleList>
       </div>

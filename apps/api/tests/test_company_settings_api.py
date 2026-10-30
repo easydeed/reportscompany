@@ -1,7 +1,8 @@
 """GET /v1/company/settings: the company's details and who is on the account.
 
 Read by anyone on the account (D-280), for their own company only. The postal
-address is read, never set: B5 is gated, and no company endpoint writes it.
+address is read here and set through PUT /v1/account/postal-address (D-079) —
+no company route writes it.
 """
 import os
 import uuid
@@ -49,8 +50,8 @@ def test_the_company_details_are_the_callers(client, world):
 
 
 def test_no_company_route_writes_the_postal_address():
-    """B5 is gated: the Settings page shows the address and offers no way to
-    set it, and neither does any company route."""
+    """One writer for the address: PUT /v1/account/postal-address (D-079),
+    tested in test_postal_address_api.py. No company route writes it."""
     from api.routes import company
     import inspect
     src = inspect.getsource(company)

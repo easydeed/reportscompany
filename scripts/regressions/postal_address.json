@@ -1,0 +1,45 @@
+[
+  {
+    "name": "D-079: an empty save is refused (the D-059 trap)",
+    "file": "apps/api/src/api/routes/postal_address.py",
+    "old": "    value = clean(body.postal_address)\n",
+    "new": "    value = clean(body.postal_address)\n    if value is None:\n        raise HTTPException(status_code=422, detail=\"Enter an address.\")\n",
+    "test": "apps/api/tests/test_postal_address_api.py"
+  },
+  {
+    "name": "D-079: blank is stored as an empty string, not cleared",
+    "file": "apps/api/src/api/routes/postal_address.py",
+    "old": "    return text or None",
+    "new": "    return text",
+    "test": "apps/api/tests/test_postal_address_api.py"
+  },
+  {
+    "name": "D-079: a rep who inherits the company's brand can overwrite their own",
+    "file": "apps/api/src/api/routes/postal_address.py",
+    "old": "        \"can_edit\": role == COMPANY_ADMIN_ROLE and not inherits,",
+    "new": "        \"can_edit\": role == COMPANY_ADMIN_ROLE,",
+    "test": "apps/api/tests/test_postal_address_api.py"
+  },
+  {
+    "name": "D-079: a regular account with no row cannot save (no upsert)",
+    "file": "apps/api/src/api/routes/postal_address.py",
+    "old": "            ON CONFLICT (account_id) DO UPDATE\n               SET postal_address = EXCLUDED.postal_address, updated_at = NOW()\n",
+    "new": "            ON CONFLICT (account_id) DO NOTHING\n",
+    "test": "apps/api/tests/test_postal_address_api.py"
+  },
+  {
+    "name": "D-079: a regular account's address never reaches its footer",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        \"postal_address\": postal_row[0] if postal_row else None,\n",
+    "new": "",
+    "test": "apps/worker/tests/test_regular_account_postal_address.py"
+  },
+  {
+    "name": "D-079: the web sends nothing for an emptied field",
+    "file": "apps/web/lib/postal-address.ts",
+    "old": "  return next === (saved ?? null) ? null : { postal_address: next }",
+    "new": "  return next === null || next === (saved ?? null) ? null : { postal_address: next }",
+    "test": "__tests__/PostalAddress.test.ts",
+    "runner": "jest"
+  }
+]
