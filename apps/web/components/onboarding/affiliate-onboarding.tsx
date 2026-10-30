@@ -136,18 +136,18 @@ export function AffiliateOnboarding({
   }
 
   return (
-    <Card className={cn("relative overflow-hidden", className)}>
+    <Card className={cn("relative min-w-0 overflow-hidden", className)}>
       {/* Gradient accent */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
 
       <CardHeader className="pb-3 pt-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-md shadow-primary/20">
               <Building2 className="w-4.5 h-4.5 text-white" />
             </div>
-            <div>
-              <CardTitle className="text-base font-bold">{isCompanyRep ? 'Welcome to your Rep Dashboard' : 'Welcome to your Affiliate Dashboard'}</CardTitle>
+            <div className="min-w-0">
+              <CardTitle className="text-base font-bold text-balance">{isCompanyRep ? 'Welcome to your Rep Dashboard' : 'Welcome to your Affiliate Dashboard'}</CardTitle>
               <CardDescription className="text-xs mt-0.5">
                 {isCompanyRep ? "Let's get you set up and start adding agents" : "Let's set up your account to start sponsoring agents"}
               </CardDescription>
