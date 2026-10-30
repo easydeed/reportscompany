@@ -420,28 +420,37 @@ def test_the_guarantee_is_against_the_fixed_surface_and_no_other():
     """
     **THE CONDITION ON JERRY'S DECISION, PINNED SO IT CANNOT BE FORGOTTEN.**
 
-    One fixed neutral means the token is true on that neutral. Six of the eight
-    dark surfaces the templates paint today are LIGHTER than #0f172a, so a value
-    that clears 4.5:1 here does not clear it there — 3.06:1 on classic's
-    #1B365D. That is the migration the decision implies, not a defect in the
-    token, and this test states the gap rather than asserting it away.
-
-    When the dark panels have migrated, the loop below should find nothing and
-    the test becomes the stronger claim. Until then it documents the checklist.
+    One fixed neutral means `primary_on_dark` is true on that neutral and on
+    nothing else. On 2026-09-23 eight dark surfaces were painted, four of them
+    lighter than #0f172a — 3.24:1 on classic's #1B365D (D-100). Those themes'
+    templates were deleted on 2026-10-27, so D-100 is closed by checking the
+    LIVE templates rather than a list: the only dark surface on the document is
+    `--dark`, it is DARK_SURFACE, `primary_on_dark` is painted only inside
+    `.rangepanel` (whose background is `--dark`), and none of the old panels
+    survives anywhere in the live chain.
     """
-    STILL_PAINTED = ("#0b0f1a", "#0f1629", "#111827", "#1a1a1a",
-                     "#0f1a45", "#18235c", "#15216e", "#1b365d")
+    import re
+    from pathlib import Path
+    from worker.property_builder import PropertyReportBuilder
+    from worker.theme_registry import THEME_TEMPLATES
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from _template_chain import chain
+
+    assert PropertyReportBuilder.V2_DARK == DARK_SURFACE, "the page's --dark is not the guaranteed neutral"
     token = derive_theme("#0D9488")["primary_on_dark"]
     assert contrast(token, DARK_SURFACE) >= AA_NORMAL, "the guarantee itself"
 
-    short = {s: round(contrast(token, s), 2)
-             for s in STILL_PAINTED if contrast(token, s) < AA_NORMAL}
-    # Measured 2026-09-23. Asserted exactly: if a panel migrates to the neutral
-    # this fails and the entry gets updated, which is the point.
-    assert short == {"#0f1a45": 4.47, "#18235c": 3.91,
-                     "#15216e": 3.80, "#1b365d": 3.24}, (
-        f"the set of surfaces where the token does not hold has changed: {short}"
-    )
+    live = {p for theme in THEME_TEMPLATES for p in chain(theme)}
+    text = "\n".join(p.read_text(encoding="utf-8") for p in sorted(live)).lower()
+    for old in ("#0f1a45", "#18235c", "#15216e", "#1b365d", "#0b0f1a", "#0f1629", "#111827"):
+        assert old not in text, f"{old}, a dark panel lighter than or beside the neutral, is painted again"
+
+    rules = re.findall(r"^\s*\.([a-z0-9-]+)\s*\{([^}]*var\(--primary-on-dark\)[^}]*)\}", text, re.M)
+    assert rules, "primary_on_dark is painted nowhere — did the template move?"
+    for name, _body in rules:
+        assert name.startswith(("rangepanel", "band")), (
+            f".{name} paints primary_on_dark outside the --dark range panel")
+    assert re.search(r"\.rangepanel\s*\{[^}]*background:\s*var\(--dark\)", text)
 
 
 # ---------------------------------------------------------------------------

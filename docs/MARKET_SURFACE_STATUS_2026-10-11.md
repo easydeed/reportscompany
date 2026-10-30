@@ -120,7 +120,7 @@ a narrative and 11 with one, so **how long an LLM happened to write decided wher
 | | what |
 |---|---|
 | ~~**`market_snapshot` unwired**~~ | wired 2026-10-26 (D-255) |
-| **D-184** `open` | Design's page-1 grids. Two asks, relayed with the arithmetic in `GALLERY_GRID_FOR_DESIGN_2026-10-10.md` |
+| **D-184** `accepted` | Design's page-1 grids. Jerry, 2026-10-30: the open-houses grid spilling to page 2 is accepted, no change; `featured_listings` was decided 2026-10-12 |
 | **D-182** `[JERRY]` | which seller's-market threshold is right. Four `moi < 3` sites are live email copy and an LLM prompt; aligning them is a content change, now a one-line edit in one file |
 | **D-183** `[JERRY]` | the inventory report carries no trend at all. Restoring it is one line plus a chart slot Design would have to agree to |
 | **dead layout macros** | `analytics_layout`, `closed_inventory_layout`, `gallery_layout`, `pricebands_layout`, and since D-255 `market_narrative_layout` — no kind reaches `base.jinja2` at all. Pinned in `UNREACHABLE_LAYOUT_MACROS`; the dead-template change deletes them |

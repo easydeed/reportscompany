@@ -116,13 +116,14 @@ def test_every_defect_it_cites_exists_and_carries_the_status_quoted(body):
         assert f"### {ref} " in text, (
             f"{ref} is cited in the status report and is not an entry"
         )
-    # The two it calls `open` must still be open, and the one it calls the
-    # remaining §7.3 item must still be unbuilt.
-    for ref in ("D-184", "D-187"):
+    # Each must still carry the status §5 quotes for it: D-187 `open`, and
+    # D-184 `accepted` (Jerry, 2026-10-30: the grid spilling to page 2 stands).
+    for ref, status in (("D-184", "accepted"), ("D-187", "open")):
         entry = text.split(f"### {ref} ", 1)[1].split("### D-", 1)[0]
-        assert "**Status:** `open`" in entry, (
-            f"{ref} is no longer open; §5 of the status report says it is"
+        assert f"**Status:** `{status}`" in entry, (
+            f"{ref} is no longer `{status}`; §5 of the status report says it is"
         )
+    assert "**D-184** `accepted`" in body, "§5 no longer quotes D-184 as `accepted`"
 
 
 def test_the_untracked_finding_is_still_true(body):
