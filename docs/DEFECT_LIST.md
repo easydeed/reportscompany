@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 72 | Real, unfixed |
-| `fixed` | 186 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 70 | Real, unfixed |
+| `fixed` | 188 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 24. (Sums to 72, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 22. (Sums to 70, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -3868,7 +3868,7 @@ fails with the reason if anyone adds it.
 ### D-086 — `_median` and `_average` publish `0.0` as a price
 
 **Severity:** ROUGH · **Affects:** market snapshot, price bands, property reports, and anything reading a metric rather than testing it
-**Status:** `open`
+**Status:** `fixed` — `_median`/`_average` return None for an empty list; the invented `100.0` close-to-list default (two builders) and the tier `else 0` are gone; metrics round through `_round`, which passes None through. Every reader was checked and already treats None as absent. Gate `apps/worker/tests/test_unknown_is_not_zero.py` (red on main) plus `scripts/regressions/missing_is_not_zero.json`.
 
 > **PARTIALLY SUPERSEDED, 2026-09-29 (D-111).** `compute/price_bands.py` has its own `_median`
 > that returns `None` for an empty list — the fix this entry asks for, on the one path that is
@@ -6115,7 +6115,7 @@ would disagree, and the one that disagreed quietly would be the gate.
 ### D-109 — the property report collapses a missing number to 0, so the report cannot tell "no data" from "zero"
 
 **Severity:** ROUGH · **Affects:** every property report; bedrooms, bathrooms, sqft, lot size, year built
-**Status:** `open`
+**Status:** `fixed` — Verified live before the fix: a home whose record has no counts rendered as "Studio · Bedrooms 0 · Bathrooms 0 · Sq ft 0 · Built 0", which is a visible falsehood rather than a rough edge. The context and the stats now keep None for unknowns (`_known`) and the page prints a dash, while a real 0 bedrooms is still a Studio. Gate `apps/worker/tests/test_unknown_is_not_zero.py` (7 of 10 red on main; the 3 that pass on main are the real-zero controls) plus `scripts/regressions/missing_is_not_zero.json`.
 
 Found 2026-09-28 while fixing D-108, by writing the same fix for the property report and then
 **reverting it**.
