@@ -526,13 +526,15 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     closed_in_rate_window = closed_in_moi_window(
         [l for l in listings if l.get("status") == "Closed"]
     )
+    truncated = (bool(context.get("active_was_truncated"))
+                 or bool(context.get("closed_was_truncated")))
     moi = months_of_supply(
         active_total_count,
         len(closed_in_rate_window),
-        active_was_truncated=bool(context.get("active_was_truncated"))
-        or bool(context.get("closed_was_truncated")),
+        active_was_truncated=truncated,
     )
-    moi_display = describe_moi(moi)
+    # D-078: a truncated fetch is "too many to count", not "too few sales".
+    moi_display = describe_moi(moi, too_many_to_count=truncated)
     print(
         f"📊 INVENTORY DEBUG: MOI inputs — {active_total_count} total active "
         f"({'authoritative count' if authoritative_active is not None else 'row count, a floor'}), "
@@ -543,7 +545,10 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     active_sorted = sorted(active, key=lambda x: x.get("days_on_market") or 0, reverse=True)
     
     # Median DOM
-    median_dom = _median([l["days_on_market"] for l in active if l.get("days_on_market") is not None])
+    # Over every home for sale, like the count and the median price (D-077);
+    # over the window it could never exceed the window's length.
+    median_dom = None if context.get("active_was_truncated") else _median(
+        [l["days_on_market"] for l in active_rows if l.get("days_on_market") is not None])
 
     # ── Median asking price (D-057) ─────────────────────────────────────────
     #
@@ -553,11 +558,11 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     # None from both. A price clause with no price, in a report where every
     # listing carries a `list_price` this builder already reads.
     #
-    # OVER `active`, NOT `active_rows` OR `active_total_count`. The sentence it
-    # feeds is "{total_active} active listings at a median of {price}", and
-    # `total_active` in the email payload is `counts["Active"]`, which is
-    # `len(active)` — the date-filtered population the listings table shows.
-    # A median over a different set than the count it sits beside is the
+    # OVER THE SAME HOMES AS THE COUNT BESIDE IT. The sentence it feeds is
+    # "{total_active} active listings at a median of {price}", and
+    # `total_active` in the email payload is `counts["Active"]` — every home
+    # for sale since D-077 (it was the windowed `active` before, and so was
+    # this median). A median over a different set than the count it sits beside is the
     # mistake D-056 was: two populations, one sentence, no way for a reader to
     # tell.
     #
@@ -573,8 +578,15 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
     # carries the same sentinel. Not changed here — it publishes a metric
     # other surfaces read, and widening this ticket to cover it silently is
     # how a scoped fix becomes an unreviewed one. Filed as D-086.
-    _priced = [l["list_price"] for l in active if l.get("list_price")]
-    median_list_price = _median(_priced) if _priced else None
+    #
+    # D-077 (Jerry, 2026-10-30): the count is every home for sale now, so the
+    # median beside it is over every home for sale too — `active_rows`, not
+    # the windowed `active`. When the active fetch was cut short the rows are
+    # the first page of the market, not the market, and no median is given.
+    _priced = [l["list_price"] for l in active_rows if l.get("list_price")]
+    median_list_price = (
+        _median(_priced) if _priced and not context.get("active_was_truncated") else None
+    )
 
     # AND DELIBERATELY NO `median_close_price`, THOUGH THIS REPORT NOW HAS THE
     # CLOSED LISTINGS TO COMPUTE ONE.
@@ -600,34 +612,26 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
         
         # Counts
         #
-        # `Active` is the LISTINGS TABLE's population — active listings that
-        # came to market inside the lookback window, which is what this report
-        # has always shown and what the table below contains. It is NOT the
-        # months-of-supply numerator; that is `metrics.total_active`, and the
-        # two differ on purpose. Both are published so neither has to be
-        # inferred from the other.
-        #
-        # FLAGGED, NOT CHANGED: a reader seeing "Active 20" beside "8.9 months
-        # of supply" can divide them and get a sales rate that does not exist.
-        # Making `Active` mean total inventory would fix that and would change
-        # a headline figure this report has always shown — a product call, not
-        # this ticket's. Same question for PDF_CONFIG's inventory copy, "All
-        # {total} active listings in {city}", which was already describing a
-        # windowed subset as if it were everything.
+        # `Active` IS EVERY HOME FOR SALE (D-077, Jerry 2026-10-30): the same
+        # population as the months-of-supply numerator, so "Active 212" beside
+        # "8.9 months of supply" cannot be divided into a sales rate that does
+        # not exist. It used to be the listings table's population, active
+        # listings that came to market inside the lookback window; the table
+        # keeps that window and carries its own count, `listed_in_window`.
         #
         # `Closed` was hard-coded to 0 and is now the real count. Zero was
         # true only because the query never asked for closed listings — the
         # same absence that made months of supply 0.0. A count that is zero
         # because nothing was fetched is not a count of zero.
         "counts": {
-            "Active": len(active),
+            "Active": active_total_count,
             "Pending": 0,
             "Closed": len(closed_in_rate_window),
         },
         
         # Metrics
         "metrics": {
-            "median_dom": round(median_dom, 1),
+            "median_dom": None if median_dom is None else round(median_dom, 1),
             # The asking price of the listings this report is about. None when
             # no active listing carries a price, which the template renders as
             # "varying prices" — honest, and now only when it is true.
@@ -641,6 +645,9 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
             "total_active": active_total_count,
             "closed_in_rate_window": len(closed_in_rate_window),
             "new_this_month": len(new_this_month),
+            # The listings table's own count: active listings that came to
+            # market inside the lookback window (D-077).
+            "listed_in_window": len(active),
         },
         
         # Listings for table
@@ -1125,6 +1132,12 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
         raise ValueError(f"Unsupported report_type: {report_type}. Supported: {list(builders.keys())}")
     
     result = builder(listings, context)
+
+    # D-110: how many listings the report is about — after the same city
+    # filter every builder applies, so a search that only returned other
+    # cities' listings counts as matching nothing. The worker does not send a
+    # report whose `matched` is 0; it tells the agent instead.
+    result["matched"] = len(_filter_by_city(listings, context.get("city")))
     
     # Pass through preset_display_name for PDF header customization
     # This allows Smart Presets to show their custom name (e.g., "Condo Watch")

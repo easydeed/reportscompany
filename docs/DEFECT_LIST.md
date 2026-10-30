@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 76 | Real, unfixed |
-| `fixed` | 182 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 72 | Real, unfixed |
+| `fixed` | 186 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 28. (Sums to 76, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 24. (Sums to 72, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -3534,7 +3534,7 @@ on at least one feed and proven right on none.
 ### D-077 — the inventory report's "Active" count and its months-of-supply numerator are different populations
 
 **Severity:** ROUGH · **Affects:** the inventory report's headline count and its PDF section copy
-**Status:** `open` — **needs a product decision, not a fix**
+**Status:** `fixed` — Jerry, 2026-10-30: both inventory figures count active listings on the market. `counts["Active"]` is now every home for sale, the same population as the months-of-supply numerator. The median list price and median days beside it are over the same homes, and are None when the active fetch was cut short. The listings table keeps its window: its count line reads "20 listed in the last 30 days", the email reads "Showing 12 of 20 listed in the last 30 days", and the result carries `listed_in_window`. PDF_CONFIG's "All {total} active listings" is now true. Gate: `apps/worker/tests/test_market_says_whats_true.py`, plus `scripts/regressions/market_says_whats_true.json`.
 
 The listings table shows active listings that came to market inside the lookback window; that is
 deliberate and documented (*"Per user request: only show listings that were listed within the
@@ -3567,7 +3567,7 @@ before this ticket. It is the same decision, so it belongs with it.
 ### D-078 — "not enough recent sales" is also what a too-large market is told
 
 **Severity:** ROUGH · **Affects:** the inventory report in markets above the fetch limit
-**Status:** `open` — **filed rather than fixed, per the one-line threshold**
+**Status:** `fixed` — `describe()` takes `too_many_to_count`. The inventory builder passes it when either fetch was truncated, so the published words are "Too many listings to count exactly" (`reason: too_many_to_count`) rather than "Not enough recent sales". No market page prints a reason today (the PDF drops the pill, the email shows N/A), so nothing rendered was wrong after D-081. The data was, and anything that reads it now gets the right reason. Gate: `apps/worker/tests/test_market_says_whats_true.py`.
 
 `compute.moi.months_of_supply` returns `None` for two unrelated reasons, and the page renders the
 same sentence for both:
@@ -6177,7 +6177,7 @@ the label "Year Built", or vanishes, depending on the theme.
 ### D-110 — a report that matched nothing is still sent, and nobody has decided whether it should be
 
 **Severity:** ROUGH · **Affects:** every scheduled market report whose search returns zero listings
-**Status:** `open` — a product decision, not a code fault
+**Status:** `fixed` — Jerry, 2026-10-30: a report that matched nothing is not sent; the agent is told instead. `build_result_json` stamps `matched`, counted after the same city filter every builder applies. `_send_and_log_report_email`, shared by the scheduled and Generate & Send paths, holds a report whose `matched` is 0. It logs the recipients' row as `suppressed` and emails the account owner "Your {schedule} matched no listings", once per run. The schedule run is recorded as `skipped_empty`. A result cached before the stamp existed is sent as before. Gate: `apps/worker/tests/test_market_says_whats_true.py`.
 
 Split out of D-108 on 2026-09-28. **D-108 fixed what such a report LOOKS like; it deliberately did
 not change whether it goes out.**
@@ -10419,7 +10419,7 @@ beyond what the scope document states. Adding one is allowed — it is not allow
 
 **Severity:** ROUGH · **Affects:** every market report — the value is inert, so nothing a customer
 sees · **Found during:** tracing `report_generations.theme_id` for the theme-rename scope
-**Status:** `open`
+**Status:** `fixed` — The market path no longer reads `report_generations.theme_id` or hands it to the builder. It reads and logs the run's accent colour, the one choice that changes the page. The column's writers are left alone, and it remains read by nothing, which is what keeps a theme rename off the migration list (`docs/THEME_RENAME_SCOPE.md` §3, updated). Gate: `apps/worker/tests/test_market_says_whats_true.py`.
 
 `tasks.py` reads `report_generations.theme_id`, resolves a default for it, logs it, and hands it to
 the builder:

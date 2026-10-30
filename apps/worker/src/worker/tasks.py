@@ -883,6 +883,124 @@ def _record_refused_send(account_id, run_id, schedule_id, recipients, subject, r
         logger.warning(f"Could not record the refused send (non-critical): {e}")
 
 
+#: `_send_and_log_report_email`'s status for a report that matched nothing and
+#: was therefore not sent (D-110). Not 200 or 202: nothing was delivered.
+NOT_SENT_MATCHED_NOTHING = 204
+
+#: In the `email_log` subject of the agent's notice; the per-run dedup finds it.
+EMPTY_NOTICE_TAG = "matched nothing"
+
+
+def _matched_nothing(result) -> bool:
+    """True when the search behind this report returned no listings (D-110).
+
+    `matched` is stamped by `build_result_json`. A result without it (one
+    cached before it existed) is not treated as empty, so guessing wrong here
+    gives the old behaviour, not a lost report."""
+    return isinstance(result, dict) and result.get("matched") == 0
+
+
+def _empty_notice(*, report_name: str, area: str, scheduled: bool,
+                  url: str) -> tuple[str, str, str]:
+    """(subject, content_html, preheader) for the agent's notice of a report
+    that matched nothing and so was not sent (D-110)."""
+    from .email.transactional import _cta_button, _e, _h1, _p
+    name = _e(report_name)
+    after = (" The schedule is still on, and its next run goes out as planned."
+             if scheduled else "")
+    content = (
+        _h1(f"Your {name} matched no listings.")
+        + _p(f"The search for {_e(area)} returned no listings this time, so the "
+             f"report wasn&rsquo;t sent to your recipients.")
+        + _p("If you expected listings, the filters may be narrower than you meant." + after)
+        + _cta_button(url, "View the schedule" if scheduled else "View your reports")
+    )
+    return (f"Your {report_name} matched no listings", content,
+            f"Your {name} matched no listings.")
+
+
+def _hold_empty_report(account_id, run_id, schedule_id, recipients, report_type, city):
+    """Record the report that was not sent, and tell the account owner (D-110).
+
+    Two `email_log` rows, both keyed on the run: the recipients' row as
+    `suppressed` (so "why did this run not send?" is answered beside the run,
+    and the admin counters, which count only delivery statuses, skip it), and
+    the owner's notice. A redelivered task finds the notice and does neither
+    again.
+    """
+    report_name = report_type.replace("_", " ").title() + " report"
+    try:
+        with _open_log_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT set_config('app.current_account_id', %s, false)",
+                            (str(account_id),))
+                cur.execute("SELECT 1 FROM email_log WHERE report_id = %s::uuid AND subject LIKE %s LIMIT 1",
+                            (run_id, f"[{EMPTY_NOTICE_TAG}]%"))
+                if cur.fetchone():
+                    return
+                cur.execute("""
+                    INSERT INTO email_log (account_id, schedule_id, report_id, provider,
+                                           to_emails, subject, status, error)
+                    VALUES (%s, %s, %s, 'resend', %s, %s, 'suppressed', %s)
+                """, (account_id, schedule_id, run_id, recipients,
+                      f"Your {report_name}", "not sent: the search matched no listings (D-110)"))
+
+                if schedule_id:
+                    cur.execute("SELECT name FROM schedules WHERE id = %s::uuid", (schedule_id,))
+                    row = cur.fetchone()
+                    if row and row[0]:
+                        report_name = row[0]
+                cur.execute("""
+                    SELECT u.email FROM users u
+                    JOIN account_users au ON au.user_id = u.id
+                    WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
+                    LIMIT 1
+                """, (account_id,))
+                owner = cur.fetchone()
+                owner_email = owner[0] if owner else None
+
+                app_base = os.environ.get("APP_BASE", "https://reportscompany-web.vercel.app")
+                subject, content_html, preheader = _empty_notice(
+                    report_name=report_name, area=city or "your area",
+                    scheduled=bool(schedule_id),
+                    url=f"{app_base}/app/schedules" if schedule_id else f"{app_base}/app/reports",
+                )
+                resend_key = os.environ.get("RESEND_API_KEY", "")
+                status, code, error = "failed", None, None
+                if not owner_email:
+                    error = "no account owner email; the agent was not told"
+                elif not resend_key:
+                    status, error = "suppressed", "RESEND_API_KEY not configured; the agent was not told"
+                else:
+                    from .email.transactional import _email_base, _plain
+                    reason = ("Sent to you when a report finds no listings, instead of "
+                              "sending your recipients an empty report.")
+                    resp = httpx.post(
+                        "https://api.resend.com/emails",
+                        headers={"Authorization": f"Bearer {resend_key}",
+                                 "Content-Type": "application/json"},
+                        json={
+                            "from": os.environ.get("EMAIL_FROM_ADDRESS", "TrendyReports <noreply@trendyreports.io>"),
+                            "to": [owner_email],
+                            "subject": subject,
+                            "html": _email_base(content_html, preheader=preheader, reason=reason),
+                            "text": _plain(content_html) + "\n" + reason + "\n",
+                        },
+                        timeout=15.0,
+                    )
+                    code = resp.status_code
+                    status = "sent" if code in (200, 201) else "failed"
+                    error = None if status == "sent" else resp.text[:400]
+                cur.execute("""
+                    INSERT INTO email_log (account_id, schedule_id, report_id, provider,
+                                           to_emails, subject, response_code, status, error)
+                    VALUES (%s, %s, %s, 'resend', %s, %s, %s, %s, %s)
+                """, (account_id, schedule_id, run_id, [owner_email] if owner_email else [],
+                      f"[{EMPTY_NOTICE_TAG}] {subject}", code, status, error))
+    except Exception as e:
+        logger.warning(f"Could not record or notify the empty report (non-critical): {e}")
+
+
 def _send_and_log_report_email(
     conn, cur, account_id, run_id, recipients,
     report_type, city, zips, lookback, result, pdf_url,
@@ -893,6 +1011,13 @@ def _send_and_log_report_email(
     Used by both the scheduled and ad-hoc email paths.
     Returns (status_code, response_text).
     """
+    # D-110 (Jerry, 2026-10-30): a report that matched nothing is not sent.
+    # The agent is told instead. Checked before the duplicate guard: nothing
+    # was ever delivered for an empty run, and the notice dedups itself.
+    if _matched_nothing(result):
+        _hold_empty_report(account_id, run_id, schedule_id, recipients, report_type, city)
+        return (NOT_SENT_MATCHED_NOTHING, "not sent: the search matched no listings")
+
     cur.execute("SELECT name FROM accounts WHERE id = %s", (account_id,))
     account_row = cur.fetchone()
     account_name = account_row[0] if account_row else None
@@ -1674,34 +1799,30 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # Always render via the new MarketReportBuilder. The legacy
         # /print/{runId} frontend path produced unbranded PDFs missing the
         # Outfit font, themed header, and AI narrative — so we never fall
-        # back to it. Reports created without an explicit theme_id default
-        # to the registry's default so the builder still has a layout.
+        # back to it.
         #
-        # The comment here used to say "theme 1 (teal)", which was wrong
-        # twice: 1 was classic, not teal, and MarketReportBuilder reads no
-        # theme at all — `builder_data["theme_id"]` below has no consumer
-        # on this path (D-164). The value is still resolved and logged
-        # because the log line is how an operator tells a defaulted run
-        # from a chosen one.
-        theme_id = None
+        # NO THEME ON THIS PATH (D-164). `report_generations.theme_id` used to
+        # be read here, defaulted, logged and handed to the builder, and
+        # `MarketReportBuilder` reads no theme: market reports are coloured by
+        # the accent colour and the brand. So the run's accent colour is what
+        # is read and logged — the one choice that changes the page — and the
+        # column is left to the writers that still fill it, read by nothing.
         theme_accent = None
         with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
                 cur.execute(
-                    "SELECT theme_id, accent_color FROM report_generations WHERE id=%s",
+                    "SELECT accent_color FROM report_generations WHERE id=%s",
                     (run_id,),
                 )
-                theme_row = cur.fetchone()
-                if theme_row:
-                    theme_id, theme_accent = theme_row
+                accent_row = cur.fetchone()
+                if accent_row:
+                    theme_accent = accent_row[0]
             conn.commit()
 
-        effective_theme_id = _theme_registry.resolve(theme_id)[1]
         print(
             f"🔍 REPORT RUN {run_id}: step=generate_pdf "
-            f"(server-side, theme={effective_theme_id}"
-            f"{' [defaulted]' if not theme_id else ''})"
+            f"(server-side, accent={theme_accent or 'brand'})"
         )
         from .market_builder import MarketReportBuilder
 
@@ -1738,7 +1859,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     }
             conn.commit()
 
-        # Merge result_json + branding + theme for the builder
+        # Merge result_json + branding for the builder
         builder_data = {}
         if isinstance(result, dict):
             builder_data.update(result)
@@ -1748,7 +1869,6 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # builders take `listings` — not a second result set.
         builder_data["closed_history"] = closed_history
         builder_data["closed_history_truncated"] = closed_history_truncated
-        builder_data["theme_id"] = effective_theme_id
         builder_data["accent_color"] = theme_accent or branding_ctx.get("accent_color")
         builder_data["branding"] = branding_ctx
 
@@ -1918,7 +2038,10 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                             )
 
                             try:
-                                run_status = 'completed' if status_code in (200, 202) else 'failed_email'
+                                if status_code == NOT_SENT_MATCHED_NOTHING:
+                                    run_status = 'skipped_empty'  # D-110
+                                else:
+                                    run_status = 'completed' if status_code in (200, 202) else 'failed_email'
                                 # Keyed on report_run_id, like the skipped_limit
                                 # writer above and the failed writer below.
                                 #

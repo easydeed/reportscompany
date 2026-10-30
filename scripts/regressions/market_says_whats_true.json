@@ -1,0 +1,51 @@
+[
+  {
+    "name": "D-077 reverts: Active is the windowed table count again",
+    "file": "apps/worker/src/worker/report_builders.py",
+    "old": "            \"Active\": active_total_count,\n            \"Pending\": 0,",
+    "new": "            \"Active\": len(active),\n            \"Pending\": 0,",
+    "test": "apps/worker/tests/test_market_says_whats_true.py"
+  },
+  {
+    "name": "D-077 reverts: the table says 'homes for sale' under the market count",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "            noun = noun_one = f\"listed in the last {days} days\"",
+    "new": "            pass",
+    "test": "apps/worker/tests/test_market_says_whats_true.py"
+  },
+  {
+    "name": "D-078 reverts: a truncated fetch is told it has too few sales",
+    "file": "apps/worker/src/worker/report_builders.py",
+    "old": "    moi_display = describe_moi(moi, too_many_to_count=truncated)",
+    "new": "    moi_display = describe_moi(moi)",
+    "test": "apps/worker/tests/test_market_says_whats_true.py"
+  },
+  {
+    "name": "D-110 reverts: an empty report is sent anyway",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "    if _matched_nothing(result):\n        _hold_empty_report(",
+    "new": "    if False:\n        _hold_empty_report(",
+    "test": "apps/worker/tests/test_market_says_whats_true.py"
+  },
+  {
+    "name": "D-110: the builders stop stamping how many listings matched",
+    "file": "apps/worker/src/worker/report_builders.py",
+    "old": "    result[\"matched\"] = len(_filter_by_city(listings, context.get(\"city\")))",
+    "new": "    result[\"matched\"] = len(listings)",
+    "test": "apps/worker/tests/test_market_says_whats_true.py"
+  },
+  {
+    "name": "D-110: the notice goes out twice on a redelivered run",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                if cur.fetchone():\n                    return\n                cur.execute(\"\"\"\n                    INSERT INTO email_log (account_id, schedule_id, report_id, provider,\n                                           to_emails, subject, status, error)",
+    "new": "                cur.fetchone()\n                cur.execute(\"\"\"\n                    INSERT INTO email_log (account_id, schedule_id, report_id, provider,\n                                           to_emails, subject, status, error)",
+    "test": "apps/worker/tests/test_market_says_whats_true.py"
+  },
+  {
+    "name": "D-164 reverts: the builder is handed the unread theme id",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        builder_data[\"accent_color\"] = theme_accent or branding_ctx.get(\"accent_color\")",
+    "new": "        builder_data[\"theme_id\"] = theme_accent\n        builder_data[\"accent_color\"] = theme_accent or branding_ctx.get(\"accent_color\")",
+    "test": "apps/worker/tests/test_market_says_whats_true.py"
+  }
+]

@@ -673,13 +673,15 @@ def test_inventory_renders_the_table_and_designs_columns():
     assert cols["fifth"] == "Status", cols
 
 
-def test_the_count_line_says_homes_for_sale_and_not_sales():
+def test_the_count_line_names_the_tables_own_population():
     """`noun` per kind. "212 sales" on an inventory report is a number that is
-    right about something else — the hardest kind of wrong to see."""
+    right about something else — the hardest kind of wrong to see. Since
+    D-077 the band counts every home for sale, and the table under it holds
+    the ones listed in the window, so its count line says that rather than a
+    second "homes for sale"."""
     table = inv()._v2_table()
-    assert table["noun"] == "homes for sale"
-    assert table["noun_one"] == "home for sale"
-    assert "sale" in table["noun"] and "sold" not in table["noun"]
+    assert table["noun"] == "listed in the last 30 days"
+    assert "sold" not in table["noun"] and "sale" not in table["noun"]
 
 
 @pytest.mark.parametrize("dom,want_fifth,want_emphasis", [
