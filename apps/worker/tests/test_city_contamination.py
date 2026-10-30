@@ -254,10 +254,12 @@ def test_before_and_after_on_one_report():
     assert contaminated["metrics"]["total_active"] == 13
     assert corrected["metrics"]["total_active"] == 12
 
-    # And the count beside it was always 12 — which is the tell. A report whose
-    # hero KPI says 13 over a table of 12 was already visibly inconsistent; the
-    # months-of-supply numerator carried the same 13 invisibly.
-    assert contaminated["counts"]["Active"] == corrected["counts"]["Active"] == 12
+    # The table's own count was always 12 — which is the tell. A report whose
+    # hero KPI says 13 over a table of 12 was visibly inconsistent; the
+    # months-of-supply numerator carried the same 13 invisibly. Since D-077
+    # `counts["Active"]` IS that numerator, so it follows it.
+    assert contaminated["metrics"]["listed_in_window"] == corrected["metrics"]["listed_in_window"] == 12
+    assert contaminated["counts"]["Active"] == 13 and corrected["counts"]["Active"] == 12
 
 
 def test_a_truncated_fetch_still_refuses_to_publish_supply():

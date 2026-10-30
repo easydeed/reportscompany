@@ -163,7 +163,8 @@ Two of these are worth stating plainly.
 So the column is a mix. It would normally make a rename a data migration — except
 **`MarketReportBuilder` reads no theme at all**, so every value in it is inert. That is filed as
 **D-164**; it is a write with no consumer, and it is the single fact that keeps a rename off the
-migration list.
+migration list. (Fixed 2026-10-30: the market path no longer even reads the column — it reads and
+logs the run's accent colour, the one choice that changes the page. The writers still fill it.)
 
 **The five `theme_<name>` stats columns would need a rename to be a migration** — `ALTER TABLE …
 RENAME COLUMN` on three tables, in two of which they appear twice. But they are *historical counters*

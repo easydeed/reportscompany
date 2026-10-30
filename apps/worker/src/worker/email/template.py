@@ -919,7 +919,8 @@ def _pdf_has_all(report_type: str, total_available: int) -> bool:
 
 
 def _build_truncation_note(total_available: int, showing: int,
-                           pdf_url: Optional[str], pdf_has_all: bool = False) -> str:
+                           pdf_url: Optional[str], pdf_has_all: bool = False,
+                           of_what: str = "") -> str:
     """
     §06 chrome `truncation_note` — "Showing X of Y."
 
@@ -929,7 +930,8 @@ def _build_truncation_note(total_available: int, showing: int,
     if not pdf_url or total_available <= showing or showing <= 0:
         return ""
     return render_block("chrome", piece="truncation_note", showing=showing,
-                        total_available=total_available, pdf_has_all=pdf_has_all)
+                        total_available=total_available, pdf_has_all=pdf_has_all,
+                        of_what=of_what)
 
 
 def _build_masthead(tk: Dict[str, str], logo_url: Optional[str], brand_name: str,
@@ -2227,8 +2229,11 @@ def schedule_email_html(
     # ------------------------------------------------------------------
     _shown = len(listings) if listings else 0
     _total = total_available or total_found or _shown
-    body_html += _build_truncation_note(_total, _shown, pdf_url,
-                                        _pdf_has_all(report_type, _total))
+    # D-077: the inventory headline counts every home for sale; the list under
+    # it is the ones listed in the window, and its note says so.
+    body_html += _build_truncation_note(
+        _total, _shown, pdf_url, _pdf_has_all(report_type, _total),
+        of_what=f"listed in the last {lookback_days} days" if report_type == "inventory" else "")
     body_html += _build_pdf_cta(pdf_url, tk, f"{area_display}, last {lookback_days} days")
 
     # ── The agent ───────────────────────────────────────────────────────────

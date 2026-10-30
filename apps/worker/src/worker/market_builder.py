@@ -173,7 +173,7 @@ PDF_CONFIG: Dict[str, Dict[str, Any]] = {
     "inventory": {
         "cap": 200,
         "section_label": "Active Inventory",
-        "truncation_template": "All {total} active listings in {city}.",
+        "truncation_template": "All {total} homes listed in {city} in the last {lookback} days.",
         "more_template": None,
     },
     "new_listings": {
@@ -1600,6 +1600,14 @@ class MarketReportBuilder:
                 "emphasis": emphasis,
                 "days": _v2_days(item.get("days_on_market")),
             })
+        noun = V2_TABLE_COLUMNS[self.report_type]["noun"]
+        noun_one = V2_TABLE_COLUMNS[self.report_type]["noun_one"]
+        if self.report_type == "inventory":
+            # D-077: the band counts every home for sale; this table holds the
+            # ones listed inside the window. "20 homes for sale" under "212
+            # homes for sale" would be two answers to one question.
+            days = self.report_data.get("lookback_days") or 30
+            noun = noun_one = f"listed in the last {days} days"
         return {
             "rows": rows,
             "showing": listings_ctx["showing"],
@@ -1608,8 +1616,8 @@ class MarketReportBuilder:
             # The count line's noun, per kind. "20 sales" on a new-listings
             # report would be wrong in a way nothing would catch — the number
             # is right and the word is not.
-            "noun": V2_TABLE_COLUMNS[self.report_type]["noun"],
-            "noun_one": V2_TABLE_COLUMNS[self.report_type]["noun_one"],
+            "noun": noun,
+            "noun_one": noun_one,
         }
 
     def _build_agent_context(self) -> Dict[str, Any]:

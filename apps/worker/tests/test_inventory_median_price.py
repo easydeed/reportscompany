@@ -101,23 +101,23 @@ def test_the_inventory_report_emits_a_median_price(build_=build):
 
 def test_the_median_is_over_the_same_set_the_count_beside_it_describes():
     """
-    `counts["Active"]` is the DATE-FILTERED population. A listing outside the
-    lookback window is in the fetch but not in that count — and must not be in
-    the median either, or the sentence pairs a count of one population with a
-    median of another.
+    `counts["Active"]` is EVERY HOME FOR SALE since D-077 (Jerry, 2026-10-30),
+    so the median beside it is over every home for sale too — a listing from
+    before the lookback window is in both. Before D-077 both were the windowed
+    set; what must never happen is the count of one and the median of another.
     """
     listings = [
         active(400_000, days_ago_listed=5),
         active(500_000, days_ago_listed=5),
         active(600_000, days_ago_listed=5),
-        # outside the 30-day window: excluded from the count, so excluded here
+        # listed before the 30-day window, still for sale: in the count, so here
         active(9_000_000, days_ago_listed=400),
     ]
     result = build(listings, lookback_days=30)
-    assert result["counts"]["Active"] == 3
-    assert result["metrics"]["median_list_price"] == 500_000, (
-        "a listing outside the lookback window moved the median, so the median "
-        "and the count beside it describe different populations"
+    assert result["counts"]["Active"] == 4
+    assert result["metrics"]["listed_in_window"] == 3
+    assert result["metrics"]["median_list_price"] == 550_000, (
+        "the median and the count beside it describe different populations"
     )
 
 
