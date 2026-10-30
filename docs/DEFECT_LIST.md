@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 69 | Real, unfixed |
-| `fixed` | 189 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 65 | Real, unfixed |
+| `fixed` | 193 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 21. (Sums to 69, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 17. (Sums to 65, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -3258,7 +3258,7 @@ reports, rather than a duplicate email nobody asked for. Worth doing with D-071,
 about this task's boundaries rather than its contents.
 ### D-073 — the per-theme cover titles were designed, and have never rendered
 **Severity:** ROUGH · **Affects:** all five property report themes
-**Status:** `open` — **needs a design decision, not a fix**
+**Status:** `open` — **[JERRY], asked 2026-10-30.** He said to build it, but the designed per-theme fallbacks (harbor "Real Estate Specialist", linen "Luxury Property Specialist", atlas "Licensed Real Estate Agent") are titles for an agent who entered none. That conflicts with his D-169 answer, "only if they entered one". Atlas's fallback also states a licence nobody has verified. Waiting on: (a) fallback per theme, (b) harbor and linen only, or (c) nothing.
 
 Each theme's cover carries its own fallback for an agent with no title —
 `'Luxury Property Specialist'` (elegant), `'Real Estate Specialist'` (modern),
@@ -4761,7 +4761,7 @@ provably zero visual change, since nothing reads them.
 ### D-098 — `on_primary` cannot reach 4.5:1 against every fill, and the spec asks it to
 
 **Severity:** ROUGH · **Affects:** label text on a brand fill, for roughly 5% of pickable colours
-**Status:** `open`
+**Status:** `fixed` — Jerry, 2026-10-30: add black as a third text colour so every brand clears contrast. `themes.text_on` keeps the white-or-near-black choice and uses pure `#000000` only where neither clears 4.5:1. White or black alone gives a worst fill of 4.58:1, so every fill now carries AA text. **The fill is not moved**, so the 2026-09-23 decision stands: contrast comes from choosing the text, never the brand. `on_primary`, `display_ink`, the PDF's `_text_on_accent` and `text_on_surfaces`, and the web port (`brand-tokens.ts`) all ask the same function. The two strict xfails this entry gated now pass and are plain tests. Mutations: `scripts/regressions/black_text_option.json`.
 
 Master plan §3.1 defines `on_primary` as *"whichever of white or `#14151A` scores higher against
 primary"*. §4.2 then requires `contrast(on_primary, primary) >= 4.5` for every input. **The first
@@ -8341,7 +8341,7 @@ baseline is now empty.
 
 **Severity:** ROUGH · **Affects:** the subject's value figure on every property report ·
 **Found during:** D-118's answer
-**Status:** `open` — **[JERRY]**, scope before build
+**Status:** `fixed` — Jerry, 2026-10-30: print the method beside the estimate. The range panel now reads "Range of the comparable sales shown." directly under the figures. This is true as written: low and high are the lowest and highest closed sale among the comparables, and every comparable is listed in the report. Gate: `apps/worker/tests/test_property_report_copy.py` (red on main), plus `scripts/regressions/property_report_copy.json`.
 
 Jerry, 2026-09-29, alongside D-118's last-sale row:
 
@@ -10665,7 +10665,7 @@ entry says not to do — it is there because the alternative was shipping 0/0/0 
 
 **Severity:** ROUGH · **Affects:** the property report's agent panel on the shared architecture ·
 **Found during:** the cover-title gate failing at collection with "found 0"
-**Status:** `open` — [JERRY]: it is a copy decision, not a bug
+**Status:** `fixed` — Jerry, 2026-10-30: show the agent's job title under their name, if they entered one. Page 6's agent panel prints it between the name and the brand line. There is no line and no default when none was entered: `_build_agent_context` and `consumer_report_data` no longer substitute "Real Estate Agent". `test_theme_cover_title.py` asserts the title appears exactly once, under the name. Gate: `apps/worker/tests/test_property_report_copy.py` (red on main).
 
 `_build_agent_context` computes `title`, defaulting it to the string `"Real Estate Agent"` when
 the agent has not entered one (`property_builder.py:1077`). Design's architecture has no agent role
@@ -14648,7 +14648,7 @@ found it.
 falls between 0.184 and 0.209 — one of 38 swept brands, and none of the six presets ·
 **Found during:** root-causing why nine surfaces across two architectures all failed at the same
 single point
-**Status:** `open` — **the derivation is shared with Design's `_v2` page, so the fix is a
+**Status:** `fixed` — 
 conversation rather than an edit.** See `docs/COVER_TYPE_AND_ATLAS_FOR_DESIGN_2026-10-21.md`.
 
 Nine surfaces fail at **exactly one** of the 38 swept brands and nowhere else: eight `span.*` on

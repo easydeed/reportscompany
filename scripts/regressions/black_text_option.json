@@ -1,0 +1,31 @@
+[
+  {
+    "name": "D-098 reverts: on_primary is white-or-near-black only",
+    "file": "apps/worker/src/worker/themes.py",
+    "old": "    if worst(best) < AA_NORMAL and worst(BLACK) > worst(best):\n        return BLACK\n    return best",
+    "new": "    return best",
+    "test": "apps/worker/tests/test_themes.py apps/worker/tests/test_color_roles.py"
+  },
+  {
+    "name": "D-210 reverts: the PDF path keeps its own two-candidate choice",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "    return text_on(normalize_hex_color(hex_color))",
+    "new": "    return _best_of((\"#ffffff\", \"#14151a\"), normalize_hex_color(hex_color))",
+    "test": "apps/worker/tests/test_color_roles.py"
+  },
+  {
+    "name": "black replaces near-black everywhere, not only where neither clears",
+    "file": "apps/worker/src/worker/themes.py",
+    "old": "    best = WHITE if worst(WHITE) >= worst(NEAR_BLACK) else NEAR_BLACK\n    if worst(best) < AA_NORMAL",
+    "new": "    best = WHITE if worst(WHITE) >= worst(BLACK) else BLACK\n    if worst(best) < AA_NORMAL",
+    "test": "apps/worker/tests/test_themes.py"
+  },
+  {
+    "name": "the web port drops the third candidate",
+    "file": "apps/web/lib/brand-tokens.ts",
+    "old": "  if (contrast(best, fill) < AA_NORMAL && contrast(BLACK, fill) > contrast(best, fill)) return BLACK;\n",
+    "new": "",
+    "test": "__tests__/BrandTokens.test.ts",
+    "runner": "jest"
+  }
+]
