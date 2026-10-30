@@ -10,7 +10,7 @@ Returns:
 """
 
 import statistics
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta, date
 
 # NOTE:
@@ -40,13 +40,23 @@ def _format_date(d: date | datetime | None) -> str:
         d = d.date()
     return d.strftime("%b %d, %Y")
 
-def _median(vals: List[float]) -> float:
-    """Safe median calculation"""
-    return statistics.median(vals) if vals else 0.0
+def _median(vals: List[float]) -> Optional[float]:
+    """The median, or None when there is nothing to take one of.
 
-def _average(vals: List[float]) -> float:
-    """Safe average calculation"""
-    return (sum(vals) / len(vals)) if vals else 0.0
+    D-086: this returned 0.0 for an empty list — a claim that the median price
+    in the market is $0, made exactly when there is nothing to claim. A
+    surface that tests the value happened to hide it; one that formats it
+    printed "$0". None is what D-056 settled for months of supply."""
+    return statistics.median(vals) if vals else None
+
+def _average(vals: List[float]) -> Optional[float]:
+    """The mean, or None when there is nothing to average (D-086)."""
+    return (sum(vals) / len(vals)) if vals else None
+
+
+def _round(value: Optional[float], ndigits: int = 0) -> Optional[float]:
+    """`round`, carrying None through: an absent figure stays absent."""
+    return None if value is None else round(value, ndigits)
 
 def _period_label(lookback_days: int) -> str:
     """Generate period label"""
@@ -168,7 +178,8 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     
     # Close-to-list ratio (from closed sales)
     ctl_ratios = [l["close_to_list_ratio"] for l in closed if l.get("close_to_list_ratio")]
-    ctl = _average(ctl_ratios) if ctl_ratios else 100.0
+    # D-086: was `else 100.0` — "sold at asking" for a market with no sales.
+    ctl = _average(ctl_ratios)
     
     # Property types (SFR, Condo, Townhome, etc.) - using property_subtype for better categorization
     # Note: If user filtered by subtype, we may only have one type. That's expected.
@@ -242,7 +253,7 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
                         "label": label,
                         "count": len(tier_closed),  # Closed sales in period
                         "active_count": len(tier_active),  # Current active inventory
-                        "median_price": _median([l["close_price"] for l in tier_closed if l.get("close_price")]) if tier_closed else 0,
+                        "median_price": _median([l["close_price"] for l in tier_closed if l.get("close_price")]),
                         "moi": tier_moi,
                         "moi_display": describe_moi(tier_moi),
                         # The boundaries, so a page can say what the tier
@@ -274,9 +285,9 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
         "metrics": {
             "median_list_price": median_list_price,
             "median_close_price": median_close_price,
-            "avg_dom": round(avg_dom, 1) if avg_dom else 0,
-            "avg_ppsf": round(_average([l.get("price_per_sqft") for l in active if l.get("price_per_sqft")]) or 0, 0),
-            "close_to_list_ratio": round(ctl, 1),
+            "avg_dom": _round(avg_dom, 1),
+            "avg_ppsf": _round(_average([l.get("price_per_sqft") for l in active if l.get("price_per_sqft")]), 0),
+            "close_to_list_ratio": _round(ctl, 1),
             "months_of_inventory": moi,
             "months_of_inventory_display": moi_display,
             "new_listings_count": len(new_listings),  # For core indicators
@@ -430,8 +441,8 @@ def build_new_listings_result(listings: List[Dict], context: Dict) -> Dict:
         # Metrics
         "metrics": {
             "median_list_price": median_price,
-            "avg_dom": round(avg_dom, 1),
-            "avg_ppsf": round(avg_ppsf, 0),
+            "avg_dom": _round(avg_dom, 1),
+            "avg_ppsf": _round(avg_ppsf, 0),
         },
         
         # Listings for table
@@ -627,7 +638,7 @@ def build_inventory_result(listings: List[Dict], context: Dict) -> Dict:
         
         # Metrics
         "metrics": {
-            "median_dom": round(median_dom, 1),
+            "median_dom": _round(median_dom, 1),
             # The asking price of the listings this report is about. None when
             # no active listing carries a price, which the template renders as
             # "varying prices" — honest, and now only when it is true.
@@ -699,7 +710,8 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
     
     # Close-to-list ratio
     ctl_ratios = [l["close_to_list_ratio"] for l in closed if l.get("close_to_list_ratio")]
-    ctl = _average(ctl_ratios) if ctl_ratios else 100.0
+    # D-086: was `else 100.0` — "sold at asking" for a market with no sales.
+    ctl = _average(ctl_ratios)
     
     return {
         "report_type": "closed",
@@ -718,8 +730,8 @@ def build_closed_result(listings: List[Dict], context: Dict) -> Dict:
         # Metrics
         "metrics": {
             "median_close_price": median_price,
-            "avg_dom": round(avg_dom, 1),
-            "close_to_list_ratio": round(ctl, 1),
+            "avg_dom": _round(avg_dom, 1),
+            "close_to_list_ratio": _round(ctl, 1),
         },
         
         # Listings for table
@@ -795,7 +807,7 @@ def build_price_bands_result(listings: List[Dict], context: Dict) -> Dict:
         # Metrics
         "metrics": {
             "median_list_price": median_price,
-            "avg_dom": round(avg_dom, 1),
+            "avg_dom": _round(avg_dom, 1),
             "min_price": min_price,
             "max_price": max_price,
         },

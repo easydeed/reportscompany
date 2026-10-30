@@ -718,6 +718,15 @@ logger.warning("[DIAGNOSTIC] TEMPLATES_DIR: %s, exists: %s", TEMPLATES_DIR, TEMP
 ABSENT = "-"
 
 
+def _known(value):
+    """A number as the record has it, or None when the record has none.
+
+    `or 0` cannot tell "the county has no bedroom count" from "a studio":
+    both become 0. This keeps a real 0 and turns only absence ('', '-',
+    None) into None (D-109)."""
+    return None if value is None or value == "" or value == ABSENT else value
+
+
 class PropertyReportBuilder:
     """
     Builds HTML property reports.
@@ -942,12 +951,16 @@ class PropertyReportBuilder:
             "county": self.report_data.get("property_county") or sitex_data.get("county") or "",
             "apn": self.report_data.get("apn") or sitex_data.get("apn") or "",
             
-            # Property details (numeric fields default to 0 for safe template arithmetic)
-            "bedrooms": sitex_data.get("bedrooms") or 0,
-            "bathrooms": sitex_data.get("bathrooms") or 0,
-            "sqft": sitex_data.get("sqft") or 0,
-            "lot_size": sitex_data.get("lot_size") or 0,
-            "year_built": sitex_data.get("year_built") or 0,
+            # D-109. Was `or 0` "for safe template arithmetic", but no live
+            # template does arithmetic on these, and the v2 page prints a 0
+            # bedroom count as "Studio": every home the county has no count
+            # for was a Studio, built in year 0. Unknown stays None (the page
+            # dashes or drops it); a real 0 stays 0.
+            "bedrooms": _known(sitex_data.get("bedrooms")),
+            "bathrooms": _known(sitex_data.get("bathrooms")),
+            "sqft": _known(sitex_data.get("sqft")),
+            "lot_size": _known(sitex_data.get("lot_size")),
+            "year_built": _known(sitex_data.get("year_built")),
             "garage": sitex_data.get("garage") or "-",
             "fireplace": sitex_data.get("fireplace") or "-",
             # D-137. Was `or "No"`. `pool` is produced by NEITHER SiteX's
@@ -1692,12 +1705,13 @@ class PropertyReportBuilder:
 
         piq = {
             "distance": 0,
-            "sqft": _safe_num(sitex_data.get("sqft"), 0),
+            # D-109: the subject's unknowns stay unknown here too.
+            "sqft": _safe_num(sitex_data.get("sqft"), None),
             "price_per_sqft": piq_ppsf,
-            "year_built": _safe_num(sitex_data.get("year_built"), 0),
-            "lot_size": _safe_num(sitex_data.get("lot_size"), 0),
-            "bedrooms": _safe_num(sitex_data.get("bedrooms"), 0),
-            "bathrooms": _safe_num(sitex_data.get("bathrooms"), 0),
+            "year_built": _safe_num(sitex_data.get("year_built"), None),
+            "lot_size": _safe_num(sitex_data.get("lot_size"), None),
+            "bedrooms": _safe_num(sitex_data.get("bedrooms"), None),
+            "bathrooms": _safe_num(sitex_data.get("bathrooms"), None),
             "stories": _safe_num(sitex_data.get("stories"), 0)
                        if sitex_data.get("stories") is not None else ABSENT,
             "pools": ABSENT if _tri_state_bool(sitex_data.get("pool")) is None
