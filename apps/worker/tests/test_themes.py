@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from worker.themes import (  # noqa: E402
     AA_NORMAL,
+    BLACK,
     DARK_SURFACE,
     NEAR_BLACK,
     TOKENS,
@@ -280,32 +281,17 @@ def test_the_ink_property_is_not_satisfied_by_going_black():
     )
 
 
-#: §0.6's two-way link: the marker names its defect, and D-098's entry lists the
-#: test. Strict, so the day `on_primary` learns to adjust the fill the build
-#: says so instead of staying quietly yellow.
-_D098_GATED = pytest.mark.xfail(
-    strict=True,
-    reason="D-098 — a white/near-black binary cannot reach 4.5:1 against every "
-           "fill; the ceiling is 4.27:1 at L=0.196 and ~5% of sRGB sits under it",
-)
 
 
-@_D098_GATED
 def test_on_primary_clears_aa_against_the_fill_for_5000_random_colours():
     """
-    §4.2 asks for this property. The derivation §3.1 specifies cannot provide
-    it, and that is a finding about the spec rather than a bug in the code:
+    §4.2 asks for this property, and since D-098/D-210 (Jerry, 2026-10-30) the
+    derivation provides it. White or #14151a alone cannot: both score 4.27:1
+    at L = 0.196, and 1056 of 20000 random colours (5.3%) landed under 4.5:1.
+    Pure black as a third candidate, used only there, makes the worst fill
+    4.58:1 — without moving the fill, which stays the affiliate's colour.
 
-        on_primary picks the better of #ffffff and #14151a. Those two are fixed,
-        so the worst case is the fill whose luminance sits exactly between them
-        — L = 0.196, where both options score 4.27:1.
-
-    Measured: 1056 of 20000 random colours (5.3%) land under 4.5:1.
-
-    Left as a strict xfail rather than relaxed to 4.27, because relaxing it in
-    silence is how a spec quietly becomes whatever the code happens to do. The
-    live assertion is the next test; the decision is Jerry's and is recorded on
-    D-097.
+    This was a strict xfail on D-098 until then; it is the defect's gate now.
     """
     bad = []
     for hexv in random_hexes():
@@ -336,19 +322,25 @@ def test_on_primary_always_reaches_the_achievable_ceiling():
 def test_on_primary_picks_the_better_of_the_two_candidates():
     """
     GUARD. "Always return #ffffff" passes the ceiling test for most colours.
-    This asserts the choice is actually a choice.
+    This asserts the choice is actually a choice: the better of white and
+    near-black, and pure black ONLY where neither of those clears AA (D-098,
+    D-210) — so no brand that passed before has its text changed.
     """
     seen = set()
     for hexv in random_hexes(2000):
         t = derive_theme(hexv)
-        assert t["on_primary"] in (WHITE, NEAR_BLACK)
         best = max((contrast(c, t["primary"]), c) for c in (WHITE, NEAR_BLACK))[1]
-        assert t["on_primary"] == best, (
-            f"{hexv}: chose {t['on_primary']} but {best} scores higher"
-        )
+        if contrast(best, t["primary"]) >= AA_NORMAL:
+            assert t["on_primary"] == best, (
+                f"{hexv}: chose {t['on_primary']} but {best} scores higher and clears AA"
+            )
+        else:
+            assert t["on_primary"] == BLACK, (
+                f"{hexv}: neither white nor near-black clears AA and black was not used"
+            )
         seen.add(t["on_primary"])
-    assert seen == {WHITE, NEAR_BLACK}, (
-        f"only ever returned {seen} across 2000 colours — the other branch is dead"
+    assert seen == {WHITE, NEAR_BLACK, BLACK}, (
+        f"only ever returned {seen} across 2000 colours — a branch is dead"
     )
 
 

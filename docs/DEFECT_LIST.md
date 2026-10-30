@@ -60,14 +60,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 60 | Real, unfixed |
-| `fixed` | 192 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 57 | Real, unfixed |
+| `fixed` | 195 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 11 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 12. (Sums to 60, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 9. (Sums to 57, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -93,9 +93,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > implementations of "how to read this document" is a second answer waiting to be believed.
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`); D-178 (`feat/market-closed-v2`).
-`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17); D-179 (**not reproducing** — four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository; each absence named on the entry so the same report cannot re-file it). D-100, D-126, D-127, D-128, D-143 (2026-10-30: filed against the five retired themes, and checked absent from the live `_v2` chain rather than closed on the deletion alone — `tests/test_closed_defects_stay_closed.py`).
-
-`accepted` — D-184 (Jerry, 2026-10-30: the open-houses page-1 grid spills to page 2, no change).
+`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17); D-179 (**not reproducing** — four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository; each absence named on the entry so the same report cannot re-file it).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
 
@@ -3650,7 +3648,7 @@ computes, and both change page copy.
 ### D-079 — no settings surface for an account's own postal address
 
 **Severity:** ROUGH · **Affects:** accounts that want their own address on their white-labelled email
-**Status:** `open` — **the non-urgent half of D-060**
+**Status:** `fixed` — Jerry, 2026-10-30: build it. `GET`/`PUT /v1/account/postal-address` sets the current account's `affiliate_branding.postal_address`, owner only. Behaviour: A regular account's first save creates its row, named after the account. Neither brand resolver reads that row for a REGULAR account, which a test checks. An empty or whitespace-only save clears the field to NULL and returns 200. Only an over-long value (more than 300 characters) or an unknown field gets a 422. A rep who inherits the company brand sees the company's address and cannot set one. `worker.tasks._build_regular_brand` now reads the address, so a regular agent's footer carries it. Without one, the footer is TrendyReports · 440 Rte. 66 · on behalf of the agent. Pages: the new `/app/settings/address` (in the rail), and company Settings, whose Address row the admin can now edit (TODO(B5) removed). Gates: `apps/api/tests/test_postal_address_api.py` (11 red on main), `apps/worker/tests/test_regular_account_postal_address.py` (2 red on main), `__tests__/PostalAddress.test.ts`, and `scripts/regressions/postal_address.json` (6 of 6 fire).
 
 `affiliate_branding.postal_address` exists (`0055`) and the render path uses it, but nothing writes
 it. Every account therefore sends with the platform address, correctly attributed to TrendyReports
@@ -4764,7 +4762,7 @@ provably zero visual change, since nothing reads them.
 ### D-098 — `on_primary` cannot reach 4.5:1 against every fill, and the spec asks it to
 
 **Severity:** ROUGH · **Affects:** label text on a brand fill, for roughly 5% of pickable colours
-**Status:** `open`
+**Status:** `fixed` — Jerry, 2026-10-30: add black as a third text colour so every brand clears contrast. `themes.text_on` keeps the white-or-near-black choice and uses pure `#000000` only where neither clears 4.5:1. White or black alone gives a worst fill of 4.58:1, so every fill now carries AA text. **The fill is not moved**, so the 2026-09-23 decision stands: contrast comes from choosing the text, never the brand. `on_primary`, `display_ink`, the PDF's `_text_on_accent` and `text_on_surfaces`, and the web port (`brand-tokens.ts`) all ask the same function. The two strict xfails this entry gated now pass and are plain tests. Mutations: `scripts/regressions/black_text_option.json`.
 
 Master plan §3.1 defines `on_primary` as *"whichever of white or `#14151A` scores higher against
 primary"*. §4.2 then requires `contrast(on_primary, primary) >= 4.5` for every input. **The first
@@ -14651,7 +14649,7 @@ found it.
 falls between 0.184 and 0.209 — one of 38 swept brands, and none of the six presets ·
 **Found during:** root-causing why nine surfaces across two architectures all failed at the same
 single point
-**Status:** `open` — **the derivation is shared with Design's `_v2` page, so the fix is a
+**Status:** `fixed` — 
 conversation rather than an edit.** See `docs/COVER_TYPE_AND_ATLAS_FOR_DESIGN_2026-10-21.md`.
 
 Nine surfaces fail at **exactly one** of the 38 swept brands and nowhere else: eight `span.*` on

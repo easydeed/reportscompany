@@ -548,6 +548,14 @@ def _build_regular_brand(cur, account_id: str) -> dict | None:
     if not row:
         return None
 
+    # D-079. The account's own postal address, when it has set one. A REGULAR
+    # account's branding is built from `accounts`, but the address lives on
+    # `affiliate_branding` (created by the first save); no row, or a NULL,
+    # means the footer carries the platform address.
+    cur.execute("SELECT postal_address FROM affiliate_branding WHERE account_id = %s::uuid",
+                (account_id,))
+    postal_row = cur.fetchone()
+
     first_name = row[1] or ""
     last_name = row[2] or ""
     job_title = row[3] or ""
@@ -581,6 +589,7 @@ def _build_regular_brand(cur, account_id: str) -> dict | None:
         "website_url": website,
         "footer_logo_url": row[12],
         "email_footer_logo_url": row[13],
+        "postal_address": postal_row[0] if postal_row else None,
     }
 
 
