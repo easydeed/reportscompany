@@ -1,0 +1,44 @@
+[
+ {
+  "name": "V1 the generator renders a retired page set",
+  "file": "scripts/render_property_previews.py",
+  "old": "    return list(PropertyReportBuilder.V2_PAGE_ORDER)",
+  "new": "    return list(PropertyReportBuilder.V2_PAGE_ORDER) + [\"aerial\"]",
+  "test": "tests/test_property_previews_are_current.py"
+ },
+ {
+  "name": "V2 the generator renders a retired theme too",
+  "file": "scripts/render_property_previews.py",
+  "old": "    return [(t[\"id\"], t[\"name\"]) for t in reg[\"themes\"]]",
+  "new": "    return [(t[\"id\"], t[\"name\"]) for t in reg[\"themes\"]] + [(4, \"teal\")]",
+  "test": "tests/test_property_previews_are_current.py"
+ },
+ {
+  "name": "V3 the generator reaches a vendor",
+  "file": "scripts/render_property_previews.py",
+  "old": "def render_html(theme: str) -> str:\n",
+  "new": "def render_html(theme: str) -> str:\n    from worker.vendors.simplyrets import fetch_properties  # noqa\n",
+  "test": "tests/test_property_previews_are_current.py"
+ },
+ {
+  "name": "V4 the fixture names a real-looking owner",
+  "file": "scripts/fixtures/property_preview.json",
+  "old": "\"owner_name\": null,",
+  "new": "\"owner_name\": \"HERNANDEZ GERARDO J\",",
+  "test": "tests/test_property_previews_are_current.py"
+ },
+ {
+  "name": "V5 a comparable gets a real-looking address",
+  "file": "scripts/fixtures/property_preview.json",
+  "old": "\"address\": \"1185 Sample Court\"",
+  "new": "\"address\": \"1507 2nd St\"",
+  "test": "tests/test_property_previews_are_current.py"
+ },
+ {
+  "name": "V6 the wizard asks for a page with no image",
+  "file": "apps/web/components/property-wizard/types.ts",
+  "old": "  { id: \"notes\",         name: \"Agent & notes\",     required: true  },",
+  "new": "  { id: \"notes\",         name: \"Agent & notes\",     required: true  },\n  { id: \"aerial\",        name: \"Aerial\",            required: false },",
+  "test": "tests/test_property_previews_are_current.py"
+ }
+]

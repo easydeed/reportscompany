@@ -6,7 +6,7 @@
 > Behavioural descriptions are more trustworthy than inventories, but neither is
 > guaranteed. Do not cite this document as evidence.
 
-> `qa_deliver_reports.py`, `scripts/test_simplyrets.py`, `scripts/test_sitex.py`, `scripts/test_property_report_flow.py`, `scripts/test_all_reports.py`, `scripts/generate_all_property_pdfs.py`, `scripts/generate_theme_previews.py`
+> `qa_deliver_reports.py`, `scripts/test_simplyrets.py`, `scripts/test_sitex.py`, `scripts/test_property_report_flow.py`, `scripts/test_all_reports.py`, `scripts/generate_all_property_pdfs.py`
 
 ---
 
@@ -185,32 +185,19 @@ python scripts/generate_all_property_pdfs.py
 
 ---
 
-### `scripts/generate_theme_preview_jpgs.py`
+### `scripts/render_property_previews.py`
 
-**Generates JPG thumbnail previews** for all 5 property report themes. Used by the wizard UI theme selector (`/previews/1.jpg` … `5.jpg`). Extracts the cover page from generated HTML and screenshots it via headless Chromium (Playwright).
+**Renders the property-report preview images** the wizard and the agent Branding page show: `/previews/{theme_id}.jpg` per live theme and `/previews/pages/{theme_id}/{page}.jpg` for each of the six pages (`PropertyReportBuilder.V2_PAGE_ORDER`). Renders with the production builder from the fixed, fictional fixture `scripts/fixtures/property_preview.json` (plus the worker's `SAMPLE_MARKET_TRENDS`) and screenshots each sheet with a local Chromium (`render_property_previews.mjs`). No vendor credentials, no live data. Deletes any image the product no longer asks for.
 
 **Usage:**
 ```bash
-# Prerequisite: generate theme HTML first
-python scripts/gen_la_verne_all_themes.py --html-only
-
-# Then generate previews
-python scripts/generate_theme_preview_jpgs.py
+python scripts/render_property_previews.py
+CHROMIUM=/path/to/chrome python scripts/render_property_previews.py
 ```
 
-**Input:** Reads from `output/la_verne_themes/` (preferred), falls back to `output/property_reports_v2/` or `output/property_reports/`.
+**Output:** 3 covers + 3 themes × 6 pages, 510×660 JPEG. `tests/test_property_previews_are_current.py` holds the folder to exactly that.
 
-**Output:** `apps/web/public/previews/1.jpg` … `5.jpg` (510×660 px, letter-size aspect ratio)
-
-**Requires:** Playwright (`pip install playwright && playwright install chromium`). Optional: Pillow for PNG→JPG conversion.
-
----
-
-### `scripts/generate_theme_previews.py` (legacy)
-
-**Generates PNG thumbnail previews.** Superseded by `generate_theme_preview_jpgs.py`.
-
-**Output:** `output/theme_previews/<theme>.png`
+Replaced (2026-10-29) `generate_theme_preview_jpgs.py`, `generate_page_preview_jpgs.py` and the legacy `generate_theme_previews.py`, which screenshotted HTML built from live vendor data by `gen_la_verne_all_themes.py`, for five themes and nine pages.
 
 ---
 
@@ -264,6 +251,7 @@ All scripts import from `apps/api/src/api/services/` or `apps/worker/src/worker/
 | Date | Change |
 |------|--------|
 | 2026-03 | Added `gen_la_verne_all_themes.py` — primary theme validation script with AI overview and market trends pages |
+| 2026-10 | `render_property_previews.py` replaces the three preview generators: fixed fictional fixture, local Chromium, live themes × six pages |
 | 2026-03 | Added `generate_theme_preview_jpgs.py` — Playwright-based JPG previews replacing `html2image`-based `generate_theme_previews.py` |
 | 2026-02 | Added `--report-types` filter to `qa_deliver_reports.py` |
 | 2026-01 | Added `test_property_report_flow.py` with fallback ladder validation |

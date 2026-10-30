@@ -182,12 +182,10 @@ python scripts/gen_la_verne_all_themes.py --html-only # HTML only (fast)
 # Generate sample PDFs for all themes (static data, no AI overview)
 python scripts/generate_all_property_pdfs.py
 
-# Generate JPG cover previews for the wizard theme gallery (requires gen_la_verne output)
-python scripts/generate_theme_preview_jpgs.py
-
-# Generate JPG page previews for the wizard page selector (requires gen_la_verne output)
-# Outputs 45 images: 5 themes × 9 pages → apps/web/public/previews/pages/{themeId}/{pageKey}.jpg
-python scripts/generate_page_preview_jpgs.py
+# Preview images for the wizard and the Branding page, from a fixed fictional
+# fixture (no vendor data): 3 covers + 3 live themes × 6 pages
+# → apps/web/public/previews/{themeId}.jpg and pages/{themeId}/{page}.jpg
+python scripts/render_property_previews.py
 ```
 
 ---
