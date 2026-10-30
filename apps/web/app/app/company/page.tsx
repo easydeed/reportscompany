@@ -25,7 +25,7 @@ import { RuleList } from "@/components/ui/list"
 import { Avatar, Sentence, StatCell, ActivityRow, H2, whenLabel, reportTypeLabel } from "@/components/sponsor/shared"
 import { repSentence, seatSub } from "@/lib/company-people"
 
-type Rep = { id: string; name: string; email: string; office: string; agent_count: number; reports_this_month: number; last_active: string | null; status: "active" | "pending" | "deactivated" }
+type Rep = { id: string; name: string; email: string; agent_count: number; reports_this_month: number; last_active: string | null; status: "active" | "pending" | "deactivated" }
 type Overview = {
   company: { name: string; plan: string; initials: string }
   metrics: { total_reps: number; total_agents: number; reports_this_month: number; active_agents_30d: number; reports_change_pct: number; reports_last_month: number; agents_at_limit: number; leads_this_month: number; leads_last_month: number }
@@ -104,7 +104,7 @@ export default function CompanyDashboard() {
             <div key={r.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] items-center gap-5 border-b border-[var(--border-subtle)] py-[14px]">
               <span className="flex min-w-0 items-center gap-3">
                 <Avatar name={r.name} size={34} color={primary} />
-                <span className="flex min-w-0 flex-col leading-[1.3]"><span className="truncate text-[15px] font-semibold text-foreground">{r.name}</span><span className="truncate text-[13px] text-muted-foreground">{r.office || r.email}</span></span>
+                <span className="flex min-w-0 flex-col leading-[1.3]"><span className="truncate text-[15px] font-semibold text-foreground">{r.name}</span><span className="truncate text-[13px] text-muted-foreground">{r.email}</span></span>
               </span>
               <Sentence tone={s.tone}>{s.text}</Sentence>
             </div>

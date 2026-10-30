@@ -1,0 +1,23 @@
+[
+ {
+  "name": "T1 all-reports answers a non-rep with an empty 200 again",
+  "file": "apps/api/src/api/routes/affiliates.py",
+  "old": "    \"\"\"Return reports from ALL sponsored agents plus the rep's own.\"\"\"\n    with db_conn() as (conn, cur):\n        # D-024: refused like every sibling, so \"not a rep\" is not read as\n        # \"a rep with no agents\" (an empty 200).\n        if not verify_affiliate_account(cur, account_id):\n            raise HTTPException(\n                status_code=403,\n                detail={\"error\": \"not_affiliate_account\",\n                        \"message\": \"This account is not an industry affiliate.\"},\n            )\n",
+  "new": "    \"\"\"Return reports from ALL sponsored agents plus the rep's own.\"\"\"\n    with db_conn() as (conn, cur):\n",
+  "test": "apps/api/tests/test_sponsor_api_tidy.py"
+ },
+ {
+  "name": "T2 office_location silently dropped again",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "    model_config = ConfigDict(extra=\"forbid\")\n",
+  "new": "",
+  "test": "apps/api/tests/test_sponsor_api_tidy.py"
+ },
+ {
+  "name": "T3 the empty office comes back",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "            \"email\": r.get(\"email\") or \"\",\n            \"status\": status,",
+  "new": "            \"email\": r.get(\"email\") or \"\",\n            \"office\": \"\",\n            \"status\": status,",
+  "test": "apps/api/tests/test_sponsor_api_tidy.py"
+ }
+]

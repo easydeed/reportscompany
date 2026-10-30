@@ -957,6 +957,14 @@ def get_all_agent_reports(
 ):
     """Return reports from ALL sponsored agents plus the rep's own."""
     with db_conn() as (conn, cur):
+        # D-024: refused like every sibling, so "not a rep" is not read as
+        # "a rep with no agents" (an empty 200).
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "not_affiliate_account",
+                        "message": "This account is not an industry affiliate."},
+            )
         cur.execute("""
             SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
         """, (account_id,))
@@ -1004,6 +1012,14 @@ def get_all_agent_reports(
 def get_all_agent_schedules(account_id: str = Depends(require_account_id)):
     """Return schedules from ALL sponsored agents plus the rep's own."""
     with db_conn() as (conn, cur):
+        # D-024: refused like every sibling, so "not a rep" is not read as
+        # "a rep with no agents" (an empty 200).
+        if not verify_affiliate_account(cur, account_id):
+            raise HTTPException(
+                status_code=403,
+                detail={"error": "not_affiliate_account",
+                        "message": "This account is not an industry affiliate."},
+            )
         cur.execute("""
             SELECT id FROM accounts WHERE sponsor_account_id = %s::uuid
         """, (account_id,))

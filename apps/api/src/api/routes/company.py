@@ -6,7 +6,7 @@ and metrics for Title Company administrators.
 """
 
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
-from pydantic import BaseModel, EmailStr, constr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, constr, field_validator
 from typing import Optional
 from uuid import UUID
 import logging
@@ -34,13 +34,17 @@ router = APIRouter()
 # ── Request / Response models ────────────────────────────────────────────────
 
 class InviteRepRequest(BaseModel):
+    # D-010: `office_location` was accepted here and stored nowhere, so the
+    # caller was told nothing while the value vanished. An unknown field is now
+    # a 422 that names it, not a silent discard.
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     email: EmailStr
     first_name: str
     last_name: str
     phone: Optional[str] = None
     title: Optional[str] = None
-    office_location: Optional[str] = None
 
 
 class ResendRepInviteRequest(BaseModel):
@@ -183,7 +187,6 @@ def get_overview(company: dict = Depends(get_company_member)):
                 "id": r["rep_id"],
                 "name": r["rep_name"],
                 "email": r.get("email") or "",
-                "office": "",
                 "agent_count": r["agent_count"],
                 "reports_this_month": r["reports_this_month"],
                 "last_active": r["last_activity"].isoformat() if r.get("last_activity") else None,
@@ -473,7 +476,6 @@ def list_reps(company: dict = Depends(get_company_member)):
             "name": r["rep_name"],
             "email": r.get("email") or "",
             "status": status,
-            "office": "",
             "agent_count": r["agent_count"],
             "reports_this_month": r["reports_this_month"],
             "total_reports": r["total_reports"],
@@ -1353,109 +1355,3 @@ async def send_company_test_email(
     if status_code != 202:
         raise HTTPException(status_code=502, detail="The test email didn't send. Please try again.")
     return {"ok": True, "sent_to": to}
-
-
-# ── 8. GET /metrics ─────────────────────────────────────────────────────────
-
-@router.get("/metrics")
-def get_metrics(company: dict = Depends(get_company_member)):
-    company_id = company["company_account_id"]
-
-    with db_conn() as (conn, cur):
-        set_rls(cur, company_id)
-        rep_ids = _get_company_rep_ids(cur, company_id)
-
-        if not rep_ids:
-            return {
-                "total_reports_30d": 0,
-                "report_trend": 0,
-                "top_rep": None,
-                "top_agent": None,
-            }
-
-        cur.execute("""
-            SELECT id::text FROM accounts
-            WHERE sponsor_account_id = ANY(%s::uuid[])
-        """, (rep_ids,))
-        agent_ids = [r[0] for r in cur.fetchall()]
-        all_ids = rep_ids + agent_ids
-
-        # Total reports last 30 days
-        cur.execute("""
-            SELECT COUNT(*) FROM report_generations
-            WHERE account_id = ANY(%s::uuid[])
-              AND generated_at >= NOW() - INTERVAL '30 days'
-              AND status IN ('completed', 'processing')
-        """, (all_ids,))
-        total_30d = cur.fetchone()[0] or 0
-
-        # Previous 30 days for trend
-        cur.execute("""
-            SELECT COUNT(*) FROM report_generations
-            WHERE account_id = ANY(%s::uuid[])
-              AND generated_at >= NOW() - INTERVAL '60 days'
-              AND generated_at <  NOW() - INTERVAL '30 days'
-              AND status IN ('completed', 'processing')
-        """, (all_ids,))
-        prev_30d = cur.fetchone()[0] or 0
-
-        trend = 0
-        if prev_30d > 0:
-            trend = round(((total_30d - prev_30d) / prev_30d) * 100, 1)
-
-        # Top-performing rep
-        if rep_ids:
-            cur.execute("""
-                SELECT a.name,
-                       COUNT(rg.id) AS cnt
-                FROM accounts a
-                LEFT JOIN accounts sa ON sa.sponsor_account_id = a.id
-                LEFT JOIN report_generations rg
-                    ON rg.account_id = sa.id
-                   AND rg.generated_at >= date_trunc('month', NOW())
-                   AND rg.status IN ('completed', 'processing')
-                WHERE a.id = ANY(%s::uuid[])
-                GROUP BY a.id, a.name
-                ORDER BY cnt DESC
-                LIMIT 1
-            """, (rep_ids,))
-            top_rep_row = cur.fetchone()
-            top_rep = {"name": top_rep_row[0], "reports": top_rep_row[1]} if top_rep_row else None
-        else:
-            top_rep = None
-
-        # Top-performing agent (LATERAL for owner)
-        if agent_ids:
-            cur.execute("""
-                SELECT COALESCE(u.first_name || ' ' || u.last_name, u.email) AS name,
-                       COUNT(rg.id) AS cnt
-                FROM accounts a
-                LEFT JOIN LATERAL (
-                    SELECT u2.id, u2.first_name, u2.last_name, u2.email
-                    FROM account_users au
-                    JOIN users u2 ON u2.id = au.user_id
-                    WHERE au.account_id = a.id AND au.role = 'OWNER'
-                    LIMIT 1
-                ) u ON true
-                LEFT JOIN report_generations rg
-                    ON rg.account_id = a.id
-                   AND rg.generated_at >= date_trunc('month', NOW())
-                   AND rg.status IN ('completed', 'processing')
-                WHERE a.id = ANY(%s::uuid[])
-                GROUP BY u.id, u.first_name, u.last_name, u.email
-                ORDER BY cnt DESC
-                LIMIT 1
-            """, (agent_ids,))
-            top_agent_row = cur.fetchone()
-            top_agent = {"name": top_agent_row[0], "reports": top_agent_row[1]} if top_agent_row else None
-        else:
-            top_agent = None
-
-    return {
-        "total_reports_30d": total_30d,
-        "report_trend": trend,
-        "top_rep": top_rep,
-        "top_agent": top_agent,
-    }
-
-

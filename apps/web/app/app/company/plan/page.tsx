@@ -66,7 +66,7 @@ export default function PlanAndSeatsPage() {
               <span className="text-[14px] text-muted-foreground">{row.label}</span>
               <span className="flex min-w-0 items-center gap-3">
                 <Avatar name={row.rep.name} size={34} color={primary} />
-                <span className="flex min-w-0 flex-col leading-[1.3]"><span className="truncate text-[15px] font-semibold text-foreground">{row.rep.name}</span><span className="truncate text-[13px] text-muted-foreground">{row.rep.office || row.rep.email}</span></span>
+                <span className="flex min-w-0 flex-col leading-[1.3]"><span className="truncate text-[15px] font-semibold text-foreground">{row.rep.name}</span><span className="truncate text-[13px] text-muted-foreground">{row.rep.email}</span></span>
               </span>
               <Sentence tone={row.tone}>{row.text}</Sentence>
             </div>
