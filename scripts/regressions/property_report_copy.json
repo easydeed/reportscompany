@@ -1,0 +1,30 @@
+[
+  {
+    "name": "D-134 reverts: the range has no method beside it",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "      <span class=\"rangepanel-method\">Range of the comparable sales shown.</span>",
+    "new": "",
+    "test": "apps/worker/tests/test_property_report_copy.py"
+  },
+  {
+    "name": "D-169 reverts: the title is defaulted to Real Estate Agent",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "            \"title\": (agent.get(\"title\") or \"\").strip(),",
+    "new": "            \"title\": (agent.get(\"title\") or \"\").strip() or \"Real Estate Agent\",",
+    "test": "apps/worker/tests/test_property_report_copy.py"
+  },
+  {
+    "name": "D-169: the panel prints the title unconditionally",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "        {% if agent.title %}<span class=\"agentpanel-title\">{{ agent.title }}</span>{% endif %}",
+    "new": "        <span class=\"agentpanel-title\">{{ agent.title }}</span>",
+    "test": "apps/worker/tests/test_property_report_copy.py"
+  },
+  {
+    "name": "D-169 reverts: the title prints nowhere",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "        {% if agent.title %}<span class=\"agentpanel-title\">{{ agent.title }}</span>{% endif %}",
+    "new": "",
+    "test": "apps/worker/tests/test_property_report_copy.py"
+  }
+]

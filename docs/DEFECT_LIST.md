@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 70 | Real, unfixed |
-| `fixed` | 188 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 68 | Real, unfixed |
+| `fixed` | 190 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 22. (Sums to 70, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 20. (Sums to 68, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -3258,7 +3258,7 @@ reports, rather than a duplicate email nobody asked for. Worth doing with D-071,
 about this task's boundaries rather than its contents.
 ### D-073 — the per-theme cover titles were designed, and have never rendered
 **Severity:** ROUGH · **Affects:** all five property report themes
-**Status:** `open` — **needs a design decision, not a fix**
+**Status:** `open` — **[JERRY], asked 2026-10-30.** He said to build it, but the designed per-theme fallbacks (harbor "Real Estate Specialist", linen "Luxury Property Specialist", atlas "Licensed Real Estate Agent") are titles for an agent who entered none. That conflicts with his D-169 answer, "only if they entered one". Atlas's fallback also states a licence nobody has verified. Waiting on: (a) fallback per theme, (b) harbor and linen only, or (c) nothing.
 
 Each theme's cover carries its own fallback for an agent with no title —
 `'Luxury Property Specialist'` (elegant), `'Real Estate Specialist'` (modern),
@@ -8341,7 +8341,7 @@ baseline is now empty.
 
 **Severity:** ROUGH · **Affects:** the subject's value figure on every property report ·
 **Found during:** D-118's answer
-**Status:** `open` — **[JERRY]**, scope before build
+**Status:** `fixed` — Jerry, 2026-10-30: print the method beside the estimate. The range panel now reads "Range of the comparable sales shown." directly under the figures. This is true as written: low and high are the lowest and highest closed sale among the comparables, and every comparable is listed in the report. Gate: `apps/worker/tests/test_property_report_copy.py` (red on main), plus `scripts/regressions/property_report_copy.json`.
 
 Jerry, 2026-09-29, alongside D-118's last-sale row:
 
@@ -10665,7 +10665,7 @@ entry says not to do — it is there because the alternative was shipping 0/0/0 
 
 **Severity:** ROUGH · **Affects:** the property report's agent panel on the shared architecture ·
 **Found during:** the cover-title gate failing at collection with "found 0"
-**Status:** `open` — [JERRY]: it is a copy decision, not a bug
+**Status:** `fixed` — Jerry, 2026-10-30: show the agent's job title under their name, if they entered one. Page 6's agent panel prints it between the name and the brand line. There is no line and no default when none was entered: `_build_agent_context` and `consumer_report_data` no longer substitute "Real Estate Agent". `test_theme_cover_title.py` asserts the title appears exactly once, under the name. Gate: `apps/worker/tests/test_property_report_copy.py` (red on main).
 
 `_build_agent_context` computes `title`, defaulting it to the string `"Real Estate Agent"` when
 the agent has not entered one (`property_builder.py:1077`). Design's architecture has no agent role

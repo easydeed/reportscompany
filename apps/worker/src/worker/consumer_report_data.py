@@ -156,7 +156,7 @@ def build_consumer_report_data(
         "comparables": list(comparables),
         "agent": {
             "name": agent_name,
-            "title": job_title or "Real Estate Agent",
+            "title": job_title or "",  # D-169: only a title the agent entered
             "phone": agent_phone or "",
             "email": agent_email or "",
             "license_number": license_number or "",
