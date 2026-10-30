@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 66 | Real, unfixed |
-| `fixed` | 192 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 65 | Real, unfixed |
+| `fixed` | 193 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 18. (Sums to 66, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 17. (Sums to 65, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -3647,7 +3647,7 @@ computes, and both change page copy.
 ### D-079 — no settings surface for an account's own postal address
 
 **Severity:** ROUGH · **Affects:** accounts that want their own address on their white-labelled email
-**Status:** `open` — **the non-urgent half of D-060**
+**Status:** `fixed` — Jerry, 2026-10-30: build it. `GET`/`PUT /v1/account/postal-address` sets the current account's `affiliate_branding.postal_address`, owner only. Behaviour: A regular account's first save creates its row, named after the account. Neither brand resolver reads that row for a REGULAR account, which a test checks. An empty or whitespace-only save clears the field to NULL and returns 200. Only an over-long value (more than 300 characters) or an unknown field gets a 422. A rep who inherits the company brand sees the company's address and cannot set one. `worker.tasks._build_regular_brand` now reads the address, so a regular agent's footer carries it. Without one, the footer is TrendyReports · 440 Rte. 66 · on behalf of the agent. Pages: the new `/app/settings/address` (in the rail), and company Settings, whose Address row the admin can now edit (TODO(B5) removed). Gates: `apps/api/tests/test_postal_address_api.py` (11 red on main), `apps/worker/tests/test_regular_account_postal_address.py` (2 red on main), `__tests__/PostalAddress.test.ts`, and `scripts/regressions/postal_address.json` (6 of 6 fire).
 
 `affiliate_branding.postal_address` exists (`0055`) and the render path uses it, but nothing writes
 it. Every account therefore sends with the platform address, correctly attributed to TrendyReports

@@ -1087,8 +1087,8 @@ _ROLE_LABEL = {"OWNER": "admin"}
 def get_settings(company: dict = Depends(get_company_member)):
     """The company's details and everyone on the account, for Settings.
 
-    Read-only for everyone on the account. `postal_address` is shown, never
-    set here (B5 is gated: the slot exists, the value comes from elsewhere).
+    Read-only for everyone on the account. `postal_address` is set by the
+    company's admin through `PUT /v1/account/postal-address` (D-079).
     Adding or removing people has no endpoint yet, so none is offered.
     """
     company_id = company["company_account_id"]

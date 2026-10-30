@@ -12,7 +12,7 @@ import { Logo } from "@/components/logo"
 import {
   LayoutDashboard, FileText, Calendar, Users, Settings, Building2, Building, Home,
   UserCheck, MessageSquare, Link2, Palette, CreditCard, Plus, CircleHelp, Mail,
-  BarChart3, Server, Shield, BookUser, Menu, LogOut, Lock, Inbox,
+  BarChart3, Server, Shield, BookUser, Menu, LogOut, Lock, Inbox, MapPin,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import {
@@ -103,6 +103,7 @@ export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored
       { label: "Account", items: [
         { name: "Branding", href: "/app/settings/branding", icon: Palette },
         { name: "Plan & billing", href: "/app/settings/billing", icon: CreditCard },
+        { name: "Mailing address", href: "/app/settings/address", icon: MapPin },
         settings,
       ] },
     ]
@@ -116,6 +117,7 @@ export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored
     { label: "Account", items: [
       ...(isSponsored ? [] : [{ name: "Branding", href: "/app/settings/branding", icon: Palette } as NavItem]),
       { name: "Plan & billing", href: "/app/settings/billing", icon: CreditCard },
+      { name: "Mailing address", href: "/app/settings/address", icon: MapPin },
       settings,
     ] },
   ]
@@ -125,8 +127,8 @@ export function isActivePath(pathname: string | null, item: NavItem) {
   if (!pathname) return false
   if (item.exact) return pathname === item.href
   if (item.also?.some((p) => pathname === p || pathname.startsWith(p + "/"))) return true
-  // /app/settings/profile owns the whole settings tree except billing/branding
-  if (item.href === "/app/settings/profile") return pathname.startsWith("/app/settings") && !pathname.startsWith("/app/settings/billing") && !pathname.startsWith("/app/settings/branding")
+  // /app/settings/profile owns the whole settings tree except billing/branding/address
+  if (item.href === "/app/settings/profile") return pathname.startsWith("/app/settings") && !pathname.startsWith("/app/settings/billing") && !pathname.startsWith("/app/settings/branding") && !pathname.startsWith("/app/settings/address")
   return pathname === item.href || pathname.startsWith(item.href + "/")
 }
 

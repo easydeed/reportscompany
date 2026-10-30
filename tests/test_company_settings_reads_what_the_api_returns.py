@@ -1,5 +1,5 @@
 """The company Settings page reads only what GET /v1/company/settings returns,
-offers no control the API lacks, and leaves the gated address unset (B5)."""
+offers no control the API lacks, and lets only the admin set the address (D-079)."""
 import ast
 import re
 from pathlib import Path
@@ -49,11 +49,17 @@ def test_no_control_the_api_does_not_have():
     assert 'type="checkbox"' not in code and "Switch" not in code
 
 
-def test_the_address_is_shown_never_set():
+def test_the_admin_sets_the_address_through_the_account_endpoint():
+    """D-079 (Jerry, 2026-10-30): the company's admin sets its postal address,
+    through PUT /v1/account/postal-address — the PUT body is built by
+    `addressPut`, so an emptied field is sent as a clear. A member still only
+    sees it. Design's mock address is never on the page."""
     code = _code(PAGE)
-    assert "TODO(B5)" in PAGE.read_text(encoding="utf-8")
-    assert "postal_address" in code
-    assert not re.search(r"[{,]\s*postal_address\s*:", code), "the page sends a postal address"
+    assert "TODO(B5)" not in PAGE.read_text(encoding="utf-8")
+    assert re.search(r'send\("/v1/account/postal-address", "PUT", addr\)', code)
+    assert "addressPut(s?.company.postal_address" in code
+    assert re.search(r"action=\{canManage && addr &&", code)
+    assert re.search(r"\{canManage\s*\?\s*<span[^>]*>\s*<input aria-label=\"Address\"", code)
     assert "18575 Jamboree" not in PAGE.read_text(encoding="utf-8")
 
 
