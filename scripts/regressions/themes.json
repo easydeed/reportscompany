@@ -13,8 +13,8 @@
 
   {"name": "R3 on_primary always white",
    "file": "apps/worker/src/worker/themes.py",
-   "old": "         WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p) else NEAR_BLACK),\n        (\"tint\"",
-   "new": "         WHITE),\n        (\"tint\"",
+   "old": "        (\"on_primary\", text_on(p)),",
+   "new": "        (\"on_primary\", WHITE),",
    "test": "apps/worker/tests/test_themes.py"},
 
   {"name": "R4 coarser darkening step (0.5 not 0.94)",
@@ -57,8 +57,8 @@
 
   {"name": "display_ink collapses to on_primary, so the token is redundant",
    "file": "apps/worker/src/worker/themes.py",
-   "old": "        (\"display_ink\",\n         WHITE if contrast(WHITE, p) >= _DISPLAY_MIN\n         else (WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p)\n               else NEAR_BLACK)),",
-   "new": "        (\"display_ink\",\n         WHITE if contrast(WHITE, p) >= contrast(NEAR_BLACK, p) else NEAR_BLACK),",
+   "old": "        (\"display_ink\",\n         WHITE if contrast(WHITE, p) >= _DISPLAY_MIN else text_on(p)),",
+   "new": "        (\"display_ink\", text_on(p)),",
    "test": "apps/worker/tests/test_display_ink.py apps/worker/tests/test_themes.py"},
 
   {"name": "the display threshold lowered to 2.0, so amber and lime take white",
