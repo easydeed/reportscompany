@@ -60,13 +60,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 64 | Real, unfixed |
-| `fixed` | 194 | Corrected in code, with the branch or PR named on the entry |
-| `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
+| `open` | 56 | Real, unfixed |
+| `fixed` | 196 | Corrected in code, with the branch or PR named on the entry |
+| `closed-not-live` | 11 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
+| `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 16. (Sums to 64, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 8. (Sums to 56, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -1746,7 +1747,7 @@ The fix is one statement extending 0054's shape to the other rows, deliberately 
 
 ### D-052 — `_intake/` is 180 files referenced by nothing
 **Severity:** ROUGH · **Affects:** nobody at runtime — dead weight and a re-litigation risk
-**Status:** `open`
+**Status:** `fixed` — `fix/cleanup-and-closures` deletes `_intake/` (180 tracked files, 5.3 MB). Proof nothing used it: no import, config, workspace entry or build step names it, and the only references are two exclusion lists that skip it plus docs. After deletion, tsc is clean, jest and the full suite pass, and `.gitignore` already lists it. Pinned by `tests/test_closed_defects_stay_closed.py`.
 
 `_intake/real-estate-saas/` contains 183 tracked files, including its own `components/footer.tsx` and `components/navbar.tsx`. **Nothing in `apps/web` references `_intake/`** — not the app code, not `tsconfig.json`, not `next.config`.
 
@@ -4927,7 +4928,7 @@ to justify.
 ### D-100 — four dark panels are lighter than the fixed dark neutral, so `primary_on_dark` is true about a surface the page does not have
 
 **Severity:** ROUGH · **Affects:** brand-coloured text on a dark panel — teal, bold and classic property reports
-**Status:** `open`
+**Status:** `closed-not-live` — Closed 2026-10-30 against the live product, not on the strength of the deletion alone. The five themes this entry describes (teal, bold, classic, elegant, modern) had their templates deleted on 2026-10-27, and every live theme renders `_v2/report.jinja2`. The four lighter dark panels (#0f1a45, #18235c, #15216e, #1b365d) are in no live template. The page's only dark surface is `--dark` = `V2_DARK` = `DARK_SURFACE`, and `primary_on_dark` is painted only inside `.rangepanel`, whose background is `--dark`. `test_themes.py::test_the_guarantee_is_against_the_fixed_surface_and_no_other` now reads the live templates instead of the 2026-09-23 list.
 
 Filed as the consequence of a decision, not as a bug in the code it constrains.
 
@@ -7663,7 +7664,7 @@ different kind of number.
 
 **Severity:** ROUGH · **Affects:** the Area Sales Analysis chart in bold, classic, elegant and
 modern · **Found during:** Workstream E measurement (E22)
-**Status:** `open`
+**Status:** `closed-not-live` — Closed 2026-10-30 against the live product, not on the strength of the deletion alone. The five themes this entry describes (teal, bold, classic, elegant, modern) had their templates deleted on 2026-10-27, and every live theme renders `_v2/report.jinja2`. The live sales chart (market trends page) draws a y-axis (`chart-yaxis`) with values. Pinned by `tests/test_closed_defects_stay_closed.py`.
 
 Rendered, the same four comps in each theme:
 
@@ -7688,7 +7689,7 @@ gradient — a false positive, see D-130).
 
 **Severity:** ROUGH · **Affects:** the teal Area Sales Analysis table · **Found during:**
 Workstream E measurement (E18)
-**Status:** `open`
+**Status:** `closed-not-live` — Closed 2026-10-30 against the live product, not on the strength of the deletion alone. The five themes this entry describes (teal, bold, classic, elegant, modern) had their templates deleted on 2026-10-27, and every live theme renders `_v2/report.jinja2`. No live template contains `PIQ`. Pinned by `tests/test_closed_defects_stay_closed.py`.
 
 Teal's table heads its first column **`PIQ`**. Bold, classic, elegant and modern all say
 `Subject`. "Property in question" is appraisal shorthand; the document's reader is a homeowner who
@@ -7704,7 +7705,7 @@ exist and this is about what a heading says.
 
 **Severity:** ROUGH · **Affects:** the `overview` page, in the themes that carry it ·
 **Found during:** Workstream E measurement (E21)
-**Status:** `open`
+**Status:** `closed-not-live` — Closed 2026-10-30 against the live product, not on the strength of the deletion alone. The five themes this entry describes (teal, bold, classic, elegant, modern) had their templates deleted on 2026-10-27, and every live theme renders `_v2/report.jinja2`. `overview` is not in `V2_PAGE_ORDER`, so the near-empty page cannot be selected. Pinned by `tests/test_closed_defects_stay_closed.py`.
 
 Measured in the `full` variant, elegant: the page holds a label, a title, a two-line paragraph and
 the agent's contact line, and then **roughly 78% of the page is empty**. `ai_overview.generate_overview`'s output is a short paragraph and the page is a full Letter sheet
@@ -9117,7 +9118,7 @@ reports D-159's deliberately ADDED `comparables_all` page as a loss on every mul
 
 **Severity:** ROUGH · **Affects:** the agent contact block, four themes ·
 **Found during:** D-137's scan, which reported them and then excluded them as out of scope
-**Status:** `open`
+**Status:** `closed-not-live` — Closed 2026-10-30 against the live product, not on the strength of the deletion alone. The five themes this entry describes (teal, bold, classic, elegant, modern) had their templates deleted on 2026-10-27, and every live theme renders `_v2/report.jinja2`. No live template carries a placeholder phone or email, and the builder falls back to `""` (`555-1234` survives only in a docstring example). Pinned by `tests/test_closed_defects_stay_closed.py`.
 
 ```jinja
 {{ agent.phone | default('(000) 000-0000') }}
@@ -11061,7 +11062,7 @@ can be taken on the number.
 **Severity:** ROUGH · **Affects:** `open_houses` and `featured_listings` page 1 — the stated grid
 against the measured fit · **Found during:** re-measuring #156's gallery fit against the `_v2`
 architecture before trusting 3×3
-**Status:** `open` for `open_houses`; **DECIDED for `featured_listings`** — see below. Built to the
+**Status:** `accepted` — **Jerry, 2026-10-30: accept the open-houses grid spilling to page 2, with no change.** `featured_listings` was already decided on 2026-10-12 (below), so both halves of this entry are now settled.
 measured fit, with the shortfall reported to Design as a measurement.
 
 > ### DECIDED 2026-10-12 — the bigger featured card stays, and the two pages are accepted
@@ -15135,7 +15136,7 @@ reset.
 **Severity:** ROUGH · **Affects:** `apps/web/app/account/plan/page.tsx`,
 `components/v0-styling/PlanPageShell.tsx` · **Found during:** rewriting D-225's suite to test the
 page instead of a mock of it
-**Status:** `open` — **deleting it or linking it is a product call.** **[JERRY]**
+**Status:** `fixed` — Jerry said delete. `fix/cleanup-and-closures` removes `app/account/plan/page.tsx` and the three components only it used (`PlanPageShell`, `stripe-billing-actions`, `checkout-status-banner`), its test and its mutation spec. Nothing linked the route, and `/app/settings/billing` serves every plan. Pinned by `tests/test_closed_defects_stay_closed.py`.
 
 Nothing in the product links `/account/plan`. Every Billing entry in the sidebar
 (`app-layout.tsx:154, 188, 211`) points at `/app/settings/billing`, which carries its own, fuller

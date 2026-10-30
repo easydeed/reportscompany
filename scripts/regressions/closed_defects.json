@@ -1,0 +1,37 @@
+[
+  {
+    "name": "D-128 comes back: overview is a page again",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "    V2_PAGE_ORDER = (\"cover\", \"property\", \"comparables\", \"range\",",
+    "new": "    V2_PAGE_ORDER = (\"cover\", \"overview\", \"property\", \"comparables\", \"range\",",
+    "test": "tests/test_closed_defects_stay_closed.py"
+  },
+  {
+    "name": "D-127 comes back: a column labelled PIQ",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "    <h2 class=\"h2\">What the comparable sales support</h2>",
+    "new": "    <h2 class=\"h2\">What the comparable sales support</h2><span>PIQ</span>",
+    "test": "tests/test_closed_defects_stay_closed.py"
+  },
+  {
+    "name": "D-143 comes back: a placeholder phone fallback",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "        <span class=\"agentpanel-phone\">{{ agent.phone }}</span>",
+    "new": "        <span class=\"agentpanel-phone\">{{ agent.phone | default('(000) 000-0000') }}</span>",
+    "test": "tests/test_closed_defects_stay_closed.py"
+  },
+  {
+    "name": "D-100 comes back: a panel lighter than the neutral",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "  .rangepanel { background: var(--dark);",
+    "new": "  .rangepanel { background: #1b365d;",
+    "test": "apps/worker/tests/test_themes.py"
+  },
+  {
+    "name": "D-100: primary_on_dark painted outside the dark panel",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "  .agentpanel-meta { font-size: 14px; }",
+    "new": "  .agentpanel-meta { font-size: 14px; color: var(--primary-on-dark); }",
+    "test": "apps/worker/tests/test_themes.py"
+  }
+]
