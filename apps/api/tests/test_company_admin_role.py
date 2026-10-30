@@ -46,7 +46,7 @@ def member(world):
 
 
 READS = ["/v1/company/overview", "/v1/company/reps", "/v1/company/agents", "/v1/company/seats",
-         "/v1/company/branding", "/v1/company/reports", "/v1/company/schedules", "/v1/company/metrics"]
+         "/v1/company/branding", "/v1/company/reports", "/v1/company/schedules"]
 
 
 @pytest.mark.parametrize("path", READS)

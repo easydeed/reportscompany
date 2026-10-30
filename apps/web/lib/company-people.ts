@@ -18,7 +18,6 @@ export type Rep = {
   id: string
   name: string
   email: string
-  office: string
   status: RepStatus
   agent_count: number
   reports_this_month: number
