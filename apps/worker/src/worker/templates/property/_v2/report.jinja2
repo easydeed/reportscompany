@@ -359,6 +359,7 @@
   .rangepanel-figures { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
   .rangepanel-headline { font-family: var(--display); font-weight: var(--display-weight); font-size: 60px; line-height: 0.95; letter-spacing: var(--display-tracking); white-space: nowrap; }
   .rangepanel-median { font-size: 13px; color: rgba(255,255,255,0.8); }
+  .rangepanel-method { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: -8px; }
   .band { position: relative; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.14); }
   .band-fill { position: absolute; top: 0; bottom: 0; background: var(--primary-on-dark); border-radius: 5px; }
   .band-marker { position: absolute; top: -6px; width: 3px; height: 22px; background: #fff; border-radius: 2px; transform: translateX(-50%); }
@@ -427,6 +428,7 @@
      panel, and nothing recorded an exception for it. Measured at 1.98:1 on
      lime and 2.15:1 on amber before the change. */
   .agentpanel-name { font-family: var(--display); font-weight: var(--display-weight); font-size: 32px; line-height: 1; letter-spacing: var(--display-tracking); color: var(--on-primary); }
+  .agentpanel-title { font-size: 15px; font-weight: 600; }
   .agentpanel-meta { font-size: 14px; }
   .agentpanel-blurb { font-size: 13px; line-height: 1.5; max-width: 400px; }
   .agentpanel-contact { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -608,6 +610,10 @@
         <span class="rangepanel-headline">{{ doc.range_low }} – {{ doc.range_high }}</span>
         <span class="rangepanel-median">median {{ doc.range_mid }}</span>
       </div>
+      {# D-134 (Jerry, 2026-10-30): the method, beside the figure. True as
+         written: low and high are the lowest and highest closed sale among
+         the comparables, and every one of them is listed in this report. #}
+      <span class="rangepanel-method">Range of the comparable sales shown.</span>
       <div>
         <div class="band">
           {% if doc.band_left is not none %}
@@ -736,6 +742,9 @@
       </div>
       <div class="agentpanel-text">
         <span class="agentpanel-name">{{ agent.name }}</span>
+        {# D-169: the job title the agent entered, under their name; no line,
+           and no default, when they entered none. #}
+        {% if agent.title %}<span class="agentpanel-title">{{ agent.title }}</span>{% endif %}
         {# `agent.license` is ALREADY formatted ("CA BRE#01234567") by
            `_build_agent_context`; `license_number` is the bare digits.
            Prefixing the formatted one produced "DRE #CA BRE#01234567". #}
