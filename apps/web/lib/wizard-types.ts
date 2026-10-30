@@ -57,7 +57,6 @@ export const THEMES = [
     name: "Harbor",
     description: "Bold orange accents with Montserrat",
     defaultColor: "#f2964a",
-    pages: "full" as const,
     previewBg: "bg-gradient-to-br from-orange-400 to-orange-600",
   },
   {
@@ -65,7 +64,6 @@ export const THEMES = [
     name: "Linen",
     description: "Sophisticated with gradient overlays",
     defaultColor: "#0d294b",
-    pages: "full" as const,
     previewBg: "bg-gradient-to-br from-slate-700 to-indigo-900",
   },
   {
@@ -73,7 +71,6 @@ export const THEMES = [
     name: "Atlas",
     description: "Navy & gold with Bebas Neue",
     defaultColor: "#d79547",
-    pages: "compact" as const,
     previewBg: "bg-gradient-to-br from-slate-800 to-amber-900",
   },
 ] as const;
@@ -111,19 +108,6 @@ export const ALL_PAGES = [
 ] as const;
 
 export type PageId = (typeof ALL_PAGES)[number]["id"];
-
-// Compact page set (for themes 4 & 5)
-export const COMPACT_PAGES: PageId[] = [
-  "cover",
-  "introduction",
-  "aerial",
-  "property_details",
-  "comparables",
-  "pricing_correctly",
-  "marketing_online",
-  "promise",
-  "back_cover",
-];
 
 // Get required page IDs
 export const REQUIRED_PAGES = ALL_PAGES.filter((p) => "required" in p && p.required).map((p) => p.id);
@@ -192,15 +176,6 @@ export const canProceedToStep = {
     state.selectedPages.length >= REQUIRED_PAGES.length &&
     REQUIRED_PAGES.every((p) => state.selectedPages.includes(p)),
 };
-
-// Helper to get default pages for a theme
-export function getDefaultPagesForTheme(themeId: ThemeId): string[] {
-  const theme = THEMES.find((t) => t.id === themeId);
-  if (theme?.pages === "compact") {
-    return COMPACT_PAGES;
-  }
-  return ALL_PAGES.map((p) => p.id);
-}
 
 // Helper to get theme by ID
 export function getThemeById(id: ThemeId) {

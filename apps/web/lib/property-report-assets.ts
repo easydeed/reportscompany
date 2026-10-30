@@ -1,8 +1,8 @@
 /**
  * Property Report Assets Manifest
- * 
+ *
  * Maps themes and pages to their preview images hosted on R2.
- * Used by ThemeSelector to show real page previews instead of placeholders.
+ * The theme id set is checked against the renderer registry.
  */
 
 import { DEFAULT_THEME_ID, themeName } from "@/lib/themes.generated";
@@ -167,25 +167,6 @@ export function getPageConfig(themeId: number, pageId: string): PageConfig | und
   return getThemePages(themeId).find(p => p.id === pageId);
 }
 
-/**
- * Check if theme is compact (fewer pages)
- *
- * D-165. This is an ORDERING ASSUMPTION ON IDS standing in for a per-theme
- * fact, and the fact no longer has a producer: `PropertyReportBuilder` uses
- * one `page_set` for every theme, so no theme renders fewer pages than
- * another. `pageCount` says 7 in this file and 9 in
- * `components/property-wizard/types.ts`; both are guesses.
- *
- * Left behaving as it did, because changing what the picker shows was not
- * part of the theme cut and the Design rewire replaces this metadata. It is
- * still an ordering assumption: the cut left ids 2, 3 and 5, so `>= 4` means
- * bold alone — which happens to match the old table, and would not have if
- * the surviving ids had been different.
- */
-export function isCompactTheme(themeId: number): boolean {
-  return themeId >= 4;
-}
-
 // ============================================
 // ASSET URLS
 // ============================================
@@ -241,7 +222,6 @@ export default {
   getThemeId,
   getThemePages,
   getPageConfig,
-  isCompactTheme,
   FONTS,
   ICONS,
   R2_BASE_URL,
