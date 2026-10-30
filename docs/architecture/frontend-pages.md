@@ -130,5 +130,4 @@
 ## Account
 | Path | File | Purpose |
 |------|------|---------|
-| `/account/plan` | `app/account/plan/page.tsx` | Plan selection |
 | `/app/account/settings` | `...page.tsx` | Account settings |

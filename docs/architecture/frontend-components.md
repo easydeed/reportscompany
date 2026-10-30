@@ -248,8 +248,6 @@ Landing page sections.
 | DataTable | `data-table.tsx` | Generic sortable data table |
 | GoogleMapsLoader | `google-maps-loader.tsx` | Google Maps API loader |
 | InviteAgentModal | `invite-agent-modal.tsx` | Modal for inviting agents |
-| CheckoutStatusBanner | `checkout-status-banner.tsx` | Checkout status notification |
-| StripeBillingActions | `stripe-billing-actions.tsx` | Stripe billing UI |
 
 ---
 
