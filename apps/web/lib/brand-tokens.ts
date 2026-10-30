@@ -20,6 +20,9 @@
 
 const WHITE = "#ffffff";
 const NEAR_BLACK = "#14151a";
+// The third candidate, used only where neither white nor near-black clears
+// AA on the fill (D-098, D-210) — `themes.text_on` in Python.
+const BLACK = "#000000";
 const DARK_SURFACE = "#0f172a";
 const AA_NORMAL = 4.5;
 const STEP = 0.94;
@@ -153,12 +156,20 @@ function ink(value: string): string {
   return NEAR_BLACK;
 }
 
+/** White or near-black, whichever scores higher; pure black only when neither
+ * clears AA and black does better. The fill never moves. */
+function textOn(fill: string): string {
+  const best = contrast(WHITE, fill) >= contrast(NEAR_BLACK, fill) ? WHITE : NEAR_BLACK;
+  if (contrast(best, fill) < AA_NORMAL && contrast(BLACK, fill) > contrast(best, fill)) return BLACK;
+  return best;
+}
+
 export function deriveBrandTokens(primary: string): BrandTokens {
   const p = normalizeHex(primary);
   return {
     primary: p,
     primaryInk: ink(p),
-    onPrimary: contrast(WHITE, p) >= contrast(NEAR_BLACK, p) ? WHITE : NEAR_BLACK,
+    onPrimary: textOn(p),
     tint: flattenOverWhite(p, TINT_ALPHA),
     primaryOnDark: onDark(p),
   };

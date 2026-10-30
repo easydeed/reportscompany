@@ -60,13 +60,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 70 | Real, unfixed |
-| `fixed` | 188 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 68 | Real, unfixed |
+| `fixed` | 190 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 6 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 22. (Sums to 70, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 20. (Sums to 68, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -4761,7 +4761,7 @@ provably zero visual change, since nothing reads them.
 ### D-098 — `on_primary` cannot reach 4.5:1 against every fill, and the spec asks it to
 
 **Severity:** ROUGH · **Affects:** label text on a brand fill, for roughly 5% of pickable colours
-**Status:** `open`
+**Status:** `fixed` — Jerry, 2026-10-30: add black as a third text colour so every brand clears contrast. `themes.text_on` keeps the white-or-near-black choice and uses pure `#000000` only where neither clears 4.5:1. White or black alone gives a worst fill of 4.58:1, so every fill now carries AA text. **The fill is not moved**, so the 2026-09-23 decision stands: contrast comes from choosing the text, never the brand. `on_primary`, `display_ink`, the PDF's `_text_on_accent` and `text_on_surfaces`, and the web port (`brand-tokens.ts`) all ask the same function. The two strict xfails this entry gated now pass and are plain tests. Mutations: `scripts/regressions/black_text_option.json`.
 
 Master plan §3.1 defines `on_primary` as *"whichever of white or `#14151A` scores higher against
 primary"*. §4.2 then requires `contrast(on_primary, primary) >= 4.5` for every input. **The first
@@ -14648,7 +14648,7 @@ found it.
 falls between 0.184 and 0.209 — one of 38 swept brands, and none of the six presets ·
 **Found during:** root-causing why nine surfaces across two architectures all failed at the same
 single point
-**Status:** `open` — **the derivation is shared with Design's `_v2` page, so the fix is a
+**Status:** `fixed` — 
 conversation rather than an edit.** See `docs/COVER_TYPE_AND_ATLAS_FOR_DESIGN_2026-10-21.md`.
 
 Nine surfaces fail at **exactly one** of the 38 swept brands and nowhere else: eight `span.*` on
