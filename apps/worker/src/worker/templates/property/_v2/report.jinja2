@@ -742,9 +742,11 @@
       </div>
       <div class="agentpanel-text">
         <span class="agentpanel-name">{{ agent.name }}</span>
-        {# D-169: the job title the agent entered, under their name; no line,
-           and no default, when they entered none. #}
-        {% if agent.title %}<span class="agentpanel-title">{{ agent.title }}</span>{% endif %}
+        {# D-169: the job title the agent entered, under their name. D-073: with
+           none entered, the theme's designed title where its entry file sets
+           one; a theme that sets none prints no line. #}
+        {% set agent_role = agent.title or (t_agent_title_fallback | default('')) %}
+        {% if agent_role %}<span class="agentpanel-title">{{ agent_role }}</span>{% endif %}
         {# `agent.license` is ALREADY formatted ("CA BRE#01234567") by
            `_build_agent_context`; `license_number` is the bare digits.
            Prefixing the formatted one produced "DRE #CA BRE#01234567". #}

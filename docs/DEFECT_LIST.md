@@ -60,14 +60,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 60 | Observed, not yet triaged |
-| `open` | 56 | Real, unfixed |
-| `fixed` | 196 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 55 | Real, unfixed |
+| `fixed` | 197 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 11 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 8. (Sums to 56, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 7. (Sums to 55, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -3259,7 +3259,7 @@ reports, rather than a duplicate email nobody asked for. Worth doing with D-071,
 about this task's boundaries rather than its contents.
 ### D-073 — the per-theme cover titles were designed, and have never rendered
 **Severity:** ROUGH · **Affects:** all five property report themes
-**Status:** `open` — **[JERRY], asked 2026-10-30.** He said to build it, but the designed per-theme fallbacks (harbor "Real Estate Specialist", linen "Luxury Property Specialist", atlas "Licensed Real Estate Agent") are titles for an agent who entered none. That conflicts with his D-169 answer, "only if they entered one". Atlas's fallback also states a licence nobody has verified. Waiting on: (a) fallback per theme, (b) harbor and linen only, or (c) nothing.
+**Status:** `fixed` — Jerry, 2026-11-02, option (b): with no title entered, harbor prints "Real Estate Specialist" and linen "Luxury Property Specialist" under the agent's name (the themes' designed fallbacks, each set in its entry file). Atlas prints no line: its design said "Licensed Real Estate Agent", a licence nobody has verified. An entered title always wins (D-169). Gate: `apps/worker/tests/test_property_report_copy.py`; mutations `scripts/regressions/d073_theme_titles.json`.
 
 Each theme's cover carries its own fallback for an agent with no title —
 `'Luxury Property Specialist'` (elegant), `'Real Estate Specialist'` (modern),

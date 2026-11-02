@@ -7,6 +7,9 @@ closed sale among the comparables, and every comparable is listed in the report.
 
 D-169. The agent's job title shows under their name, if they entered one. It
 used to be computed, defaulted to "Real Estate Agent", and printed nowhere.
+
+D-073 (option b). With no title entered, harbor and linen print their designed
+title; atlas prints none, because its design claimed a licence.
 """
 import os
 import re
@@ -74,12 +77,32 @@ def test_an_entered_title_shows_under_the_agents_name(theme):
     assert name < title < meta
 
 
+#: D-073 (Jerry, 2026-11-02, option b): the theme's designed title for an
+#: agent who entered none — harbor and linen only. Atlas's design said
+#: "Licensed Real Estate Agent", a licence nobody has verified, so atlas
+#: prints no line.
+FALLBACK = {"harbor": "Real Estate Specialist", "linen": "Luxury Property Specialist", "atlas": None}
+
+
 @pytest.mark.parametrize("theme", THEMES)
 @pytest.mark.parametrize("title", [None, "", "   "])
-def test_no_title_entered_means_no_line_and_no_default(theme, title):
+def test_no_title_entered_gets_the_themes_designed_title_or_no_line(theme, title):
     body = _body(_render(theme, title=title))
-    assert "agentpanel-title" not in body
-    assert "Real Estate Agent" not in _text(body)
+    want = FALLBACK[theme]
+    if want:
+        assert f'<span class="agentpanel-title">{want}</span>' in body
+    else:
+        assert "agentpanel-title" not in body
+    text = _text(body)
+    assert "Real Estate Agent" not in text and "Licensed" not in text
+
+
+@pytest.mark.parametrize("theme", THEMES)
+def test_an_entered_title_always_wins_over_the_themes(theme):
+    body = _body(_render(theme, title="REALTOR®"))
+    assert '<span class="agentpanel-title">REALTOR®</span>' in body
+    if FALLBACK[theme]:
+        assert FALLBACK[theme] not in _text(body)
 
 
 def test_the_builder_invents_no_title():

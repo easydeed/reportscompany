@@ -64,11 +64,11 @@ port them, do not take their copy as current.** (D-131.)
 > next. The 1,549 in the table is those two plus bold's 34.
 
 > **UPDATED 2026-10-26 — ALL THREE THEMES ARE ON YOUR ARCHITECTURE.** harbor and linen moved
-> onto `_v2/report.jinja2` too; each entry file is now 22 lines of typography from your
-> README's theme table. Live property templates: **870** lines across four files (the shared
-> 792 plus atlas 34, harbor 22, linen 22). The table above is the 2026-10-05 snapshot.
+> onto `_v2/report.jinja2` too; each entry file is now 24 lines of typography (and, for harbor and linen, the D-073 title) from your
+> README's theme table. Live property templates: **878** lines across four files (the shared
+> 794 plus atlas 36, harbor 24, linen 24). The table above is the 2026-10-05 snapshot.
 
-**There is still more dead property-template code than live.** 5,570 lines against 870 —
+**There is still more dead property-template code than live.** 5,570 lines against 878 —
 *(2,423 until 2026-10-26, when harbor and linen moved onto the shared architecture and their
 self-contained templates went)* —
 *(2,284 until 2026-10-07, when `display_ink` closed the one open [JERRY] decision in

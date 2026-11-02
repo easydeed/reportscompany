@@ -289,10 +289,16 @@ def test_a_theme_without_a_cover_role_line_prints_the_title_once_under_the_name(
             f"{theme}: the agent's title should appear once, under their name")
         assert '<span class="agentpanel-title">Broker Associate</span>' in rendered
 
+        # D-073 (option b): no title entered → the theme's designed title
+        # (harbor, linen) or no line (atlas). Never the old Python default.
         data["agent"] = {**data["agent"], "title": "   "}
-        rendered = PropertyReportBuilder(data).render_html()
-        assert "agentpanel-title" not in rendered.split("</style>", 1)[1], (
-            f"{theme}: an agent with no title got a title line anyway")
+        body = PropertyReportBuilder(data).render_html().split("</style>", 1)[1]
+        fallback = {"harbor": "Real Estate Specialist", "linen": "Luxury Property Specialist"}.get(theme)
+        if fallback:
+            assert f'<span class="agentpanel-title">{fallback}</span>' in body, theme
+        else:
+            assert "agentpanel-title" not in body, f"{theme}: an agent with no title got a title line anyway"
+        assert "Real Estate Agent" not in body
 
 
 @pytest.mark.parametrize("theme", COVER_LINE_THEMES)

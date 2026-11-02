@@ -1,0 +1,23 @@
+[
+  {
+    "name": "D-073: atlas regains the unverified licence claim",
+    "file": "apps/worker/src/worker/templates/property/atlas/atlas_report.jinja2",
+    "old": "{% include '_v2/report.jinja2' %}",
+    "new": "{% set t_agent_title_fallback = 'Licensed Real Estate Agent' %}\n{% include '_v2/report.jinja2' %}",
+    "test": "apps/worker/tests/test_property_report_copy.py"
+  },
+  {
+    "name": "D-073: the theme fallback beats the agent's own title",
+    "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
+    "old": "{% set agent_role = agent.title or (t_agent_title_fallback | default('')) %}",
+    "new": "{% set agent_role = (t_agent_title_fallback | default('')) or agent.title %}",
+    "test": "apps/worker/tests/test_property_report_copy.py"
+  },
+  {
+    "name": "D-073: harbor's designed title is dropped",
+    "file": "apps/worker/src/worker/templates/property/harbor/harbor_report.jinja2",
+    "old": "{% set t_agent_title_fallback = 'Real Estate Specialist' %}\n",
+    "new": "",
+    "test": "apps/worker/tests/test_property_report_copy.py"
+  }
+]
