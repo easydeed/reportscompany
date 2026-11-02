@@ -34,7 +34,6 @@ export default function LeadCaptureForm({
   });
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [retryAfter, setRetryAfter] = useState<number | null>(null);
   
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -96,7 +95,6 @@ export default function LeadCaptureForm({
           // Rate limited
           setErrorMessage("You've submitted too many requests. Please try again in an hour.");
           setStatus("rate_limited");
-          setRetryAfter(60);  // 60 minutes
           return;
         }
         

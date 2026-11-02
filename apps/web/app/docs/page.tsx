@@ -144,27 +144,27 @@ export default function DocsPage() {
             Quick Start
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div>
+          <div className="grid min-w-0 md:grid-cols-2 gap-8">
+            <div className="min-w-0">
               <h3 className="font-semibold text-lg text-slate-900 mb-4">1. Get Your API Key</h3>
               <p className="text-slate-600 mb-4">
                 Generate an API key from your dashboard under Settings &rarr; API. Keep this key
                 secure and never expose it in client-side code.
               </p>
-              <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 overflow-x-auto">
+              <div className="min-w-0 max-w-full overflow-x-auto break-all bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300">
                 <span className="text-slate-500"># Include in request headers</span>
                 <br />
                 Authorization: Bearer tr_live_xxxxxxxxxxxx
               </div>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <h3 className="font-semibold text-lg text-slate-900 mb-4">2. Make Your First Request</h3>
               <p className="text-slate-600 mb-4">
                 Generate a market report with a simple POST request. The API will return a report
                 ID that you can use to retrieve the PDF.
               </p>
-              <div className="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 overflow-x-auto">
+              <div className="min-w-0 max-w-full overflow-x-auto break-all bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300">
                 <span className="text-indigo-400">curl</span> -X POST \<br />
                 {"  "}https://api.trendyreports.com/v1/reports/generate \<br />
                 {"  "}-H{" "}
@@ -190,9 +190,9 @@ export default function DocsPage() {
               {endpoints.map((endpoint) => (
                 <div
                   key={endpoint.path}
-                  className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                  className="flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-slate-50 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex min-w-0 items-center gap-4">
                     <span
                       className={`px-2 py-1 rounded text-xs font-mono font-bold ${
                         methodColors[endpoint.method]
@@ -200,7 +200,7 @@ export default function DocsPage() {
                     >
                       {endpoint.method}
                     </span>
-                    <code className="text-sm text-slate-700">{endpoint.path}</code>
+                    <code className="min-w-0 break-all text-sm text-slate-700">{endpoint.path}</code>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-slate-600 hidden md:block">
@@ -280,7 +280,7 @@ export default function DocsPage() {
       {/* Webhooks */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-[1000px] mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="grid min-w-0 md:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="font-display font-semibold text-3xl text-slate-900 mb-6">Webhooks</h2>
               <p className="text-slate-600 mb-6">
@@ -308,8 +308,8 @@ export default function DocsPage() {
                 </div>
               </div>
             </div>
-            <div className="bg-slate-900 rounded-xl p-6">
-              <div className="text-sm font-mono text-slate-300">
+            <div className="min-w-0 max-w-full overflow-x-auto bg-slate-900 rounded-xl p-6">
+              <div className="break-all text-sm font-mono text-slate-300">
                 <span className="text-slate-500">// Webhook payload example</span>
                 <br />
                 {"{"}
