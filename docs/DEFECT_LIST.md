@@ -59,15 +59,15 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 60 | Observed, not yet triaged |
-| `open` | 55 | Real, unfixed |
-| `fixed` | 197 | Corrected in code, with the branch or PR named on the entry |
-| `closed-not-live` | 11 | Not occurring in production, with the evidence named on the entry |
+| `recorded` | 61 | Observed, not yet triaged |
+| `open` | 48 | Real, unfixed |
+| `fixed` | 203 | Corrected in code, with the branch or PR named on the entry |
+| `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
+| **Total** | **326** | D-001 … D-326, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 7. (Sums to 55, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -1525,7 +1525,7 @@ It never gated anything: `e2e.yml` triggered only on `push` to `main` and `workf
 
 ### D-043 — The onboarding checklist card is clipped by up to 85px and the clipped content is unreachable
 **Severity:** ROUGH · **Affects:** REGULAR (agent) accounts on `/app`
-**Status:** `open`
+**Status:** `closed-not-live` — No page mounts this card any more: neither `OnboardingChecklist` nor `DashboardOnboarding` is imported by anything in `app/`, and a regular account with unfinished onboarding sees no checklist on `/app` (measured 2026-11-02 at 1024, 1142, 1280 and 390px on the local stack, with the account's onboarding set back to 50% and then restored). #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) made the header wrap (`flex-wrap`, `min-w-0`), so the clipping is fixed in the component too, but there is nothing live to measure. The unmounted components are filed as D-326.
 
 Found while measuring M5, and **not** the M5 defect — it never reaches document level, so it produces no horizontal page scroll and did not appear in the `scrollWidth > clientWidth` sweep. It was caught only by the separate reachability check.
 
@@ -12260,7 +12260,7 @@ instance of the same difference.
 
 **Severity:** ROUGH · **Affects:** the property wizard's theme step — one advisory sentence and a
 page list · **Found during:** the theme cut, auditing every id-range test
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes `isCompactTheme` and the `ThemeSelector` that read it. Nothing references either (checked on review).
 
 ```ts
 // apps/web/lib/property-report-assets.ts
@@ -14832,7 +14832,7 @@ matches retired theme **names**, which is the other near-miss: this is an id.
 
 **Severity:** ROUGH · **Affects:** `apps/web/components/property-wizard/types.ts` and
 `property-wizard.tsx:271` · **Found during:** the same enumeration
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes `COMPACT_PAGES`, `getDefaultPagesForTheme` and the per-theme `pages` flag. `tests/test_wizard_pages_match_the_builder.py` asserts `COMPACT_PAGES` stays gone.
 
 ```js
 const newPages = theme.compact ? COMPACT_PAGES : FULL_PAGES;
@@ -14854,7 +14854,7 @@ file says which. Design's deck says "Pages {{ pageCount }} of 6", which is a thi
 **Severity:** ROUGH · **Affects:** `/docs` at 390px; the first thing found by the first
 measurement of the public pages · **Found during:** probing the eleven public routes at two
 viewports
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) adds `min-w-0`, `break-all` and `flex-wrap` to the `/docs` code blocks and endpoint rows. Cursor measured document scroll width = viewport at 390 and 820px. No automated gate.
 
 At a 390px viewport the document scrolls 70px sideways. Eight elements sit past the edge, and the
 innermost is the `curl` example:
@@ -14873,7 +14873,7 @@ nothing; this is what the first look costs.
 
 **Severity:** ROUGH · **Affects:** `apps/web/components/` · **Found during:** establishing which
 wizards are live
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes the unused wizards (`Wizard`, `ConsumerLandingWizard`, `setup-wizard`, `schedule-wizard`) and their barrel exports. No remaining importer (checked on review); tsc clean, jest and the full suite pass.
 
 | File | Lines | Reached by |
 |---|---|---|
@@ -14892,7 +14892,7 @@ on looking like the schedule wizard after `/app/schedules/new` moved to `Unified
 
 **Severity:** ROUGH · **Affects:** `apps/web/components/marketing/testimonials.tsx` ·
 **Found during:** checking whether Design's landing inherits the M-phase's findings
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes `components/marketing/testimonials.tsx`. No remaining importer (checked on review).
 
 Three invented people — `Jessica M.`, `David C.`, `Sarah T.` — with invented quotes and five stars
 each. `11459e7c` removed the render and left the file, with a comment at `marketing-home.tsx:23`
@@ -14993,7 +14993,7 @@ outlive this entry.
 
 **Severity:** ROUGH · **Affects:** `apps/web/app/p/[code]/lead-capture-form.tsx` on a 429 ·
 **Found during:** checking whether any consumer lead handler sets state the UI never renders
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) removes the stored-but-never-read `retryAfter` state. The rate-limit message is unchanged ("try again in an hour").
 
 ```js
 setErrorMessage("You've submitted too many requests. Please try again in an hour.");
@@ -15856,6 +15856,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 **Severity:** WRONG · found 2026-10-29 building the rep's leads feed. `app/p/[code]/lead-capture-form.tsx` posts `source: "qr_scan"` whichever way the visitor reached the page, so `leads.source` cannot tell a QR scan from a shared link, and the agent's own Leads page and `property_stats` (`leads_from_qr` / `leads_from_direct`) split them on a value that is always the same.
 **Status:** `recorded` — the rep's feed says "from their property report page" for both and does not pretend to know which. The fix is to carry how the visitor arrived (the QR code's URL can say so) into the form.
 
+
+---
+
+### D-326 — the agent onboarding checklist and its dashboard wrapper are mounted by no page
+
+**Severity:** ROUGH · found 2026-11-02 measuring D-043 after #258. `components/onboarding/onboarding-checklist.tsx` (`OnboardingChecklist`) and `dashboard-onboarding.tsx` (`DashboardOnboarding`) are imported by nothing in `app/` — `/app` stopped rendering them in a dashboard redesign — so an agent with unfinished onboarding sees no checklist, and #258's wrap fix to that card cannot be seen. `AffiliateOnboarding` (`/app/affiliate`) and `GuidedGetStarted` (`/app/get-started`) are live.
+**Status:** `recorded` — either remount the checklist on `/app` (a product call: the redesign dropped it) or delete the two components with their barrel exports, as #258 did for the other unused onboarding pieces.
 ---
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
