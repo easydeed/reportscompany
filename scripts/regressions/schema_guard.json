@@ -2,8 +2,8 @@
   {
     "name": "G1 a new migration lands and the required one is not moved",
     "file": "apps/api/src/api/schema_guard.py",
-    "old": "REQUIRED_MIGRATION = \"0061_seat_book_handover.sql\"",
-    "new": "REQUIRED_MIGRATION = \"0060_rep_seats.sql\"",
+    "old": "REQUIRED_MIGRATION = \"0062_email_log_status_comment.sql\"",
+    "new": "REQUIRED_MIGRATION = \"0061_seat_book_handover.sql\"",
     "test": "tests/test_schema_guard.py"
   },
   {

@@ -32,7 +32,7 @@ import logging
 import os
 import sys
 
-REQUIRED_MIGRATION = "0061_seat_book_handover.sql"
+REQUIRED_MIGRATION = "0062_email_log_status_comment.sql"
 
 logger = logging.getLogger("schema_guard")
 
