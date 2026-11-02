@@ -42,7 +42,9 @@ on:
 
 jobs:
   e2e:
-    runs-on: ubuntu-latest
+    # Pinned, not ubuntu-latest: latest moved to 26.04 on or before 2026-11-02 and the pinned
+    # Playwright cannot install Chromium there, so every run died before a test ran.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
