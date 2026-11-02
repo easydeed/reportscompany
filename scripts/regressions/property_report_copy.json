@@ -16,14 +16,14 @@
   {
     "name": "D-169: the panel prints the title unconditionally",
     "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
-    "old": "        {% if agent.title %}<span class=\"agentpanel-title\">{{ agent.title }}</span>{% endif %}",
-    "new": "        <span class=\"agentpanel-title\">{{ agent.title }}</span>",
+    "old": "        {% if agent_role %}<span class=\"agentpanel-title\">{{ agent_role }}</span>{% endif %}",
+    "new": "        <span class=\"agentpanel-title\">{{ agent_role }}</span>",
     "test": "apps/worker/tests/test_property_report_copy.py"
   },
   {
     "name": "D-169 reverts: the title prints nowhere",
     "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
-    "old": "        {% if agent.title %}<span class=\"agentpanel-title\">{{ agent.title }}</span>{% endif %}",
+    "old": "        {% if agent_role %}<span class=\"agentpanel-title\">{{ agent_role }}</span>{% endif %}",
     "new": "",
     "test": "apps/worker/tests/test_property_report_copy.py"
   }

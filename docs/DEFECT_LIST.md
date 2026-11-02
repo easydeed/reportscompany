@@ -59,15 +59,15 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 60 | Observed, not yet triaged |
-| `open` | 56 | Real, unfixed |
-| `fixed` | 196 | Corrected in code, with the branch or PR named on the entry |
-| `closed-not-live` | 11 | Not occurring in production, with the evidence named on the entry |
+| `recorded` | 61 | Observed, not yet triaged |
+| `open` | 48 | Real, unfixed |
+| `fixed` | 203 | Corrected in code, with the branch or PR named on the entry |
+| `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **325** | D-001 … D-325, contiguous, no duplicates |
+| **Total** | **326** | D-001 … D-326, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 8. (Sums to 56, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -93,7 +93,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > implementations of "how to read this document" is a second answer waiting to be believed.
 
 `fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`); D-178 (`feat/market-closed-v2`).
-`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17); D-179 (**not reproducing** — four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository; each absence named on the entry so the same report cannot re-file it).
+`closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17); D-179 (**not reproducing** — four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository; each absence named on the entry so the same report cannot re-file it). D-043, D-100, D-126, D-127, D-128, D-143 (2026-10-30 and 11-02: checked absent from what renders today rather than closed on a deletion — the retired themes' templates, and for D-043 a card no page mounts any more; `tests/test_closed_defects_stay_closed.py`).
+
+`accepted` — D-184 (Jerry, 2026-10-30: the open-houses page-1 grid spills to page 2, no change).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
 
@@ -1525,7 +1527,7 @@ It never gated anything: `e2e.yml` triggered only on `push` to `main` and `workf
 
 ### D-043 — The onboarding checklist card is clipped by up to 85px and the clipped content is unreachable
 **Severity:** ROUGH · **Affects:** REGULAR (agent) accounts on `/app`
-**Status:** `open`
+**Status:** `closed-not-live` — No page mounts this card any more: neither `OnboardingChecklist` nor `DashboardOnboarding` is imported by anything in `app/`, and a regular account with unfinished onboarding sees no checklist on `/app` (measured 2026-11-02 at 1024, 1142, 1280 and 390px on the local stack, with the account's onboarding set back to 50% and then restored). #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) made the header wrap (`flex-wrap`, `min-w-0`), so the clipping is fixed in the component too, but there is nothing live to measure. The unmounted components are filed as D-326.
 
 Found while measuring M5, and **not** the M5 defect — it never reaches document level, so it produces no horizontal page scroll and did not appear in the `scrollWidth > clientWidth` sweep. It was caught only by the separate reachability check.
 
@@ -3259,7 +3261,7 @@ reports, rather than a duplicate email nobody asked for. Worth doing with D-071,
 about this task's boundaries rather than its contents.
 ### D-073 — the per-theme cover titles were designed, and have never rendered
 **Severity:** ROUGH · **Affects:** all five property report themes
-**Status:** `open` — **[JERRY], asked 2026-10-30.** He said to build it, but the designed per-theme fallbacks (harbor "Real Estate Specialist", linen "Luxury Property Specialist", atlas "Licensed Real Estate Agent") are titles for an agent who entered none. That conflicts with his D-169 answer, "only if they entered one". Atlas's fallback also states a licence nobody has verified. Waiting on: (a) fallback per theme, (b) harbor and linen only, or (c) nothing.
+**Status:** `fixed` — Jerry, 2026-11-02, option (b): with no title entered, harbor prints "Real Estate Specialist" and linen "Luxury Property Specialist" under the agent's name (the themes' designed fallbacks, each set in its entry file). Atlas prints no line: its design said "Licensed Real Estate Agent", a licence nobody has verified. An entered title always wins (D-169). Gate: `apps/worker/tests/test_property_report_copy.py`; mutations `scripts/regressions/d073_theme_titles.json`.
 
 Each theme's cover carries its own fallback for an agent with no title —
 `'Luxury Property Specialist'` (elegant), `'Real Estate Specialist'` (modern),
@@ -12260,7 +12262,7 @@ instance of the same difference.
 
 **Severity:** ROUGH · **Affects:** the property wizard's theme step — one advisory sentence and a
 page list · **Found during:** the theme cut, auditing every id-range test
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes `isCompactTheme` and the `ThemeSelector` that read it. Nothing references either (checked on review).
 
 ```ts
 // apps/web/lib/property-report-assets.ts
@@ -14832,7 +14834,7 @@ matches retired theme **names**, which is the other near-miss: this is an id.
 
 **Severity:** ROUGH · **Affects:** `apps/web/components/property-wizard/types.ts` and
 `property-wizard.tsx:271` · **Found during:** the same enumeration
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes `COMPACT_PAGES`, `getDefaultPagesForTheme` and the per-theme `pages` flag. `tests/test_wizard_pages_match_the_builder.py` asserts `COMPACT_PAGES` stays gone.
 
 ```js
 const newPages = theme.compact ? COMPACT_PAGES : FULL_PAGES;
@@ -14854,7 +14856,7 @@ file says which. Design's deck says "Pages {{ pageCount }} of 6", which is a thi
 **Severity:** ROUGH · **Affects:** `/docs` at 390px; the first thing found by the first
 measurement of the public pages · **Found during:** probing the eleven public routes at two
 viewports
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) adds `min-w-0`, `break-all` and `flex-wrap` to the `/docs` code blocks and endpoint rows. Cursor measured document scroll width = viewport at 390 and 820px. No automated gate.
 
 At a 390px viewport the document scrolls 70px sideways. Eight elements sit past the edge, and the
 innermost is the `curl` example:
@@ -14873,7 +14875,7 @@ nothing; this is what the first look costs.
 
 **Severity:** ROUGH · **Affects:** `apps/web/components/` · **Found during:** establishing which
 wizards are live
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes the unused wizards (`Wizard`, `ConsumerLandingWizard`, `setup-wizard`, `schedule-wizard`) and their barrel exports. No remaining importer (checked on review); tsc clean, jest and the full suite pass.
 
 | File | Lines | Reached by |
 |---|---|---|
@@ -14892,7 +14894,7 @@ on looking like the schedule wizard after `/app/schedules/new` moved to `Unified
 
 **Severity:** ROUGH · **Affects:** `apps/web/components/marketing/testimonials.tsx` ·
 **Found during:** checking whether Design's landing inherits the M-phase's findings
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) deletes `components/marketing/testimonials.tsx`. No remaining importer (checked on review).
 
 Three invented people — `Jessica M.`, `David C.`, `Sarah T.` — with invented quotes and five stars
 each. `11459e7c` removed the render and left the file, with a comment at `marketing-home.tsx:23`
@@ -14993,7 +14995,7 @@ outlive this entry.
 
 **Severity:** ROUGH · **Affects:** `apps/web/app/p/[code]/lead-capture-form.tsx` on a 429 ·
 **Found during:** checking whether any consumer lead handler sets state the UI never renders
-**Status:** `open`
+**Status:** `fixed` — #258 (Cursor, `fix/frontend-cleanup`; reviewed and merged 2026-11-02) removes the stored-but-never-read `retryAfter` state. The rate-limit message is unchanged ("try again in an hour").
 
 ```js
 setErrorMessage("You've submitted too many requests. Please try again in an hour.");
@@ -15856,6 +15858,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 **Severity:** WRONG · found 2026-10-29 building the rep's leads feed. `app/p/[code]/lead-capture-form.tsx` posts `source: "qr_scan"` whichever way the visitor reached the page, so `leads.source` cannot tell a QR scan from a shared link, and the agent's own Leads page and `property_stats` (`leads_from_qr` / `leads_from_direct`) split them on a value that is always the same.
 **Status:** `recorded` — the rep's feed says "from their property report page" for both and does not pretend to know which. The fix is to carry how the visitor arrived (the QR code's URL can say so) into the form.
 
+
+---
+
+### D-326 — the agent onboarding checklist and its dashboard wrapper are mounted by no page
+
+**Severity:** ROUGH · found 2026-11-02 measuring D-043 after #258. `components/onboarding/onboarding-checklist.tsx` (`OnboardingChecklist`) and `dashboard-onboarding.tsx` (`DashboardOnboarding`) are imported by nothing in `app/` — `/app` stopped rendering them in a dashboard redesign — so an agent with unfinished onboarding sees no checklist, and #258's wrap fix to that card cannot be seen. `AffiliateOnboarding` (`/app/affiliate`) and `GuidedGetStarted` (`/app/get-started`) are live.
+**Status:** `recorded` — either remount the checklist on `/app` (a product call: the redesign dropped it) or delete the two components with their barrel exports, as #258 did for the other unused onboarding pieces.
 ---
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
