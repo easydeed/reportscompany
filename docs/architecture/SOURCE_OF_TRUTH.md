@@ -171,7 +171,7 @@ Standalone Next.js preview apps for developing report layouts, schedule builders
 
 | Workflow | File | Triggers — **all are path-filtered; none runs on every PR** |
 |---|---|---|
-| Backend tests | `backend-tests.yml` | PR + push on `apps/api/**`, `apps/worker/**`, `tests/**`, `db/**`, `tools/**`, `scripts/**`, `pytest.ini`, `apps/web/templates/**`, and its own file |
+| Backend tests | `backend-tests.yml` | PR + push on `apps/api/**`, `apps/worker/**`, `tests/**`, `db/**`, `tools/**`, `scripts/**`, `pytest.ini`, `apps/web/templates/**`, `docs/DEFECT_LIST.md`, and its own file |
 | Frontend tests | `frontend-tests.yml` | PR + push on `apps/web/**` and its own file |
 | E2E tests | `e2e.yml` | **manual only** (`workflow_dispatch`) — disabled D-045 |
 
