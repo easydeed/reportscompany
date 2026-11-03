@@ -59,13 +59,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 61 | Observed, not yet triaged |
+| `recorded` | 82 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
 | `fixed` | 203 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **326** | D-001 … D-326, contiguous, no duplicates |
+| **Total** | **347** | D-001 … D-347, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
@@ -15865,6 +15865,153 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** ROUGH · found 2026-11-02 measuring D-043 after #258. `components/onboarding/onboarding-checklist.tsx` (`OnboardingChecklist`) and `dashboard-onboarding.tsx` (`DashboardOnboarding`) are imported by nothing in `app/` — `/app` stopped rendering them in a dashboard redesign — so an agent with unfinished onboarding sees no checklist, and #258's wrap fix to that card cannot be seen. `AffiliateOnboarding` (`/app/affiliate`) and `GuidedGetStarted` (`/app/get-started`) are live.
 **Status:** `recorded` — either remount the checklist on `/app` (a product call: the redesign dropped it) or delete the two components with their barrel exports, as #258 did for the other unused onboarding pieces.
+---
+
+### D-327 — a schedule's "Run Now" does nothing and its Run History is always empty
+
+**Severity:** BROKEN · found 2026-11-03 tracing the production walk-through. `app/app/schedules/[id]/schedule-detail-shell.tsx:59-61` hands `ScheduleDetail` `runs={[]}` and `onRunNow={() => {}}`. The button looks live and does nothing, and Run History reads "No runs yet" for a schedule that has sent many times. `GET /v1/schedules/{id}/runs` exists and nothing calls it. There is no way to send a schedule on demand.
+**Status:** `recorded` — wire both to the API (the runs endpoint exists; a run-now needs a route), or remove the button until it does something.
+
+---
+
+### D-328 — editing a schedule creates a second schedule
+
+**Severity:** BROKEN · found 2026-11-03 tracing the production walk-through. `/app/schedules/[id]/edit` renders `UnifiedReportWizard` with `scheduleId`. The wizard declares the prop (`components/unified-wizard/index.tsx:61,64`) and never reads it, so "Create Schedule" POSTs a new schedule and the original stays as it was. On Free (1 schedule) the edit is refused by the schedule limit, which then shows as D-329.
+**Status:** `recorded` — load the schedule into the wizard and PATCH it; test that an edit leaves one schedule with the new values.
+
+---
+
+### D-329 — every plan-limit error reads "[object Object]"
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. The API puts `used`, `limit` and `message` inside `detail` (`routes/reports.py:205-214`, `routes/schedules.py:336-346`, `routes/property.py:1144`). The market and schedule wizard reads `errData.used` and `errData.limit` at the top level, finds null, and prints `errData.detail`, an object (`unified-wizard/index.tsx:318-323`, `:382-387`). The property wizard throws `new Error(errData.detail)` (`property-wizard/step-generate.tsx:154`). The over-limit screen therefore says "Market Report limit reached — [object Object]".
+**Status:** `recorded` — read `detail.used`, `detail.limit` and `detail.message`, with a jest test per product.
+
+---
+
+### D-330 — a schedule that fails to save shows nothing
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. In the wizard's schedule branch, any failure other than unverified (403) or over-limit (429) is thrown and then caught, and the catch only reports in `send_now` mode (`unified-wizard/index.tsx:393-400`). Create Schedule stops spinning and the page says nothing.
+**Status:** `recorded` — show the error in schedule mode as well.
+
+---
+
+### D-331 — the schedule step says every run uses one report from the allowance; scheduled runs use none
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. `step-deliver.tsx:44`: "Every run uses one report from your allowance and pulls fresh data when it runs." Market usage counts manual reports only (`services/usage.py:233-241`, "scheduled runs are governed by the schedules limit"), and the limit email agrees.
+**Status:** `recorded` — say what is true: a schedule counts against the schedules limit, and its runs don't count against the monthly reports.
+
+---
+
+### D-332 — a scheduled send skipped for the market-report limit leaves no record anywhere
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. `schedules_tick.py:577-596`: when the account is over its manual market limit, the ticker logs a line, moves `next_run_at` on and `continue`s. It writes no `schedule_runs` row and no `email_log` row. The agent's sphere silently gets nothing that week, and nothing in the app or the admin says so. It is also arguably the wrong rule, given D-331: scheduled runs don't count toward the limit, yet manual use can stop them.
+**Status:** `recorded` — record the skip (a run row with a reason, shown on the schedule), and decide whether manual use should stop scheduled sends at all.
+
+---
+
+### D-333 — nothing a user can see says an unsubscribed recipient was skipped
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. When every recipient is suppressed, `email_log` gets `suppressed` and the run is still `completed` (`tasks.py:1075`, `:2053`). When some are, the row is `sent` and the skipped addresses are recorded nowhere. The agent's surfaces show either an empty Run History (D-327) or the dashboard's Recent list, which shows the subject and address but not the status. Only `/app/admin/emails` shows `suppressed`.
+**Status:** `recorded` — record who was skipped per send and show it on the schedule's runs.
+
+---
+
+### D-334 — `email_log` records a different subject from the one the recipient saw
+
+**Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. The sent subject is "📊 Your {label} for {area} is Ready!" (`email/template.py:2388`). The logged subject is `f"Your {report_type…title()} Report"` (`tasks.py:1036`), e.g. "Your Market Snapshot Report". The dashboard's Recent list and the admin email log show the logged one.
+**Status:** `recorded` — log the subject that was sent.
+
+---
+
+### D-335 — a schedule's page shows its recipients as raw JSON
+
+**Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. `ScheduleOut.recipients` is "Raw JSON strings from DB" (`routes/schedules.py:138`), and `components/schedules/schedule-detail.tsx:193-196` prints each one in a badge, so an agent sees `{"type":"manual_email",…}`.
+**Status:** `recorded` — resolve recipients to names and emails for display.
+
+---
+
+### D-336 — the name typed at sign-up is not saved as the user's name
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. `POST /auth/register` uses the name only for the account name, "{name}'s Account" (`routes/auth.py:281`). The user row is inserted with no `first_name` or `last_name` (`:288-292`). Until Branding is saved, the email signature reads "{name}'s Account" and the footer "…in {name}'s Account's contacts.". Branding's Display Name is prefilled with the same string.
+**Status:** `recorded` — save first and last name on the user; test the signature of a new account's first email.
+
+---
+
+### D-337 — the agent Branding page drops the Email field and never loads the Tagline
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. `app/app/settings/branding/page.tsx`: the form initialises `tagline: ""` regardless of what is stored (`:128`), and the save sends no email field to either request (`:160-176`). An agent who types either sees it gone on reload.
+**Status:** `recorded` — load and save both, or remove the fields.
+
+---
+
+### D-338 — the market report's build stages still say "Generating AI market insight"
+
+**Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. `unified-wizard/index.tsx:55`. The market PDF has no AI narrative (the worker's "NO AI NARRATIVE" note), so for 20 of the 60 seconds the screen describes a step that does not happen.
+**Status:** `recorded` — drop or rename the stage.
+
+---
+
+### D-339 — the home-value request limit counts every homeowner behind the web server as one
+
+**Severity:** BROKEN · found 2026-11-03 tracing the production walk-through. `POST /v1/cma/{code}/request` refuses a sixth request in an hour from one `request.client.host` (`routes/lead_pages.py:319-330`). The browser calls the Next proxy, and the proxy (`app/api/proxy/v1/cma/[code]/request/route.ts`) forwards only `Content-Type`, so the address the API sees is the web server's, not the phone's. Five homeowners in an hour, across every agent sharing that egress address, and the next one gets "Something went wrong sending your report." The success screen never shows. `device_type` is derived from the server's user agent for the same reason.
+**Status:** `recorded` — forward the client address from the proxy and trust it only from the proxy; test that two different client addresses each get five.
+
+---
+
+### D-340 — an agent gets no email about a new home-value lead
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. The only alert is a text, sent only when the homeowner's delivery succeeded and the agent has a phone on their user record (`tasks.py:2942-2961`). An agent with no phone, or whose homeowner's delivery failed, is told nothing. The lead sits on the Home-value page until they look.
+**Status:** `recorded` — email the agent on every lead, with the text as an extra.
+
+---
+
+### D-341 — `/app/leads` crashes on a lead with no name or no email, and mislabels home-value leads
+
+**Severity:** BROKEN · found 2026-11-03 tracing the production walk-through. `app/app/leads/page.tsx` types `name` and `email` as strings (`:66-67`). The detail modal calls `selectedLead.name.charAt(0)` (`:443`) and the search calls `lead.email.toLowerCase()` (`:198`). A home-value lead's name is optional and a text-me lead has no email, so either throws. Home-value leads also show Source "Direct Link" and Property "N/A". The page isn't in the agent's menu, which is why nobody has hit it.
+**Status:** `recorded` — null-safe both, label `cma_page` leads, or delete the page in favour of Home-value page's list.
+
+---
+
+### D-342 — a home-value lead records that the box was ticked, not what it said
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. `cmaRequestBody` sends `consent_given: true` (`lib/cma-lead.ts:57`), and the API has no field for the wording. `consentText()` exists so the lead can record exactly what was agreed (`cma-funnel.tsx:25-29`), and nothing sends it. Once the brokerage's TCPA wording goes in, there will be no record of which wording a given homeowner agreed to.
+**Status:** `recorded` — send and store the consent text with the lead (a column on `leads`) before the TCPA wording ships.
+
+---
+
+### D-343 — the homeowner is told the link is a PDF that works for 30 days
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. `cma-funnel.tsx:280` ("It's a PDF of the sales near your home.") and `:327` ("It works for 30 days." / "The link works for 30 days."). The link is `/r/{id}`, a web page, and no expiry was found on that route (`routes/mobile_reports.py`).
+**Status:** `recorded` — say what it is and drop the 30 days, or add the expiry the page promises.
+
+---
+
+### D-344 — the homeowner's and agent's texts are signed "- TrendyReports"
+
+**Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. `worker/sms/send.py:105`, `:145`. The funnel's own rule is "Everything the homeowner sees is in the agent's name" (`cma-funnel.tsx:5`), and the homeowner's text is the one thing they keep.
+**Status:** `recorded` — sign the homeowner's text with the agent's name.
+
+---
+
+### D-345 — the Home-value page's Headline, Subheadline and Theme Color settings don't change the page
+
+**Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. Headline and Subheadline feed only the browser title and share tags (`app/cma/[code]/page.tsx:46-52`). The funnel's heading is fixed. Theme Color is used only when the account has no `primary_color` (`routes/lead_pages.py:206`), and every account has one. The page is also titled "My Leads" (`lead-page-client.tsx:192`) under the menu item "Home-value page".
+**Status:** `recorded` — remove the three settings or make them do what they say; title the page as the menu does.
+
+---
+
+### D-346 — a self-signed-up agent can never join a rep's book
+
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. Reps see leads and activity only for accounts whose `sponsor_account_id` is theirs (`routes/affiliates.py:1166`). It is set only by a rep's invite, which creates a new account and refuses an existing email (`services/invite_service.py:78-80`), or moved by a seat reassignment (`services/seats.py:314`). An agent who signed up first and then meets a Pacific Coast rep has no way in short of a new account.
+**Status:** `recorded` — a product call: an invite to an existing agent that they accept.
+
+---
+
+### D-347 — turning a paused schedule back on skips the schedule limit
+
+**Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. The schedule limit is checked only on create (`routes/schedules.py:331-346`). `PATCH` with `active: true` checks verification and not the limit, so a Free account can pause, create a second schedule, and turn the first back on.
+**Status:** `recorded` — check the limit when a schedule is turned on.
+
 ---
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
