@@ -61,11 +61,11 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 82 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
-| `fixed` | 203 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 204 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **347** | D-001 … D-347, contiguous, no duplicates |
+| **Total** | **348** | D-001 … D-348, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
@@ -16011,6 +16011,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. The schedule limit is checked only on create (`routes/schedules.py:331-346`). `PATCH` with `active: true` checks verification and not the limit, so a Free account can pause, create a second schedule, and turn the first back on.
 **Status:** `recorded` — check the limit when a schedule is turned on.
+
+---
+
+### D-348 — editing the defect board alone runs none of the tests that check it
+
+**Severity:** FRAGILE · found 2026-11-03 when #261, a board-only PR, ran no checks but Vercel's. `tests/test_defect_list_counts.py` and `tests/test_xfail_defect_links.py` read `docs/DEFECT_LIST.md`, and `backend-tests.yml`'s path filters listed `tests/**` but not the board. A board edit with a wrong count, a missing entry or a broken xfail link merged green, checked only if someone ran the tests locally. The D-089 shape: a file that can change without triggering the job that checks it.
+**Status:** `fixed` — #261: `docs/DEFECT_LIST.md` is in both of `backend-tests.yml`'s path filters, and the CI table in `docs/architecture/SOURCE_OF_TRUTH.md` names it (`tests/test_ci_table_matches_workflows.py` holds the two in step).
 
 ---
 

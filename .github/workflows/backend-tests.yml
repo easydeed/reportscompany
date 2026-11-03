@@ -29,6 +29,10 @@ on:
       # fire until something else touched the backend — the same "edit a file
       # without triggering the job that checks it" gap D-089 was.
       - "apps/web/templates/**"
+      # The defect board. tests/test_defect_list_counts.py and
+      # test_xfail_defect_links.py read it, and an edit to it alone (every
+      # board-only PR) ran nothing. D-348, the D-089 gap again.
+      - "docs/DEFECT_LIST.md"
       - ".github/workflows/backend-tests.yml"
   pull_request:
     paths:
@@ -50,6 +54,10 @@ on:
       # fire until something else touched the backend — the same "edit a file
       # without triggering the job that checks it" gap D-089 was.
       - "apps/web/templates/**"
+      # The defect board. tests/test_defect_list_counts.py and
+      # test_xfail_defect_links.py read it, and an edit to it alone (every
+      # board-only PR) ran nothing. D-348, the D-089 gap again.
+      - "docs/DEFECT_LIST.md"
       - ".github/workflows/backend-tests.yml"
 jobs:
   test:
