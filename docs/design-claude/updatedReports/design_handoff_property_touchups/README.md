@@ -2,9 +2,9 @@
 
 Date: 2026-11-03 · Reviewed against: `uploads/property__{atlas,harbor,linen}__full.pdf` (1358 5th Street, La Verne; agent path; 4 closed comps, no comp photos, no monthly chart) and `apps/worker/src/worker/templates/property/_v2/report.jinja2` @ `35e6e6db`.
 
-Deliverable: **one file**, `apps/worker/src/worker/templates/property/_v2/report.jinja2`, in this folder at its repo path. Drop it over the live one. Every change is marked `[T1]`–`[T9]` in the file with a comment saying what it does and why. Nothing else is touched. Theme entry files, builder, tests: unchanged.
+Deliverable: **edits, not a file.** `EDITS.md` lists each touch T1–T9 as an exact-string replacement against `property/_v2/report.jinja2` on `main` @ `35e6e6db` — what it changes, the lines before and after, and why. `touches.json` is the same list machine-readable; `apply_touches.py --check <path>` verifies every `before` still occurs exactly once in your copy and writes nothing unless all do. Nothing outside those strings changes. Theme entry files, builder, tests: untouched.
 
-Rules kept: six pages, same order; no new pages; no brand colour moved; text on brand uses the derived inks; no text on gradients or photos; dashes untouched; no estimate outside the range panel. No new colour anywhere — every touch uses an existing token or neutral.
+Rules kept: six pages, same order; no new pages; no brand colour moved; text on brand uses the derived inks; no text on gradients or photos; dashes untouched; no estimate outside the range panel. No new colour anywhere — every pairing introduced already exists in the baseline under another selector.
 
 ---
 
@@ -92,6 +92,8 @@ Things the document could carry that it does not. None are in the diff — each 
 ## Files
 ```
 design_handoff_property_touchups/
-  README.md                                                        this file
-  apps/worker/src/worker/templates/property/_v2/report.jinja2      the edited template, drop-in
+  README.md            this file — what bugged me, the nine touches, left on the table
+  EDITS.md             T1–T9 as before/after edits with rationale (human-readable)
+  touches.json         the same edits, machine-readable (source for both EDITS.md and the script)
+  apply_touches.py     --check verifies all edits apply exactly once; without it, applies them
 ```

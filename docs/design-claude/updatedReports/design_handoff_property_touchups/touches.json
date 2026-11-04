@@ -1,0 +1,106 @@
+[
+  {
+    "id": "T1",
+    "page": "1 · cover",
+    "title": "\"Prepared for\" name no longer orphans its last word",
+    "why": "\"The owners of 1358 5th Street\" broke as \"…1358 5th / Street\" in the 200px column on all three renders. 20px instead of 22 and `text-wrap: balance` split it \"The owners of / 1358 5th Street\"; the note below gets `pretty` for the same reason (\"Prepared at the request of Zoe / Noelle\"). Column width is unchanged so \"In short\" keeps its measure. Colour untouched.",
+    "before": "  .cover-for-name { font-family: var(--display); font-weight: var(--display-weight); font-size: 22px; line-height: 1.15; letter-spacing: var(--display-tracking); }\n  .cover-for-note { font-size: 13px; color: var(--muted); }\n",
+    "after": "  .cover-for-name { font-family: var(--display); font-weight: var(--display-weight); font-size: 20px; line-height: 1.15; letter-spacing: var(--display-tracking); text-wrap: balance; }\n  .cover-for-note { font-size: 13px; color: var(--muted); text-wrap: pretty; }\n"
+  },
+  {
+    "id": "T2",
+    "page": "1 · cover",
+    "title": "\"In short\" ends on an ellipsis, not a sliced line",
+    "why": "`max-height: 81px; overflow: hidden` cut the paragraph through its x-height on harbor, where Manrope sets the ~380-character narrative to four full lines plus a fifth. `-webkit-line-clamp` ends on \"…\" at a word boundary. Five lines (101px) rather than four: the hero plate above is `flex: 1` with a 300px floor and measures ~440px on the fixture, so the 20px comes out of the photo, never the page. The generation cap stays the primary bound.",
+    "before": "  /* Four lines, bounded. The only other thing on page 1 that grows with data\n     is the title, and the ladder bounds that. */\n  .inshort-text { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--body); max-height: 81px; overflow: hidden; }\n",
+    "after": "  /* Five lines, bounded, ending on an ellipsis at a word boundary rather\n     than a line sliced by max-height. The only other thing on page 1 that\n     grows with data is the title, and the ladder bounds that. */\n  .inshort-text { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--body); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }\n"
+  },
+  {
+    "id": "T3",
+    "page": "all · running head",
+    "title": "One name for the document",
+    "why": "The running head said \"Property report\" on every page while the cover's masthead said \"Seller's report\" or \"Home value report\" — two titles on one sheet, and the consumer copy named a kind the funnel never offered. `doc.report_kind` is already the masthead's value.",
+    "before": "    <span class=\"runhead-address\">Property report · {{ doc.street }}</span>\n",
+    "after": "    <span class=\"runhead-address\">{{ doc.report_kind }} · {{ doc.street }}</span>\n"
+  },
+  {
+    "id": "T4",
+    "page": "2 · your home",
+    "title": "\"Not on record\" reads as a caption, not a warning",
+    "why": "A bold label sharing one line with thirteen field names read as a paragraph of warning. Label above the list in the page's own label voice (10.5px caps), list at 11.5px. Same panel, same colour (`--muted` on `--strip`, already in the baseline).",
+    "before": "  .notonrecord { display: flex; gap: 14px; align-items: baseline; padding: 14px 16px; background: var(--strip); border-radius: var(--radius); font-size: 12px; line-height: 1.5; color: var(--muted); }\n  .notonrecord-label { font-weight: 700; white-space: nowrap; }\n",
+    "after": "  .notonrecord { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px 13px; background: var(--strip); border-radius: var(--radius); font-size: 11.5px; line-height: 1.5; color: var(--muted); }\n  .notonrecord-label { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; white-space: nowrap; }\n"
+  },
+  {
+    "id": "T5",
+    "page": "3 · comparable sales",
+    "title": "The grid fits the number of comps",
+    "why": "Six cells for four comps left the second row two-thirds empty on every fixture render. Quantity selectors, so no builder change: 5–6 comps keep 3×2; 4 comps go 2×2; 1–3 comps sit in one top-aligned row with plates at 4:3 so three tall slivers do not stretch to the footer. `:has()` is supported by the Chromium PDFShift renders with.",
+    "before": "  .comp-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 20px 16px; }\n  .comp { display: flex; flex-direction: column; min-height: 0; }\n",
+    "after": "  .comp-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 20px 16px; }\n  /* The grid fits the count. 5–6 comps: 3 × 2 as designed. 4 comps: 2 × 2,\n     no empty cells. 1–3 comps: one top-aligned row, plates at 4:3. Quantity\n     selectors — the template counts its own children. */\n  .comp-grid:has(.comp:nth-child(4):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }\n  .comp-grid:has(.comp:nth-child(3):last-child),\n  .comp-grid:has(.comp:nth-child(2):last-child),\n  .comp-grid:has(.comp:first-child:last-child) { grid-template-rows: none; align-content: start; }\n  .comp-grid:has(.comp:nth-child(3):last-child) .comp-plate,\n  .comp-grid:has(.comp:nth-child(2):last-child) .comp-plate,\n  .comp-grid:has(.comp:first-child:last-child) .comp-plate { flex: none; aspect-ratio: 4 / 3; }\n  .comp { display: flex; flex-direction: column; min-height: 0; }\n"
+  },
+  {
+    "id": "T6",
+    "page": "3 · comparable sales",
+    "title": "A missing-photo tile says how far away the sale is",
+    "why": "All four tiles read \"La Verne / NO PHOTO ON FILE\" — four copies of one tile. `comp.v2_dist` (\"0.24 mi\") is already on the comp; shown in the same display slot over \"FROM YOUR HOME · NO PHOTO ON FILE\", the tiles differ and lead with the number a seller asks about first. City falls back in only when the distance is itself a dash. Same tokens (`primary_ink` on `tint`), same position, no CSS change.",
+    "before": "          <div class=\"comp-nophoto\">\n            <span class=\"comp-nophoto-name\">{{ comp.neighborhood or doc.city_name }}</span>\n            <span class=\"comp-nophoto-note\">No photo on file</span>\n          </div>\n",
+    "after": "          <div class=\"comp-nophoto\">\n            {# Distance from the subject where it is known; the city only when\n               the distance is itself a dash. #}\n            {% if comp.v2_dist and comp.v2_dist != '-' %}\n            <span class=\"comp-nophoto-name\">{{ comp.v2_dist }}</span>\n            <span class=\"comp-nophoto-note\">From your home · no photo on file</span>\n            {% else %}\n            <span class=\"comp-nophoto-name\">{{ comp.neighborhood or doc.city_name }}</span>\n            <span class=\"comp-nophoto-note\">No photo on file</span>\n            {% endif %}\n          </div>\n"
+  },
+  {
+    "id": "T7a",
+    "page": "4 · what the comps support",
+    "title": "Range caption — the style",
+    "why": "Replaces `.band-axis-mid` (centred middle item of a space-between row) with a row of its own under the axis, in which the caption is absolutely positioned at the marker's x. Same `#fff`, 600, 11px on `--dark`; the pairing is already in the baseline under the old selector.",
+    "before": "  .band-axis-mid { color: #fff; font-weight: 600; }\n",
+    "after": "  /* The marker's caption, under the marker. A row of its own: left-anchored\n     in the first 30% of the axis, right-anchored in the last 30%, centred\n     between — so the ▲ points at the marker whatever its position. */\n  .band-you { position: relative; height: 17px; margin-top: 2px; font-size: 11px; color: #fff; font-weight: 600; }\n  .band-you-text { position: absolute; top: 0; white-space: nowrap; }\n"
+  },
+  {
+    "id": "T7b",
+    "page": "4 · what the comps support",
+    "title": "Range caption — the markup",
+    "why": "On the fixture the subject's last sale sits at 2% of the axis and the centred \"▲ your home's last recorded sale\" pointed at nothing. The axis row now carries only low and high; the caption gets its own row anchored at `subject_x`. Adds 19px inside the range panel; page 4 has ~110px of slack under the bars on the fixture, and the 15-comp case already runs `bar_height` 14 / `bar_gap` 5.",
+    "before": "        <div class=\"band-axis\" style=\"margin-top:6px\">\n          <span>{{ doc.axis_low }}</span>\n          {% if doc.subject_x is not none %}\n          <span class=\"band-axis-mid\">▲ your home's last recorded sale · {{ doc.last_sale_label }}</span>\n          {% endif %}\n          <span>{{ doc.axis_high }}</span>\n        </div>\n",
+    "after": "        <div class=\"band-axis\" style=\"margin-top:6px\">\n          <span>{{ doc.axis_low }}</span>\n          <span>{{ doc.axis_high }}</span>\n        </div>\n        {% if doc.subject_x is not none %}\n        <div class=\"band-you\">\n          {% if doc.subject_x < 30 %}\n          <span class=\"band-you-text\" style=\"left:{{ doc.subject_x }}%\">▲ your home's last recorded sale · {{ doc.last_sale_label }}</span>\n          {% elif doc.subject_x > 70 %}\n          <span class=\"band-you-text\" style=\"right:{{ 100 - doc.subject_x }}%\">▲ your home's last recorded sale · {{ doc.last_sale_label }}</span>\n          {% else %}\n          <span class=\"band-you-text\" style=\"left:{{ doc.subject_x }}%;transform:translateX(-50%)\">▲ your home's last recorded sale · {{ doc.last_sale_label }}</span>\n          {% endif %}\n        </div>\n        {% endif %}\n"
+  },
+  {
+    "id": "T8a",
+    "page": "5 · your market",
+    "title": "Empty chart — the style",
+    "why": "The one-line note sat under the chart heading and the chart's `flex: 1` left ~400px of white below it — reads as a failed render. The note now fills the chart's area on `--strip`, centred, radius per theme, same muted type. `--muted` on `--strip` is the `.notonrecord` pairing, already in the baseline. `margin-bottom: 24px` matches the `.chart-xaxis` padding the chart would otherwise end with.",
+    "before": "  .chart-empty { margin: 0; padding: 24px 0; font-size: 12px; line-height: 1.5; color: var(--muted); }\n",
+    "after": "  /* A designed empty state: fills the chart's area rather than leaving it\n     white under a one-line note. */\n  .chart-empty { margin: 0 0 24px; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px 72px; background: var(--strip); border-radius: var(--radius); font-size: 12.5px; line-height: 1.55; color: var(--muted); text-wrap: pretty; }\n"
+  },
+  {
+    "id": "T8b",
+    "page": "5 · your market",
+    "title": "Empty chart — the copy",
+    "why": "Names the city and the window the four figures above were measured over, so the page still closes on a fact. Both values are already in context (`doc.city_name`, `market_trends.window_label`, e.g. \"Last 90 Days\").",
+    "before": "      <p class=\"chart-empty\">Not enough recorded sales to chart a monthly median for this area.</p>\n",
+    "after": "      <p class=\"chart-empty\">Not enough recorded sales in {{ doc.city_name }} to chart a monthly median. The four figures above are measured over the {{ market_trends.window_label | lower }} of closed sales.</p>\n"
+  },
+  {
+    "id": "T9a",
+    "page": "6 · next steps + footer",
+    "title": "Tap-to-call — the style",
+    "why": "Links inherit the colour of the text they sit in and carry no underline, so the anchors in T9b/T9c are pixel-identical to the spans they replace. Placed directly after the `body` block.",
+    "before": "    font-variant-numeric: lining-nums;\n  }\n\n  /* 8.5 x 11in at 96dpi.",
+    "after": "    font-variant-numeric: lining-nums;\n  }\n  /* Links carry the colour of the text they sit in and no underline: the\n     phone and email on page 6 and the footer phone are tap-to-call in the\n     PDF and must look exactly as they did as spans. */\n  a { color: inherit; text-decoration: none; }\n\n  /* 8.5 x 11in at 96dpi."
+  },
+  {
+    "id": "T9b",
+    "page": "6 · next steps",
+    "title": "Tap-to-call — agent panel",
+    "why": "A PDF opened on a phone — where the consumer copy is opened — keeps `tel:` and `mailto:` links. The `tel:` value is the display phone with spaces, parentheses, dashes and dots stripped; a leading `+` survives.",
+    "before": "        <span class=\"agentpanel-phone\">{{ agent.phone }}</span>\n        <span class=\"agentpanel-email\">{{ agent.email }}</span>\n",
+    "after": "        <a class=\"agentpanel-phone\" href=\"tel:{{ agent.phone | replace(' ', '') | replace('(', '') | replace(')', '') | replace('-', '') | replace('.', '') }}\">{{ agent.phone }}</a>\n        <a class=\"agentpanel-email\" href=\"mailto:{{ agent.email }}\">{{ agent.email }}</a>\n"
+  },
+  {
+    "id": "T9c",
+    "page": "all · footer",
+    "title": "Tap-to-call — footer phone",
+    "why": "Same link on the footer phone, every page. Colour inherits `--muted` from `.pagefoot-brand`; nothing visible changes.",
+    "before": "    <span><span class=\"pagefoot-agent\">{{ agent.name }}</span><span class=\"pagefoot-brand\"> · {{ agent.company_name }} · {{ agent.phone }}</span></span>\n",
+    "after": "    <span><span class=\"pagefoot-agent\">{{ agent.name }}</span><span class=\"pagefoot-brand\"> · {{ agent.company_name }} · <a href=\"tel:{{ agent.phone | replace(' ', '') | replace('(', '') | replace(')', '') | replace('-', '') | replace('.', '') }}\">{{ agent.phone }}</a></span></span>\n"
+  }
+]
