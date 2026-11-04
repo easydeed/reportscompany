@@ -59,13 +59,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 84 | Observed, not yet triaged |
+| `recorded` | 85 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
 | `fixed` | 210 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **356** | D-001 … D-356, contiguous, no duplicates |
+| **Total** | **357** | D-001 … D-357, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
@@ -16074,6 +16074,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** WRONG · found 2026-11-04 writing the digital report's theme test. `PublicPropertyReportResponse.accent_color` was `str`, and `property_reports.accent_color` is nullable: reports made before the wizard always stored an accent have NULL, and `GET /v1/property/public/{code}` failed validation, so the whole public page, lead form included, was an error page for them.
 **Status:** `fixed` — `design/digital-report-theme`: the field is `Optional[str]`, and such a report takes the brand's primary colour, as its PDF does (`_get_theme_color`). Test: `apps/api/tests/test_report_pages_carry_the_pdf_theme.py::test_a_report_with_no_accent_takes_the_brand` (red on main).
+
+---
+
+### D-357 — CI's dependency install can crash mid-swap: two locks, one venv, parallel uninstalls
+
+**Severity:** ROUGH · found 2026-11-04 on #266, run 41902558579. `backend-tests.yml` installs the API lock and then the worker lock into one shared `.venv`. The worker lock pins older greenlet, markupsafe, psycopg, kombu, click and certifi than the API lock, so the second `poetry install` downgrades them, and Poetry's installer runs those swaps in parallel. One job's `pip uninstall markupsafe` enumerated site-packages while another had just removed `greenlet-3.3.0.dist-info`, and pip died with `FileNotFoundError`, so the job failed before a single test ran. Intermittent: the same commit's push run, main's run on #265 and four local repetitions with the same Poetry (2.5.1) all installed cleanly. The same family as the Render build failure (pip crashing mid-swap), with a different trigger.
+**Status:** `recorded` — set `POETRY_INSTALLER_PARALLEL: "false"` on the worker install step, so the downgrades run one at a time. The lasting fix is for the two locks to agree on those versions so the second install has nothing to downgrade. Not changed in #266, which is a Design handoff.
 
 ---
 
