@@ -26,5 +26,19 @@
     "old": "    return values[len(values) // 2] if values else None",
     "new": "    return (values[(len(values) - 1) // 2] + values[len(values) // 2]) / 2 if values else None",
     "test": "tests/test_comp_summary_matches_the_pdf.py"
+  },
+  {
+      "name": "D-358 comes back: the consumer PDF takes the secondary colour first",
+      "file": "apps/worker/src/worker/consumer_report_data.py",
+      "old": "        \"accent_color\": primary_color or DEFAULT_THEME_ACCENT,",
+      "new": "        \"accent_color\": secondary_color or primary_color or DEFAULT_THEME_ACCENT,",
+      "test": "apps/worker/tests/test_consumer_report_wears_the_primary.py"
+  },
+  {
+      "name": "D-358 comes back on /r: the page takes the secondary colour first",
+      "file": "apps/api/src/api/routes/mobile_reports.py",
+      "old": "        theme_tokens = tokens_for(consumer_report_color(brand_row[0] if brand_row else None))",
+      "new": "        theme_tokens = tokens_for(consumer_report_color((brand_row[1] or brand_row[0]) if brand_row else None))",
+      "test": "apps/api/tests/test_report_pages_carry_the_pdf_theme.py"
   }
 ]

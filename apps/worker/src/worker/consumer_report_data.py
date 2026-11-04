@@ -97,7 +97,11 @@ def build_consumer_report_data(
     return {
         "report_type": "seller",
         "theme": theme_id or DEFAULT_THEME_ID,
-        "accent_color": secondary_color or primary_color or DEFAULT_THEME_ACCENT,
+        # The account's PRIMARY, as the agent's property report and /p use
+        # (decided 2026-11-04). It was secondary first, so a navy/amber
+        # account's consumer PDF and /r were amber while its /p was navy.
+        # Secondary is no fallback: /p has none either.
+        "accent_color": primary_color or DEFAULT_THEME_ACCENT,
         "property_address": prop_address,
         "property_city": prop_city,
         "property_state": prop_state,

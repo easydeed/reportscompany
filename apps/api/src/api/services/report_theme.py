@@ -59,5 +59,7 @@ def property_report_color(accent_color: Optional[str], brand_primary: Optional[s
     return accent_color or brand_primary or THEME_DEFAULT_COLORS[resolve_theme_id(theme_id)]
 
 
-def consumer_report_color(primary_color: Optional[str], secondary_color: Optional[str]) -> str:
-    return secondary_color or primary_color or CONSUMER_DEFAULT_ACCENT
+def consumer_report_color(primary_color: Optional[str]) -> str:
+    """The consumer PDF's rule (`build_consumer_report_data`): the account's
+    primary, else the default accent. Secondary plays no part, as on /p."""
+    return primary_color or CONSUMER_DEFAULT_ACCENT

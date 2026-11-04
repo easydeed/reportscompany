@@ -73,7 +73,9 @@ def client():
 def test_the_consumer_page_gets_the_consumer_pdfs_theme_and_colour(client, account):
     body = client.get(f"/v1/r/{account['cr']}/data").json()
     assert body["theme"] == account["theme"]
-    assert body["theme_tokens"] == _derive(AMBER), "the consumer PDF derives from secondary first"
+    # The account's primary, as on /p and the consumer PDF (decided 2026-11-04);
+    # the account's amber secondary plays no part.
+    assert body["theme_tokens"] == _derive(NAVY), "/r takes the account's primary"
 
 
 def test_the_property_page_gets_the_reports_accent(client, account):
