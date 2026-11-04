@@ -2821,7 +2821,7 @@ class PropertyReportBuilder:
         # THE NARRATIVE OUTLIVED THE PAGE IT WAS WRITTEN FOR.
         #
         # `overview` was a page in the retired nine-page set; it is a bounded
-        # panel on the cover now ("In short", four lines, `max-height: 81px`).
+        # panel on the cover now ("In short", five lines, line-clamped; D-349).
         # Gating generation on the PAGE being in the set left that panel empty
         # on every v2 render — the first bold render had `<p class="inshort-
         # text"></p>` and nothing failed, because an empty paragraph is valid

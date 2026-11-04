@@ -59,13 +59,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 82 | Observed, not yet triaged |
+| `recorded` | 83 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
 | `fixed` | 204 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **348** | D-001 … D-348, contiguous, no duplicates |
+| **Total** | **349** | D-001 … D-349, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
@@ -16018,6 +16018,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** FRAGILE · found 2026-11-03 when #261, a board-only PR, ran no checks but Vercel's. `tests/test_defect_list_counts.py` and `tests/test_xfail_defect_links.py` read `docs/DEFECT_LIST.md`, and `backend-tests.yml`'s path filters listed `tests/**` but not the board. A board edit with a wrong count, a missing entry or a broken xfail link merged green, checked only if someone ran the tests locally. The D-089 shape: a file that can change without triggering the job that checks it.
 **Status:** `fixed` — #261: `docs/DEFECT_LIST.md` is in both of `backend-tests.yml`'s path filters, and the CI table in `docs/architecture/SOURCE_OF_TRUTH.md` names it (`tests/test_ci_table_matches_workflows.py` holds the two in step).
+
+---
+
+### D-349 — the cover's "In short" panel shows the first five lines of a 180–250-word summary
+
+**Severity:** WRONG · found 2026-11-04 testing Design's touch T2. The panel holds five lines (`.inshort-text`, `-webkit-line-clamp: 5` since T2; four lines and `max-height: 81px` before). The text in it is `generate_overview()`'s, and that prompt still asks for the retired overview page's summary: "4-5 short paragraphs, 180-250 words total", opening with "Briefly introduce the report and the property" (`apps/worker/src/worker/ai_overview.py:32-37`, `:225`). Nothing trims it (`property_builder.py:2820-2849`). So every AI-written cover shows the introduction and stops: before T2 silently after four lines, after T2 on an ellipsis after five. Measured: a 361-character paragraph already runs six lines on harbor and linen. Design's handoff assumed "the ~380-char generation cap remains the primary bound"; no such cap exists in the code.
+**Status:** `recorded` — write a cover-sized prompt (one paragraph, about 300 characters, the range and why), and test the generated length against the panel on all three themes.
 
 ---
 
