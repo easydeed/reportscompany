@@ -59,13 +59,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 83 | Observed, not yet triaged |
+| `recorded` | 85 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
-| `fixed` | 209 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 210 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **354** | D-001 … D-354, contiguous, no duplicates |
+| **Total** | **357** | D-001 … D-357, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
@@ -16052,14 +16052,35 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-353 — /p and /r are still on the old look
 
 **Severity:** ROUGH · found 2026-11-04 rendering `/p/{code}` and `/r/{id}` on fixture data at phone and desktop. Neither page uses the property report's design (harbor, linen, atlas): `/p` ignores the report's `theme` and renders a generic card under a coloured band; `/r` is the older mobile viewer (`components/mobile-report/MobileReportViewer.tsx`) with its own palette and type. A homeowner who opens the PDF and then the link sees two different documents for one report.
-**Status:** `recorded` — for Design, as surgical edits against the live files under `docs/DESIGN_HANDOFF_RULES.md`. The request, page by page, is with the owner.
+**Status:** `recorded` — partly fixed by `design/digital-report-theme` (Design's handoff, 45 of 49 edits): both pages now wear the report's theme — its display and body faces, weight, case and corner (THEME_FACES, held to the PDF entry files by `tests/test_digital_report_faces_match_the_pdf.py`) — and the PDF's derived tokens, which the API now serves (`theme_tokens`, and `theme` on /r). Still on the old look: the /r range card, the market tab's $/sq ft label and its note panel, and the /p consent row — Design's R9, R21, R22 and F7 were cut before #265 changed those lines and were rejected (rule 1); they need recutting against current main.
 
 ---
 
 ### D-354 — /p and /r lead with the accent colour and put text on gradients
 
 **Severity:** WRONG · found 2026-11-04 rendering `/p/{code}` and `/r/{id}` on fixture data at phone and desktop. `/p` paints its header and button in the ACCENT colour (`app/p/[code]/page.tsx:218`, `:232`, `:316`), as a gradient under white text: on an account with a navy brand and an amber accent the PDF is navy and `/p` is amber, and white on amber fails contrast. `/r`'s range card is a primary-to-accent gradient under white text (`MobileReportViewer.tsx:253`). Both break two standing rules: the brand colour leads, and no text on gradients (text on brand uses the derived inks).
-**Status:** `recorded` — with D-353, for Design.
+**Status:** `recorded` — partly fixed by `design/digital-report-theme`: /p leads with the brand fill and its derived ink, no gradient (measured: 0 contrast failures in 164 text runs per theme, on navy and on lime); /r's buttons, tabs, chips and comp plates use primary_ink / on_primary. Remaining: the /r range card is still a primary-to-accent gradient under white text — Design's R9, rejected (anchor moved by #265), carries the fix.
+
+---
+
+### D-355 — CORS reads `ALLOWED_ORIGINS` literally, so a `*.vercel.app` entry matches no preview
+
+**Severity:** ROUGH · found 2026-11-04 checking production's `ALLOWED_ORIGINS`, which includes `https://reportscompany-web-*.vercel.app`. `api/main.py` passes the list to Starlette's `CORSMiddleware(allow_origins=...)`, which compares each entry as an exact string; only `allow_origin_regex` matches a pattern, and nothing sets it. Measured: a preflight from `https://reportscompany-web-git-fix-abc-easydeeds-projects.vercel.app` gets 400 and no `Access-Control-Allow-Origin`; only an origin literally spelled `…-*.vercel.app` passes. So on a Vercel preview every browser-to-API call fails CORS, including the /p lead form. Production (www and the bare domain) is unaffected.
+**Status:** `recorded` — add an `ALLOWED_ORIGIN_REGEX` setting passed as `allow_origin_regex` (e.g. `https://reportscompany-web-[a-z0-9-]+\.vercel\.app`), with a test that a preview origin passes and an unrelated one does not. Low priority.
+
+---
+
+### D-356 — /p returns 500 for a report with no stored accent colour
+
+**Severity:** WRONG · found 2026-11-04 writing the digital report's theme test. `PublicPropertyReportResponse.accent_color` was `str`, and `property_reports.accent_color` is nullable: reports made before the wizard always stored an accent have NULL, and `GET /v1/property/public/{code}` failed validation, so the whole public page, lead form included, was an error page for them.
+**Status:** `fixed` — `design/digital-report-theme`: the field is `Optional[str]`, and such a report takes the brand's primary colour, as its PDF does (`_get_theme_color`). Test: `apps/api/tests/test_report_pages_carry_the_pdf_theme.py::test_a_report_with_no_accent_takes_the_brand` (red on main).
+
+---
+
+### D-357 — CI's dependency install can crash mid-swap: two locks, one venv, parallel uninstalls
+
+**Severity:** ROUGH · found 2026-11-04 on #266, run 41902558579. `backend-tests.yml` installs the API lock and then the worker lock into one shared `.venv`. The worker lock pins older greenlet, markupsafe, psycopg, kombu, click and certifi than the API lock, so the second `poetry install` downgrades them, and Poetry's installer runs those swaps in parallel. One job's `pip uninstall markupsafe` enumerated site-packages while another had just removed `greenlet-3.3.0.dist-info`, and pip died with `FileNotFoundError`, so the job failed before a single test ran. Intermittent: the same commit's push run, main's run on #265 and four local repetitions with the same Poetry (2.5.1) all installed cleanly. The same family as the Render build failure (pip crashing mid-swap), with a different trigger.
+**Status:** `recorded` — set `POETRY_INSTALLER_PARALLEL: "false"` on the worker install step, so the downgrades run one at a time. The lasting fix is for the two locks to agree on those versions so the second install has nothing to downgrade. Not changed in #266, which is a Design handoff.
 
 ---
 

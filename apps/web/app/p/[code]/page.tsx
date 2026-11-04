@@ -1,10 +1,35 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from "next/font/google";
+import { themeName } from "@/lib/themes.generated";
 import LeadCaptureForm from "./lead-capture-form";
 
 type Props = {
   params: Promise<{ code: string }>;
 };
+
+// Theme faces, as the PDF entry files set them
+// (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).
+// Self-hosted through next/font; only the theme in use is painted.
+const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700"], display: "swap" });
+const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap" });
+const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"], display: "swap" });
+const geist = Geist({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap" });
+const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], display: "swap" });
+
+type ThemeFaces = { display: string; body: string; weight: number; tracking: string; kase: string; radius: string };
+const THEME_FACES: Record<string, ThemeFaces> = {
+  atlas: { display: `${barlowCondensed.style.fontFamily}, 'Arial Narrow', sans-serif`, body: `${barlow.style.fontFamily}, system-ui, sans-serif`, weight: 700, tracking: "0", kase: "uppercase", radius: "4px" },
+  linen: { display: `${cormorant.style.fontFamily}, Georgia, 'Times New Roman', serif`, body: `${geist.style.fontFamily}, system-ui, sans-serif`, weight: 500, tracking: "-0.01em", kase: "none", radius: "0px" },
+  harbor: { display: `${manrope.style.fontFamily}, system-ui, sans-serif`, body: `${manrope.style.fontFamily}, system-ui, sans-serif`, weight: 800, tracking: "-0.035em", kase: "none", radius: "14px" },
+};
+
+// The derive_theme tokens (apps/worker/src/worker/themes.py), read from the
+// response. Until the API carries them the page renders on the one fixed dark
+// neutral the PDF uses — readable everywhere, and visibly unbranded so nobody
+// mistakes it for done.
+type ThemeTokens = { primary: string; primary_dark: string; primary_ink: string; on_primary: string; tint: string; primary_on_dark: string; display_ink: string };
+const NEUTRAL_TOKENS: ThemeTokens = { primary: "#0f172a", primary_dark: "#0c1221", primary_ink: "#0f172a", on_primary: "#ffffff", tint: "#f1f2f4", primary_on_dark: "#ffffff", display_ink: "#ffffff" };
 
 // Types for property report data
 interface PropertyReportData {
@@ -20,6 +45,7 @@ interface PropertyReportData {
   report_type: string;
   theme: number;
   accent_color: string;
+  theme_tokens?: ThemeTokens | null;
   short_code: string;
   agent_name: string | null;
   agent_photo_url: string | null;
@@ -216,6 +242,23 @@ export default async function PropertyLandingPage({ params }: Props) {
   
   const fullAddress = `${data.property_address}, ${data.property_city}, ${data.property_state} ${data.property_zip}`;
   const accentColor = data.accent_color || "#2563eb";
+  const tokens: ThemeTokens = data.theme_tokens ?? NEUTRAL_TOKENS;
+  const faces: ThemeFaces = THEME_FACES[themeName(data.theme)];
+  const onPrimaryRule = tokens.on_primary.toLowerCase() === "#ffffff" ? "rgba(255,255,255,0.3)" : "rgba(20,21,26,0.25)";
+  const themeVars = {
+    "--primary": tokens.primary,
+    "--primary-ink": tokens.primary_ink,
+    "--on-primary": tokens.on_primary,
+    "--tint": tokens.tint,
+    "--display-ink": tokens.display_ink,
+    "--on-primary-rule": onPrimaryRule,
+    "--display": faces.display,
+    "--body-face": faces.body,
+    "--display-weight": faces.weight,
+    "--display-tracking": faces.tracking,
+    "--display-case": faces.kase,
+    "--radius": faces.radius,
+  } as React.CSSProperties;
   
   // Format numbers for display
   const formatNumber = (num: number | null) => {
@@ -224,157 +267,110 @@ export default async function PropertyLandingPage({ params }: Props) {
   };
   
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Hero Section */}
-      <div 
-        className="relative h-64 md:h-80"
-        style={{
-          background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 50%, ${accentColor}aa 100%)`,
-        }}
+    <div className="min-h-screen" style={{ ...themeVars, background: "#F6F6F3", fontFamily: "var(--body-face)", color: "#14161A", fontVariantNumeric: "lining-nums" }}>
+      {/* Masthead — the PDF cover band: brand fill, on_primary text, no gradient */}
+      <div
+        className="relative"
+        style={{ background: "var(--primary)", color: "var(--on-primary)" }}
       >
-        {/* Company Logo */}
-        {data.company_logo_url && (
-          <div className="absolute top-4 left-4 md:top-6 md:left-6">
-            <img 
-              src={data.company_logo_url} 
-              alt={data.company_name || "Company"} 
-              className="h-10 md:h-12 w-auto object-contain filter brightness-0 invert"
-            />
+        <div className="max-w-[880px] mx-auto px-5 pt-6 pb-[22px] md:px-10 md:pt-9 md:pb-8 flex flex-col gap-[22px]">
+          <div className="flex items-center justify-between gap-3">
+            <span style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Property report</span>
+            {data.company_logo_url ? (
+              <img
+                src={data.company_logo_url}
+                alt={data.company_name || "Company"}
+                className="h-10 max-w-[200px] w-auto object-contain"
+              />
+            ) : (
+              data.company_name && <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.01em" }}>{data.company_name}</span>
+            )}
           </div>
-        )}
-        
-        {/* Property Address */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white px-4">
-          <h1 className="text-2xl md:text-4xl font-bold text-center mb-2 drop-shadow-lg">
-            {data.property_address}
-          </h1>
-          <p className="text-lg md:text-xl opacity-90 drop-shadow">
-            {data.property_city}, {data.property_state} {data.property_zip}
-          </p>
+          <div className="flex flex-col gap-1">
+            <h1 className="m-0 text-[36px] md:text-[56px]" style={{ fontFamily: "var(--display)", fontWeight: "var(--display-weight)", lineHeight: 1.1, letterSpacing: "var(--display-tracking)", textTransform: "var(--display-case)", color: "var(--display-ink)", textWrap: "balance" } as unknown as React.CSSProperties}>
+              {data.property_address}
+            </h1>
+            <p className="m-0" style={{ fontSize: 16, fontWeight: 500 }}>
+              {data.property_city}, {data.property_state} {data.property_zip}
+            </p>
+          </div>
+          <div className="grid grid-cols-4 gap-2 pt-3.5" style={{ borderTop: "1px solid var(--on-primary-rule)" }}>
+            {([["Beds", data.bedrooms], ["Baths", data.bathrooms], ["Sq ft", formatNumber(data.sqft)], ["Year built", data.year_built]] as [string, string | number | null][]).map(([label, value]) => (
+              <div key={label} className="flex flex-col gap-[3px]">
+                <span style={{ fontFamily: "var(--display)", fontWeight: "var(--display-weight)", fontSize: 26, lineHeight: 1, letterSpacing: "var(--display-tracking)", color: "var(--display-ink)" } as React.CSSProperties}>{value ?? "—"}</span>
+                <span style={{ fontSize: 11, fontWeight: 500 }}>{label}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        
-        {/* Decorative pattern overlay */}
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
       </div>
       
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 -mt-12 relative z-10 pb-12">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          
-          {/* Property Details */}
-          {(data.bedrooms || data.bathrooms || data.sqft || data.year_built) && (
-            <div className="border-b border-slate-100 p-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                {data.bedrooms && (
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{data.bedrooms}</p>
-                    <p className="text-sm text-slate-500">Bedrooms</p>
-                  </div>
-                )}
-                {data.bathrooms && (
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{data.bathrooms}</p>
-                    <p className="text-sm text-slate-500">Bathrooms</p>
-                  </div>
-                )}
-                {data.sqft && (
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{formatNumber(data.sqft)}</p>
-                    <p className="text-sm text-slate-500">Sq Ft</p>
-                  </div>
-                )}
-                {data.year_built && (
-                  <div>
-                    <p className="text-2xl font-bold text-slate-900">{data.year_built}</p>
-                    <p className="text-sm text-slate-500">Year Built</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Agent Info + Lead Form Grid */}
+      {/* Body — the white sheet under the band; form first on a phone */}
+      <div className="max-w-[880px] mx-auto bg-white">
+        <div>
           <div className="grid md:grid-cols-2 gap-0">
             
-            {/* Agent Info */}
-            <div className="p-6 md:p-8 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100">
-              <div className="flex items-start gap-4">
-                {data.agent_photo_url ? (
-                  <img 
-                    src={data.agent_photo_url} 
-                    alt={data.agent_name || "Agent"} 
-                    className="w-20 h-20 rounded-full object-cover shadow-md"
-                  />
-                ) : (
-                  <div 
-                    className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md"
-                    style={{ backgroundColor: accentColor }}
-                  >
-                    {data.agent_name ? data.agent_name.charAt(0).toUpperCase() : "A"}
+            {/* Agent panel — the PDF's page-6 panel: brand fill, on_primary text, white phone pill in primary_ink */}
+            <div className="order-2 md:order-1 p-5 md:p-10 flex flex-col gap-4" style={{ background: "#F6F6F3" }}>
+              <div className="flex flex-col gap-4 p-5" style={{ background: "var(--primary)", color: "var(--on-primary)", borderRadius: "var(--radius)" }}>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full flex-none overflow-hidden flex items-center justify-center bg-white" style={{ color: "var(--primary-ink)", fontFamily: "var(--display)", fontWeight: "var(--display-weight)", fontSize: 24 } as React.CSSProperties}>
+                    {data.agent_photo_url ? (
+                      <img src={data.agent_photo_url} alt={data.agent_name || "Agent"} className="w-full h-full object-cover" />
+                    ) : (
+                      data.agent_name ? data.agent_name.charAt(0).toUpperCase() : "A"
+                    )}
                   </div>
-                )}
-                <div className="flex-1">
-                  {data.agent_name && (
-                    <h2 className="text-xl font-semibold text-slate-900">{data.agent_name}</h2>
-                  )}
-                  {data.company_name && (
-                    <p className="text-slate-600">{data.company_name}</p>
-                  )}
-                  
-                  <div className="mt-3 space-y-1">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    {data.agent_name && (
+                      <h2 className="m-0" style={{ fontFamily: "var(--display)", fontWeight: "var(--display-weight)", fontSize: 24, lineHeight: 1, letterSpacing: "var(--display-tracking)" } as React.CSSProperties}>{data.agent_name}</h2>
+                    )}
+                    {data.company_name && (
+                      <p className="m-0" style={{ fontSize: 13 }}>{data.company_name}</p>
+                    )}
+                  </div>
+                </div>
+                {(data.agent_phone || data.agent_email) && (
+                  <div className="flex flex-col gap-2 text-center">
                     {data.agent_phone && (
-                      <a 
-                        href={`tel:${data.agent_phone}`}
-                        className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
+                      <a
+                        href={`tel:${data.agent_phone.replace(/[\s().-]/g, "")}`}
+                        className="block bg-white"
+                        style={{ color: "var(--primary-ink)", fontSize: 15, fontWeight: 700, padding: "13px 18px", borderRadius: "var(--radius)", textDecoration: "none" }}
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
                         {data.agent_phone}
                       </a>
                     )}
                     {data.agent_email && (
-                      <a 
-                        href={`mailto:${data.agent_email}`}
-                        className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                      <a href={`mailto:${data.agent_email}`} style={{ color: "inherit", fontSize: 13, textDecoration: "none" }}>
                         {data.agent_email}
                       </a>
                     )}
                   </div>
-                </div>
+                )}
               </div>
-              
               {data.website_url && (
-                <a 
+                <a
                   href={data.website_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-4 inline-flex items-center gap-1 text-sm hover:underline"
-                  style={{ color: accentColor }}
+                  className="text-sm hover:underline"
+                  style={{ color: "var(--primary-ink)" }}
                 >
-                  Visit Website
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  Visit website
                 </a>
               )}
             </div>
             
-            {/* Lead Capture Form */}
-            <div className="p-6 md:p-8">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            {/* Lead form — first on a phone */}
+            <div className="order-1 md:order-2 p-5 md:p-10 bg-white">
+              <span className="block mb-2" style={{ fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--primary-ink)", fontWeight: 600 }}>
+                About this home
+              </span>
+              <h3 className="m-0 mb-2" style={{ fontFamily: "var(--display)", fontWeight: "var(--display-weight)", fontSize: 30, lineHeight: 1, letterSpacing: "var(--display-tracking)", textTransform: "var(--display-case)" } as unknown as React.CSSProperties}>
                 Interested in this property?
               </h3>
-              <p className="text-slate-600 text-sm mb-6">
+              <p className="text-sm mb-6" style={{ color: "#5E636B" }}>
                 Fill out the form below and {data.agent_name || "the agent"} will get back to you shortly.
               </p>
               
@@ -388,9 +384,14 @@ export default async function PropertyLandingPage({ params }: Props) {
           </div>
         </div>
         
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-slate-500">
-          <p>Powered by <span className="font-medium">TrendyReports</span></p>
+        {/* Footer — the PDF's page foot */}
+        <div className="mx-5 md:mx-10 pt-3.5 pb-6 flex flex-wrap justify-between items-center gap-3" style={{ borderTop: "1px solid #E4E4E0", fontSize: 11.5, color: "#5E636B" }}>
+          <span>
+            {data.agent_name && <span style={{ fontWeight: 700, color: "#14161A" }}>{data.agent_name}</span>}
+            {data.company_name && ` · ${data.company_name}`}
+            {data.agent_phone && ` · ${data.agent_phone}`}
+          </span>
+          <span>Powered by TrendyReports</span>
         </div>
       </div>
     </div>

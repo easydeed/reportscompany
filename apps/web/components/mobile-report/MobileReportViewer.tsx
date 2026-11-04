@@ -9,6 +9,31 @@ import {
   Bed, Bath, Square, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from 'next/font/google';
+import { themeName } from '@/lib/themes.generated';
+
+// Theme faces, as the PDF entry files set them
+// (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).
+// Self-hosted through next/font; only the theme in use is painted.
+const barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: ['600', '700'], display: 'swap' });
+const barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], display: 'swap' });
+const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['500', '600'], display: 'swap' });
+const geist = Geist({ subsets: ['latin'], weight: ['400', '500', '600', '700'], display: 'swap' });
+const manrope = Manrope({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], display: 'swap' });
+
+type ThemeFaces = { display: string; body: string; weight: number; tracking: string; kase: string; radius: string };
+const THEME_FACES: Record<string, ThemeFaces> = {
+  atlas: { display: `${barlowCondensed.style.fontFamily}, "Arial Narrow", sans-serif`, body: `${barlow.style.fontFamily}, system-ui, sans-serif`, weight: 700, tracking: '0', kase: 'uppercase', radius: '4px' },
+  linen: { display: `${cormorant.style.fontFamily}, Georgia, "Times New Roman", serif`, body: `${geist.style.fontFamily}, system-ui, sans-serif`, weight: 500, tracking: '-0.01em', kase: 'none', radius: '0px' },
+  harbor: { display: `${manrope.style.fontFamily}, system-ui, sans-serif`, body: `${manrope.style.fontFamily}, system-ui, sans-serif`, weight: 800, tracking: '-0.035em', kase: 'none', radius: '14px' },
+};
+
+// The derive_theme tokens (apps/worker/src/worker/themes.py), read from the
+// response. Until the API carries them the page renders on the one fixed dark
+// neutral the PDF uses — readable everywhere, and visibly unbranded so nobody
+// mistakes it for done.
+type ThemeTokens = { primary: string; primary_dark: string; primary_ink: string; on_primary: string; tint: string; primary_on_dark: string; display_ink: string };
+const NEUTRAL_TOKENS: ThemeTokens = { primary: '#0f172a', primary_dark: '#0c1221', primary_ink: '#0f172a', on_primary: '#ffffff', tint: '#f1f2f4', primary_on_dark: '#ffffff', display_ink: '#ffffff' };
 import { NO_RANGE, RANGE_HEADING, compsSentence, homesSoldLabel, rangeBasis, type CompsRange, type ConsumerMarketStats } from "@/lib/consumer-report";
 
 interface ReportData {
@@ -54,6 +79,8 @@ interface ReportData {
     accent_color: string;
     logo_url?: string;
   };
+  theme?: number | null;
+  theme_tokens?: ThemeTokens | null;
   has_pdf: boolean;
 }
 
@@ -150,16 +177,33 @@ export function MobileReportViewer({ report, reportId }: Props) {
 
   const formatPrice = (n: number) => `$${n.toLocaleString()}`;
 
+  const tokens: ThemeTokens = report.theme_tokens ?? NEUTRAL_TOKENS;
+  const faces: ThemeFaces = THEME_FACES[themeName(report.theme)];
+  const themeVars = {
+    '--primary': tokens.primary,
+    '--primary-ink': tokens.primary_ink,
+    '--on-primary': tokens.on_primary,
+    '--tint': tokens.tint,
+    '--primary-on-dark': tokens.primary_on_dark,
+    '--display': faces.display,
+    '--body-face': faces.body,
+    '--display-weight': faces.weight,
+    '--display-tracking': faces.tracking,
+    '--display-case': faces.kase,
+    '--radius': faces.radius,
+  } as React.CSSProperties;
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ ...themeVars, background: '#F6F6F3', fontFamily: 'var(--body-face)', color: '#14161A', fontVariantNumeric: 'lining-nums' }}>
       {/* Header */}
-      <header className="bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex-1 min-w-0">
-          <h1 className="font-semibold text-gray-900 truncate">
+      <header className="bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-50" style={{ borderBottom: '1px solid #ECECE8' }}>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <span style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>Home value report</span>
+          <h1 className="truncate m-0" style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 22, lineHeight: 1.05, letterSpacing: 'var(--display-tracking)', textTransform: 'var(--display-case)' } as unknown as React.CSSProperties}>
             {report.property.address}
           </h1>
-          <p className="text-sm text-gray-500">
-            {report.property.city}, {report.property.state}
+          <p className="m-0" style={{ fontSize: 12.5, color: '#5E636B' }}>
+            {report.property.city}, {report.property.state} {report.property.zip}
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleShare}>
@@ -168,7 +212,7 @@ export function MobileReportViewer({ report, reportId }: Props) {
       </header>
 
       {/* Tab Content */}
-      <main className="flex-1 overflow-y-auto pb-20">
+      <main className="flex-1 overflow-y-auto pb-20 w-full max-w-[560px] mx-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -207,7 +251,7 @@ export function MobileReportViewer({ report, reportId }: Props) {
       </main>
 
       {/* Tab Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t px-2 py-2 flex justify-around z-50">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[560px] bg-white flex justify-around z-50" style={{ borderTop: '1px solid #ECECE8' }}>
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -215,15 +259,11 @@ export function MobileReportViewer({ report, reportId }: Props) {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center px-3 py-1 rounded-lg transition-colors ${
-                isActive 
-                  ? '' 
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-              style={isActive ? { color: report.branding?.primary_color || '#6366f1', backgroundColor: `${report.branding?.primary_color || '#6366f1'}15` } : {}}
+              className="flex flex-col items-center gap-[3px] px-2.5 pt-2.5 pb-2 min-w-[56px] -mt-px transition-colors"
+              style={{ color: isActive ? 'var(--primary-ink)' : '#5E636B', fontWeight: isActive ? 600 : 500, borderTop: `2px solid ${isActive ? 'var(--primary)' : 'transparent'}` }}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-xs mt-0.5">{tab.label}</span>
+              <span style={{ fontSize: 11.5 }}>{tab.label}</span>
             </button>
           );
         })}
@@ -261,26 +301,23 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
         <StatCard 
           icon={<Bed className="w-5 h-5" />}
           label="Beds"
-          value={report.property.bedrooms || '--'}
+          value={report.property.bedrooms || '—'}
         />
         <StatCard 
           icon={<Bath className="w-5 h-5" />}
           label="Baths"
-          value={report.property.bathrooms || '--'}
+          value={report.property.bathrooms || '—'}
         />
         <StatCard 
           icon={<Square className="w-5 h-5" />}
           label="Sqft"
-          value={report.property.sqft?.toLocaleString() || '--'}
+          value={report.property.sqft?.toLocaleString() || '—'}
         />
       </div>
 
       {/* Address Card */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="bg-white p-4 rounded-[var(--radius)] border border-[#ECECE8]">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-            <MapPin className="w-5 h-5 text-indigo-600" />
-          </div>
           <div>
             <p className="font-semibold text-gray-900">{report.property.address}</p>
             <p className="text-gray-600">
@@ -291,7 +328,7 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
       </div>
 
       {/* Agent Preview */}
-      <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="bg-white p-4 rounded-[var(--radius)] border border-[#ECECE8]">
         <div className="flex items-center gap-3">
           {report.agent.photo_url ? (
             <img 
@@ -300,8 +337,8 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
               className="w-12 h-12 rounded-full object-cover"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-              <User className="w-6 h-6 text-gray-500" />
+            <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'var(--tint)', color: 'var(--primary-ink)' }}>
+              <User className="w-6 h-6" />
             </div>
           )}
           <div className="flex-1">
@@ -310,10 +347,11 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
           </div>
           {report.agent.phone && (
             <a 
-              href={`tel:${report.agent.phone}`}
-              className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center"
+              href={`tel:${report.agent.phone.replace(/[\s().-]/g, '')}`}
+              className="w-11 h-11 rounded-full flex items-center justify-center"
+              style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}
             >
-              <Phone className="w-5 h-5 text-indigo-600" />
+              <Phone className="w-5 h-5" />
             </a>
           )}
         </div>
@@ -329,18 +367,18 @@ function DetailsTab({ report }: { report: ReportData }) {
     { label: 'City', value: report.property.city },
     { label: 'State', value: report.property.state },
     { label: 'ZIP', value: report.property.zip },
-    { label: 'Bedrooms', value: report.property.bedrooms || '--' },
-    { label: 'Bathrooms', value: report.property.bathrooms || '--' },
-    { label: 'Square Feet', value: report.property.sqft?.toLocaleString() || '--' },
-    { label: 'Lot Size', value: report.property.lot_size ? `${report.property.lot_size.toLocaleString()} sqft` : '--' },
-    { label: 'Year Built', value: report.property.year_built || '--' },
+    { label: 'Bedrooms', value: report.property.bedrooms || '—' },
+    { label: 'Bathrooms', value: report.property.bathrooms || '—' },
+    { label: 'Square Feet', value: report.property.sqft?.toLocaleString() || '—' },
+    { label: 'Lot Size', value: report.property.lot_size ? `${report.property.lot_size.toLocaleString()} sqft` : '—' },
+    { label: 'Year Built', value: report.property.year_built || '—' },
   ];
 
   return (
     <div className="p-4">
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 py-3 bg-gray-50 border-b">
-          <h2 className="font-semibold text-gray-900">Property Details</h2>
+      <div className="bg-white overflow-hidden rounded-[var(--radius)] border border-[#ECECE8]">
+        <div className="px-4 py-3" style={{ background: '#F6F6F3', borderBottom: '1px solid #ECECE8' }}>
+          <h2 className="m-0" style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-ink)', fontWeight: 600 }}>Property details</h2>
         </div>
         <div className="divide-y">
           {details.map((item, i) => (
@@ -405,10 +443,10 @@ function CompsTab({
         key={compIndex}
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="bg-white rounded-2xl shadow-sm overflow-hidden"
+        className="bg-white overflow-hidden rounded-[var(--radius)] border border-[#ECECE8]"
       >
         {/* Photo */}
-        <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300 relative">
+        <div className="h-48 relative" style={{ background: 'var(--tint)' }}>
           {comp.photo_url ? (
             <img 
               src={comp.photo_url} 
@@ -416,11 +454,16 @@ function CompsTab({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Home className="w-12 h-12 text-gray-400" />
+            <div className="absolute inset-0 flex flex-col justify-end p-3">
+              <span style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 28, lineHeight: 1, color: 'var(--primary-ink)' } as React.CSSProperties}>
+                {comp.distance_miles > 0 ? `${comp.distance_miles.toFixed(1)} mi` : comp.city}
+              </span>
+              <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4, color: '#5E636B' }}>
+                {comp.distance_miles > 0 ? 'From your home · no photo on file' : 'No photo on file'}
+              </span>
             </div>
           )}
-          <div className="absolute top-3 right-3 px-2 py-1 bg-black/70 rounded text-white text-sm font-medium">
+          <div className="absolute top-2.5 left-2.5 px-2 py-1 bg-white rounded text-sm font-bold" style={{ color: '#14161A' }}>
             {formatPrice(comp.sold_price)}
           </div>
         </div>
@@ -457,7 +500,7 @@ function CompsTab({
           </div>
 
           <div className="mt-3 pt-3 border-t">
-            <p className="text-center font-semibold" style={{ color: report.branding?.primary_color || '#6366f1' }}>
+            <p className="text-center font-semibold" style={{ color: 'var(--primary-ink)' }}>
               {comp.price_per_sqft > 0 ? `$${comp.price_per_sqft}/sqft` : '—'}
             </p>
           </div>
@@ -470,9 +513,8 @@ function CompsTab({
           <button
             key={i}
             onClick={() => setCompIndex(i)}
-            className={`w-2 h-2 rounded-full transition-colors ${
-              i === compIndex ? 'bg-indigo-600' : 'bg-gray-300'
-            }`}
+            className="w-2 h-2 rounded-full transition-colors"
+            style={{ background: i === compIndex ? 'var(--primary)' : '#D9DADF' }}
           />
         ))}
       </div>
@@ -486,25 +528,25 @@ function MarketTab({ report, formatPrice }: { report: ReportData; formatPrice: (
 
   return (
     <div className="p-4 space-y-4">
-      <div className="bg-white rounded-xl p-4 shadow-sm">
+      <div className="bg-white p-4 rounded-[var(--radius)] border border-[#ECECE8]">
         <h2 className="font-semibold text-gray-900 mb-4">Market Statistics</h2>
         
         <div className="space-y-4">
           <MarketStatRow 
             label="Median Sale Price"
-            value={stats.median_price ? formatPrice(stats.median_price) : '--'}
+            value={stats.median_price ? formatPrice(stats.median_price) : '—'}
           />
           <MarketStatRow 
             label="Median Price per Sqft"
-            value={stats.median_price_per_sqft ? `$${stats.median_price_per_sqft}` : '--'}
+            value={stats.median_price_per_sqft ? `$${stats.median_price_per_sqft}` : '—'}
           />
           <MarketStatRow 
             label="Avg. Days on Market"
-            value={stats.avg_days_on_market ? `${stats.avg_days_on_market} days` : '--'}
+            value={stats.avg_days_on_market ? `${stats.avg_days_on_market} days` : '—'}
           />
           <MarketStatRow 
             label={homesSoldLabel(stats)}
-            value={stats.homes_sold ? stats.homes_sold.toString() : '--'}
+            value={stats.homes_sold ? stats.homes_sold.toString() : '—'}
           />
         </div>
       </div>
@@ -533,16 +575,16 @@ function AgentTab({
   return (
     <div className="p-4 space-y-4">
       {/* Agent Card */}
-      <div className="bg-white rounded-xl p-6 shadow-sm text-center">
+      <div className="bg-white p-6 text-center rounded-[var(--radius)] border border-[#ECECE8]">
         {report.agent.photo_url ? (
           <img 
             src={report.agent.photo_url} 
             alt={report.agent.name}
-            className="w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-violet-100"
+            className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
           />
         ) : (
-          <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-indigo-100 flex items-center justify-center">
-            <User className="w-12 h-12 text-violet-400" />
+          <div className="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: 'var(--tint)', color: 'var(--primary-ink)' }}>
+            <User className="w-12 h-12" />
           </div>
         )}
         
@@ -559,10 +601,10 @@ function AgentTab({
       <div className="space-y-3">
         {report.agent.phone && (
           <a
-            href={`tel:${report.agent.phone}`}
+            href={`tel:${report.agent.phone.replace(/[\s().-]/g, '')}`}
             onClick={() => onContactClick('call')}
-            className="flex items-center justify-center gap-3 w-full py-4 text-white rounded-xl font-semibold transition"
-            style={{ backgroundColor: report.branding?.primary_color || '#6366f1' }}
+            className="flex items-center justify-center gap-3 w-full py-4 font-semibold transition"
+            style={{ backgroundColor: 'var(--primary)', color: 'var(--on-primary)', borderRadius: 'var(--radius)' }}
           >
             <Phone className="w-5 h-5" />
             Call {report.agent.name.split(' ')[0]}
@@ -571,10 +613,10 @@ function AgentTab({
         
         {report.agent.phone && (
           <a
-            href={`sms:${report.agent.phone}`}
+            href={`sms:${report.agent.phone.replace(/[\s().-]/g, '')}`}
             onClick={() => onContactClick('text')}
-            className="flex items-center justify-center gap-3 w-full py-4 bg-white border-2 rounded-xl font-semibold transition"
-            style={{ borderColor: report.branding?.primary_color || '#6366f1', color: report.branding?.primary_color || '#6366f1' }}
+            className="flex items-center justify-center gap-3 w-full py-4 bg-white border-2 font-semibold transition"
+            style={{ borderColor: 'var(--primary-ink)', color: 'var(--primary-ink)', borderRadius: 'var(--radius)' }}
           >
             <MessageSquare className="w-5 h-5" />
             Send Text
@@ -585,7 +627,7 @@ function AgentTab({
           <a
             href={`mailto:${report.agent.email}`}
             onClick={() => onContactClick('email')}
-            className="flex items-center justify-center gap-3 w-full py-4 bg-white border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition"
+            className="flex items-center justify-center gap-3 w-full py-4 bg-white border border-gray-300 text-gray-700 rounded-[var(--radius)] font-medium hover:bg-gray-50 transition"
           >
             <Mail className="w-5 h-5" />
             Send Email
@@ -619,10 +661,9 @@ function AgentTab({
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
-    <div className="bg-white rounded-xl p-3 shadow-sm text-center">
-      <div className="text-indigo-600 mb-1 flex justify-center">{icon}</div>
-      <p className="text-lg font-semibold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-500">{label}</p>
+    <div className="bg-white p-3.5 flex flex-col gap-1 rounded-[var(--radius)] border border-[#ECECE8]">
+      <p className="m-0" style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 24, lineHeight: 1, letterSpacing: 'var(--display-tracking)' } as React.CSSProperties}>{value}</p>
+      <p className="m-0" style={{ fontSize: 11.5, color: '#5E636B' }}>{label}</p>
     </div>
   );
 }

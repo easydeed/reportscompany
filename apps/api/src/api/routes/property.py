@@ -57,6 +57,8 @@ from ..services.simplyrets import (
 from ..worker_client import enqueue_property_report
 from ..services.qr_service import generate_qr_code
 from ..services.property_stats import get_agent_stats, get_affiliate_stats
+from ..services.brand_resolver import resolve_brand
+from ..services.report_theme import property_report_color, tokens_for
 
 logger = logging.getLogger(__name__)
 
@@ -1881,7 +1883,12 @@ class PublicPropertyReportResponse(BaseModel):
     # Report metadata
     report_type: str
     theme: int
-    accent_color: str
+    # NULL on reports made before the wizard always stored one: optional, or the
+    # whole public page 500s for them (found 2026-11-04 with the theme tokens).
+    accent_color: Optional[str] = None
+    # The PDF's derived tokens for this report's colour (services/report_theme.py).
+    # None only when no colour resolves; the page then renders on its neutral.
+    theme_tokens: Optional[dict] = None
     short_code: str
     
     # Agent/branding info
@@ -2056,6 +2063,13 @@ def get_public_property_report(short_code: str):
             
             website_url = branding_row[5]
         
+        # The colour the PDF used: the report's accent, else the brand's
+        # primary, else the theme's default (_get_theme_color).
+        brand_primary = None
+        if not accent_color and account_id:
+            brand_primary = (resolve_brand(cur, str(account_id)) or {}).get("primary_color")
+        theme_tokens = tokens_for(property_report_color(accent_color, brand_primary, theme))
+
         conn.commit()
     
     return PublicPropertyReportResponse(
@@ -2071,6 +2085,7 @@ def get_public_property_report(short_code: str):
         report_type=report_type,
         theme=theme,
         accent_color=accent_color,
+        theme_tokens=theme_tokens,
         short_code=short_code_val,
         agent_name=agent_name,
         agent_photo_url=agent_photo_url,

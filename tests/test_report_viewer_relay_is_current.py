@@ -56,20 +56,24 @@ def test_the_hue_tally_is_the_one_the_relay_quotes(src, doc):
     assert derived == stated, (
         f"the relay states {stated}; MobileReportViewer.tsx has {derived}"
     )
-    assert sum(derived.values()) == 14, (
-        f"the relay's question is about fourteen hard-coded sites; there are "
+    # Fourteen when the relay was written; five since Design's 2026-11-04
+    # handoff, all at the two edits (R9, R22) rejected for moved anchors.
+    assert sum(derived.values()) == 5, (
+        f"the relay's answer says five hard-coded sites remain; there are "
         f"now {sum(derived.values())}"
     )
 
 
 def test_the_file_is_still_half_brand_driven(src, doc):
     lines = [i for i, l in enumerate(src.splitlines(), 1) if BRAND.search(l)]
-    assert len(lines) == 5, (
-        f"the relay says five lines read the agent's brand; now {len(lines)}: "
+    # Five when the relay was written; one since the handoff moved every
+    # other brand read onto the derived tokens (theme_tokens).
+    assert len(lines) == 1, (
+        f"the relay's answer says one line reads the agent's brand directly; now {len(lines)}: "
         f"{lines}. If the file became fully brand-driven the question is moot; "
         f"if it became fully hard-coded it is sharper. Either way, re-read it."
     )
-    assert "**Five lines take the agent's brand**" in doc
+    assert "**One line still takes the agent's brand directly**" in doc
 
 
 def test_the_collision_the_relay_names_is_still_there(src):

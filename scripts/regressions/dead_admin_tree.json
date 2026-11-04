@@ -30,15 +30,15 @@
   {
     "name": "R5 the report-viewer relay quotes a hue tally the source no longer has",
     "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
-    "old": "<MapPin className=\"w-5 h-5 text-indigo-600\" />",
-    "new": "<MapPin className=\"w-5 h-5 text-slate-600\" />",
+    "old": "        <p className=\"text-sm text-violet-800\">",
+    "new": "        <p className=\"text-sm text-slate-800\">",
     "test": "tests/test_report_viewer_relay_is_current.py"
   },
   {
     "name": "R6 the viewer becomes fully hard-coded, so the relay's half-and-half premise is stale",
     "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
-    "old": "            <p className=\"text-center font-semibold\" style={{ color: report.branding?.primary_color || '#6366f1' }}>",
-    "new": "            <p className=\"text-center font-semibold\">",
+    "old": "style={{ background: `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%, ${report.branding?.accent_color || '#8b5cf6'} 100%)`",
+    "new": "style={{ background: `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`",
     "test": "tests/test_report_viewer_relay_is_current.py"
   },
   {
