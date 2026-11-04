@@ -146,12 +146,12 @@ export default function LeadCaptureForm({
       <div className="text-center py-8">
         <div 
           className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-          style={{ backgroundColor: `${accentColor}20` }}
+          style={{ backgroundColor: "var(--tint)" }}
         >
           <svg 
             className="w-8 h-8" 
             fill="none" 
-            stroke={accentColor} 
+            stroke="var(--primary-ink)" 
             viewBox="0 0 24 24"
           >
             <path 
@@ -221,9 +221,10 @@ export default function LeadCaptureForm({
       <div>
         <label 
           htmlFor="name" 
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-[13px] font-semibold mb-1.5"
+          style={{ color: "#2A2D33" }}
         >
-          Name <span className="text-red-500">*</span>
+          Name <span style={{ color: "var(--primary-ink)" }}>*</span>
         </label>
         <input
           type="text"
@@ -234,9 +235,12 @@ export default function LeadCaptureForm({
           required
           autoComplete="name"
           placeholder="Your name"
-          className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all"
+          className="w-full px-4 py-3 border outline-none transition-all focus:ring-2 focus:border-transparent"
           style={{ 
-            "--tw-ring-color": accentColor,
+            "--tw-ring-color": "var(--primary-ink)",
+            borderColor: "#D9DADF",
+            borderRadius: "var(--radius)",
+            fontSize: 15,
           } as React.CSSProperties}
           disabled={status === "submitting"}
         />
@@ -246,9 +250,10 @@ export default function LeadCaptureForm({
       <div>
         <label 
           htmlFor="email" 
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-[13px] font-semibold mb-1.5"
+          style={{ color: "#2A2D33" }}
         >
-          Email <span className="text-red-500">*</span>
+          Email <span style={{ color: "var(--primary-ink)" }}>*</span>
         </label>
         <input
           type="email"
@@ -259,9 +264,12 @@ export default function LeadCaptureForm({
           required
           autoComplete="email"
           placeholder="you@example.com"
-          className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all"
+          className="w-full px-4 py-3 border outline-none transition-all focus:ring-2 focus:border-transparent"
           style={{ 
-            "--tw-ring-color": accentColor,
+            "--tw-ring-color": "var(--primary-ink)",
+            borderColor: "#D9DADF",
+            borderRadius: "var(--radius)",
+            fontSize: 15,
           } as React.CSSProperties}
           disabled={status === "submitting"}
         />
@@ -271,9 +279,10 @@ export default function LeadCaptureForm({
       <div>
         <label 
           htmlFor="phone" 
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-[13px] font-semibold mb-1.5"
+          style={{ color: "#2A2D33" }}
         >
-          Phone <span className="text-slate-400">(optional)</span>
+          Phone <span className="font-normal" style={{ color: "#5E636B" }}>(optional)</span>
         </label>
         <input
           type="tel"
@@ -283,9 +292,12 @@ export default function LeadCaptureForm({
           onChange={handleChange}
           autoComplete="tel"
           placeholder="(555) 123-4567"
-          className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all"
+          className="w-full px-4 py-3 border outline-none transition-all focus:ring-2 focus:border-transparent"
           style={{ 
-            "--tw-ring-color": accentColor,
+            "--tw-ring-color": "var(--primary-ink)",
+            borderColor: "#D9DADF",
+            borderRadius: "var(--radius)",
+            fontSize: 15,
           } as React.CSSProperties}
           disabled={status === "submitting"}
         />
@@ -295,9 +307,10 @@ export default function LeadCaptureForm({
       <div>
         <label 
           htmlFor="message" 
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-[13px] font-semibold mb-1.5"
+          style={{ color: "#2A2D33" }}
         >
-          Message <span className="text-slate-400">(optional)</span>
+          Message <span className="font-normal" style={{ color: "#5E636B" }}>(optional)</span>
         </label>
         <textarea
           id="message"
@@ -306,9 +319,12 @@ export default function LeadCaptureForm({
           onChange={handleChange}
           placeholder="I'd like to learn more about this property..."
           rows={3}
-          className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all resize-none"
+          className="w-full px-4 py-3 border outline-none transition-all focus:ring-2 focus:border-transparent resize-none"
           style={{ 
-            "--tw-ring-color": accentColor,
+            "--tw-ring-color": "var(--primary-ink)",
+            borderColor: "#D9DADF",
+            borderRadius: "var(--radius)",
+            fontSize: 15,
           } as React.CSSProperties}
           disabled={status === "submitting"}
         />
@@ -346,8 +362,8 @@ export default function LeadCaptureForm({
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="w-full py-3 px-4 text-white font-medium rounded-lg transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
-        style={{ backgroundColor: accentColor }}
+        className="w-full py-3.5 px-4 font-bold transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+        style={{ backgroundColor: "var(--primary)", color: "var(--on-primary)", borderRadius: "var(--radius)", fontSize: 15 }}
       >
         {status === "submitting" ? (
           <span className="flex items-center justify-center gap-2">
@@ -373,7 +389,7 @@ export default function LeadCaptureForm({
         )}
       </button>
       
-      <p className="text-xs text-slate-500 text-center">
+      <p className="text-xs text-center" style={{ color: "#5E636B" }}>
         Your information is secure and will only be shared with the listing agent.
       </p>
     </form>

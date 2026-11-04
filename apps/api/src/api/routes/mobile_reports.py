@@ -16,6 +16,7 @@ import logging
 
 from ..db import db_conn, fetchone_dict, fetchall_dicts
 from ..services.comp_summary import summarize as summarize_comps
+from ..services.report_theme import consumer_report_color, resolve_theme_id, tokens_for
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,9 @@ class MobileReportResponse(BaseModel):
     market_stats: MarketStats
     agent: AgentInfo
     branding: Optional[dict] = None
+    # The consumer PDF's theme and derived tokens (services/report_theme.py).
+    theme: Optional[int] = None
+    theme_tokens: Optional[dict] = None
     has_pdf: bool
     created_at: datetime
 
@@ -283,13 +287,18 @@ async def get_report_data(
     branding_data = None
     with db_conn() as (conn, cur):
         cur.execute("""
-            SELECT a.primary_color, a.secondary_color, a.logo_url
+            SELECT a.primary_color, a.secondary_color, a.logo_url, a.default_theme_id
             FROM accounts a
             JOIN users u ON u.account_id = a.id
             WHERE u.id = %s
             LIMIT 1
         """, (str(report.get("agent_id")),))
         brand_row = cur.fetchone()
+        # The consumer PDF: secondary, else primary, on the account's default
+        # theme (consumer_report_data.build_consumer_report_data).
+        theme_id = resolve_theme_id(brand_row[3] if brand_row else None)
+        theme_tokens = tokens_for(consumer_report_color(
+            brand_row[0] if brand_row else None, brand_row[1] if brand_row else None))
         if brand_row:
             branding_data = {
                 "primary_color": brand_row[0] or "#6366f1",
@@ -305,6 +314,8 @@ async def get_report_data(
         market_stats=mkt_stats,
         agent=agent,
         branding=branding_data,
+        theme=theme_id,
+        theme_tokens=theme_tokens,
         has_pdf=report.get("pdf_url") is not None,
         created_at=report["created_at"]
     )

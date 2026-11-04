@@ -82,7 +82,7 @@ was that nobody knew how many copies there were.
 
 ## 1 · Where a theme NAME appears, and where an ID appears
 
-**70 name occurrences across 12 files** (was 147 across 18 before the theme cut, 82 after it, and 71 until 2026-10-26, when the `V2_THEMES` seam that named `atlas` in `property_builder.py` was deleted with the move of harbor and linen).
+**76 name occurrences across 14 files** (was 70 across 12 until 2026-11-04, when Design's digital-report handoff gave `/p` and `/r` a per-theme faces table; was 147 across 18 before the theme cut, 82 after it, and 71 until 2026-10-26, when the `V2_THEMES` seam that named `atlas` in `property_builder.py` was deleted with the move of harbor and linen).
 Grouped by what a rename would have to do to them:
 
 > **+3 ON 2026-10-06, when bold moved to Design's shared architecture.** One in
@@ -112,6 +112,7 @@ Grouped by what a rename would have to do to them:
 | **derives from the registry** — `property_builder`, `theme_registry`, `unified-wizard`, `wizard-types` | 4 | 9 | **nothing** — they import it |
 | **historical, deliberately keeps retired names** — `affiliate/property-reports/page.tsx` | 1 | 10 | **nothing** — see §4 |
 | **per-theme presentation metadata** — `web/lib/property-report-assets.ts` | 1 | 9 | **one `key:` per theme** |
+| **per-theme faces on the digital report** — `app/p/[code]/page.tsx`, `components/mobile-report/MobileReportViewer.tsx` (Design, 2026-11-04: each theme's display and body face, weight, tracking, case and corner, as the PDF entry files set them; `tests/test_digital_report_faces_match_the_pdf.py` holds them to those files) | 2 | 6 | **one `key:` per theme, in each** |
 | **the gate** — `test_theme_registry_is_single_sourced.py` | 1 | 9 | **nothing** — they read the registry |
 | **golden/corpus scripts naming themes to seed data** — `regen_color_roles_golden.py`, `test_property_templates.py` | 2 | 6 | **one literal each** |
 
