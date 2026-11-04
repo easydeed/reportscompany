@@ -1,0 +1,410 @@
+{
+  "repo": "easydeed/reportscompany",
+  "branch": "main",
+  "cut_against": "main as read 2026-11-04T18:10Z (tree d70f6df2f744)",
+  "files": [
+    "apps/web/app/p/[code]/page.tsx",
+    "apps/web/app/p/[code]/lead-capture-form.tsx",
+    "apps/web/components/mobile-report/MobileReportViewer.tsx"
+  ],
+  "touches": [
+    {
+      "id": "P1",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — module head",
+      "why": "The theme faces and the registry name lookup. Barlow/Barlow Condensed (atlas), Cormorant Garamond/Geist (linen), Manrope (harbor) are what the PDF entry files set; `themeName` is the generated single-source id→name map (D-163).",
+      "before": "import { Metadata } from \"next\";\nimport { notFound } from \"next/navigation\";\nimport LeadCaptureForm from \"./lead-capture-form\";\n",
+      "after": "import { Metadata } from \"next\";\nimport { notFound } from \"next/navigation\";\nimport { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from \"next/font/google\";\nimport { themeName } from \"@/lib/themes.generated\";\nimport LeadCaptureForm from \"./lead-capture-form\";\n"
+    },
+    {
+      "id": "P2",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — module head",
+      "why": "Theme faces per theme and the token type, module-scope. FLAG (rule 6 — derived inks): tokens are the PDF's derive_theme values; the page never computes a colour. FLAG (rule 5 — data): `theme_tokens` is not on the public response yet; NEUTRAL_TOKENS is the fallback until it is.",
+      "before": "type Props = {\n  params: Promise<{ code: string }>;\n};\n",
+      "after": "type Props = {\n  params: Promise<{ code: string }>;\n};\n\n// Theme faces, as the PDF entry files set them\n// (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).\n// Self-hosted through next/font; only the theme in use is painted.\nconst barlowCondensed = Barlow_Condensed({ subsets: [\"latin\"], weight: [\"600\", \"700\"], display: \"swap\" });\nconst barlow = Barlow({ subsets: [\"latin\"], weight: [\"400\", \"500\", \"600\", \"700\"], display: \"swap\" });\nconst cormorant = Cormorant_Garamond({ subsets: [\"latin\"], weight: [\"500\", \"600\"], display: \"swap\" });\nconst geist = Geist({ subsets: [\"latin\"], weight: [\"400\", \"500\", \"600\", \"700\"], display: \"swap\" });\nconst manrope = Manrope({ subsets: [\"latin\"], weight: [\"400\", \"500\", \"600\", \"700\", \"800\"], display: \"swap\" });\n\ntype ThemeFaces = { display: string; body: string; weight: number; tracking: string; kase: string; radius: string };\nconst THEME_FACES: Record<string, ThemeFaces> = {\n  atlas: { display: `${barlowCondensed.style.fontFamily}, 'Arial Narrow', sans-serif`, body: `${barlow.style.fontFamily}, system-ui, sans-serif`, weight: 700, tracking: \"0\", kase: \"uppercase\", radius: \"4px\" },\n  linen: { display: `${cormorant.style.fontFamily}, Georgia, 'Times New Roman', serif`, body: `${geist.style.fontFamily}, system-ui, sans-serif`, weight: 500, tracking: \"-0.01em\", kase: \"none\", radius: \"0px\" },\n  harbor: { display: `${manrope.style.fontFamily}, system-ui, sans-serif`, body: `${manrope.style.fontFamily}, system-ui, sans-serif`, weight: 800, tracking: \"-0.035em\", kase: \"none\", radius: \"14px\" },\n};\n\n// The derive_theme tokens (apps/worker/src/worker/themes.py), read from the\n// response. Until the API carries them the page renders on the one fixed dark\n// neutral the PDF uses — readable everywhere, and visibly unbranded so nobody\n// mistakes it for done.\ntype ThemeTokens = { primary: string; primary_dark: string; primary_ink: string; on_primary: string; tint: string; primary_on_dark: string; display_ink: string };\nconst NEUTRAL_TOKENS: ThemeTokens = { primary: \"#0f172a\", primary_dark: \"#0c1221\", primary_ink: \"#0f172a\", on_primary: \"#ffffff\", tint: \"#f1f2f4\", primary_on_dark: \"#ffffff\", display_ink: \"#ffffff\" };\n"
+    },
+    {
+      "id": "P3",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — response type",
+      "why": "The field the tokens arrive on. Optional so the page builds before the API change lands. FLAG (rule 5): the API side — `derive_theme(accent_color)` serialised onto `/v1/property/public/{code}` — is yours; this is only the type.",
+      "before": "  theme: number;\n  accent_color: string;\n  short_code: string;",
+      "after": "  theme: number;\n  accent_color: string;\n  theme_tokens?: ThemeTokens | null;\n  short_code: string;"
+    },
+    {
+      "id": "P4",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — page setup",
+      "why": "Tokens, faces and the CSS custom properties the whole page reads. `accent_color` on a property report IS the PDF's brand colour (property_builder._get_theme_color prefers it) — it is passed to the form unchanged; the form now reads the variables, not the prop.",
+      "before": "  const accentColor = data.accent_color || \"#2563eb\";\n",
+      "after": "  const accentColor = data.accent_color || \"#2563eb\";\n  const tokens: ThemeTokens = data.theme_tokens ?? NEUTRAL_TOKENS;\n  const faces: ThemeFaces = THEME_FACES[themeName(data.theme)];\n  const onPrimaryRule = tokens.on_primary.toLowerCase() === \"#ffffff\" ? \"rgba(255,255,255,0.3)\" : \"rgba(20,21,26,0.25)\";\n  const themeVars = {\n    \"--primary\": tokens.primary,\n    \"--primary-ink\": tokens.primary_ink,\n    \"--on-primary\": tokens.on_primary,\n    \"--tint\": tokens.tint,\n    \"--display-ink\": tokens.display_ink,\n    \"--on-primary-rule\": onPrimaryRule,\n    \"--display\": faces.display,\n    \"--body-face\": faces.body,\n    \"--display-weight\": faces.weight,\n    \"--display-tracking\": faces.tracking,\n    \"--display-case\": faces.kase,\n    \"--radius\": faces.radius,\n  } as React.CSSProperties;\n"
+    },
+    {
+      "id": "P5",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — hero",
+      "why": "The accent gradient under white text (page.tsx ~218) becomes the PDF cover band: a flat brand fill carrying on_primary. FLAG (rule 6 — text on gradients, brand colour, derived inks). The root takes the theme variables and the body face.",
+      "before": "    <div className=\"min-h-screen bg-slate-50\">\n      {/* Hero Section */}\n      <div \n        className=\"relative h-64 md:h-80\"\n        style={{\n          background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 50%, ${accentColor}aa 100%)`,\n        }}\n      >",
+      "after": "    <div className=\"min-h-screen\" style={{ ...themeVars, background: \"#F6F6F3\", fontFamily: \"var(--body-face)\", color: \"#14161A\", fontVariantNumeric: \"lining-nums\" }}>\n      {/* Masthead — the PDF cover band: brand fill, on_primary text, no gradient */}\n      <div\n        className=\"relative\"\n        style={{ background: \"var(--primary)\", color: \"var(--on-primary)\" }}\n      >"
+    },
+    {
+      "id": "P6",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — hero content",
+      "why": "Logo as supplied (no brightness-0 invert — it painted every logo white), report kind + brand on one row, street in the display face at display_ink, city at on_primary, then the four cover stats with dashes for missing values. FLAG (rule 6 — missing-data dashes; text on brand = derived inks). The pattern overlay goes: it was a translucent layer under text.",
+      "before": "        {/* Company Logo */}\n        {data.company_logo_url && (\n          <div className=\"absolute top-4 left-4 md:top-6 md:left-6\">\n            <img \n              src={data.company_logo_url} \n              alt={data.company_name || \"Company\"} \n              className=\"h-10 md:h-12 w-auto object-contain filter brightness-0 invert\"\n            />\n          </div>\n        )}\n        \n        {/* Property Address */}\n        <div className=\"absolute inset-0 flex flex-col items-center justify-center text-white px-4\">\n          <h1 className=\"text-2xl md:text-4xl font-bold text-center mb-2 drop-shadow-lg\">\n            {data.property_address}\n          </h1>\n          <p className=\"text-lg md:text-xl opacity-90 drop-shadow\">\n            {data.property_city}, {data.property_state} {data.property_zip}\n          </p>\n        </div>\n        \n        {/* Decorative pattern overlay */}\n        <div \n          className=\"absolute inset-0 opacity-10\"\n          style={{\n            backgroundImage: `url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")`,\n          }}\n        />\n      </div>",
+      "after": "        <div className=\"max-w-[880px] mx-auto px-5 pt-6 pb-[22px] md:px-10 md:pt-9 md:pb-8 flex flex-col gap-[22px]\">\n          <div className=\"flex items-center justify-between gap-3\">\n            <span style={{ fontSize: 11, letterSpacing: \"0.12em\", textTransform: \"uppercase\", fontWeight: 600 }}>Property report</span>\n            {data.company_logo_url ? (\n              <img\n                src={data.company_logo_url}\n                alt={data.company_name || \"Company\"}\n                className=\"h-10 max-w-[200px] w-auto object-contain\"\n              />\n            ) : (\n              data.company_name && <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: \"-0.01em\" }}>{data.company_name}</span>\n            )}\n          </div>\n          <div className=\"flex flex-col gap-1\">\n            <h1 className=\"m-0 text-[36px] md:text-[56px]\" style={{ fontFamily: \"var(--display)\", fontWeight: \"var(--display-weight)\", lineHeight: 1.1, letterSpacing: \"var(--display-tracking)\", textTransform: \"var(--display-case)\", color: \"var(--display-ink)\", textWrap: \"balance\" } as React.CSSProperties}>\n              {data.property_address}\n            </h1>\n            <p className=\"m-0\" style={{ fontSize: 16, fontWeight: 500 }}>\n              {data.property_city}, {data.property_state} {data.property_zip}\n            </p>\n          </div>\n          <div className=\"grid grid-cols-4 gap-2 pt-3.5\" style={{ borderTop: \"1px solid var(--on-primary-rule)\" }}>\n            {([[\"Beds\", data.bedrooms], [\"Baths\", data.bathrooms], [\"Sq ft\", formatNumber(data.sqft)], [\"Year built\", data.year_built]] as [string, string | number | null][]).map(([label, value]) => (\n              <div key={label} className=\"flex flex-col gap-[3px]\">\n                <span style={{ fontFamily: \"var(--display)\", fontWeight: \"var(--display-weight)\", fontSize: 26, lineHeight: 1, letterSpacing: \"var(--display-tracking)\", color: \"var(--display-ink)\" } as React.CSSProperties}>{value ?? \"—\"}</span>\n                <span style={{ fontSize: 11, fontWeight: 500 }}>{label}</span>\n              </div>\n            ))}\n          </div>\n        </div>\n      </div>"
+    },
+    {
+      "id": "P7",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — body",
+      "why": "The floating card becomes the white sheet under the band, 880px like the PDF. The stats block leaves the card (it is on the band now — P6) and its four-condition guard goes with it: a missing value is a dash, not an absent block.",
+      "before": "      {/* Main Content */}\n      <div className=\"max-w-4xl mx-auto px-4 -mt-12 relative z-10 pb-12\">\n        <div className=\"bg-white rounded-2xl shadow-xl overflow-hidden\">\n          \n          {/* Property Details */}\n          {(data.bedrooms || data.bathrooms || data.sqft || data.year_built) && (\n            <div className=\"border-b border-slate-100 p-6\">\n              <div className=\"grid grid-cols-2 md:grid-cols-4 gap-4 text-center\">\n                {data.bedrooms && (\n                  <div>\n                    <p className=\"text-2xl font-bold text-slate-900\">{data.bedrooms}</p>\n                    <p className=\"text-sm text-slate-500\">Bedrooms</p>\n                  </div>\n                )}\n                {data.bathrooms && (\n                  <div>\n                    <p className=\"text-2xl font-bold text-slate-900\">{data.bathrooms}</p>\n                    <p className=\"text-sm text-slate-500\">Bathrooms</p>\n                  </div>\n                )}\n                {data.sqft && (\n                  <div>\n                    <p className=\"text-2xl font-bold text-slate-900\">{formatNumber(data.sqft)}</p>\n                    <p className=\"text-sm text-slate-500\">Sq Ft</p>\n                  </div>\n                )}\n                {data.year_built && (\n                  <div>\n                    <p className=\"text-2xl font-bold text-slate-900\">{data.year_built}</p>\n                    <p className=\"text-sm text-slate-500\">Year Built</p>\n                  </div>\n                )}\n              </div>\n            </div>\n          )}\n          \n          {/* Agent Info + Lead Form Grid */}\n          <div className=\"grid md:grid-cols-2 gap-0\">",
+      "after": "      {/* Body — the white sheet under the band; form first on a phone */}\n      <div className=\"max-w-[880px] mx-auto bg-white\">\n        <div>\n          <div className=\"grid md:grid-cols-2 gap-0\">"
+    },
+    {
+      "id": "P8",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — agent block",
+      "why": "The slate agent card becomes the PDF page-6 agent panel: brand fill, on_primary text, the display face for the name, a white phone pill in primary_ink, tel:/mailto: with the number stripped for dialling. Second on a phone (order-2), left on a desktop. FLAG (rule 6 — derived inks).",
+      "before": "            {/* Agent Info */}\n            <div className=\"p-6 md:p-8 bg-slate-50 border-b md:border-b-0 md:border-r border-slate-100\">\n              <div className=\"flex items-start gap-4\">\n                {data.agent_photo_url ? (\n                  <img \n                    src={data.agent_photo_url} \n                    alt={data.agent_name || \"Agent\"} \n                    className=\"w-20 h-20 rounded-full object-cover shadow-md\"\n                  />\n                ) : (\n                  <div \n                    className=\"w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md\"\n                    style={{ backgroundColor: accentColor }}\n                  >\n                    {data.agent_name ? data.agent_name.charAt(0).toUpperCase() : \"A\"}\n                  </div>\n                )}\n                <div className=\"flex-1\">\n                  {data.agent_name && (\n                    <h2 className=\"text-xl font-semibold text-slate-900\">{data.agent_name}</h2>\n                  )}\n                  {data.company_name && (\n                    <p className=\"text-slate-600\">{data.company_name}</p>\n                  )}\n                  \n                  <div className=\"mt-3 space-y-1\">\n                    {data.agent_phone && (\n                      <a \n                        href={`tel:${data.agent_phone}`}\n                        className=\"flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900\"\n                      >\n                        <svg className=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n                          <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth={2} d=\"M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z\" />\n                        </svg>\n                        {data.agent_phone}\n                      </a>\n                    )}\n                    {data.agent_email && (\n                      <a \n                        href={`mailto:${data.agent_email}`}\n                        className=\"flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900\"\n                      >\n                        <svg className=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n                          <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth={2} d=\"M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z\" />\n                        </svg>\n                        {data.agent_email}\n                      </a>\n                    )}\n                  </div>\n                </div>\n              </div>\n              \n              {data.website_url && (\n                <a \n                  href={data.website_url}\n                  target=\"_blank\"\n                  rel=\"noopener noreferrer\"\n                  className=\"mt-4 inline-flex items-center gap-1 text-sm hover:underline\"\n                  style={{ color: accentColor }}\n                >\n                  Visit Website\n                  <svg className=\"w-4 h-4\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\">\n                    <path strokeLinecap=\"round\" strokeLinejoin=\"round\" strokeWidth={2} d=\"M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14\" />\n                  </svg>\n                </a>\n              )}\n            </div>",
+      "after": "            {/* Agent panel — the PDF's page-6 panel: brand fill, on_primary text, white phone pill in primary_ink */}\n            <div className=\"order-2 md:order-1 p-5 md:p-10 flex flex-col gap-4\" style={{ background: \"#F6F6F3\" }}>\n              <div className=\"flex flex-col gap-4 p-5\" style={{ background: \"var(--primary)\", color: \"var(--on-primary)\", borderRadius: \"var(--radius)\" }}>\n                <div className=\"flex items-center gap-4\">\n                  <div className=\"w-16 h-16 rounded-full flex-none overflow-hidden flex items-center justify-center bg-white\" style={{ color: \"var(--primary-ink)\", fontFamily: \"var(--display)\", fontWeight: \"var(--display-weight)\", fontSize: 24 } as React.CSSProperties}>\n                    {data.agent_photo_url ? (\n                      <img src={data.agent_photo_url} alt={data.agent_name || \"Agent\"} className=\"w-full h-full object-cover\" />\n                    ) : (\n                      data.agent_name ? data.agent_name.charAt(0).toUpperCase() : \"A\"\n                    )}\n                  </div>\n                  <div className=\"flex flex-col gap-1 min-w-0\">\n                    {data.agent_name && (\n                      <h2 className=\"m-0\" style={{ fontFamily: \"var(--display)\", fontWeight: \"var(--display-weight)\", fontSize: 24, lineHeight: 1, letterSpacing: \"var(--display-tracking)\" } as React.CSSProperties}>{data.agent_name}</h2>\n                    )}\n                    {data.company_name && (\n                      <p className=\"m-0\" style={{ fontSize: 13 }}>{data.company_name}</p>\n                    )}\n                  </div>\n                </div>\n                {(data.agent_phone || data.agent_email) && (\n                  <div className=\"flex flex-col gap-2 text-center\">\n                    {data.agent_phone && (\n                      <a\n                        href={`tel:${data.agent_phone.replace(/[\\s().-]/g, \"\")}`}\n                        className=\"block bg-white\"\n                        style={{ color: \"var(--primary-ink)\", fontSize: 15, fontWeight: 700, padding: \"13px 18px\", borderRadius: \"var(--radius)\", textDecoration: \"none\" }}\n                      >\n                        {data.agent_phone}\n                      </a>\n                    )}\n                    {data.agent_email && (\n                      <a href={`mailto:${data.agent_email}`} style={{ color: \"inherit\", fontSize: 13, textDecoration: \"none\" }}>\n                        {data.agent_email}\n                      </a>\n                    )}\n                  </div>\n                )}\n              </div>\n              {data.website_url && (\n                <a\n                  href={data.website_url}\n                  target=\"_blank\"\n                  rel=\"noopener noreferrer\"\n                  className=\"text-sm hover:underline\"\n                  style={{ color: \"var(--primary-ink)\" }}\n                >\n                  Visit website\n                </a>\n              )}\n            </div>"
+    },
+    {
+      "id": "P9",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — form heading",
+      "why": "The form comes first on a phone (order-1) — it is what the page is for. Its heading takes the page's label voice and the display face; copy unchanged.",
+      "before": "            {/* Lead Capture Form */}\n            <div className=\"p-6 md:p-8\">\n              <h3 className=\"text-lg font-semibold text-slate-900 mb-4\">\n                Interested in this property?\n              </h3>\n              <p className=\"text-slate-600 text-sm mb-6\">",
+      "after": "            {/* Lead form — first on a phone */}\n            <div className=\"order-1 md:order-2 p-5 md:p-10 bg-white\">\n              <span className=\"block mb-2\" style={{ fontSize: 10.5, letterSpacing: \"0.1em\", textTransform: \"uppercase\", color: \"var(--primary-ink)\", fontWeight: 600 }}>\n                About this home\n              </span>\n              <h3 className=\"m-0 mb-2\" style={{ fontFamily: \"var(--display)\", fontWeight: \"var(--display-weight)\", fontSize: 30, lineHeight: 1, letterSpacing: \"var(--display-tracking)\", textTransform: \"var(--display-case)\" } as React.CSSProperties}>\n                Interested in this property?\n              </h3>\n              <p className=\"text-sm mb-6\" style={{ color: \"#5E636B\" }}>"
+    },
+    {
+      "id": "P10",
+      "file": "apps/web/app/p/[code]/page.tsx",
+      "page": "/p — footer",
+      "why": "\"Powered by\" becomes the PDF page foot: agent · company · phone on the left, the product on the right, over a hairline.",
+      "before": "        {/* Footer */}\n        <div className=\"mt-8 text-center text-sm text-slate-500\">\n          <p>Powered by <span className=\"font-medium\">TrendyReports</span></p>\n        </div>",
+      "after": "        {/* Footer — the PDF's page foot */}\n        <div className=\"mx-5 md:mx-10 pt-3.5 pb-6 flex flex-wrap justify-between items-center gap-3\" style={{ borderTop: \"1px solid #E4E4E0\", fontSize: 11.5, color: \"#5E636B\" }}>\n          <span>\n            {data.agent_name && <span style={{ fontWeight: 700, color: \"#14161A\" }}>{data.agent_name}</span>}\n            {data.company_name && ` · ${data.company_name}`}\n            {data.agent_phone && ` · ${data.agent_phone}`}\n          </span>\n          <span>Powered by TrendyReports</span>\n        </div>"
+    },
+    {
+      "id": "F1",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — form success",
+      "why": "The 20%-alpha accent disc becomes the tint token; the check stroke is primary_ink. The form sits inside the themed root, so it reads the CSS variables and no prop changes.",
+      "before": "          style={{ backgroundColor: `${accentColor}20` }}\n        >\n          <svg \n            className=\"w-8 h-8\" \n            fill=\"none\" \n            stroke={accentColor} ",
+      "after": "          style={{ backgroundColor: \"var(--tint)\" }}\n        >\n          <svg \n            className=\"w-8 h-8\" \n            fill=\"none\" \n            stroke=\"var(--primary-ink)\" "
+    },
+    {
+      "id": "F2",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — form labels",
+      "why": "Labels in the PDF body colour at weight 600; four of them.",
+      "count": 4,
+      "before": "          className=\"block text-sm font-medium text-slate-700 mb-1\"",
+      "after": "          className=\"block text-[13px] font-semibold mb-1.5\"\n          style={{ color: \"#2A2D33\" }}"
+    },
+    {
+      "id": "F3",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — required marks",
+      "why": "The required asterisk in primary_ink rather than red: red is reserved for the error state below.",
+      "count": 2,
+      "before": "<span className=\"text-red-500\">*</span>",
+      "after": "<span style={{ color: \"var(--primary-ink)\" }}>*</span>"
+    },
+    {
+      "id": "F4",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — optional marks",
+      "why": "The (optional) note in the PDF muted grey, weight 400.",
+      "count": 2,
+      "before": "<span className=\"text-slate-400\">(optional)</span>",
+      "after": "<span className=\"font-normal\" style={{ color: \"#5E636B\" }}>(optional)</span>"
+    },
+    {
+      "id": "F5",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — text inputs",
+      "why": "Inputs take the theme corner, the PDF axis-rule border, 15px type and a 48px tap height; focus ring in primary_ink. Three inputs.",
+      "count": 3,
+      "before": "          className=\"w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all\"\n          style={{ \n            \"--tw-ring-color\": accentColor,\n          } as React.CSSProperties}",
+      "after": "          className=\"w-full px-4 py-3 border outline-none transition-all focus:ring-2 focus:border-transparent\"\n          style={{ \n            \"--tw-ring-color\": \"var(--primary-ink)\",\n            borderColor: \"#D9DADF\",\n            borderRadius: \"var(--radius)\",\n            fontSize: 15,\n          } as React.CSSProperties}"
+    },
+    {
+      "id": "F6",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — textarea",
+      "why": "Same as F5 for the message field.",
+      "before": "          className=\"w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:border-transparent outline-none transition-all resize-none\"\n          style={{ \n            \"--tw-ring-color\": accentColor,\n          } as React.CSSProperties}",
+      "after": "          className=\"w-full px-4 py-3 border outline-none transition-all focus:ring-2 focus:border-transparent resize-none\"\n          style={{ \n            \"--tw-ring-color\": \"var(--primary-ink)\",\n            borderColor: \"#D9DADF\",\n            borderRadius: \"var(--radius)\",\n            fontSize: 15,\n          } as React.CSSProperties}"
+    },
+    {
+      "id": "F7",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — consent",
+      "why": "Consent becomes required: the `required` attribute and the asterisk are the template half; the handler check in handleSubmit (and the server) is yours. Checkbox at 20px for the thumb, accent-color from the brand.",
+      "before": "          className=\"mt-1 w-4 h-4 rounded border-slate-300\"\n          style={{ accentColor }}\n          disabled={status === \"submitting\"}\n        />\n        <label \n          htmlFor=\"consent_given\" \n          className=\"text-sm text-slate-600\"\n        >\n          I consent to being contacted about this property and related services.\n        </label>",
+      "after": "          className=\"mt-0.5 w-5 h-5 rounded border-slate-400\"\n          style={{ accentColor: \"var(--primary)\" }}\n          required\n          disabled={status === \"submitting\"}\n        />\n        <label \n          htmlFor=\"consent_given\" \n          className=\"text-[13px] leading-normal\"\n          style={{ color: \"#2A2D33\" }}\n        >\n          I consent to being contacted about this property and related services. <span style={{ color: \"var(--primary-ink)\" }}>*</span>\n        </label>"
+    },
+    {
+      "id": "F8",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — submit",
+      "why": "The accent fill under white text becomes the brand fill under on_primary. FLAG (rule 6 — brand colour, derived inks). Theme corner.",
+      "before": "        className=\"w-full py-3 px-4 text-white font-medium rounded-lg transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed\"\n        style={{ backgroundColor: accentColor }}",
+      "after": "        className=\"w-full py-3.5 px-4 font-bold transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed\"\n        style={{ backgroundColor: \"var(--primary)\", color: \"var(--on-primary)\", borderRadius: \"var(--radius)\", fontSize: 15 }}"
+    },
+    {
+      "id": "F9",
+      "file": "apps/web/app/p/[code]/lead-capture-form.tsx",
+      "page": "/p — form footnote",
+      "why": "Footnote in the PDF muted grey.",
+      "before": "      <p className=\"text-xs text-slate-500 text-center\">",
+      "after": "      <p className=\"text-xs text-center\" style={{ color: \"#5E636B\" }}>"
+    },
+    {
+      "id": "R1",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — module head",
+      "why": "Same faces and registry lookup as P1/P2, in the client component. FLAG (rule 5 — data): `theme` and `theme_tokens` are not on `/v1/r/{id}/data`; `themeName(undefined)` resolves to the registry default (atlas) and NEUTRAL_TOKENS carries the colour until they are.",
+      "before": "import { Button } from '@/components/ui/button';\n",
+      "after": "import { Button } from '@/components/ui/button';\nimport { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from 'next/font/google';\nimport { themeName } from '@/lib/themes.generated';\n\n// Theme faces, as the PDF entry files set them\n// (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).\n// Self-hosted through next/font; only the theme in use is painted.\nconst barlowCondensed = Barlow_Condensed({ subsets: ['latin'], weight: ['600', '700'], display: 'swap' });\nconst barlow = Barlow({ subsets: ['latin'], weight: ['400', '500', '600', '700'], display: 'swap' });\nconst cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['500', '600'], display: 'swap' });\nconst geist = Geist({ subsets: ['latin'], weight: ['400', '500', '600', '700'], display: 'swap' });\nconst manrope = Manrope({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'], display: 'swap' });\n\ntype ThemeFaces = { display: string; body: string; weight: number; tracking: string; kase: string; radius: string };\nconst THEME_FACES: Record<string, ThemeFaces> = {\n  atlas: { display: `${barlowCondensed.style.fontFamily}, \"Arial Narrow\", sans-serif`, body: `${barlow.style.fontFamily}, system-ui, sans-serif`, weight: 700, tracking: '0', kase: 'uppercase', radius: '4px' },\n  linen: { display: `${cormorant.style.fontFamily}, Georgia, \"Times New Roman\", serif`, body: `${geist.style.fontFamily}, system-ui, sans-serif`, weight: 500, tracking: '-0.01em', kase: 'none', radius: '0px' },\n  harbor: { display: `${manrope.style.fontFamily}, system-ui, sans-serif`, body: `${manrope.style.fontFamily}, system-ui, sans-serif`, weight: 800, tracking: '-0.035em', kase: 'none', radius: '14px' },\n};\n\n// The derive_theme tokens (apps/worker/src/worker/themes.py), read from the\n// response. Until the API carries them the page renders on the one fixed dark\n// neutral the PDF uses — readable everywhere, and visibly unbranded so nobody\n// mistakes it for done.\ntype ThemeTokens = { primary: string; primary_dark: string; primary_ink: string; on_primary: string; tint: string; primary_on_dark: string; display_ink: string };\nconst NEUTRAL_TOKENS: ThemeTokens = { primary: '#0f172a', primary_dark: '#0c1221', primary_ink: '#0f172a', on_primary: '#ffffff', tint: '#f1f2f4', primary_on_dark: '#ffffff', display_ink: '#ffffff' };\n"
+    },
+    {
+      "id": "R2",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — response type",
+      "why": "The two fields the theme arrives on, optional. FLAG (rule 5): the API side is yours — `consumer_reports.theme_id` and `derive_theme(...)` of the colour the consumer PDF is built from.",
+      "before": "  branding?: {\n    primary_color: string;\n    accent_color: string;\n    logo_url?: string;\n  };\n  has_pdf: boolean;\n}",
+      "after": "  branding?: {\n    primary_color: string;\n    accent_color: string;\n    logo_url?: string;\n  };\n  theme?: number | null;\n  theme_tokens?: ThemeTokens | null;\n  has_pdf: boolean;\n}"
+    },
+    {
+      "id": "R3",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — viewer setup",
+      "why": "Tokens, faces and the CSS variables, once, on the root.",
+      "before": "  const formatPrice = (n: number) => `$${n.toLocaleString()}`;\n",
+      "after": "  const formatPrice = (n: number) => `$${n.toLocaleString()}`;\n\n  const tokens: ThemeTokens = report.theme_tokens ?? NEUTRAL_TOKENS;\n  const faces: ThemeFaces = THEME_FACES[themeName(report.theme)];\n  const themeVars = {\n    '--primary': tokens.primary,\n    '--primary-ink': tokens.primary_ink,\n    '--on-primary': tokens.on_primary,\n    '--tint': tokens.tint,\n    '--primary-on-dark': tokens.primary_on_dark,\n    '--display': faces.display,\n    '--body-face': faces.body,\n    '--display-weight': faces.weight,\n    '--display-tracking': faces.tracking,\n    '--display-case': faces.kase,\n    '--radius': faces.radius,\n  } as React.CSSProperties;\n"
+    },
+    {
+      "id": "R4",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — root",
+      "why": "Page background is the PDF strip; body face and ink from the theme.",
+      "before": "    <div className=\"min-h-screen bg-gray-50 flex flex-col\">",
+      "after": "    <div className=\"min-h-screen flex flex-col\" style={{ ...themeVars, background: '#F6F6F3', fontFamily: 'var(--body-face)', color: '#14161A', fontVariantNumeric: 'lining-nums' }}>"
+    },
+    {
+      "id": "R5",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — header",
+      "why": "The header is the report's masthead on a phone: kind label in primary_ink, street in the display face, city line with the ZIP, PDF hairline.",
+      "before": "      <header className=\"bg-white border-b px-4 py-3 flex items-center justify-between sticky top-0 z-50\">\n        <div className=\"flex-1 min-w-0\">\n          <h1 className=\"font-semibold text-gray-900 truncate\">\n            {report.property.address}\n          </h1>\n          <p className=\"text-sm text-gray-500\">\n            {report.property.city}, {report.property.state}\n          </p>\n        </div>",
+      "after": "      <header className=\"bg-white px-4 py-3 flex items-center justify-between sticky top-0 z-50\" style={{ borderBottom: '1px solid #ECECE8' }}>\n        <div className=\"flex-1 min-w-0 flex flex-col\">\n          <span style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>Home value report</span>\n          <h1 className=\"truncate m-0\" style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 22, lineHeight: 1.05, letterSpacing: 'var(--display-tracking)', textTransform: 'var(--display-case)' } as React.CSSProperties}>\n            {report.property.address}\n          </h1>\n          <p className=\"m-0\" style={{ fontSize: 12.5, color: '#5E636B' }}>\n            {report.property.city}, {report.property.state} {report.property.zip}\n          </p>\n        </div>"
+    },
+    {
+      "id": "R6",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — desktop column",
+      "why": "Phone first, desktop second: content holds a 560px column on wide screens instead of stretching to the viewport.",
+      "before": "      <main className=\"flex-1 overflow-y-auto pb-20\">",
+      "after": "      <main className=\"flex-1 overflow-y-auto pb-20 w-full max-w-[560px] mx-auto\">"
+    },
+    {
+      "id": "R7",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — tab bar",
+      "why": "The bar holds the same 560px column; PDF hairline instead of the default border.",
+      "before": "      <nav className=\"fixed bottom-0 left-0 right-0 bg-white border-t px-2 py-2 flex justify-around z-50\">",
+      "after": "      <nav className=\"fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[560px] bg-white flex justify-around z-50\" style={{ borderTop: '1px solid #ECECE8' }}>"
+    },
+    {
+      "id": "R8",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — tab item",
+      "why": "Active tab: primary_ink text and a 2px brand bar on top — no 15%-alpha brand wash, which is a tinted surface and a colour nobody chose (REPORT_VIEWER_TINTS l.232). Inactive: PDF muted grey.",
+      "before": "              className={`flex flex-col items-center px-3 py-1 rounded-lg transition-colors ${\n                isActive \n                  ? '' \n                  : 'text-gray-500 hover:text-gray-700'\n              }`}\n              style={isActive ? { color: report.branding?.primary_color || '#6366f1', backgroundColor: `${report.branding?.primary_color || '#6366f1'}15` } : {}}\n            >\n              <Icon className=\"w-5 h-5\" />\n              <span className=\"text-xs mt-0.5\">{tab.label}</span>",
+      "after": "              className=\"flex flex-col items-center gap-[3px] px-2.5 pt-2.5 pb-2 min-w-[56px] -mt-px transition-colors\"\n              style={{ color: isActive ? 'var(--primary-ink)' : '#5E636B', fontWeight: isActive ? 600 : 500, borderTop: `2px solid ${isActive ? 'var(--primary)' : 'transparent'}` }}\n            >\n              <Icon className=\"w-5 h-5\" />\n              <span style={{ fontSize: 11.5 }}>{tab.label}</span>"
+    },
+    {
+      "id": "R9",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — overview value box",
+      "why": "The brand-to-accent gradient under violet text (l.253) becomes the PDF range panel on the one fixed dark neutral (#0f172a): label in primary_on_dark, the range in the display face, the method line beside it. No \"most likely\" figure; no confidence pill (a tinted fill behind semantic text). FLAG (rule 6 — estimate panel, text on gradients, derived inks). Reads the fields you are correcting (low/high = comps range).",
+      "before": "      {/* Hero Card */}\n      <div className=\"rounded-2xl p-6 text-white\" style={{ background: `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%, ${report.branding?.accent_color || '#8b5cf6'} 100%)` }}>\n        <p className=\"text-violet-200 text-sm mb-1\">Estimated Value Range</p>\n        <p className=\"text-3xl font-bold mb-2\">\n          {formatPrice(report.value_estimate.low)} - {formatPrice(report.value_estimate.high)}\n        </p>\n        <p className=\"text-violet-200 text-sm\">\n          Most likely: {formatPrice(report.value_estimate.mid)}\n        </p>\n        <div className=\"mt-4 flex items-center gap-2\">\n          <span className={`px-2 py-0.5 rounded text-xs font-medium ${\n            report.value_estimate.confidence === 'high' \n              ? 'bg-green-500/20 text-green-100'\n              : report.value_estimate.confidence === 'medium'\n              ? 'bg-yellow-500/20 text-yellow-100'\n              : 'bg-red-500/20 text-red-100'\n          }`}>\n            {report.value_estimate.confidence} confidence\n          </span>\n          <span className=\"text-violet-200 text-xs\">\n            Based on {report.comparables.length} comparable sales\n          </span>\n        </div>\n      </div>",
+      "after": "      {/* Range panel — the PDF's page-4 panel on the one fixed dark neutral; primary_on_dark is guaranteed against it and nothing else */}\n      <div className=\"p-5 text-white flex flex-col gap-3\" style={{ background: '#0f172a', borderRadius: 'var(--radius)' }}>\n        <span style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-on-dark)', fontWeight: 600 }}>\n          Range supported by {report.comparables.length} closed sales\n        </span>\n        <span style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 34, lineHeight: 0.95, letterSpacing: 'var(--display-tracking)', textWrap: 'balance' } as React.CSSProperties}>\n          {formatPrice(report.value_estimate.low)} – {formatPrice(report.value_estimate.high)}\n        </span>\n        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>Range of the comparable sales shown.</span>\n      </div>"
+    },
+    {
+      "id": "R10",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — missing values",
+      "why": "A missing value is an em dash, as on the PDF, not two hyphens. Twelve sites across overview, details and market. FLAG (rule 6 — missing-data dashes).",
+      "count": 12,
+      "before": "'--'",
+      "after": "'—'"
+    },
+    {
+      "id": "R11",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — white cards",
+      "why": "Cards take the theme corner and the PDF hairline instead of rounded-xl and a shadow. Three cards (address, agent preview, market).",
+      "count": 3,
+      "before": "className=\"bg-white rounded-xl p-4 shadow-sm\"",
+      "after": "className=\"bg-white p-4 rounded-[var(--radius)] border border-[#ECECE8]\""
+    },
+    {
+      "id": "R12",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — address chip",
+      "why": "The indigo MapPin chip goes (REPORT_VIEWER_TINTS l.299–300): an icon chip in a hue that follows no brand.",
+      "before": "          <div className=\"w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0\">\n            <MapPin className=\"w-5 h-5 text-indigo-600\" />\n          </div>\n",
+      "after": ""
+    },
+    {
+      "id": "R13",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — agent preview avatar",
+      "why": "Fallback avatar on the tint token with the glyph in primary_ink.",
+      "before": "            <div className=\"w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center\">\n              <User className=\"w-6 h-6 text-gray-500\" />\n            </div>",
+      "after": "            <div className=\"w-12 h-12 rounded-full flex items-center justify-center\" style={{ background: 'var(--tint)', color: 'var(--primary-ink)' }}>\n              <User className=\"w-6 h-6\" />\n            </div>"
+    },
+    {
+      "id": "R14",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — agent preview phone",
+      "why": "The indigo phone chip (l.337–339) becomes a 44px brand-fill button with the glyph in on_primary; the number is stripped for dialling.",
+      "before": "              href={`tel:${report.agent.phone}`}\n              className=\"w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center\"\n            >\n              <Phone className=\"w-5 h-5 text-indigo-600\" />",
+      "after": "              href={`tel:${report.agent.phone.replace(/[\\s().-]/g, '')}`}\n              className=\"w-11 h-11 rounded-full flex items-center justify-center\"\n              style={{ background: 'var(--primary)', color: 'var(--on-primary)' }}\n            >\n              <Phone className=\"w-5 h-5\" />"
+    },
+    {
+      "id": "R15",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — comp photo plate",
+      "why": "The grey gradient plate becomes the tint plate the PDF uses.",
+      "before": "        <div className=\"h-48 bg-gradient-to-br from-gray-200 to-gray-300 relative\">",
+      "after": "        <div className=\"h-48 relative\" style={{ background: 'var(--tint)' }}>"
+    },
+    {
+      "id": "R16",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — comp missing photo",
+      "why": "The PDF missing-photo tile: distance from the subject in the display face (city when distance is unknown), with the note. Replaces a grey house glyph.",
+      "before": "            <div className=\"absolute inset-0 flex items-center justify-center\">\n              <Home className=\"w-12 h-12 text-gray-400\" />\n            </div>",
+      "after": "            <div className=\"absolute inset-0 flex flex-col justify-end p-3\">\n              <span style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 28, lineHeight: 1, color: 'var(--primary-ink)' } as React.CSSProperties}>\n                {comp.distance_miles > 0 ? `${comp.distance_miles.toFixed(1)} mi` : comp.city}\n              </span>\n              <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4, color: '#5E636B' }}>\n                {comp.distance_miles > 0 ? 'From your home · no photo on file' : 'No photo on file'}\n              </span>\n            </div>"
+    },
+    {
+      "id": "R17",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — comp price",
+      "why": "No text on photography: the 70%-black badge over the photo becomes the PDF's solid white price plate, top-left.",
+      "before": "          <div className=\"absolute top-3 right-3 px-2 py-1 bg-black/70 rounded text-white text-sm font-medium\">",
+      "after": "          <div className=\"absolute top-2.5 left-2.5 px-2 py-1 bg-white rounded text-sm font-bold\" style={{ color: '#14161A' }}>"
+    },
+    {
+      "id": "R18",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — comp card",
+      "why": "Theme corner on the comp card.",
+      "before": "        className=\"bg-white rounded-2xl shadow-sm overflow-hidden\"",
+      "after": "        className=\"bg-white overflow-hidden rounded-[var(--radius)] border border-[#ECECE8]\""
+    },
+    {
+      "id": "R19",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — comp $/sqft",
+      "why": "The brand colour was used as TEXT on white (l.484). primary is fills only; primary_ink is the text token.",
+      "before": "            <p className=\"text-center font-semibold\" style={{ color: report.branding?.primary_color || '#6366f1' }}>",
+      "after": "            <p className=\"text-center font-semibold\" style={{ color: 'var(--primary-ink)' }}>"
+    },
+    {
+      "id": "R20",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — comp dots",
+      "why": "Active dot in the brand fill (l.498), inactive in the PDF axis rule.",
+      "before": "            className={`w-2 h-2 rounded-full transition-colors ${\n              i === compIndex ? 'bg-indigo-600' : 'bg-gray-300'\n            }`}",
+      "after": "            className=\"w-2 h-2 rounded-full transition-colors\"\n            style={{ background: i === compIndex ? 'var(--primary)' : '#D9DADF' }}"
+    },
+    {
+      "id": "R21",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — market $/sqft label",
+      "why": "Label follows your data fix: the PDF's median price per square foot. Ship with that change, not before.",
+      "before": "            label=\"Avg. Price per Sqft\"",
+      "after": "            label=\"Median price per sq ft\""
+    },
+    {
+      "id": "R22",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — market context panel",
+      "why": "The indigo-50 panel with violet text (l.536–537) becomes the PDF strip with muted text, and the copy stops asserting \"2 miles / 12 months\", which the data fix changes to the PDF's window. Print the radius here once it is on the response.",
+      "before": "      <div className=\"bg-indigo-50 rounded-xl p-4\">\n        <p className=\"text-sm text-violet-800\">\n          Based on {report.comparables.length} comparable sales within 2 miles \n          of your property in the last 12 months.\n        </p>\n      </div>",
+      "after": "      <div className=\"p-4\" style={{ background: '#F6F6F3', borderRadius: 'var(--radius)' }}>\n        <p className=\"text-sm m-0\" style={{ color: '#5E636B', lineHeight: 1.5 }}>\n          Closed sales near your home over the last six months — the same window and radius as your PDF report. A dash means the record is silent, not that the answer is no.\n        </p>\n      </div>"
+    },
+    {
+      "id": "R23",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — agent tab avatar",
+      "why": "No violet ring on the photo; the fallback sits on the tint token with the glyph in primary_ink (l.566–570).",
+      "before": "            className=\"w-24 h-24 rounded-full mx-auto mb-4 object-cover border-4 border-violet-100\"\n          />\n        ) : (\n          <div className=\"w-24 h-24 rounded-full mx-auto mb-4 bg-indigo-100 flex items-center justify-center\">\n            <User className=\"w-12 h-12 text-violet-400\" />\n          </div>",
+      "after": "            className=\"w-24 h-24 rounded-full mx-auto mb-4 object-cover\"\n          />\n        ) : (\n          <div className=\"w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center\" style={{ background: 'var(--tint)', color: 'var(--primary-ink)' }}>\n            <User className=\"w-12 h-12\" />\n          </div>"
+    },
+    {
+      "id": "R24",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — agent card",
+      "why": "Theme corner and hairline on the agent card.",
+      "before": "      <div className=\"bg-white rounded-xl p-6 shadow-sm text-center\">",
+      "after": "      <div className=\"bg-white p-6 text-center rounded-[var(--radius)] border border-[#ECECE8]\">"
+    },
+    {
+      "id": "R25",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — call button",
+      "why": "Brand fill under on_primary, not white (l.590). FLAG (rule 6 — derived inks). Stripped tel: value.",
+      "before": "            href={`tel:${report.agent.phone}`}\n            onClick={() => onContactClick('call')}\n            className=\"flex items-center justify-center gap-3 w-full py-4 text-white rounded-xl font-semibold transition\"\n            style={{ backgroundColor: report.branding?.primary_color || '#6366f1' }}",
+      "after": "            href={`tel:${report.agent.phone.replace(/[\\s().-]/g, '')}`}\n            onClick={() => onContactClick('call')}\n            className=\"flex items-center justify-center gap-3 w-full py-4 font-semibold transition\"\n            style={{ backgroundColor: 'var(--primary)', color: 'var(--on-primary)', borderRadius: 'var(--radius)' }}"
+    },
+    {
+      "id": "R26",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — text button",
+      "why": "Border and label in primary_ink — primary is never text on a light surface (l.602). Stripped sms: value.",
+      "before": "            href={`sms:${report.agent.phone}`}\n            onClick={() => onContactClick('text')}\n            className=\"flex items-center justify-center gap-3 w-full py-4 bg-white border-2 rounded-xl font-semibold transition\"\n            style={{ borderColor: report.branding?.primary_color || '#6366f1', color: report.branding?.primary_color || '#6366f1' }}",
+      "after": "            href={`sms:${report.agent.phone.replace(/[\\s().-]/g, '')}`}\n            onClick={() => onContactClick('text')}\n            className=\"flex items-center justify-center gap-3 w-full py-4 bg-white border-2 font-semibold transition\"\n            style={{ borderColor: 'var(--primary-ink)', color: 'var(--primary-ink)', borderRadius: 'var(--radius)' }}"
+    },
+    {
+      "id": "R27",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — email button",
+      "why": "Theme corner.",
+      "before": "            className=\"flex items-center justify-center gap-3 w-full py-4 bg-white border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition\"",
+      "after": "            className=\"flex items-center justify-center gap-3 w-full py-4 bg-white border border-gray-300 text-gray-700 rounded-[var(--radius)] font-medium hover:bg-gray-50 transition\""
+    },
+    {
+      "id": "R28",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — stat tiles",
+      "why": "The indigo glyph goes (l.648); value in the display face, label muted, theme corner and hairline. `icon` stays in the signature so the three call sites are untouched.",
+      "before": "    <div className=\"bg-white rounded-xl p-3 shadow-sm text-center\">\n      <div className=\"text-indigo-600 mb-1 flex justify-center\">{icon}</div>\n      <p className=\"text-lg font-semibold text-gray-900\">{value}</p>\n      <p className=\"text-xs text-gray-500\">{label}</p>\n    </div>",
+      "after": "    <div className=\"bg-white p-3.5 flex flex-col gap-1 rounded-[var(--radius)] border border-[#ECECE8]\">\n      <p className=\"m-0\" style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 24, lineHeight: 1, letterSpacing: 'var(--display-tracking)' } as React.CSSProperties}>{value}</p>\n      <p className=\"m-0\" style={{ fontSize: 11.5, color: '#5E636B' }}>{label}</p>\n    </div>"
+    },
+    {
+      "id": "R29",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — details card",
+      "why": "Theme corner and the PDF hairline on the details card, like the other cards (R11, R18, R24).",
+      "before": "      <div className=\"bg-white rounded-xl shadow-sm overflow-hidden\">",
+      "after": "      <div className=\"bg-white overflow-hidden rounded-[var(--radius)] border border-[#ECECE8]\">"
+    },
+    {
+      "id": "R30",
+      "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
+      "page": "/r — details head",
+      "why": "The section head in the PDF label voice (10.5px caps, primary_ink) on the strip, with the hairline.",
+      "before": "        <div className=\"px-4 py-3 bg-gray-50 border-b\">\n          <h2 className=\"font-semibold text-gray-900\">Property Details</h2>\n        </div>",
+      "after": "        <div className=\"px-4 py-3\" style={{ background: '#F6F6F3', borderBottom: '1px solid #ECECE8' }}>\n          <h2 className=\"m-0\" style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-ink)', fontWeight: 600 }}>Property details</h2>\n        </div>"
+    }
+  ]
+}
