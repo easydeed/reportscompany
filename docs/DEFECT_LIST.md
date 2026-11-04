@@ -59,13 +59,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 83 | Observed, not yet triaged |
+| `recorded` | 84 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
-| `fixed` | 204 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 208 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **349** | D-001 … D-349, contiguous, no duplicates |
+| **Total** | **354** | D-001 … D-354, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
@@ -15975,7 +15975,7 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-342 — a home-value lead records that the box was ticked, not what it said
 
 **Severity:** WRONG · found 2026-11-03 tracing the production walk-through. `cmaRequestBody` sends `consent_given: true` (`lib/cma-lead.ts:57`), and the API has no field for the wording. `consentText()` exists so the lead can record exactly what was agreed (`cma-funnel.tsx:25-29`), and nothing sends it. Once the brokerage's TCPA wording goes in, there will be no record of which wording a given homeowner agreed to.
-**Status:** `recorded` — send and store the consent text with the lead (a column on `leads`) before the TCPA wording ships.
+**Status:** `fixed` — `fix/r-range-and-p-consent`: the Home Value Page sends the sentence beside the box (`consentText`, through `cmaRequestBody`) and `POST /v1/cma/{code}/request` stores it in `leads.consent_text` (migration 0063). The /p form does the same (D-352). Test: `apps/api/tests/test_leads_require_consent.py::test_the_home_value_page_stores_the_wording_agreed_to` (red on main).
 
 ---
 
@@ -16025,6 +16025,41 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** WRONG · found 2026-11-04 testing Design's touch T2. The panel holds five lines (`.inshort-text`, `-webkit-line-clamp: 5` since T2; four lines and `max-height: 81px` before). The text in it is `generate_overview()`'s, and that prompt still asks for the retired overview page's summary: "4-5 short paragraphs, 180-250 words total", opening with "Briefly introduce the report and the property" (`apps/worker/src/worker/ai_overview.py:32-37`, `:225`). Nothing trims it (`property_builder.py:2820-2849`). So every AI-written cover shows the introduction and stops: before T2 silently after four lines, after T2 on an ellipsis after five. Measured: a 361-character paragraph already runs six lines on harbor and linen. Design's handoff assumed "the ~380-char generation cap remains the primary bound"; no such cap exists in the code.
 **Status:** `recorded` — write a cover-sized prompt (one paragraph, about 300 characters, the range and why), and test the generated length against the panel on all three themes.
+
+---
+
+### D-350 — the /r page leads with an estimate the PDF never prints
+
+**Severity:** WRONG · found 2026-11-04 rendering `/p/{code}` and `/r/{id}` on fixture data at phone and desktop. `/r/{id}` opened on "Estimated Value Range $509,799 – $598,460 · Most likely: $554,130 · medium confidence". The figure was the home's square footage times the comps' AVERAGE price per square foot, ±8% (`worker/tasks.py:2598-2630`), served as `value_estimate` by `GET /v1/r/{id}/data` and shown with no method. The PDF of the same report prints "$470K – $635K, Range of the comparable sales shown." — the lowest to highest closed comparable — and no point estimate. Two different answers to the homeowner, and an estimate outside the range panel, which the owner decided against.
+**Status:** `fixed` — `fix/r-range-and-p-consent`. The API computes the range from the stored comps by the PDF's rule (`api/services/comp_summary.py`: closed sales only, lowest to highest) and returns it as `comps_range` with the PDF's method line; `value_estimate` is no longer read or returned, so reports already sent are corrected too. The worker stores the same range (`consumer_comps_range`) instead of the estimate. The viewer shows "What the comparable sales support", the range, "Range of the comparable sales shown." and "Based on N closed sales"; no "most likely", no confidence grade. Tests: `apps/api/tests/test_consumer_report_shows_the_pdf_range.py`, `tests/test_comp_summary_matches_the_pdf.py`, `apps/web/__tests__/ConsumerReportRange.test.ts` (red on main).
+
+---
+
+### D-351 — the /r market tab contradicts itself and the PDF
+
+**Severity:** WRONG · found 2026-11-04 rendering `/p/{code}` and `/r/{id}` on fixture data at phone and desktop. "Homes Sold (6 mo)" sat over "Based on N comparable sales within 2 miles of your property in the last 12 months." — both fixed strings, neither derived from the comps (`MobileReportViewer.tsx:524`, `:532`). The PDF for the same comps says "within 0.6 mi · last 6 months". The tab also showed an AVERAGE price per square foot ($705) where the PDF shows the median ($696), and its median sale price was `len // 2` over every comp, listings included.
+**Status:** `fixed` — `fix/r-range-and-p-consent`. Window, radius, median sale price and median $/sq ft come from `comp_summary` with the PDF's rules (window: oldest close rounded up to 6 or 12 months; radius: farthest closed comp; upper medians over closed sales). The tab prints "Homes sold (last N months)", "Median Price per Sqft", and "Based on N closed comparable sales within X mi of your home in the last N months.", leaving out a part it does not know. `tests/test_comp_summary_matches_the_pdf.py` renders the PDF and compares.
+
+---
+
+### D-352 — the /p lead form saves a lead without consent
+
+**Severity:** BROKEN · found 2026-11-04 rendering `/p/{code}` and `/r/{id}` on fixture data at phone and desktop. The consent box on the property report page was optional: `handleSubmit` checked only name and email (`app/p/[code]/lead-capture-form.tsx`), the checkbox had no `required`, and `POST /v1/leads/capture` defaulted `consent_given` to false and stored the lead, contact details and all, for the agent to call. The Home Value Page required the box in the browser but its endpoint (`POST /v1/cma/{code}/request`) accepted a request without it. Neither stored the sentence beside the box.
+**Status:** `fixed` — `fix/r-range-and-p-consent`. The box is required in the form, and both endpoints refuse a request without consent (422, "Consent to be contacted is required."). Both forms send the wording they showed and both endpoints store it in `leads.consent_text` (migration `0063_leads_consent_text.sql` — apply before merge; both `REQUIRED_MIGRATION`s moved). Production also needs `ALLOWED_ORIGINS` to include the web domain: the /p form posts from the browser straight to the API. Tests: `apps/api/tests/test_leads_require_consent.py`, `apps/web/__tests__/PropertyLeadConsent.test.ts` (red on main).
+
+---
+
+### D-353 — /p and /r are still on the old look
+
+**Severity:** ROUGH · found 2026-11-04 rendering `/p/{code}` and `/r/{id}` on fixture data at phone and desktop. Neither page uses the property report's design (harbor, linen, atlas): `/p` ignores the report's `theme` and renders a generic card under a coloured band; `/r` is the older mobile viewer (`components/mobile-report/MobileReportViewer.tsx`) with its own palette and type. A homeowner who opens the PDF and then the link sees two different documents for one report.
+**Status:** `recorded` — for Design, as surgical edits against the live files under `docs/DESIGN_HANDOFF_RULES.md`. The request, page by page, is with the owner.
+
+---
+
+### D-354 — /p and /r lead with the accent colour and put text on gradients
+
+**Severity:** WRONG · found 2026-11-04 rendering `/p/{code}` and `/r/{id}` on fixture data at phone and desktop. `/p` paints its header and button in the ACCENT colour (`app/p/[code]/page.tsx:218`, `:232`, `:316`), as a gradient under white text: on an account with a navy brand and an amber accent the PDF is navy and `/p` is amber, and white on amber fails contrast. `/r`'s range card is a primary-to-accent gradient under white text (`MobileReportViewer.tsx:253`). Both break two standing rules: the brand colour leads, and no text on gradients (text on brand uses the derived inks).
+**Status:** `recorded` — with D-353, for Design.
 
 ---
 

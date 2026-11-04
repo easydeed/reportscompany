@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 
+// The sentence beside the checkbox, word for word. It is sent with the lead and
+// stored on it (`leads.consent_text`), so the record says what was agreed to.
+// The box is required: no lead is saved without it (the API refuses one too).
+export const P_CONSENT_COPY = "I consent to being contacted about this property and related services.";
+export const P_CONSENT_REQUIRED = "Please tick the box to agree to be contacted.";
+
 interface LeadCaptureFormProps {
   shortCode: string;
   agentName: string | null;
@@ -57,6 +63,12 @@ export default function LeadCaptureForm({
       return;
     }
     
+    if (!formData.consent_given) {
+      setErrorMessage(P_CONSENT_REQUIRED);
+      setStatus("error");
+      return;
+    }
+
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
@@ -82,6 +94,7 @@ export default function LeadCaptureForm({
           phone: formData.phone.trim() || null,
           message: formData.message.trim() || null,
           consent_given: formData.consent_given,
+          consent_text: P_CONSENT_COPY,
           source: "qr_scan",
           website: formData.website,  // Honeypot field
         }),
@@ -309,6 +322,7 @@ export default function LeadCaptureForm({
           name="consent_given"
           checked={formData.consent_given}
           onChange={handleChange}
+          required
           className="mt-1 w-4 h-4 rounded border-slate-300"
           style={{ accentColor }}
           disabled={status === "submitting"}
@@ -317,7 +331,7 @@ export default function LeadCaptureForm({
           htmlFor="consent_given" 
           className="text-sm text-slate-600"
         >
-          I consent to being contacted about this property and related services.
+          {P_CONSENT_COPY}
         </label>
       </div>
       

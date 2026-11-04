@@ -42,6 +42,13 @@ RATE_LIMIT_WINDOW_HOURS = 1
 # ============================================================================
 
 
+#: A lead is a person's contact details handed to an agent to contact them.
+#: Without their consent there is no lead to store (owner decision, 2026-11-04).
+CONSENT_REQUIRED = "Consent to be contacted is required."
+#: The wording the person saw beside the box is stored with the lead, so the
+#: record says what they agreed to. Long enough for a brokerage TCPA paragraph.
+CONSENT_TEXT_MAX = 2000
+
 class LeadCaptureInput(BaseModel):
     """Public lead capture input from QR scan or direct link."""
     short_code: str = Field(..., min_length=4, max_length=20, description="Property report short code")
@@ -50,6 +57,8 @@ class LeadCaptureInput(BaseModel):
     phone: Optional[str] = Field(None, max_length=50, description="Lead's phone number")
     message: Optional[str] = Field(None, max_length=2000, description="Optional message")
     consent_given: bool = Field(default=False, description="Whether lead consented to contact")
+    consent_text: Optional[str] = Field(None, max_length=CONSENT_TEXT_MAX,
+                                        description="The consent wording shown beside the box")
     source: Literal["qr_scan", "direct_link"] = Field(default="direct_link", description="How lead found the report")
     access_code: Optional[str] = Field(None, max_length=50, description="Access code for protected landing pages")
     website: Optional[str] = Field(None, description="Honeypot field - should be empty")
@@ -247,7 +256,12 @@ async def capture_lead(payload: LeadCaptureInput, request: Request):
     if payload.website:
         logger.warning(f"Honeypot triggered from IP {client_ip}")
         return silent_success  # Silently ignore bot submissions
-    
+
+    # 1b. No consent, no lead. The form requires the box; this holds for any
+    # caller that skips the form.
+    if not payload.consent_given:
+        raise HTTPException(status_code=422, detail=CONSENT_REQUIRED)
+
     with db_conn() as (conn, cur):
         # 2. Find property report by short_code (no RLS - public endpoint)
         cur.execute("""
@@ -343,11 +357,12 @@ async def capture_lead(payload: LeadCaptureInput, request: Request):
                 message,
                 source,
                 consent_given,
+                consent_text,
                 status,
                 ip_address,
                 user_agent
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'new', %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'new', %s, %s)
             RETURNING id::text
         """, (
             account_id,
@@ -358,6 +373,7 @@ async def capture_lead(payload: LeadCaptureInput, request: Request):
             payload.message,
             payload.source,
             payload.consent_given,
+            (payload.consent_text or "").strip() or None,
             client_ip,
             user_agent,
         ))

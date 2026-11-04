@@ -9,6 +9,7 @@ import {
   Bed, Bath, Square, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NO_RANGE, RANGE_HEADING, compsSentence, homesSoldLabel, rangeBasis, type CompsRange, type ConsumerMarketStats } from "@/lib/consumer-report";
 
 interface ReportData {
   id: string;
@@ -38,18 +39,8 @@ interface ReportData {
     distance_miles: number;
     photo_url?: string;
   }>;
-  value_estimate: {
-    low: number;
-    mid: number;
-    high: number;
-    confidence: string;
-  };
-  market_stats: {
-    median_price?: number;
-    avg_price_per_sqft?: number;
-    avg_days_on_market?: number;
-    total_sold_last_6mo?: number;
-  };
+  comps_range: CompsRange | null;
+  market_stats: ConsumerMarketStats;
   agent: {
     name: string;
     phone?: string;
@@ -251,27 +242,18 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
     <div className="p-4 space-y-4">
       {/* Hero Card */}
       <div className="rounded-2xl p-6 text-white" style={{ background: `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%, ${report.branding?.accent_color || '#8b5cf6'} 100%)` }}>
-        <p className="text-violet-200 text-sm mb-1">Estimated Value Range</p>
-        <p className="text-3xl font-bold mb-2">
-          {formatPrice(report.value_estimate.low)} - {formatPrice(report.value_estimate.high)}
-        </p>
-        <p className="text-violet-200 text-sm">
-          Most likely: {formatPrice(report.value_estimate.mid)}
-        </p>
-        <div className="mt-4 flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-            report.value_estimate.confidence === 'high' 
-              ? 'bg-green-500/20 text-green-100'
-              : report.value_estimate.confidence === 'medium'
-              ? 'bg-yellow-500/20 text-yellow-100'
-              : 'bg-red-500/20 text-red-100'
-          }`}>
-            {report.value_estimate.confidence} confidence
-          </span>
-          <span className="text-violet-200 text-xs">
-            Based on {report.comparables.length} comparable sales
-          </span>
-        </div>
+        <p className="text-violet-200 text-sm mb-1">{RANGE_HEADING}</p>
+        {report.comps_range ? (
+          <>
+            <p className="text-3xl font-bold mb-2">
+              {formatPrice(report.comps_range.low)} – {formatPrice(report.comps_range.high)}
+            </p>
+            <p className="text-violet-200 text-sm">{report.comps_range.method}</p>
+            <p className="mt-4 text-violet-200 text-xs">{rangeBasis(report.comps_range)}</p>
+          </>
+        ) : (
+          <p className="text-base">{NO_RANGE}</p>
+        )}
       </div>
 
       {/* Quick Stats */}
@@ -513,24 +495,23 @@ function MarketTab({ report, formatPrice }: { report: ReportData; formatPrice: (
             value={stats.median_price ? formatPrice(stats.median_price) : '--'}
           />
           <MarketStatRow 
-            label="Avg. Price per Sqft"
-            value={stats.avg_price_per_sqft ? `$${stats.avg_price_per_sqft}` : '--'}
+            label="Median Price per Sqft"
+            value={stats.median_price_per_sqft ? `$${stats.median_price_per_sqft}` : '--'}
           />
           <MarketStatRow 
             label="Avg. Days on Market"
             value={stats.avg_days_on_market ? `${stats.avg_days_on_market} days` : '--'}
           />
           <MarketStatRow 
-            label="Homes Sold (6 mo)"
-            value={stats.total_sold_last_6mo?.toString() || '--'}
+            label={homesSoldLabel(stats)}
+            value={stats.homes_sold ? stats.homes_sold.toString() : '--'}
           />
         </div>
       </div>
 
       <div className="bg-indigo-50 rounded-xl p-4">
         <p className="text-sm text-violet-800">
-          Based on {report.comparables.length} comparable sales within 2 miles 
-          of your property in the last 12 months.
+          {compsSentence(stats)}
         </p>
       </div>
     </div>

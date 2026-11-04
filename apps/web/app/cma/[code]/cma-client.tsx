@@ -131,6 +131,7 @@ export function CmaExperience({
           baths: lead.record.baths,
           sqft: lead.record.sqft,
           yearBuilt: lead.record.yearBuilt,
+          consentText: lead.consentText,
         })),
       })
       if (!res.ok) throw new Error("request failed")

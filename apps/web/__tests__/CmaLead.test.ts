@@ -28,6 +28,8 @@ const captured = JSON.stringify({
   property_state: "CA",
   property_zip: "92618",
   consent_given: true,
+  // D-342: the wording shown beside the box goes with the lead.
+  consent_text: "I agree to receive my report and to be contacted by Dana Ortiz about my property.",
   bedrooms: 4,
   bathrooms: 2.5,
   sqft: 2100,
@@ -51,6 +53,7 @@ describe("the home-value request matches the page it replaces", () => {
       baths: 2.5,
       sqft: 2100,
       yearBuilt: 1998,
+      consentText: "I agree to receive my report and to be contacted by Dana Ortiz about my property.",
     })
     expect(JSON.stringify(body)).toBe(captured)
   })
@@ -67,6 +70,7 @@ describe("the home-value request matches the page it replaces", () => {
       baths: 2.5,
       sqft: 2100,
       yearBuilt: 1998,
+      consentText: "x",
     })
     expect(body.bedrooms).toBe(3)
     expect("owner_name" in body).toBe(false)
