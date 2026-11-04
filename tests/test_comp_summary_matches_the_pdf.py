@@ -17,7 +17,7 @@ for p in ("apps/api/src", "apps/worker/src", "apps/worker/tests"):
 os.environ.setdefault("DATABASE_URL", "postgresql://fake/fake")
 
 from api.services.comp_summary import RANGE_METHOD, summarize  # noqa: E402
-from worker.property_builder import PropertyReportBuilder  # noqa: E402
+from worker.property_builder import PropertyReportBuilder, THEME_TEMPLATES  # noqa: E402
 from worker.tasks import consumer_comps_range  # noqa: E402
 from test_property_production_render import COMPS, report_data  # noqa: E402
 
@@ -25,7 +25,9 @@ PropertyReportBuilder._fetch_market_trends = lambda self: None
 
 
 def _pdf():
-    html = PropertyReportBuilder(report_data("harbor")).render_html()
+    # Any live theme: the numbers do not depend on it. Taken from the registry,
+    # not named here (tests/test_rename_scope_numbers_are_current.py).
+    html = PropertyReportBuilder(report_data(sorted(THEME_TEMPLATES)[0])).render_html()
     return re.sub(r"\s+", " ", html.split("</style>", 1)[1])
 
 
