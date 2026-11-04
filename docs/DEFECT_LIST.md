@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 85 | Observed, not yet triaged |
+| `recorded` | 84 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
-| `fixed` | 210 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 211 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
@@ -16080,7 +16080,7 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-357 — CI's dependency install can crash mid-swap: two locks, one venv, parallel uninstalls
 
 **Severity:** ROUGH · found 2026-11-04 on #266, run 41902558579. `backend-tests.yml` installs the API lock and then the worker lock into one shared `.venv`. The worker lock pins older greenlet, markupsafe, psycopg, kombu, click and certifi than the API lock, so the second `poetry install` downgrades them, and Poetry's installer runs those swaps in parallel. One job's `pip uninstall markupsafe` enumerated site-packages while another had just removed `greenlet-3.3.0.dist-info`, and pip died with `FileNotFoundError`, so the job failed before a single test ran. Intermittent: the same commit's push run, main's run on #265 and four local repetitions with the same Poetry (2.5.1) all installed cleanly. The same family as the Render build failure (pip crashing mid-swap), with a different trigger.
-**Status:** `recorded` — set `POETRY_INSTALLER_PARALLEL: "false"` on the worker install step, so the downgrades run one at a time. The lasting fix is for the two locks to agree on those versions so the second install has nothing to downgrade. Not changed in #266, which is a Design handoff.
+**Status:** `fixed` — `fix/ci-serial-worker-install`: `POETRY_INSTALLER_PARALLEL: "false"` on the worker install step, so the downgrades into the shared venv run one at a time. Test: `tests/test_ci_installs_the_worker_serially.py` (red on main). Not done: the lasting fix, two locks that agree on greenlet, markupsafe, psycopg, kombu, click and certifi, so the second install has nothing to downgrade.
 
 ---
 
