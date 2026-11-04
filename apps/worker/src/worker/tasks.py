@@ -2357,6 +2357,28 @@ def _record_consumer_delivery_failure(cur, report_id: str, reason: str):
     logger.error("CONSUMER REPORT %s: not delivered — %s", report_id, reason)
 
 
+
+def consumer_comps_range(comparables):
+    """Lowest and highest CLOSED comparable sale — the PDF's range rule
+    (`PropertyReportBuilder._v2_closed_prices`). Empty when there are none."""
+    prices = []
+    for c in comparables or []:
+        if str(c.get("status") or "").strip().lower() not in ("closed", "sold"):
+            continue
+        for key in ("sale_price", "price", "close_price"):
+            try:
+                price = float(c.get(key) or 0)
+            except (TypeError, ValueError):
+                price = 0
+            if price > 0:
+                prices.append(price)
+                break
+    if not prices:
+        return {}
+    prices.sort()
+    return {"low": int(prices[0]), "high": int(prices[-1]), "count": len(prices)}
+
+
 @celery.task(name="process_consumer_report", bind=True, max_retries=3)
 def process_consumer_report(self, report_id: str):
     """
@@ -2593,41 +2615,14 @@ def process_consumer_report(self, report_id: str):
                     market_stats = {}
                 
                 # =============================================
-                # CALCULATE VALUE ESTIMATE
+                # THE COMPS' RANGE, NOT AN ESTIMATE
                 # =============================================
-                value_estimate = {"low": 0, "mid": 0, "high": 0, "confidence": "low"}
-                
-                if comparables:
-                    prices = [c["price"] for c in comparables if c.get("price")]
-                    if prices:
-                        avg_price = sum(prices) / len(prices)
-                        price_range = max(prices) - min(prices) if len(prices) > 1 else avg_price * 0.1
-                        
-                        # Adjust based on sqft if we have it
-                        subject_sqft = property_data.get("sqft")
-                        if subject_sqft and market_stats.get("avg_price_per_sqft"):
-                            # Use price per sqft to estimate
-                            estimated = subject_sqft * market_stats["avg_price_per_sqft"]
-                            value_estimate = {
-                                "low": int(estimated * 0.92),
-                                "mid": int(estimated),
-                                "high": int(estimated * 1.08),
-                                "confidence": "medium" if len(comparables) >= 3 else "low",
-                            }
-                        else:
-                            # Use average of comparables
-                            value_estimate = {
-                                "low": int(avg_price - price_range * 0.5),
-                                "mid": int(avg_price),
-                                "high": int(avg_price + price_range * 0.5),
-                                "confidence": "medium" if len(comparables) >= 5 else "low",
-                            }
-                        
-                        # Boost confidence if we have many good comps
-                        if len(comparables) >= 5:
-                            value_estimate["confidence"] = "high"
-                        
-                        logger.info(f"Value estimate: {value_estimate}")
+                # This used to store sqft x the comps' AVERAGE $/sqft, +/-8%,
+                # with a "most likely" price — a figure the PDF never prints and
+                # the owner decided against (2026-11-04). The /r page now reads
+                # the range from the comps itself; this stores the same thing so
+                # the row does not hold a number nobody should show.
+                value_estimate = consumer_comps_range(comparables)
                 
                 # =============================================
                 # GENERATE BRANDED PDF REPORT

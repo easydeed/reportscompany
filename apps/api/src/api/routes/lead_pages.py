@@ -6,13 +6,14 @@ NO AUTHENTICATION REQUIRED for these endpoints.
 """
 
 from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 import json
 import re
 import logging
 
 from ..db import db_conn, set_rls
+from .leads import CONSENT_REQUIRED, CONSENT_TEXT_MAX
 from ..services.agent_code import get_agent_by_code, increment_landing_page_visits
 from ..services.sitex import lookup_property
 
@@ -102,6 +103,9 @@ class ReportRequestPayload(BaseModel):
     property_state: str
     property_zip: str
     consent_given: bool = False
+    # The wording beside the checkbox, as shown (cma-funnel `consentText`).
+    # Stored on the lead so the record says what was agreed to (D-342).
+    consent_text: Optional[str] = Field(None, max_length=CONSENT_TEXT_MAX)
     name: Optional[str] = None
     owner_name: Optional[str] = None
     bedrooms: Optional[int] = None
@@ -292,6 +296,9 @@ async def request_report(
     Consumer requests their home value report.
     Accepts phone (SMS) or email delivery. Also writes to unified leads table.
     """
+    # No consent, no lead: the page requires the box, and so does this.
+    if not payload.consent_given:
+        raise HTTPException(status_code=422, detail=CONSENT_REQUIRED)
     if payload.delivery_method == "sms" and not payload.phone:
         raise HTTPException(status_code=422, detail="Phone number required for SMS delivery")
     if payload.delivery_method == "email" and not payload.email:
@@ -413,11 +420,11 @@ async def request_report(
             """
             INSERT INTO leads (
                 account_id, name, email, phone, message,
-                source, consent_given, status,
+                source, consent_given, consent_text, status,
                 ip_address, user_agent, consumer_report_id
             ) VALUES (
                 %s::uuid, %s, %s, %s, %s,
-                'cma_page', %s, 'new',
+                'cma_page', %s, %s, 'new',
                 %s, %s, %s
             )
             """,
@@ -434,6 +441,7 @@ async def request_report(
                 payload.phone,
                 f"CMA report requested for {full_address}",
                 payload.consent_given,
+                (payload.consent_text or "").strip() or None,
                 ip,
                 user_agent[:500] if user_agent else None,
                 str(report_id),

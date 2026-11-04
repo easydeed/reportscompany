@@ -30,6 +30,8 @@ export type LeadFacts = {
   baths: number | null
   sqft: number | null
   yearBuilt: number | null
+  /** The consent sentence exactly as shown beside the checkbox. */
+  consentText: string
 }
 
 /** A manual search sends only `address`. A picked place always sends city and state too. */
@@ -55,6 +57,7 @@ export function cmaRequestBody(property: StoredProperty, lead: LeadFacts) {
     property_state: property.state,
     property_zip: property.zip,
     consent_given: true,
+    consent_text: lead.consentText,
     bedrooms: fact(lead.beds, property.bedrooms),
     bathrooms: fact(lead.baths, property.bathrooms),
     sqft: fact(lead.sqft, property.sqft),

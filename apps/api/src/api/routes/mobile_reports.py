@@ -15,6 +15,7 @@ import json
 import logging
 
 from ..db import db_conn, fetchone_dict, fetchall_dicts
+from ..services.comp_summary import summarize as summarize_comps
 
 logger = logging.getLogger(__name__)
 
@@ -66,19 +67,25 @@ class Comparable(BaseModel):
     photo_url: Optional[str] = None
 
 
-class ValueEstimate(BaseModel):
+class CompsRange(BaseModel):
+    """The lowest and highest closed comparable sale, and the line the PDF
+    prints beside them. Not an estimate: there is no point inside it, and no
+    figure derived from the home's size (owner decision; see comp_summary)."""
     low: int
-    mid: int
     high: int
-    confidence: str  # 'high', 'medium', 'low'
+    count: int
+    method: str
 
 
 class MarketStats(BaseModel):
+    """The comps page of the PDF, in numbers: closed sales only, upper medians,
+    the window and radius the comps actually cover."""
     median_price: Optional[int] = None
-    avg_price_per_sqft: Optional[int] = None
+    median_price_per_sqft: Optional[int] = None
     avg_days_on_market: Optional[int] = None
-    total_sold_last_6mo: Optional[int] = None
-    price_trend_pct: Optional[float] = None  # e.g., +5.2 or -3.1
+    homes_sold: int = 0
+    window_months: Optional[int] = None
+    radius_miles: Optional[float] = None
 
 
 class AgentInfo(BaseModel):
@@ -95,7 +102,7 @@ class MobileReportResponse(BaseModel):
     id: str
     property: PropertyData
     comparables: List[Comparable]
-    value_estimate: ValueEstimate
+    comps_range: Optional[CompsRange] = None
     market_stats: MarketStats
     agent: AgentInfo
     branding: Optional[dict] = None
@@ -162,13 +169,12 @@ async def get_report_data(
     if isinstance(comparables, str):
         comparables = json.loads(comparables)
     
-    value_estimate = report.get("value_estimate") or {}
-    if isinstance(value_estimate, str):
-        value_estimate = json.loads(value_estimate)
-    
-    market_stats = report.get("market_stats") or {}
-    if isinstance(market_stats, str):
-        market_stats = json.loads(market_stats)
+    # `value_estimate` and `market_stats` on the row are not read. The first
+    # was sqft x the comps' average $/sqft +/-8% with a "most likely" price,
+    # an estimate the owner decided against; the second disagreed with the PDF
+    # on window, radius and median. Both are recomputed from the stored comps
+    # by the PDF's rules, which also corrects every report already sent.
+    summary = summarize_comps([c for c in comparables if isinstance(c, dict)])
     
     # Build property data with fallbacks
     prop = PropertyData(
@@ -254,21 +260,14 @@ async def get_report_data(
             logger.warning(f"Error parsing comparable: {e}")
             continue
     
-    # Build value estimate
-    val_est = ValueEstimate(
-        low=value_estimate.get("low") or 0,
-        mid=value_estimate.get("mid") or 0,
-        high=value_estimate.get("high") or 0,
-        confidence=value_estimate.get("confidence") or "low"
-    )
-    
-    # Build market stats
+    comps_range = CompsRange(**summary["range"]) if summary["range"] else None
     mkt_stats = MarketStats(
-        median_price=market_stats.get("median_price"),
-        avg_price_per_sqft=market_stats.get("avg_price_per_sqft"),
-        avg_days_on_market=market_stats.get("avg_days_on_market"),
-        total_sold_last_6mo=market_stats.get("total_sold_last_6mo"),
-        price_trend_pct=market_stats.get("price_trend_pct")
+        median_price=summary["median_price"],
+        median_price_per_sqft=summary["median_price_per_sqft"],
+        avg_days_on_market=summary["avg_days_on_market"],
+        homes_sold=summary["homes_sold"],
+        window_months=summary["window_months"],
+        radius_miles=summary["radius_miles"],
     )
     
     # Build agent info
@@ -302,7 +301,7 @@ async def get_report_data(
         id=str(report["id"]),
         property=prop,
         comparables=comp_list,
-        value_estimate=val_est,
+        comps_range=comps_range,
         market_stats=mkt_stats,
         agent=agent,
         branding=branding_data,

@@ -44,8 +44,8 @@
   {
     "name": "R7 the violet labels leave the brand-gradient hero",
     "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
-    "old": "        <p className=\"text-violet-200 text-sm mb-1\">Estimated Value Range</p>",
-    "new": "        <p className=\"text-sm mb-1\">Estimated Value Range</p>",
+    "old": "        <p className=\"text-violet-200 text-sm mb-1\">{RANGE_HEADING}</p>",
+    "new": "        <p className=\"text-sm mb-1\">{RANGE_HEADING}</p>",
     "test": "tests/test_report_viewer_relay_is_current.py"
   },
   {

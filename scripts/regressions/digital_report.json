@@ -1,0 +1,30 @@
+[
+  {
+    "name": "D-352 comes back: the /p endpoint stores a lead without consent",
+    "file": "apps/api/src/api/routes/leads.py",
+    "old": "    if not payload.consent_given:\n        raise HTTPException(status_code=422, detail=CONSENT_REQUIRED)\n\n    with db_conn() as (conn, cur):\n        # 2. Find property report by short_code",
+    "new": "    with db_conn() as (conn, cur):\n        # 2. Find property report by short_code",
+    "test": "apps/api/tests/test_leads_require_consent.py"
+  },
+  {
+    "name": "D-342 comes back: the Home Value Page drops the wording",
+    "file": "apps/api/src/api/routes/lead_pages.py",
+    "old": "                payload.consent_given,\n                (payload.consent_text or \"\").strip() or None,\n                ip,",
+    "new": "                payload.consent_given,\n                None,\n                ip,",
+    "test": "apps/api/tests/test_leads_require_consent.py"
+  },
+  {
+    "name": "D-350 comes back: the range includes an asking price",
+    "file": "apps/api/src/api/services/comp_summary.py",
+    "old": "    return sorted(p for p in (_price(c) for c in comps if _closed(c)) if p is not None)",
+    "new": "    return sorted(p for p in (_price(c) for c in comps) if p is not None)",
+    "test": "apps/api/tests/test_consumer_report_shows_the_pdf_range.py"
+  },
+  {
+    "name": "D-351 comes back: the median is the mean of the middle two",
+    "file": "apps/api/src/api/services/comp_summary.py",
+    "old": "    return values[len(values) // 2] if values else None",
+    "new": "    return (values[(len(values) - 1) // 2] + values[len(values) // 2]) / 2 if values else None",
+    "test": "tests/test_comp_summary_matches_the_pdf.py"
+  }
+]

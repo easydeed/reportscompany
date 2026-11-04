@@ -30,8 +30,8 @@
   {
     "name": "S5 the lead request forwards an owner name again",
     "file": "apps/web/lib/cma-lead.ts",
-    "old": "    consent_given: true,\n    bedrooms: fact(lead.beds, property.bedrooms),",
-    "new": "    consent_given: true,\n    ...((property as { owner_name?: string }).owner_name ? { owner_name: (property as { owner_name?: string }).owner_name } : {}),\n    bedrooms: fact(lead.beds, property.bedrooms),",
+    "old": "    consent_text: lead.consentText,\n    bedrooms: fact(lead.beds, property.bedrooms),",
+    "new": "    consent_text: lead.consentText,\n    ...((property as { owner_name?: string }).owner_name ? { owner_name: (property as { owner_name?: string }).owner_name } : {}),\n    bedrooms: fact(lead.beds, property.bedrooms),",
     "test": "__tests__/CmaLead.test.ts",
     "runner": "jest"
   }
