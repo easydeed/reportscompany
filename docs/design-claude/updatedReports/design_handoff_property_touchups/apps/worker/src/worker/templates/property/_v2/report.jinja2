@@ -1,0 +1,881 @@
+{#
+  THE ONE PAGE ARCHITECTURE — Design's 2026-10-05 property package.
+
+  Six pages, shared by every theme. A theme file sets the eight typography
+  variables below and includes this; nothing else differs between themes
+  (Design: "they differ only in display/body typeface, weight, tracking, case
+  and corner radius").
+
+  WHY THIS IS A SHARED FILE AND NOT COPIED PER THEME
+  `test_one_comp_set.py::test_the_live_template_set_is_the_five_entry_files`
+  used to fail on any live template with an `extends`, `import`, `include` or
+  `from`. That gate exists because of D-131: there is a second property
+  template tree under `_base/` that renders NOWHERE, and three separate costs
+  were paid reading it as if it did. The gate is changed deliberately, which
+  Design's README asks for by name, and it is NARROWED rather than dropped —
+  a live template may reach `_v2/` and may still not reach `_base/`. The
+  distinction the gate protects is "is this file rendered", not "does this
+  file use include".
+
+  CLASSES, NOT THE DESIGN FILE'S INLINE STYLES. The contrast ratchet keys on
+  `(family, selector, fg, bg)`; with everything inline every selector is
+  `div` and 118 baseline entries become unreadable. The values below are the
+  design's, to the pixel.
+
+  VARIABLES THE THEME FILE MUST SET, all consumed as CSS custom properties:
+    t_display, t_body        font stacks
+    t_display_weight         300-900
+    t_display_tracking       em
+    t_display_case           none | uppercase
+    t_radius                 px
+    t_font_link              the Google Fonts href
+
+  TOUCH-UPS, 2026-11-03 (Design, docs/design-claude/property_touchups/).
+  Ten visual touches, no structural change. Each is marked `[T1]`..`[T9]`
+  at the site and described in that package's README. No colour that is not
+  a derive_theme token or a fixed neutral below was added; no text sits on a
+  gradient or a photo; the six pages and their order are unchanged.
+#}
+<!DOCTYPE html>
+<html lang="{{ language | default('en', true) }}">
+<head>
+<meta charset="utf-8">
+<title>{{ doc.report_kind }} — {{ doc.street }}</title>
+<link rel="stylesheet" href="{{ t_font_link }}">
+<style>
+  :root {
+    /* The derive_theme tokens. Nothing on this document is a colour that is
+       not one of these or a fixed neutral below (Design §3.1). `display_ink`
+       is declared below, next to the decision it records. */
+    --primary: {{ primary }};
+    --primary-dark: {{ primary_dark }};
+    --primary-ink: {{ primary_ink }};
+    --on-primary: {{ on_primary }};
+    --tint: {{ tint }};
+    --primary-on-dark: {{ primary_on_dark }};
+    /* Rule lines on a primary fill, by which way on_primary resolved. */
+    --on-primary-rule: {% if on_primary | lower == '#ffffff' %}rgba(255,255,255,0.3){% else %}rgba(20,21,26,0.25){% endif %};
+
+    /* ── CLOSED, 2026-10-07, BY DESIGN DERIVING IT. ──────────────────────
+       This was an open [JERRY] decision. Design's package specified `#FFFFFF`
+       for the cover's display lines — street, city, the four 30px stat values
+       — "by owner decision", on the stated grounds that white "passes the 3.0
+       large-text threshold" on the sample brands. D-171 measured that and the
+       premise was false for two of six: amber #f59e0b is 2.15 and lime
+       #84cc16 is 1.98, clearing neither 3.0 nor 4.5.
+
+       The holding position was `on_primary`, which passes on all six but
+       overshoots: it picks the strict winner between white and near-black, so
+       it also took white OFF teal, where white is 3.74 and the owner exception
+       was real. The note recorded that taking Design's decision as written
+       would widen the exception from one brand to four. Neither was right.
+
+       Design's answer (RESPONSE_2026-10-06) is a THIRD option, and it is the
+       correct one: compute the threshold instead of asserting it.
+
+           display_ink = contrast(white, primary) >= 3.0 ? white : on_primary
+
+       Which lands, measured on `themes.derive_theme`:
+
+           brand   white  near-black   on_primary   display_ink
+           violet   5.70        3.20      #ffffff       #ffffff
+           cyan     5.36        3.40      #ffffff       #ffffff
+           red      4.83        3.77      #ffffff       #ffffff
+           teal     3.74        4.87      #14151a       #ffffff   <- differs
+           amber    2.15        8.49      #14151a       #14151a
+           lime     1.98        9.23      #14151a       #14151a
+
+       So it keeps white on exactly the one brand the owner exception was
+       about, and drops it on exactly the two that failed. One brand wide, not
+       four and not zero — and derived, so a seventh brand resolves itself. */
+    --display-ink: {{ display_ink }};
+    --cover-display: var(--display-ink);
+
+    /* Fixed neutrals, with the measured contrast on white. */
+    --ink: #14161A;        /* 18.1:1 */
+    --body: #2A2D33;       /* 13.8:1 */
+    --muted: #5E636B;      /* 6.05:1 — the lightest text on the surface */
+    --rule: #ECECE8;
+    --rule-soft: #E4E4E0;
+    --rule-axis: #D9DADF;
+    --track: #F1F1EE;
+    --strip: #F6F6F3;
+    --inactive: #EDEDEA;
+    --dark: {{ doc.dark }};
+
+    {# `| safe` ON THESE TWO ONLY, and only because they are constants from
+       the theme's own entry file — never a value a user or a vendor supplied.
+       The builder renders with autoescape on, which turns the quotes in a
+       font stack into `&#39;`: `--display: &#39;Barlow Condensed&#39;…` is
+       not valid CSS, the declaration is dropped, and every theme rendered in
+       the browser's default serif from 2026-10-06 until this was found by
+       looking at a render. `test_each_theme_renders_in_its_own_typefaces`
+       compares the rendered stacks with the entry files. #}
+    --display: {{ t_display | safe }};
+    --body-face: {{ t_body | safe }};
+    --display-weight: {{ t_display_weight }};
+    --display-tracking: {{ t_display_tracking }};
+    --display-case: {{ t_display_case }};
+    --radius: {{ t_radius }};
+  }
+
+  @page { size: Letter; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--body-face);
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    /* Lining figures everywhere. Cormorant Garamond (the elegant display face)
+       defaults to old-style figures, so the cover read "2 · I · 786 · 1949"
+       with the 1 as a small capital I — a legibility defect on a cover
+       figure. Barlow, Manrope and Geist are lining by default, so this changes
+       that theme only. Inherited, so every figure on every page gets it. */
+    font-variant-numeric: lining-nums;
+  }
+  /* [T9] Links carry the colour of the text they sit in and no underline:
+     the phone and email on page 6 and the footer phone are now tap-to-call /
+     tap-to-write in the PDF, and must look exactly as they did. */
+  a { color: inherit; text-decoration: none; }
+
+  /* 8.5 x 11in at 96dpi. Fixed height, not min-height: every page in this
+     document is a fixed-row layout and a page that grows is a page that
+     pushes a footer onto the next sheet. */
+  .sheet {
+    width: 816px;
+    height: 1056px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+  .sheet:last-child { page-break-after: auto; }
+
+  /* PDFShift renders through a headless browser's print path, so the print
+     rules are the ones that ship. `@page { margin: 0 }` above removes the
+     browser's own margins; this removes the drop shadow and the page gap that
+     only make sense on screen, and re-states the breaks so a renderer that
+     honours `@media print` over the base rules still gets them.
+     `test_has_print_media_query` asserts this block exists on every theme —
+     it was missing from the first version of this file, and the gate is the
+     only thing that said so. */
+  @media print {
+    html, body { background: #fff; }
+    .sheet {
+      box-shadow: none;
+      margin: 0;
+      page-break-after: always;
+      page-break-inside: avoid;
+    }
+    .sheet:last-child { page-break-after: auto; }
+  }
+
+  /* ── running head and footer, in-page ──────────────────────────────────
+     The design specifies these as PDFShift header/footer elements. They are
+     rendered in-page here because the property pipeline does not pass
+     header_html/footer_html (only the market one does), and because these
+     pages are fixed-height — the 1.07in the market reports recovered by
+     moving to the header slot comes from reflow, which cannot happen here.
+     Moving them is a pipeline change, not a template change. */
+  .runhead {
+    height: 40px;
+    flex-shrink: 0;
+    padding: 0 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--rule);
+    font-size: 10.5px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .runhead-address { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .pagefoot {
+    margin: 0 52px;
+    padding: 14px 0 22px;
+    border-top: 1px solid var(--rule-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    flex-shrink: 0;
+  }
+  .pagefoot-agent { font-weight: 700; }
+  .pagefoot-brand { color: var(--muted); }
+  .pagefoot-num { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ── shared type ───────────────────────────────────────────────────── */
+  .h2 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: var(--display-weight);
+    font-size: 40px;
+    line-height: 1;
+    letter-spacing: var(--display-tracking);
+    text-transform: var(--display-case);
+  }
+  .label {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--primary-ink);
+    font-weight: 600;
+  }
+  .pagehead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+  }
+  .pagehead-aside { font-size: 12px; color: var(--muted); text-align: right; }
+  .body-pad { padding: 32px 52px 0; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  /* ── 1 · cover ─────────────────────────────────────────────────────── */
+  .masthead {
+    background: var(--primary);
+    color: var(--on-primary);
+    padding: 36px 52px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+  .masthead-row { display: flex; justify-content: space-between; align-items: center; }
+  /* No `opacity` on a brand fill: 85% of on_primary over `primary` is a
+     colour neither token measured, and the contrast gate reports it as a
+     pairing nobody chose. Design's 85%/92%/90% opacities on the band are all
+     dropped for the same reason. */
+  .masthead-kind { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; }
+  .masthead-logo { height: 40px; max-width: 200px; object-fit: contain; object-position: right center; }
+  .masthead-brand { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+  .cover-titlebox { height: 78px; display: flex; align-items: flex-end; overflow: hidden; }
+  /* White by owner decision, scoped to the display lines. On teal that is
+     3.74:1 — above the 3.0 large-text threshold for the street and the 30px
+     stat values, and the recorded exception for the 22px city line. */
+  .cover-street {
+    font-family: var(--display);
+    font-weight: var(--display-weight);
+    font-size: {{ doc.title_size }}px;
+    line-height: 1.15;
+    letter-spacing: var(--display-tracking);
+    text-transform: var(--display-case);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    color: var(--cover-display);
+  }
+  /* `opacity` on a brand fill makes the effective colour depend on the fill,
+     which is the thing §3.2 forbids — so the city line is a flat token. The
+     design's 92% is dropped rather than approximated.
+
+     AND IT IS NOT `--cover-display`. 22px at weight 500 is NOT large text by
+     either of WCAG 1.4.3's definitions (>=24px, or >=18.66px at >=700), so it
+     needs 4.5 and not 3.0. `display_ink`'s threshold is 3.0, which is right
+     for the three sites around it — the street line (32-64px) and the 30px
+     stat values — and wrong for this one.
+
+     The pixel gate caught it: pointing all four sites at `display_ink` put
+     `#ffffff on #0d9488` at 3.74 under `span.cover-city`, one new failure, on
+     teal. Design's rule is correct and is applied to one site too many; the
+     city line takes `on_primary`, which is the 4.5-or-better token.
+
+     So the derived threshold is right and the SET OF SITES it covers is the
+     part that needed measuring — which is also what Design asked for ("please
+     re-measure"). */
+  .cover-city { font-size: 22px; font-weight: 500; color: var(--on-primary); }
+  .cover-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    border-top: 1px solid var(--on-primary-rule);
+    padding-top: 16px;
+  }
+  .cover-stat { display: flex; flex-direction: column; gap: 3px; padding-right: 12px; }
+  .cover-stat-value {
+    font-family: var(--display);
+    font-weight: var(--display-weight);
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: var(--display-tracking);
+    color: var(--cover-display);
+  }
+  .cover-stat-label { font-size: 11px; font-weight: 500; }
+
+  .cover-body { padding: 24px 52px 0; display: flex; flex-direction: column; gap: 22px; flex: 1; min-height: 0; }
+  .plate { border-radius: var(--radius); overflow: hidden; background: var(--tint); position: relative; }
+  .plate-hero { flex: 1; min-height: 300px; }
+  .plate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* No text over photography anywhere (§3.2). The missing-photo tile is a
+     TINT panel, so its text sits on a known flat colour. */
+  .nophoto { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; }
+  .nophoto-name { font-family: var(--display); font-size: 28px; font-weight: var(--display-weight); line-height: 1; color: var(--primary-ink); }
+  .nophoto-note { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; color: var(--muted); }
+  .cover-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; padding-bottom: 20px; }
+  /* One column when there is no name to address the report to. */
+  .cover-grid.is-unaddressed { grid-template-columns: minmax(0, 1fr); }
+  .cover-for { display: flex; flex-direction: column; gap: 10px; }
+  /* [T1] 20px, not 22, and balanced wrapping. "The owners of 1358 5th Street"
+     broke as "…1358 5th / Street" in the 200px column on every theme — a
+     one-word orphan under the cover's most personal line. `text-wrap:
+     balance` splits it "The owners of / 1358 5th Street"; the note below gets
+     `pretty` for the same reason ("Prepared at the request of Zoe / Noelle"). */
+  .cover-for-name { font-family: var(--display); font-weight: var(--display-weight); font-size: 20px; line-height: 1.15; letter-spacing: var(--display-tracking); text-wrap: balance; }
+  .cover-for-note { font-size: 13px; color: var(--muted); text-wrap: pretty; }
+  .inshort { background: var(--tint); border-radius: var(--radius); padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+  /* [T2] Bounded at five lines with an ELLIPSIS, not clipped at four.
+     `max-height: 81px; overflow: hidden` cut the paragraph mid-line on
+     harbor (Manrope sets wider than Barlow; the same ~380 characters run to
+     four full lines there and the fifth was sliced through its x-height).
+     Line clamp ends on "…" at a word boundary. Five lines (101px) rather
+     than four: the hero plate above is `flex: 1` with 300px as its floor and
+     measured ~440px on the fixture, so the extra 20px comes out of the photo,
+     not the page. The generation cap stays the primary bound. */
+  .inshort-text { margin: 0; font-size: 13.5px; line-height: 1.5; color: var(--body); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
+
+  /* ── 2 · your home ────────────────────────────────────────────────── */
+  .home-photos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .plate-pair { height: 220px; }
+  .plate-caption { position: absolute; left: 12px; bottom: 12px; background: #fff; color: var(--ink); font-size: 11px; font-weight: 600; padding: 5px 9px; border-radius: 4px; }
+  .detail-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; align-items: start; }
+  .detail-group { display: flex; flex-direction: column; }
+  .detail-title { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary-ink); font-weight: 600; padding: 14px 0 6px; border-bottom: 1.5px solid var(--ink); }
+  .detail-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 12.5px; }
+  .detail-label { color: var(--muted); white-space: nowrap; }
+  .detail-value { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: var(--ink); }
+  /* A dash is quieter than a value, deliberately: weight 400 and the muted
+     grey, so a page of knowns does not read as a page of maybes. */
+  .detail-value.is-absent { font-weight: 400; color: var(--muted); }
+  .detail-value.is-wrap { white-space: normal; overflow: visible; font-size: 11.5px; }
+  /* [T4] Label above the list, in the page's own label voice, instead of a
+     bold "Not on record" sharing a line with thirteen field names. The
+     strip read as a paragraph of warning; it is a caption. Same colour, same
+     panel, two lines instead of a run-on. */
+  .notonrecord { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px 13px; background: var(--strip); border-radius: var(--radius); font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+  .notonrecord-label { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+
+  /* ── 3 · comparable sales ─────────────────────────────────────────── */
+  .conf-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .conf-pill { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 600; padding: 5px 10px; border-radius: 4px; background: var(--tint); color: var(--primary-ink); white-space: nowrap; }
+  .conf-grade { width: 20px; height: 20px; border-radius: 4px; background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+  .comp-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 20px 16px; }
+  /* [T5] The grid fits the count. Six cells for four comps left the second
+     row two-thirds empty on every fixture render — a hole where the page's
+     one piece of imagery should be. Quantity selectors, so the template
+     needs no count from the builder:
+       5–6 comps  3 × 2 (as designed)
+       4 comps    2 × 2, each plate a third wider
+       1–3 comps  one row, plates at 4:3 so three tall slivers do not fill the
+                  page; the row sits at the top, the space below is honest
+     `:has()` is supported by the Chromium PDFShift renders with. */
+  .comp-grid:has(.comp:nth-child(4):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .comp-grid:has(.comp:nth-child(3):last-child),
+  .comp-grid:has(.comp:nth-child(2):last-child),
+  .comp-grid:has(.comp:first-child:last-child) { grid-template-rows: none; align-content: start; }
+  .comp-grid:has(.comp:nth-child(3):last-child) .comp-plate,
+  .comp-grid:has(.comp:nth-child(2):last-child) .comp-plate,
+  .comp-grid:has(.comp:first-child:last-child) .comp-plate { flex: none; aspect-ratio: 4 / 3; }
+  .comp { display: flex; flex-direction: column; min-height: 0; }
+  .comp-plate { position: relative; flex: 1; min-height: 0; border-radius: var(--radius); overflow: hidden; background: var(--tint); }
+  .comp-plate img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* Solid white plate on the photo — never text directly on photography. */
+  .comp-price { position: absolute; left: 10px; top: 10px; background: #fff; color: var(--ink); font-size: 14px; font-weight: 700; padding: 4px 8px; border-radius: 4px; }
+  /* [T6] A missing-photo tile says the one thing the card below does not:
+     how far away the sale is. Four tiles reading "La Verne / NO PHOTO ON
+     FILE" were four copies of the same tile; "0.24 mi / FROM YOUR HOME · NO
+     PHOTO ON FILE" differs per comp and is the number a seller asks about
+     first. Same tokens (primary_ink on tint), same position. The city falls
+     back in only when the distance is itself a dash. */
+  .comp-nophoto { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; }
+  .comp-nophoto-name { font-family: var(--display); font-size: 22px; font-weight: var(--display-weight); line-height: 1; color: var(--primary-ink); letter-spacing: var(--display-tracking); }
+  .comp-nophoto-note { font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 5px; color: var(--muted); }
+  .comp-lines { padding-top: 9px; display: flex; flex-direction: column; gap: 3px; }
+  .comp-address { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .comp-line { font-size: 11px; color: var(--muted); }
+
+  /* ── 4 · what the comparable sales support ────────────────────────── */
+  .rangepanel { background: var(--dark); color: #fff; border-radius: var(--radius); padding: 28px 32px; display: flex; flex-direction: column; gap: 16px; }
+  /* primary_on_dark is guaranteed against --dark and against nothing else,
+     which is why --dark is the only dark surface on the document. */
+  .rangepanel-label { font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary-on-dark); font-weight: 600; }
+  .rangepanel-figures { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .rangepanel-headline { font-family: var(--display); font-weight: var(--display-weight); font-size: 60px; line-height: 0.95; letter-spacing: var(--display-tracking); white-space: nowrap; }
+  .rangepanel-median { font-size: 13px; color: rgba(255,255,255,0.8); }
+  .rangepanel-method { font-size: 13px; color: rgba(255,255,255,0.8); margin-top: -8px; }
+  .band { position: relative; height: 10px; border-radius: 5px; background: rgba(255,255,255,0.14); }
+  .band-fill { position: absolute; top: 0; bottom: 0; background: var(--primary-on-dark); border-radius: 5px; }
+  .band-marker { position: absolute; top: -6px; width: 3px; height: 22px; background: #fff; border-radius: 2px; transform: translateX(-50%); }
+  .band-axis { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.8); }
+  /* [T7] The marker's caption sits UNDER THE MARKER. It was the middle item
+     of a space-between row, so it was centred whatever the marker's position
+     — on the fixture the marker is at 2% of the axis and its "▲" pointed at
+     nothing. Now a row of its own, anchored at `subject_x`: left-aligned in
+     the first 30% of the axis, right-aligned in the last 30%, centred
+     between. Same colour and size as before (`#fff`, 600, 11px). */
+  .band-you { position: relative; height: 17px; margin-top: 2px; font-size: 11px; color: #fff; font-weight: 600; }
+  .band-you-text { position: absolute; top: 0; white-space: nowrap; }
+  .rangepanel-note { margin: 0; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,0.8); }
+
+  .compare-head, .compare-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 110px 110px 110px; gap: 12px; }
+  .compare-head { padding-bottom: 8px; border-bottom: 1.5px solid var(--ink); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .compare-head-subject { text-align: right; color: var(--primary-ink); font-weight: 700; }
+  .compare-head-col { text-align: right; }
+  .compare-row { padding: 9px 0; border-bottom: 1px solid var(--rule); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .compare-label { color: var(--muted); }
+  .compare-subject { text-align: right; font-weight: 700; color: var(--ink); }
+  .compare-cell { text-align: right; }
+
+  .bars { display: flex; flex-direction: column; gap: {{ doc.bar_gap }}px; }
+  .bar-row { display: grid; grid-template-columns: 170px minmax(0, 1fr) 90px; gap: 12px; align-items: center; font-size: 12.5px; }
+  .bar-address { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-track { height: {{ doc.bar_height }}px; background: var(--track); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--primary); border-radius: 3px; }
+  .bar-price { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ── 5 · your market ──────────────────────────────────────────────── */
+  .market-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1.5px solid var(--ink); }
+  .market-stat { padding: 22px 16px 22px 0; display: flex; flex-direction: column; gap: 6px; border-right: 1px solid var(--rule); }
+  .market-stat-value { font-family: var(--display); font-weight: var(--display-weight); font-size: 44px; line-height: 1; letter-spacing: var(--display-tracking); color: var(--ink); }
+  .market-stat-value.is-brand { color: var(--primary-ink); }
+  .market-stat-label { font-size: 11.5px; color: var(--muted); }
+  .moi { display: grid; grid-template-columns: 200px 1fr; gap: 32px; align-items: start; }
+  .moi-copy { display: flex; flex-direction: column; gap: 6px; }
+  .moi-headline { font-size: 13px; font-weight: 700; }
+  .moi-note { font-size: 12px; line-height: 1.5; color: var(--muted); }
+  .moi-cells { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; height: 44px; }
+  .moi-cell { background: var(--inactive); border-radius: 3px; }
+  .moi-cell.is-filled { background: var(--primary); }
+  .moi-legend { display: grid; grid-template-columns: 4fr 2fr 2fr; gap: 4px; font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  .moi-legend > div { padding-top: 6px; }
+  .moi-legend-a { border-top: 2px solid var(--ink); }
+  .moi-legend-b { border-top: 2px solid #B9BBC1; }
+  .moi-legend-c { border-top: 2px solid #DADBDF; }
+  .chart { display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .chart-unit { font-size: 11px; color: var(--muted); }
+  .chart-body { display: grid; grid-template-columns: 44px 1fr; gap: 10px; flex: 1; min-height: 0; }
+  .chart-yaxis { display: flex; flex-direction: column; justify-content: space-between; height: 100%; font-size: 10px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .chart-plot { position: relative; height: 100%; border-left: 1px solid var(--rule-axis); border-bottom: 1px solid var(--ink); }
+  .chart-mid { position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed var(--rule-soft); }
+  .chart-cols { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; padding: 0 14px; align-items: end; }
+  .chart-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  /* The VALUE above every bar, on every theme. D-126 was a theme that drew
+     the chart and printed no numbers on it. */
+  .chart-value { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .chart-bar { width: 100%; background: var(--primary-dark); border-radius: 3px 3px 0 0; }
+  .chart-bar.is-latest { background: var(--primary); }
+  .chart-xaxis { display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding-bottom: 24px; }
+  .chart-xlabels { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; padding: 0 14px; font-size: 10.5px; color: var(--muted); text-align: center; }
+  /* [T8] The empty chart is a designed panel, not a sentence over 400px of
+     white. When `monthly_median` is None (the fixture's La Verne), the
+     one-line note sat under the chart heading and the rest of the page —
+     the chart's `flex: 1` — was blank, which reads as a failed render. The
+     note now fills the chart's area on the strip neutral, centred, in the
+     same muted type, and says which window the four figures above come from
+     so the page still closes on a fact. Nothing new is drawn; no new colour. */
+  .chart-empty { margin: 0 0 24px; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 24px 72px; background: var(--strip); border-radius: var(--radius); font-size: 12.5px; line-height: 1.55; color: var(--muted); text-wrap: pretty; }
+
+  /* ── 6 · next steps ───────────────────────────────────────────────── */
+  .agentpanel { background: var(--primary); color: var(--on-primary); border-radius: var(--radius); padding: 44px 40px; display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 28px; align-items: center; }
+  .agentpanel-avatar { width: 120px; height: 120px; border-radius: 999px; background: #fff; color: var(--primary-ink); display: flex; align-items: center; justify-content: center; font-family: var(--display); font-weight: var(--display-weight); font-size: 42px; overflow: hidden; }
+  .agentpanel-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .agentpanel-text { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  /* `on_primary`, NOT `#FFFFFF`. Design's file sets white here too, but the
+     owner decision above is scoped to the cover band — this is page 6's agent
+     panel, and nothing recorded an exception for it. Measured at 1.98:1 on
+     lime and 2.15:1 on amber before the change. */
+  .agentpanel-name { font-family: var(--display); font-weight: var(--display-weight); font-size: 32px; line-height: 1; letter-spacing: var(--display-tracking); color: var(--on-primary); }
+  .agentpanel-title { font-size: 15px; font-weight: 600; }
+  .agentpanel-meta { font-size: 14px; }
+  .agentpanel-blurb { font-size: 13px; line-height: 1.5; max-width: 400px; }
+  .agentpanel-contact { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .agentpanel-phone { background: #fff; color: var(--primary-ink); font-size: 15px; font-weight: 700; padding: 12px 18px; border-radius: var(--radius); white-space: nowrap; }
+  .agentpanel-email { font-size: 13px; }
+  .explainers { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; padding-top: 8px; }
+  .explainer { display: flex; flex-direction: column; gap: 12px; }
+  .explainer p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--body); }
+  .steps { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .steps-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .step { background: var(--tint); border-radius: var(--radius); padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .step-n { font-family: var(--display); font-weight: var(--display-weight); font-size: 30px; line-height: 1; color: var(--primary-ink); }
+  .step-title { font-size: 14px; font-weight: 700; }
+  .step-body { font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .disclaimer { padding: 16px 0; border-top: 1px solid var(--rule); font-size: 10.5px; line-height: 1.5; color: var(--muted); }
+</style>
+</head>
+<body>
+{% set total_pages = doc.pages | length %}
+{% for page in doc.pages %}
+{% set page_n = loop.index %}
+<section class="sheet sheet-{{ page }}">
+
+  <div class="runhead">
+    {# [T3] One name for the document. The running head said "Property
+       report" on every page while the cover's masthead said "Seller's
+       report" or "Home value report" — two titles on one sheet, and the
+       consumer's copy named a report kind the funnel never offered. #}
+    <span class="runhead-address">{{ doc.report_kind }} · {{ doc.street }}</span>
+    <span class="runhead-date">{{ generated_label }}</span>
+  </div>
+
+  {% if page == 'cover' %}
+  <div class="masthead">
+    <div class="masthead-row">
+      <span class="masthead-kind">{{ doc.report_kind }}</span>
+      {% if agent.logo_url %}
+      <img class="masthead-logo" src="{{ agent.logo_url }}" alt="">
+      {% else %}
+      <span class="masthead-brand">{{ agent.company_name }}</span>
+      {% endif %}
+    </div>
+    <div>
+      <div class="cover-titlebox"><span class="cover-street">{{ doc.street }}</span></div>
+      <span class="cover-city">{{ doc.city_line }}</span>
+    </div>
+    <div class="cover-stats">
+      {% for stat in doc.hero_stats %}
+      <div class="cover-stat">
+        <span class="cover-stat-value">{{ stat.value }}</span>
+        <span class="cover-stat-label">{{ stat.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="cover-body">
+    <div class="plate plate-hero">
+      {% if images.hero %}
+      <img src="{{ images.hero }}" alt="">
+      {% else %}
+      <div class="nophoto">
+        <span class="nophoto-name">{{ doc.city_name }}</span>
+        <span class="nophoto-note">No photo on file</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cover-grid{% if not doc.prepared_for %} is-unaddressed{% endif %}">
+      {# NO NAME, NO BLOCK. Jerry: "If the form has no name, the report
+         renders without the line. No fallback to the assessor roll." The
+         first v2 render printed the LABEL over an empty name, which is the
+         same shape as the fallback it forbids — a slot that says a person
+         should be here. The grid's other column fills the width. #}
+      {% if doc.prepared_for %}
+      <div class="cover-for">
+        <span class="label">Prepared for</span>
+        <span class="cover-for-name">{{ doc.prepared_for }}</span>
+        <span class="cover-for-note">{{ doc.prepared_note }}</span>
+      </div>
+      {% endif %}
+      <div class="inshort">
+        <span class="label">In short</span>
+        {# The AI narrative, bounded at five lines with an ellipsis [T2].
+           When there is none the panel says what the report is built from
+           rather than rendering an empty paragraph — which is what the first
+           v2 render did, and which is valid HTML and so failed nothing. #}
+        <p class="inshort-text">{% if overview_text %}{{ overview_text }}{% elif doc.comp_count %}This report compares {{ doc.comp_count }} {{ doc.comp_noun }} with your home as the public record describes it. The range on page {{ doc.pages.index('range') + 1 if 'range' in doc.pages else 4 }} {{ doc.comp_range_clause }}.{% else %}No comparable sales were found for this home in the search area, so this report describes your home as the public record has it and does not estimate a range.{% endif %}</p>
+      </div>
+    </div>
+  </div>
+
+  {% elif page == 'property' %}
+  <div class="body-pad" style="padding-top:28px;gap:18px">
+    <div class="pagehead">
+      <h2 class="h2">Your home</h2>
+      <span class="pagehead-aside">{{ property.full_address }}<br>APN {{ property.apn }}</span>
+    </div>
+    <div class="home-photos">
+      <div class="plate plate-pair">
+        {% if images.aerial_map %}<img src="{{ images.aerial_map }}" alt="">{% endif %}
+        <span class="plate-caption">Aerial</span>
+      </div>
+      <div class="plate plate-pair">
+        {% if cover_image_url %}<img src="{{ cover_image_url }}" alt="">{% endif %}
+        <span class="plate-caption">Street view</span>
+      </div>
+    </div>
+    <div class="detail-groups">
+      {% for group in doc.detail_groups %}
+      <div class="detail-group">
+        <span class="detail-title">{{ group.title }}</span>
+        {% for row in group.rows %}
+        {# `is-wrap` on the one row whose value is a legal description:
+           everything else on this page is short enough for one nowrap line,
+           and "LOT 44 TR#6654 ..." is not. Ellipsising it would hide the
+           field rather than show it. #}
+        <div class="detail-row">
+          <span class="detail-label">{{ row.label }}</span>
+          <span class="detail-value{% if row.absent %} is-absent{% endif %}{% if row.wrap %} is-wrap{% endif %}">{{ row.value }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if doc.has_unknowns %}
+    <div class="notonrecord">
+      <span class="notonrecord-label">Not on record</span>
+      <span>{{ doc.unknown_list }}. A dash anywhere in this report means the public record doesn't say, not that the answer is no.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {% elif page == 'comparables' %}
+  <div class="body-pad" style="gap:20px">
+    <div class="pagehead">
+      <h2 class="h2">Comparable sales</h2>
+      <div class="conf-wrap">
+        {# A grade is a statement about a set. With no comps there is no set,
+           so no pill — the nine-page themes said "No comparable sales" here
+           and the shared page said "A · Strict match" over nothing. #}
+        {% if doc.comp_count %}
+        <span class="conf-pill"><span class="conf-grade">{{ doc.conf_grade }}</span>{{ doc.conf_label }}</span>
+        <span class="pagehead-aside">{{ doc.comp_count }} {{ doc.comp_noun_short }} within {{ doc.comp_radius }} · {{ doc.comp_window | lower }} · {{ doc.pictured_note }}</span>
+        {% else %}
+        <span class="pagehead-aside">No comparable sales were found for this home in the search area.</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="comp-grid">
+      {% for comp in doc.pictured %}
+      <div class="comp">
+        <div class="comp-plate">
+          {% if comp.photo_url or comp.map_image_url %}
+          <img src="{{ comp.photo_url or comp.map_image_url }}" alt="">
+          {% else %}
+          <div class="comp-nophoto">
+            {# [T6] Distance from the subject, falling back to the city only
+               when the distance is itself a dash. #}
+            {% if comp.v2_dist and comp.v2_dist != '-' %}
+            <span class="comp-nophoto-name">{{ comp.v2_dist }}</span>
+            <span class="comp-nophoto-note">From your home · no photo on file</span>
+            {% else %}
+            <span class="comp-nophoto-name">{{ comp.neighborhood or doc.city_name }}</span>
+            <span class="comp-nophoto-note">No photo on file</span>
+            {% endif %}
+          </div>
+          {% endif %}
+          {# `price_label` is the COLUMN HEADING ("Sale Price" / "List
+             Price"). The first render put those two words on every comp
+             photo where the price belongs. #}
+          <span class="comp-price">{{ comp.price }}</span>
+        </div>
+        <div class="comp-lines">
+          <span class="comp-address">{{ comp.address }}</span>
+          <span class="comp-line">{{ comp.v2_specs }}</span>
+          <span class="comp-line">{{ comp.v2_ppsf }} · {{ comp.v2_dist }} · {{ comp.v2_when }}</span>
+          <span class="comp-line">{{ comp.v2_lot }} · {{ comp.v2_hoa }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% elif page == 'range' %}
+  <div class="body-pad" style="padding-top:28px;gap:18px">
+    <h2 class="h2">What the comparable sales support</h2>
+    <div class="rangepanel">
+      <span class="rangepanel-label">Range supported by {{ doc.closed_count }} closed sales · confidence {{ doc.conf_grade }}, {{ doc.conf_label | lower }}</span>
+      <div class="rangepanel-figures">
+        <span class="rangepanel-headline">{{ doc.range_low }} – {{ doc.range_high }}</span>
+        <span class="rangepanel-median">median {{ doc.range_mid }}</span>
+      </div>
+      {# D-134 (Jerry, 2026-10-30): the method, beside the figure. True as
+         written: low and high are the lowest and highest closed sale among
+         the comparables, and every one of them is listed in this report. #}
+      <span class="rangepanel-method">Range of the comparable sales shown.</span>
+      <div>
+        <div class="band">
+          {% if doc.band_left is not none %}
+          <div class="band-fill" style="left:{{ doc.band_left }}%;right:{{ doc.band_right }}%"></div>
+          {% endif %}
+          {% if doc.subject_x is not none %}
+          <div class="band-marker" style="left:{{ doc.subject_x }}%"></div>
+          {% endif %}
+        </div>
+        <div class="band-axis" style="margin-top:6px">
+          <span>{{ doc.axis_low }}</span>
+          <span>{{ doc.axis_high }}</span>
+        </div>
+        {% if doc.subject_x is not none %}
+        {# [T7] Caption anchored under the marker; see `.band-you`. #}
+        <div class="band-you">
+          {% if doc.subject_x < 30 %}
+          <span class="band-you-text" style="left:{{ doc.subject_x }}%">▲ your home's last recorded sale · {{ doc.last_sale_label }}</span>
+          {% elif doc.subject_x > 70 %}
+          <span class="band-you-text" style="right:{{ 100 - doc.subject_x }}%">▲ your home's last recorded sale · {{ doc.last_sale_label }}</span>
+          {% else %}
+          <span class="band-you-text" style="left:{{ doc.subject_x }}%;transform:translateX(-50%)">▲ your home's last recorded sale · {{ doc.last_sale_label }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      <p class="rangepanel-note">This is what recent sales of similar homes nearby support. It is a report of the market, not an appraisal, and a listing price is a conversation with your agent.</p>
+    </div>
+    <div>
+      <div class="compare-head">
+        <span></span>
+        <span class="compare-head-subject">Your home</span>
+        <span class="compare-head-col">Low</span>
+        <span class="compare-head-col">Median</span>
+        <span class="compare-head-col">High</span>
+      </div>
+      {% for row in doc.compare_rows %}
+      <div class="compare-row">
+        <span class="compare-label">{{ row.label }}</span>
+        <span class="compare-subject">{{ row.subject }}</span>
+        <span class="compare-cell">{{ row.low }}</span>
+        <span class="compare-cell">{{ row.mid }}</span>
+        <span class="compare-cell">{{ row.high }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="bars">
+      <span class="label" style="padding-bottom:4px">Each sale · {{ doc.comp_count }}</span>
+      {% for bar in doc.bars %}
+      <div class="bar-row">
+        <span class="bar-address">{{ bar.address }}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:{{ bar.width }}%"></div></div>
+        <span class="bar-price">{{ bar.price }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% elif page == 'market_trends' %}
+  <div class="body-pad" style="gap:32px">
+    <div class="pagehead">
+      <h2 class="h2">Your market</h2>
+      <span class="pagehead-aside">{{ doc.city_name }} · {{ market_trends.window_label }}</span>
+    </div>
+    <div class="market-stats">
+      {% for stat in market_trends.v2_stats %}
+      <div class="market-stat">
+        <span class="market-stat-value{% if loop.first %} is-brand{% endif %}">{{ stat.value }}</span>
+        <span class="market-stat-label">{{ stat.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="moi">
+      <div class="moi-copy">
+        <span class="moi-headline">{{ market_trends.v2_moi_headline }}</span>
+        <span class="moi-note">{{ market_trends.v2_moi_note }}</span>
+      </div>
+      <div>
+        <div class="moi-cells">
+          {% for cell in market_trends.v2_moi_cells %}
+          <div class="moi-cell{% if cell %} is-filled{% endif %}"></div>
+          {% endfor %}
+        </div>
+        <div class="moi-legend" style="margin-top:8px">
+          <div class="moi-legend-a">Seller's · under 4 mo</div>
+          <div class="moi-legend-b">Balanced</div>
+          <div class="moi-legend-c">Buyer's · 6+</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart">
+      <div class="chart-head">
+        <span class="label">Median sale price · last 6 months</span>
+        <span class="chart-unit">Thousands of dollars</span>
+      </div>
+      {% if market_trends.v2_months %}
+      <div class="chart-body">
+        <div class="chart-yaxis">
+          <span>{{ market_trends.v2_y_top }}</span>
+          <span>{{ market_trends.v2_y_mid }}</span>
+          <span>{{ market_trends.v2_y_bot }}</span>
+        </div>
+        <div class="chart-plot">
+          <div class="chart-mid"></div>
+          <div class="chart-cols">
+            {% for month in market_trends.v2_months %}
+            <div class="chart-col">
+              <span class="chart-value">{{ month.value }}</span>
+              <div class="chart-bar{% if loop.last %} is-latest{% endif %}" style="height:{{ month.height }}%"></div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="chart-xaxis">
+        <span></span>
+        <div class="chart-xlabels">
+          {% for month in market_trends.v2_months %}<span>{{ month.label }}</span>{% endfor %}
+        </div>
+      </div>
+      {% else %}
+      {# No monthly series (the computation can return None). The axis used to
+         print the Python value "None" three times over an empty plot. [T8]:
+         the note fills the chart's area and names the window the figures
+         above were measured over. #}
+      <p class="chart-empty">Not enough recorded sales in {{ doc.city_name }} to chart a monthly median. The four figures above are measured over the {{ market_trends.window_label | lower }} of closed sales.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% elif page == 'notes' %}
+  <div class="body-pad" style="gap:32px">
+    <h2 class="h2">Next steps</h2>
+    <div class="agentpanel">
+      <div class="agentpanel-avatar">
+        {% if agent.photo_url %}<img src="{{ agent.photo_url }}" alt="">{% else %}{{ doc.initials }}{% endif %}
+      </div>
+      <div class="agentpanel-text">
+        <span class="agentpanel-name">{{ agent.name }}</span>
+        {# D-169: the job title the agent entered, under their name. D-073: with
+           none entered, the theme's designed title where its entry file sets
+           one; a theme that sets none prints no line. #}
+        {% set agent_role = agent.title or (t_agent_title_fallback | default('')) %}
+        {% if agent_role %}<span class="agentpanel-title">{{ agent_role }}</span>{% endif %}
+        {# `agent.license` is ALREADY formatted ("CA BRE#01234567") by
+           `_build_agent_context`; `license_number` is the bare digits.
+           Prefixing the formatted one produced "DRE #CA BRE#01234567". #}
+        <span class="agentpanel-meta">{{ agent.company_name }}{% if agent.license %} · {{ agent.license }}{% endif %}</span>
+        <span class="agentpanel-blurb">{{ doc.agent_blurb }}</span>
+      </div>
+      <div class="agentpanel-contact">
+        {# [T9] Tap-to-call and tap-to-write. A PDF opened on a phone — which
+           is where the consumer path's copy is opened — keeps these links;
+           the digits for `tel:` are the phone with everything but digits and
+           a leading + removed. Visually identical to the spans they replace. #}
+        <a class="agentpanel-phone" href="tel:{{ agent.phone | replace(' ', '') | replace('(', '') | replace(')', '') | replace('-', '') | replace('.', '') }}">{{ agent.phone }}</a>
+        <a class="agentpanel-email" href="mailto:{{ agent.email }}">{{ agent.email }}</a>
+      </div>
+    </div>
+    <div class="explainers">
+      <div class="explainer">
+        <span class="label">How the comparables were chosen</span>
+        <p>Closed sales within {{ doc.comp_radius }} of your home, {{ doc.comp_window | lower }}, matched on property type and kept within roughly 25% of your home's living area. Listings still on the market are shown for context and not counted in the range.</p>
+      </div>
+      <div class="explainer">
+        <span class="label">Where the data comes from</span>
+        <p>Sales and listings from CRMLS, pulled {{ generated_label }}. Property details from the county assessor's public record. A dash means the record is silent, not that the answer is no.</p>
+      </div>
+    </div>
+    <div class="steps">
+      <span class="label">If you're thinking about selling</span>
+      <div class="steps-cards">
+        {% for step in doc.next_steps %}
+        <div class="step">
+          <span class="step-n">{{ step.n }}</span>
+          <span class="step-title">{{ step.title }}</span>
+          <span class="step-body">{{ step.body }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="disclaimer">Information is deemed reliable but not guaranteed. This report is not an appraisal and is not intended to be relied upon as one. {{ doc.consumer_disclosure }}</div>
+  </div>
+  {% endif %}
+
+  <div class="pagefoot">
+    <span><span class="pagefoot-agent">{{ agent.name }}</span><span class="pagefoot-brand"> · {{ agent.company_name }} · <a href="tel:{{ agent.phone | replace(' ', '') | replace('(', '') | replace(')', '') | replace('-', '') | replace('.', '') }}">{{ agent.phone }}</a></span></span>
+    <span class="pagefoot-num">Page {{ page_n }} of {{ total_pages }}</span>
+  </div>
+</section>
+{% endfor %}
+</body>
+</html>
