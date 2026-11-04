@@ -59,9 +59,9 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 84 | Observed, not yet triaged |
+| `recorded` | 83 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
-| `fixed` | 208 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 209 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
@@ -16024,7 +16024,7 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-349 — the cover's "In short" panel shows the first five lines of a 180–250-word summary
 
 **Severity:** WRONG · found 2026-11-04 testing Design's touch T2. The panel holds five lines (`.inshort-text`, `-webkit-line-clamp: 5` since T2; four lines and `max-height: 81px` before). The text in it is `generate_overview()`'s, and that prompt still asks for the retired overview page's summary: "4-5 short paragraphs, 180-250 words total", opening with "Briefly introduce the report and the property" (`apps/worker/src/worker/ai_overview.py:32-37`, `:225`). Nothing trims it (`property_builder.py:2820-2849`). So every AI-written cover shows the introduction and stops: before T2 silently after four lines, after T2 on an ellipsis after five. Measured: a 361-character paragraph already runs six lines on harbor and linen. Design's handoff assumed "the ~380-char generation cap remains the primary bound"; no such cap exists in the code.
-**Status:** `recorded` — write a cover-sized prompt (one paragraph, about 300 characters, the range and why), and test the generated length against the panel on all three themes.
+**Status:** `fixed` — `fix/d349-cover-summary`: the prompt asks for ONE paragraph of at most 300 characters (`SUMMARY_TARGET_CHARS`), no value or estimate for the home, and no period or distance it was not given; `max_tokens` is 120; `fit_summary` collapses paragraphs and cuts anything over 330 (`SUMMARY_MAX_CHARS`) at the last full sentence. The box is unchanged. Measured in Chromium: 336 characters fills five lines on all three themes and 354 runs to six on harbor and linen, so ~360 would not have fit. Test: `apps/worker/tests/test_cover_summary_fits_the_box.py` (7 red on main), including a browser measurement of the 330-character ceiling on all three themes.
 
 ---
 

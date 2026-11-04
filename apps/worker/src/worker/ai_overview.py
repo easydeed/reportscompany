@@ -12,6 +12,7 @@ Environment Variables:
 """
 
 import os
+import re
 import logging
 from typing import Dict, Any, Optional
 
@@ -19,31 +20,38 @@ logger = logging.getLogger(__name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
-SYSTEM_PROMPT = """You are an expert real estate analyst writing a concise executive summary for a property report.
+# THE SUMMARY IS WRITTEN FOR THE BOX IT GOES IN (D-349).
+#
+# It used to be prompted for "4-5 short paragraphs, 180-250 words" — the
+# retired overview page's executive summary — and printed in the cover's "In
+# short" panel, which holds five lines. Nothing trimmed it, so every cover
+# showed the introduction and stopped. Measured 2026-11-04 in Chromium on the
+# three live themes: 336 characters fills five lines on all three; 354 runs to
+# six on harbor and linen. So the prompt asks for 300 (a margin for wide
+# glyphs: "$", digits, capitals), and `fit_summary` holds 330 as the ceiling.
+SUMMARY_TARGET_CHARS = 300
+SUMMARY_MAX_CHARS = 330
 
-Your audience is the property owner. The report was prepared by their real estate agent.
+SYSTEM_PROMPT = f"""You are an expert real estate analyst writing the two- or three-sentence summary that sits on the cover of a property report, under the heading "In short".
+
+Your audience is the reader of the report. The report was prepared by their real estate agent.
 
 Your tone:
 - Professional yet warm and approachable
-- Confident and knowledgeable
-- Reassuring—help the owner feel informed and empowered
-- Use "your" to address the owner directly
+- Plain and specific: one clear point, with a number that supports it
+- Use "your" to address the reader directly
 
-Structure (4-5 short paragraphs, 180-250 words total):
-1. **Opening** (1-2 sentences): Briefly introduce the report and the property.
-2. **Property Snapshot** (2-3 sentences): Highlight the key property attributes that stand out.
-3. **Market Position** (2-3 sentences): How this property compares to recent comparable sales in the area. Reference specific numbers (median price, price/sqft, etc.).
-4. **Market Context** (1-2 sentences): If market trends data is available, briefly note whether it's a seller's or buyer's market and what that means for the owner.
-5. **Closing** (1 sentence): Encourage them to review the full report and reach out to their agent.
+Length and shape:
+- ONE paragraph, two or three sentences, at most {SUMMARY_TARGET_CHARS} characters including spaces. The box holds five short lines; anything longer is cut off.
+- Say what the comparable sales show about this home, and the one fact that matters most (for example how many sold, how quickly, or how the home compares on size or lot).
 
 CRITICAL RULES:
 - NEVER fabricate numbers. Only reference data explicitly provided.
+- Do NOT state a value, price or estimate for the reader's home. The report gives the range of the comparable sales on its own page, with how it was made.
+- Do NOT state a time period or distance unless it is given in the data.
 - If a data point is missing or zero, skip it gracefully.
-- Keep paragraphs short (2-3 sentences max each).
-- Do NOT use bullet points or numbered lists—write in flowing paragraphs.
-- Do NOT use markdown formatting (no **, ##, etc.)—output plain text only.
+- Plain text only: no bullet points, no markdown, no line breaks, no emojis.
 - Do NOT mention "AI" or "generated." Write as if the agent prepared this summary.
-- Do NOT use emojis.
 """
 
 
@@ -90,7 +98,8 @@ def generate_overview(
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
-                "max_tokens": 500,
+                # ~300 characters is ~70 tokens; this is a ceiling, not a target.
+                "max_tokens": 120,
                 "temperature": 0.7,
             },
             timeout=20.0,
@@ -101,7 +110,7 @@ def generate_overview(
             return None
 
         result = response.json()
-        text = result.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        text = fit_summary(result.get("choices", [{}])[0].get("message", {}).get("content", ""))
 
         # Clean up stray quotes
         if text.startswith('"') and text.endswith('"'):
@@ -222,7 +231,24 @@ def _build_prompt(
 
     lines += [
         "",
-        "Write the executive summary now. Remember: 4-5 short paragraphs, 180-250 words, plain text only, no formatting.",
+        f"Write the cover summary now: one paragraph, at most {SUMMARY_TARGET_CHARS} characters, plain text.",
     ]
 
     return "\n".join(lines)
+
+
+def fit_summary(text: Optional[str]) -> str:
+    """One paragraph that fits the cover's "In short" box.
+
+    Whitespace and paragraph breaks collapse to single spaces (the box is one
+    paragraph). Over `SUMMARY_MAX_CHARS`, it is cut at the last full sentence
+    that fits, so the box never ends on an ellipsis mid-thought. A first
+    sentence that is itself too long is left whole: the box's line clamp ends
+    it on an ellipsis, which is better than an empty panel.
+    """
+    text = " ".join((text or "").split())
+    if len(text) <= SUMMARY_MAX_CHARS:
+        return text
+    head = text[:SUMMARY_MAX_CHARS + 1]
+    ends = [m.end() for m in re.finditer(r"[.!?](?=\s|$)", head)]
+    return head[:ends[-1]].strip() if ends else text
