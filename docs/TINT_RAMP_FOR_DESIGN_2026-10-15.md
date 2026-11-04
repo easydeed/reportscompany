@@ -99,7 +99,7 @@ render — the account-type tag in `app-layout.tsx`, the affiliate dashboard she
 chips, the comparables status pill. The grep target (`bg-indigo-50/100/200`, `border-indigo-200`)
 is now **zero across every surface reachable from an authenticated `/app` route**.
 
-It is **not** zero app-wide. **46 hits remain across 15 files**, and none of them is app chrome.
+It is **not** zero app-wide. **43 hits remain across 15 files**, and none of them is app chrome.
 These are occurrences, not lines — `grep -c` counts a line that carries both `bg-indigo-50` and
 `border-indigo-200` once, and five of these lines do:
 
@@ -108,10 +108,10 @@ These are occurrences, not lines — `grep -c` counts a line that carries both `
 | `app/about`, `app/docs`, `app/security`, `app/careers`, `app/blog` | 19 | public marketing pages, not app chrome — a separate surface and a separate decision |
 | `app/admin/**` | 19 | **a dead tree — D-197.** Established against `docs/DEAD_CODE.md`'s three conditions, not by reading the redirect: zero importers, zero runtime string construction, and one live route reference (`app/access-denied/page.tsx:12` → `/admin/login`) which points at a URL the middleware serves by redirect, never at these files. Its own first line marks it deprecated with a deletion deadline that passed five months ago. Documented rather than de-tinted, so nobody restyles 19 surfaces in a panel that renders for nobody |
 | `components/branding-form.tsx` | 4 | `BrandingForm` is exported and imported by nothing |
-| `components/mobile-report/MobileReportViewer.tsx` | 4 | live on `/r/[id]`, but it renders **the report**, not chrome. **Asked separately** — see `REPORT_VIEWER_TINTS_FOR_DESIGN_2026-10-19.md`. Design's whole argument is that chrome must not compete with the report, so whether the rule reaches inside the report is their ruling and not ours |
+| `components/mobile-report/MobileReportViewer.tsx` | 1 | *(was 4 until 2026-11-04, when Design's digital-report handoff restyled the viewer; the one left is the market note, R22, rejected for a moved anchor)* live on `/r/[id]`, but it renders **the report**, not chrome. **Asked separately** — see `REPORT_VIEWER_TINTS_FOR_DESIGN_2026-10-19.md`. Design's whole argument is that chrome must not compete with the report, so whether the rule reaches inside the report is their ruling and not ours |
 
 **One occurrence more exists and is not a surface:** the comment in `globals.css` that states this
-rule quotes `bg-indigo-50/100/200` while describing it. A repo-wide grep therefore reports **47**,
-of which 46 are markup and the 47th is the rule itself. Audited across every file type in
+rule quotes `bg-indigo-50/100/200` while describing it. A repo-wide grep therefore reports **44**,
+of which 43 are markup and the 44th is the rule itself. Audited across every file type in
 `apps/web`, not just `.tsx`, and across the rest of the repository: no source outside `apps/web`
 carries any of these classes, `packages/ui` included.

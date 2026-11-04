@@ -8,6 +8,20 @@ Four occurrences remain on a **live** surface we did not touch, because your arg
 is the reason to ask rather than act. You wrote that a tinted indigo panel *"competes with the
 report, which is what the agent is selling."* These four are **inside the report**.
 
+
+> ## ANSWERED, 2026-11-04 — Design's digital-report handoff
+>
+> Design answered this relay with `docs/design-claude/mobilereports/design_handoff_digital_report/`:
+> the viewer wears the report's theme, and every brand colour on it is one of the PDF's derived
+> tokens, served by the API as `theme_tokens`, so nothing in the file reads `branding?.primary_color`
+> directly any more except one line. Nine of the fourteen hard-coded sites went with it.
+>
+> **What is left** is the two sites whose edits were cut before #265 rewrote them and were
+> rejected under the handoff rules (anchor moved): the range card, R9, and the market note, R22.
+> Counted now: `violet-200` ×3, `indigo-50` ×1, `violet-800` ×1, five sites. **One line still takes the agent's brand directly**: the range card's primary-to-accent gradient, under the three `violet-200` labels.
+> The collision the relay named is therefore still there, and it is exactly what R9, recut against
+> main, removes.
+
 ## The surface
 
 `apps/web/components/mobile-report/MobileReportViewer.tsx`, mounted by `app/r/[id]/page.tsx`. It is
@@ -41,8 +55,7 @@ The file is **half brand-driven and half hard-coded**, and nobody has reconciled
 | 566, 569, 570 | agent photo and its fallback: `border-violet-100`, `bg-indigo-100`, `User` glyph in `text-violet-400` | the avatar shape |
 | 648 | stat-tile icons, `text-indigo-600` | bare glyph |
 
-Counted, not estimated: `indigo-600` ×4, `violet-200` ×3, `indigo-100` ×3, `indigo-50` ×1,
-`violet-800` ×1, `violet-400` ×1, `violet-100` ×1.
+Counted, not estimated, on 2026-10-19: indigo-600 four times, violet-200 three, indigo-100 three, indigo-50, violet-800, violet-400 and violet-100 once each — fourteen sites.
 
 **The collision we can state without rendering anything.** Lines 254, 258 and 271 are
 `text-violet-200` on the surface whose colour comes from `primary_color` at line 253. For an agent
