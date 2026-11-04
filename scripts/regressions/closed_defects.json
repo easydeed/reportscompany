@@ -16,8 +16,8 @@
   {
     "name": "D-143 comes back: a placeholder phone fallback",
     "file": "apps/worker/src/worker/templates/property/_v2/report.jinja2",
-    "old": "        <span class=\"agentpanel-phone\">{{ agent.phone }}</span>",
-    "new": "        <span class=\"agentpanel-phone\">{{ agent.phone | default('(000) 000-0000') }}</span>",
+    "old": "\">{{ agent.phone }}</a>\n        <a class=\"agentpanel-email\"",
+    "new": "\">{{ agent.phone | default('(000) 000-0000') }}</a>\n        <a class=\"agentpanel-email\"",
     "test": "tests/test_closed_defects_stay_closed.py"
   },
   {
