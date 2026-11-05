@@ -142,12 +142,20 @@ jobs:
           VIRTUAL_ENV: ${{ github.workspace }}/.venv
           POETRY_VIRTUALENVS_CREATE: "false"
 
+      # D-357: ONE PACKAGE AT A TIME. The worker lock pins older greenlet,
+      # markupsafe, psycopg, kombu, click and certifi than the API lock, so this
+      # install downgrades what the step above put in the shared venv. Poetry
+      # runs those swaps in parallel by default, and on #266 one job's
+      # `pip uninstall` listed site-packages while another had just removed a
+      # dist-info: pip died with FileNotFoundError before any test ran. Serial
+      # costs seconds here. The lasting fix is two locks that agree.
       - name: Install Worker dependencies
         working-directory: apps/worker
         run: poetry install --no-root
         env:
           VIRTUAL_ENV: ${{ github.workspace }}/.venv
           POETRY_VIRTUALENVS_CREATE: "false"
+          POETRY_INSTALLER_PARALLEL: "false"
 
       # CHROMIUM, BECAUSE ONE TEST MEASURES WHAT A BROWSER PAINTS.
       # test_pdf_contrast.py walks every market and property render for
