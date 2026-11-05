@@ -60,14 +60,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 48 | Real, unfixed |
-| `fixed` | 212 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 47 | Real, unfixed |
+| `fixed` | 213 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **359** | D-001 … D-359, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 0. (Sums to 47, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13093,7 +13093,7 @@ copied out before that tree is ever deleted.
 every account whose brand is not the default indigo · **Found during:** counting the four tinted
 surfaces left in the report viewer for Design (#178), which is why it was nearly filed as a styling
 question
-**Status:** `open`
+**Status:** `fixed` — `design/digital-report-r2`: Design's round 2 (R9) replaced the brand gradient with the PDF's range panel on the fixed dark neutral `#0f172a`, its heading in `primary_on_dark`; no violet label and no raw brand read remain. `tests/test_consumer_report_brand_colours.py` was a strict xfail and now holds the fix: the panel is on the neutral, reads no brand colour, and names no Tailwind hue.
 
 `apps/web/components/mobile-report/MobileReportViewer.tsx:253` paints the hero panel with **the
 agent's brand**:
