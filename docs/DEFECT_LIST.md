@@ -61,7 +61,7 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 84 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
-| `fixed` | 211 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 212 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
