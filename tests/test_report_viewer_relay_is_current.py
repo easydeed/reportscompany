@@ -44,59 +44,36 @@ def test_the_surface_the_relay_asks_about_is_still_the_one_mounted_at_r_id():
     )
 
 
-def test_the_hue_tally_is_the_one_the_relay_quotes(src, doc):
+def test_no_indigo_or_violet_class_remains(src, doc):
+    """Closed 2026-11-05 by Design's round 2. Fourteen hard-coded hue sites when
+    the relay was written, five after the first handoff, none since."""
     derived = {}
     for hue in HUE.findall(src):
         derived[hue] = derived.get(hue, 0) + 1
-    stated = {
-        m.group(1): int(m.group(2))
-        for m in re.finditer(r"`((?:indigo|violet)-\d+)` ×(\d+)", doc)
-    }
-    assert stated, "the relay no longer quotes a hue tally at all"
-    assert derived == stated, (
-        f"the relay states {stated}; MobileReportViewer.tsx has {derived}"
+    assert derived == {}, (
+        f"the relay is closed on zero; MobileReportViewer.tsx has {derived}. "
+        f"A hue class on the report needs a ruling from Design, not a quiet return"
     )
-    # Fourteen when the relay was written; five since Design's 2026-11-04
-    # handoff, all at the two edits (R9, R22) rejected for moved anchors.
-    assert sum(derived.values()) == 5, (
-        f"the relay's answer says five hard-coded sites remain; there are "
-        f"now {sum(derived.values())}"
-    )
+    assert "**No indigo or violet class remains**" in doc
 
 
-def test_the_file_is_still_half_brand_driven(src, doc):
+def test_no_line_reads_the_brand_directly(src, doc):
+    """Every brand colour on /r comes from `theme_tokens`, the PDF's derived inks.
+    Five direct reads when the relay was written, one after the first handoff."""
     lines = [i for i, l in enumerate(src.splitlines(), 1) if BRAND.search(l)]
-    # Five when the relay was written; one since the handoff moved every
-    # other brand read onto the derived tokens (theme_tokens).
-    assert len(lines) == 1, (
-        f"the relay's answer says one line reads the agent's brand directly; now {len(lines)}: "
-        f"{lines}. If the file became fully brand-driven the question is moot; "
-        f"if it became fully hard-coded it is sharper. Either way, re-read it."
+    assert lines == [], (
+        f"MobileReportViewer.tsx reads `branding?.primary/accent_color` directly at {lines}; "
+        f"read the tokens instead"
     )
-    assert "**One line still takes the agent's brand directly**" in doc
+    assert "**no line takes the agent's\n> brand directly**" in doc or \
+        "**no line takes the agent's brand directly**" in doc
 
 
-def test_the_collision_the_relay_names_is_still_there(src):
-    """Three `text-violet-200` labels sitting on a surface whose colour comes
-    from `primary_color`. This is the one claim in the relay that does not need
-    a render, so it is the one worth pinning."""
-    lines = src.splitlines()
-    gradient = next(
-        i for i, l in enumerate(lines)
-        if "linear-gradient" in l and BRAND.search(l)
-    )
-    after_hero = next(
-        i for i, l in enumerate(lines)
-        if i > gradient and "{/* Address Card */}" in l
-    )
-    violet = [i for i, l in enumerate(lines) if "text-violet-200" in l]
-    assert violet and all(gradient < i < after_hero for i in violet), (
-        f"the three violet labels are no longer inside the brand-gradient hero "
-        f"(gradient at line {gradient + 1}, hero ends by line {after_hero + 1}, "
-        f"labels at {[i + 1 for i in violet]}). The relay's one render-free "
-        f"claim no longer holds as written."
-    )
-    assert len(violet) == 3
+def test_the_collision_the_relay_named_is_gone(src):
+    """Three `text-violet-200` labels on a surface coloured from `primary_color`:
+    the relay's one render-free claim. It no longer holds, and must not return."""
+    assert "text-violet-200" not in src
+    assert not any("linear-gradient" in l and BRAND.search(l) for l in src.splitlines())
 
 
 def test_the_relay_still_says_it_changed_nothing(doc):

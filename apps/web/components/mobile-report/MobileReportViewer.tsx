@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Home, Building2, TrendingUp, BarChart3, User,
+  Home, TrendingUp, BarChart3, User,
   Phone, MessageSquare, Mail, Download, Share2,
   ChevronLeft, ChevronRight, MapPin, Calendar,
   Bed, Bath, Square, Loader2
@@ -89,11 +89,10 @@ interface Props {
   reportId: string;
 }
 
-type TabId = 'overview' | 'details' | 'comps' | 'market' | 'agent';
+type TabId = 'overview' | 'comps' | 'market' | 'agent';
 
 const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: 'overview', label: 'Overview', icon: Home },
-  { id: 'details', label: 'Details', icon: Building2 },
   { id: 'comps', label: 'Comps', icon: TrendingUp },
   { id: 'market', label: 'Market', icon: BarChart3 },
   { id: 'agent', label: 'Agent', icon: User },
@@ -224,9 +223,6 @@ export function MobileReportViewer({ report, reportId }: Props) {
             {activeTab === 'overview' && (
               <OverviewTab report={report} formatPrice={formatPrice} />
             )}
-            {activeTab === 'details' && (
-              <DetailsTab report={report} />
-            )}
             {activeTab === 'comps' && (
               <CompsTab 
                 report={report} 
@@ -280,19 +276,20 @@ export function MobileReportViewer({ report, reportId }: Props) {
 function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice: (n: number) => string }) {
   return (
     <div className="p-4 space-y-4">
-      {/* Hero Card */}
-      <div className="rounded-2xl p-6 text-white" style={{ background: `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%, ${report.branding?.accent_color || '#8b5cf6'} 100%)` }}>
-        <p className="text-violet-200 text-sm mb-1">{RANGE_HEADING}</p>
+      {/* Range panel — the PDF's page-4 panel on the fixed dark neutral; primary_on_dark is derived against it.
+          Only the range, its method and its basis: no midpoint, no figure that isn't a comp. */}
+      <div className="p-5 text-white flex flex-col gap-3" style={{ background: '#0f172a', borderRadius: 'var(--radius)' }}>
+        <span style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-on-dark)', fontWeight: 600 }}>{RANGE_HEADING}</span>
         {report.comps_range ? (
           <>
-            <p className="text-3xl font-bold mb-2">
+            <span style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 34, lineHeight: 0.95, letterSpacing: 'var(--display-tracking)', textWrap: 'balance' } as React.CSSProperties}>
               {formatPrice(report.comps_range.low)} – {formatPrice(report.comps_range.high)}
-            </p>
-            <p className="text-violet-200 text-sm">{report.comps_range.method}</p>
-            <p className="mt-4 text-violet-200 text-xs">{rangeBasis(report.comps_range)}</p>
+            </span>
+            <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{report.comps_range.method}</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>{rangeBasis(report.comps_range)}</span>
           </>
         ) : (
-          <p className="text-base">{NO_RANGE}</p>
+          <span style={{ fontSize: 15, lineHeight: 1.45 }}>{NO_RANGE}</span>
         )}
       </div>
 
@@ -315,14 +312,28 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
         />
       </div>
 
-      {/* Address Card */}
-      <div className="bg-white p-4 rounded-[var(--radius)] border border-[#ECECE8]">
+      {/* Address card — plus the two facts the Details tab held that the tiles don't: lot size and year built, each once */}
+      <div className="bg-white p-4 flex flex-col gap-3 rounded-[var(--radius)] border border-[#ECECE8]">
         <div className="flex items-start gap-3">
           <div>
             <p className="font-semibold text-gray-900">{report.property.address}</p>
             <p className="text-gray-600">
               {report.property.city}, {report.property.state} {report.property.zip}
             </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 pt-3" style={{ borderTop: '1px solid #ECECE8' }}>
+          <div className="flex flex-col gap-1">
+            <p className="m-0" style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 20, lineHeight: 1, letterSpacing: 'var(--display-tracking)' } as React.CSSProperties}>
+              {report.property.lot_size ? `${report.property.lot_size.toLocaleString()} sqft` : '—'}
+            </p>
+            <p className="m-0" style={{ fontSize: 11.5, color: '#5E636B' }}>Lot size</p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <p className="m-0" style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 20, lineHeight: 1, letterSpacing: 'var(--display-tracking)' } as React.CSSProperties}>
+              {report.property.year_built || '—'}
+            </p>
+            <p className="m-0" style={{ fontSize: 11.5, color: '#5E636B' }}>Year built</p>
           </div>
         </div>
       </div>
@@ -354,39 +365,6 @@ function OverviewTab({ report, formatPrice }: { report: ReportData; formatPrice:
               <Phone className="w-5 h-5" />
             </a>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function DetailsTab({ report }: { report: ReportData }) {
-  const details = [
-    { label: 'Address', value: report.property.address },
-    { label: 'City', value: report.property.city },
-    { label: 'State', value: report.property.state },
-    { label: 'ZIP', value: report.property.zip },
-    { label: 'Bedrooms', value: report.property.bedrooms || '—' },
-    { label: 'Bathrooms', value: report.property.bathrooms || '—' },
-    { label: 'Square Feet', value: report.property.sqft?.toLocaleString() || '—' },
-    { label: 'Lot Size', value: report.property.lot_size ? `${report.property.lot_size.toLocaleString()} sqft` : '—' },
-    { label: 'Year Built', value: report.property.year_built || '—' },
-  ];
-
-  return (
-    <div className="p-4">
-      <div className="bg-white overflow-hidden rounded-[var(--radius)] border border-[#ECECE8]">
-        <div className="px-4 py-3" style={{ background: '#F6F6F3', borderBottom: '1px solid #ECECE8' }}>
-          <h2 className="m-0" style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-ink)', fontWeight: 600 }}>Property details</h2>
-        </div>
-        <div className="divide-y">
-          {details.map((item, i) => (
-            <div key={i} className="px-4 py-3 flex justify-between">
-              <span className="text-gray-600">{item.label}</span>
-              <span className="font-medium text-gray-900">{item.value}</span>
-            </div>
-          ))}
         </div>
       </div>
     </div>
@@ -551,8 +529,8 @@ function MarketTab({ report, formatPrice }: { report: ReportData; formatPrice: (
         </div>
       </div>
 
-      <div className="bg-indigo-50 rounded-xl p-4">
-        <p className="text-sm text-violet-800">
+      <div className="p-4" style={{ background: '#F6F6F3', border: '1px solid #ECECE8', borderRadius: 'var(--radius)' }}>
+        <p className="text-sm m-0" style={{ color: '#5E636B', lineHeight: 1.5 }}>
           {compsSentence(stats)}
         </p>
       </div>

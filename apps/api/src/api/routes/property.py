@@ -14,6 +14,7 @@ from math import radians, cos, sin, asin, sqrt
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -1906,6 +1907,16 @@ class PublicPropertyReportResponse(BaseModel):
     requires_access_code: bool = False
 
 
+def _public_page_tokens(cur, accent_color, account_id, theme):
+    """The colour the PDF used: the report's accent, else the brand's primary,
+    else the theme's default (_get_theme_color), as /p's derived tokens.
+    Shared by the live page and its 410 status page, so they cannot differ."""
+    brand_primary = None
+    if not accent_color and account_id:
+        brand_primary = (resolve_brand(cur, str(account_id)) or {}).get("primary_color")
+    return tokens_for(property_report_color(accent_color, brand_primary, theme))
+
+
 @router.get("/public/{short_code}", response_model=PublicPropertyReportResponse)
 def get_public_property_report(short_code: str):
     """
@@ -1970,15 +1981,25 @@ def get_public_property_report(short_code: str):
             lead_count,
         ) = report_row
         
-        # Check landing page controls
+        # Check landing page controls. A closed page still wears its report's
+        # theme (Design's round 2, B3): the 410 body carries `theme` and
+        # `theme_tokens` beside the same `detail` it always had. Nothing else
+        # about the report is disclosed, and nothing is written.
+        def _gone(message: str) -> JSONResponse:
+            return JSONResponse(status_code=410, content={
+                "detail": message,
+                "theme": theme,
+                "theme_tokens": _public_page_tokens(cur, accent_color, account_id, theme),
+            })
+
         if not is_active:
-            raise HTTPException(status_code=410, detail="This page is no longer available")
+            return _gone("This page is no longer available")
         
         if expires_at and expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-            raise HTTPException(status_code=410, detail="This page has expired")
+            return _gone("This page has expired")
         
         if max_leads and lead_count >= max_leads:
-            raise HTTPException(status_code=410, detail="This page is no longer accepting submissions")
+            return _gone("This page is no longer accepting submissions")
         
         # Increment view count (after checks pass)
         cur.execute("""
@@ -2063,12 +2084,7 @@ def get_public_property_report(short_code: str):
             
             website_url = branding_row[5]
         
-        # The colour the PDF used: the report's accent, else the brand's
-        # primary, else the theme's default (_get_theme_color).
-        brand_primary = None
-        if not accent_color and account_id:
-            brand_primary = (resolve_brand(cur, str(account_id)) or {}).get("primary_color")
-        theme_tokens = tokens_for(property_report_color(accent_color, brand_primary, theme))
+        theme_tokens = _public_page_tokens(cur, accent_color, account_id, theme)
 
         conn.commit()
     

@@ -28,24 +28,24 @@
     "test": "tests/test_tint_answer_is_current.py"
   },
   {
-    "name": "R5 the report-viewer relay quotes a hue tally the source no longer has",
+    "name": "R5 a Tailwind violet class comes back into the viewer after the relay was closed",
     "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
-    "old": "        <p className=\"text-sm text-violet-800\">",
-    "new": "        <p className=\"text-sm text-slate-800\">",
+    "old": "        <p className=\"text-sm m-0\" style={{ color: '#5E636B', lineHeight: 1.5 }}>",
+    "new": "        <p className=\"text-sm m-0 text-violet-800\" style={{ color: '#5E636B', lineHeight: 1.5 }}>",
     "test": "tests/test_report_viewer_relay_is_current.py"
   },
   {
-    "name": "R6 the viewer becomes fully hard-coded, so the relay's half-and-half premise is stale",
+    "name": "R6 the range panel reads the raw brand colour again instead of the tokens",
     "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
-    "old": "style={{ background: `linear-gradient(135deg, ${report.branding?.primary_color || '#6366f1'} 0%, ${report.branding?.accent_color || '#8b5cf6'} 100%)`",
-    "new": "style={{ background: `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`",
+    "old": "      <div className=\"p-5 text-white flex flex-col gap-3\" style={{ background: '#0f172a', borderRadius: 'var(--radius)' }}>",
+    "new": "      <div className=\"p-5 text-white flex flex-col gap-3\" style={{ background: report.branding?.primary_color || '#0f172a', borderRadius: 'var(--radius)' }}>",
     "test": "tests/test_report_viewer_relay_is_current.py"
   },
   {
-    "name": "R7 the violet labels leave the brand-gradient hero",
+    "name": "R7 a violet label returns to the range panel",
     "file": "apps/web/components/mobile-report/MobileReportViewer.tsx",
-    "old": "        <p className=\"text-violet-200 text-sm mb-1\">{RANGE_HEADING}</p>",
-    "new": "        <p className=\"text-sm mb-1\">{RANGE_HEADING}</p>",
+    "old": "        <span style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-on-dark)', fontWeight: 600 }}>{RANGE_HEADING}</span>",
+    "new": "        <span className=\"text-violet-200\" style={{ fontSize: 10.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--primary-on-dark)', fontWeight: 600 }}>{RANGE_HEADING}</span>",
     "test": "tests/test_report_viewer_relay_is_current.py"
   },
   {

@@ -11,7 +11,6 @@ export const P_CONSENT_REQUIRED = "Please tick the box to agree to be contacted.
 interface LeadCaptureFormProps {
   shortCode: string;
   agentName: string | null;
-  accentColor: string;
 }
 
 interface FormData {
@@ -27,8 +26,7 @@ type FormStatus = "idle" | "submitting" | "success" | "error" | "rate_limited";
 
 export default function LeadCaptureForm({ 
   shortCode, 
-  agentName, 
-  accentColor 
+  agentName
 }: LeadCaptureFormProps) {
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -339,16 +337,14 @@ export default function LeadCaptureForm({
           checked={formData.consent_given}
           onChange={handleChange}
           required
-          className="mt-1 w-4 h-4 rounded border-slate-300"
-          style={{ accentColor }}
+          className="mt-0.5 w-5 h-5 rounded border-slate-400"
+          style={{ accentColor: "var(--primary)" }}
           disabled={status === "submitting"}
         />
-        <label 
-          htmlFor="consent_given" 
-          className="text-sm text-slate-600"
-        >
-          {P_CONSENT_COPY}
-        </label>
+        <span className="text-[13px] leading-normal" style={{ color: "#2A2D33" }}>
+          <label htmlFor="consent_given">{P_CONSENT_COPY}</label>
+          <span aria-hidden="true" style={{ color: "var(--primary-ink)" }}> *</span>
+        </span>
       </div>
       
       {/* Error Message */}

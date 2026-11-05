@@ -59,15 +59,15 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 84 | Observed, not yet triaged |
-| `open` | 48 | Real, unfixed |
-| `fixed` | 212 | Corrected in code, with the branch or PR named on the entry |
+| `recorded` | 85 | Observed, not yet triaged |
+| `open` | 47 | Real, unfixed |
+| `fixed` | 213 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **358** | D-001 … D-358, contiguous, no duplicates |
+| **Total** | **359** | D-001 … D-359, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
+**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 0. (Sums to 47, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -13093,7 +13093,7 @@ copied out before that tree is ever deleted.
 every account whose brand is not the default indigo · **Found during:** counting the four tinted
 surfaces left in the report viewer for Design (#178), which is why it was nearly filed as a styling
 question
-**Status:** `open`
+**Status:** `fixed` — `design/digital-report-r2`: Design's round 2 (R9) replaced the brand gradient with the PDF's range panel on the fixed dark neutral `#0f172a`, its heading in `primary_on_dark`; no violet label and no raw brand read remain. `tests/test_consumer_report_brand_colours.py` was a strict xfail and now holds the fix: the panel is on the neutral, reads no brand colour, and names no Tailwind hue.
 
 `apps/web/components/mobile-report/MobileReportViewer.tsx:253` paints the hero panel with **the
 agent's brand**:
@@ -16088,6 +16088,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** WRONG · found 2026-11-04, flagged by Design in the digital-report handoff. `build_consumer_report_data` set `accent_color: secondary_color or primary_color`, while the agent's property report (and /p) leads with the report accent and then the brand primary. For a navy-primary, amber-secondary account, the homeowner's PDF and /r were amber while /p for the same account was navy. Decided 2026-11-04: the account's PRIMARY on every surface.
 **Status:** `fixed` — `fix/consumer-report-primary-colour`: the consumer PDF takes `primary_color or DEFAULT_THEME_ACCENT` (secondary is no fallback, as on /p), and /r's `theme_tokens` follow it (`report_theme.consumer_report_color`). Tests: `apps/worker/tests/test_consumer_report_wears_the_primary.py` (every brand variable on the rendered PDF is the primary's derivation, all themes) and `apps/api/tests/test_report_pages_carry_the_pdf_theme.py`, both red on main; two mutations in `scripts/regressions/digital_report.json`. Left: /r's range card still paints a primary-to-accent gradient from the raw brand fields, which is the rejected R9 site, so it waits on Design's re-cut.
+
+---
+
+### D-359 — A /p page with an access code can never be opened: nothing asks the visitor for the code
+
+**Severity:** BROKEN · found 2026-11-05 rendering Design's round-2 status page. An agent can set an access code on a property page (`/app/property/[id]/settings`, `access_code`). `GET /v1/property/public/{code}` then returns the page with `requires_access_code: true`, and `/p` renders only the "Access Code Required" status page, whose message says "Please enter the access code to continue". There is no field to enter it: no visitor-facing code input exists anywhere in `apps/web`, the public endpoint takes no code to unlock the page, and the lead form never sends `access_code`, which `POST /v1/leads/capture` checks. So a protected page is a dead end for every visitor, the agent's own included, and its lead form can never be reached.
+**Status:** `recorded`: needs a decision and a design. The code-entry step (where the visitor types the code, how the API checks it before returning the page, what the form sends) is a feature, not a style edit, so it is a question for Jerry and then Design (rule 7), plus an API change of ours. Until then the honest interim fix is the settings page warning that a code makes the page unreachable. Not changed in the round-2 PR.
 
 ---
 
