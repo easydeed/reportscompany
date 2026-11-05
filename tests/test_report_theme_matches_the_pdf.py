@@ -6,8 +6,8 @@ colour. The API computes them with `api/themes.py`, which must be the worker's
 
   * property report: accent, else brand primary, else the theme default
     (`PropertyReportBuilder._get_theme_color`, `_THEME_DEFAULT_COLORS`);
-  * consumer report: secondary, else primary, else the default accent, on the
-    account's default theme (`consumer_report_data`).
+  * consumer report: the account's primary, else the default accent, on the
+    account's default theme (`consumer_report_data`). Secondary plays no part.
 """
 import os
 import sys
@@ -65,11 +65,13 @@ def test_the_property_page_takes_the_accent_first():
         report_theme.THEME_DEFAULT_COLORS[api_registry.DEFAULT_THEME_ID]
 
 
-def test_the_consumer_page_takes_the_secondary_first():
-    """The consumer PDF's own rule (consumer_report_data.py, `accent_color`):
-    for a navy-primary, amber-secondary account the PDF is amber, so the page is."""
-    assert report_theme.consumer_report_color("#1B365D", "#F59E0B") == "#F59E0B"
-    assert report_theme.consumer_report_color("#1B365D", None) == "#1B365D"
-    assert report_theme.consumer_report_color(None, None) == report_theme.CONSUMER_DEFAULT_ACCENT
-    src = (REPO / "apps/worker/src/worker/consumer_report_data.py").read_text(encoding="utf-8")
-    assert '"accent_color": secondary_color or primary_color or DEFAULT_THEME_ACCENT' in src
+def test_the_consumer_page_takes_the_primary():
+    """Decided 2026-11-04: /r and the consumer PDF use the account's primary,
+    as /p does. For a navy-primary, amber-secondary account all three are navy."""
+    assert report_theme.consumer_report_color("#1B365D") == "#1B365D"
+    assert report_theme.consumer_report_color(None) == report_theme.CONSUMER_DEFAULT_ACCENT
+    data = consumer_report_data.build_consumer_report_data(
+        property_data={}, prop_address="", prop_city="", prop_state="", prop_zip="",
+        comparables=[], primary_color="#1B365D", secondary_color="#F59E0B")
+    assert data["accent_color"] == report_theme.consumer_report_color("#1B365D"), \
+        "the page and the PDF must pick the same colour"

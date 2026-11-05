@@ -294,11 +294,10 @@ async def get_report_data(
             LIMIT 1
         """, (str(report.get("agent_id")),))
         brand_row = cur.fetchone()
-        # The consumer PDF: secondary, else primary, on the account's default
-        # theme (consumer_report_data.build_consumer_report_data).
+        # The consumer PDF: the account's primary, on its default theme
+        # (consumer_report_data.build_consumer_report_data).
         theme_id = resolve_theme_id(brand_row[3] if brand_row else None)
-        theme_tokens = tokens_for(consumer_report_color(
-            brand_row[0] if brand_row else None, brand_row[1] if brand_row else None))
+        theme_tokens = tokens_for(consumer_report_color(brand_row[0] if brand_row else None))
         if brand_row:
             branding_data = {
                 "primary_color": brand_row[0] or "#6366f1",

@@ -61,11 +61,11 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 84 | Observed, not yet triaged |
 | `open` | 48 | Real, unfixed |
-| `fixed` | 211 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 212 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **357** | D-001 … D-357, contiguous, no duplicates |
+| **Total** | **358** | D-001 … D-358, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 22 · FRAGILE 21 · ROUGH 0. (Sums to 48, the open total.)
 
@@ -16081,6 +16081,13 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 **Severity:** ROUGH · found 2026-11-04 on #266, run 41902558579. `backend-tests.yml` installs the API lock and then the worker lock into one shared `.venv`. The worker lock pins older greenlet, markupsafe, psycopg, kombu, click and certifi than the API lock, so the second `poetry install` downgrades them, and Poetry's installer runs those swaps in parallel. One job's `pip uninstall markupsafe` enumerated site-packages while another had just removed `greenlet-3.3.0.dist-info`, and pip died with `FileNotFoundError`, so the job failed before a single test ran. Intermittent: the same commit's push run, main's run on #265 and four local repetitions with the same Poetry (2.5.1) all installed cleanly. The same family as the Render build failure (pip crashing mid-swap), with a different trigger.
 **Status:** `fixed` — `fix/ci-serial-worker-install`: `POETRY_INSTALLER_PARALLEL: "false"` on the worker install step, so the downgrades into the shared venv run one at a time. Test: `tests/test_ci_installs_the_worker_serially.py` (red on main). Not done: the lasting fix, two locks that agree on greenlet, markupsafe, psycopg, kombu, click and certifi, so the second install has nothing to downgrade.
+
+---
+
+### D-358 — The consumer PDF and /r took the account's secondary colour; /p took its primary
+
+**Severity:** WRONG · found 2026-11-04, flagged by Design in the digital-report handoff. `build_consumer_report_data` set `accent_color: secondary_color or primary_color`, while the agent's property report (and /p) leads with the report accent and then the brand primary. For a navy-primary, amber-secondary account, the homeowner's PDF and /r were amber while /p for the same account was navy. Decided 2026-11-04: the account's PRIMARY on every surface.
+**Status:** `fixed` — `fix/consumer-report-primary-colour`: the consumer PDF takes `primary_color or DEFAULT_THEME_ACCENT` (secondary is no fallback, as on /p), and /r's `theme_tokens` follow it (`report_theme.consumer_report_color`). Tests: `apps/worker/tests/test_consumer_report_wears_the_primary.py` (every brand variable on the rendered PDF is the primary's derivation, all themes) and `apps/api/tests/test_report_pages_carry_the_pdf_theme.py`, both red on main; two mutations in `scripts/regressions/digital_report.json`. Left: /r's range card still paints a primary-to-accent gradient from the raw brand fields, which is the rejected R9 site, so it waits on Design's re-cut.
 
 ---
 
