@@ -63,9 +63,9 @@ interface PropertyReportData {
 type FetchResult = 
   | { status: "success"; data: PropertyReportData }
   | { status: "not_found" }
-  | { status: "inactive"; message: string }
-  | { status: "expired"; message: string }
-  | { status: "requires_code" }
+  | { status: "inactive"; message: string; theme?: number | null; theme_tokens?: ThemeTokens | null }
+  | { status: "expired"; message: string; theme?: number | null; theme_tokens?: ThemeTokens | null }
+  | { status: "requires_code"; theme?: number | null; theme_tokens?: ThemeTokens | null }
   | { status: "error"; message: string };
 
 async function fetchPropertyReport(code: string): Promise<FetchResult> {
@@ -94,10 +94,12 @@ async function fetchPropertyReport(code: string): Promise<FetchResult> {
       // Gone - page inactive or expired
       const data = await res.json().catch(() => ({}));
       const message = data.detail || "This page is no longer available";
+      const theme = data.theme ?? null;
+      const theme_tokens = data.theme_tokens ?? null;
       if (message.includes("expired")) {
-        return { status: "expired", message };
+        return { status: "expired", message, theme, theme_tokens };
       }
-      return { status: "inactive", message };
+      return { status: "inactive", message, theme, theme_tokens };
     }
     
     if (!res.ok) {
@@ -110,7 +112,7 @@ async function fetchPropertyReport(code: string): Promise<FetchResult> {
     
     // Check if access code is required
     if (data.requires_access_code) {
-      return { status: "requires_code" };
+      return { status: "requires_code", theme: data.theme ?? null, theme_tokens: data.theme_tokens ?? null };
     }
     
     return { status: "success", data };
@@ -143,45 +145,50 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 function StatusPage({ 
   title, 
   message, 
-  icon 
+  icon,
+  theme,
+  tokens,
 }: { 
   title: string; 
   message: string; 
   icon: "expired" | "inactive" | "error" | "locked";
+  theme?: number | null;
+  tokens?: ThemeTokens | null;
 }) {
-  const iconSvg = {
-    expired: (
-      <svg className="w-16 h-16 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    inactive: (
-      <svg className="w-16 h-16 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-      </svg>
-    ),
-    error: (
-      <svg className="w-16 h-16 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-      </svg>
-    ),
-    locked: (
-      <svg className="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-      </svg>
-    ),
+  // Not-found and error have no account to theme from; expired/inactive have none until the 410 body
+  // carries them. Those render on NEUTRAL_TOKENS and the default faces, as the page does when tokens are missing.
+  const t: ThemeTokens = tokens ?? NEUTRAL_TOKENS;
+  const faces: ThemeFaces = THEME_FACES[themeName(theme)];
+  const themeVars = {
+    "--primary": t.primary,
+    "--primary-ink": t.primary_ink,
+    "--display": faces.display,
+    "--body-face": faces.body,
+    "--display-weight": faces.weight,
+    "--display-tracking": faces.tracking,
+    "--display-case": faces.kase,
+    "--radius": faces.radius,
+  } as React.CSSProperties;
+  const iconPath = {
+    expired: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+    inactive: "M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636",
+    error: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z",
+    locked: "M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z",
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        <div className="flex justify-center mb-6">
-          {iconSvg[icon]}
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ ...themeVars, background: "#F6F6F3", fontFamily: "var(--body-face)", color: "#14161A" }}>
+      <div className="bg-white max-w-md w-full overflow-hidden" style={{ border: "1px solid #E4E4E0", borderRadius: "var(--radius)" }}>
+        <div style={{ height: 8, background: "var(--primary)" }} />
+        <div className="p-8 text-center flex flex-col items-center gap-3">
+          <svg className="w-14 h-14 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: "var(--primary-ink)" }}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={iconPath[icon]} />
+          </svg>
+          <h1 className="m-0" style={{ fontFamily: "var(--display)", fontWeight: "var(--display-weight)", fontSize: 30, lineHeight: 1.05, letterSpacing: "var(--display-tracking)", textTransform: "var(--display-case)", textWrap: "balance" } as unknown as React.CSSProperties}>{title}</h1>
+          <p className="m-0" style={{ fontSize: 15, lineHeight: 1.5, color: "#5E636B", textWrap: "pretty" } as React.CSSProperties}>{message}</p>
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">{title}</h1>
-        <p className="text-slate-600 mb-6">{message}</p>
-        <div className="text-sm text-slate-400">
-          Powered by <span className="font-medium">TrendyReports</span>
+        <div className="mx-8 pt-3.5 pb-6 text-center" style={{ borderTop: "1px solid #E4E4E0", fontSize: 11.5, color: "#5E636B" }}>
+          Powered by <span style={{ fontWeight: 700, color: "#14161A" }}>TrendyReports</span>
         </div>
       </div>
     </div>
@@ -203,6 +210,8 @@ export default async function PropertyLandingPage({ params }: Props) {
         icon="inactive"
         title="Page Not Available"
         message={result.message}
+        theme={result.theme}
+        tokens={result.theme_tokens}
       />
     );
   }
@@ -213,6 +222,8 @@ export default async function PropertyLandingPage({ params }: Props) {
         icon="expired"
         title="Page Expired"
         message={result.message}
+        theme={result.theme}
+        tokens={result.theme_tokens}
       />
     );
   }
@@ -224,6 +235,8 @@ export default async function PropertyLandingPage({ params }: Props) {
         icon="locked"
         title="Access Code Required"
         message="This property page is protected. Please enter the access code to continue."
+        theme={result.theme}
+        tokens={result.theme_tokens}
       />
     );
   }
@@ -241,7 +254,6 @@ export default async function PropertyLandingPage({ params }: Props) {
   const data = result.data;
   
   const fullAddress = `${data.property_address}, ${data.property_city}, ${data.property_state} ${data.property_zip}`;
-  const accentColor = data.accent_color || "#2563eb";
   const tokens: ThemeTokens = data.theme_tokens ?? NEUTRAL_TOKENS;
   const faces: ThemeFaces = THEME_FACES[themeName(data.theme)];
   const onPrimaryRule = tokens.on_primary.toLowerCase() === "#ffffff" ? "rgba(255,255,255,0.3)" : "rgba(20,21,26,0.25)";
@@ -364,6 +376,18 @@ export default async function PropertyLandingPage({ params }: Props) {
             
             {/* Lead form — first on a phone */}
             <div className="order-1 md:order-2 p-5 md:p-10 bg-white">
+              {/* Phone only: whom the visitor is writing to, one line — the full agent panel follows the form */}
+              {data.agent_name && (
+                <div className="md:hidden flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 mb-5 pb-4" style={{ borderBottom: "1px solid #E4E4E0", fontSize: 13, color: "#5E636B" }}>
+                  <span>
+                    <span style={{ fontWeight: 700, color: "#14161A" }}>{data.agent_name}</span>
+                    {data.company_name && ` · ${data.company_name}`}
+                  </span>
+                  {data.agent_phone && (
+                    <a href={`tel:${data.agent_phone.replace(/[\s().-]/g, "")}`} style={{ color: "var(--primary-ink)", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>{data.agent_phone}</a>
+                  )}
+                </div>
+              )}
               <span className="block mb-2" style={{ fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--primary-ink)", fontWeight: 600 }}>
                 About this home
               </span>
@@ -377,7 +401,6 @@ export default async function PropertyLandingPage({ params }: Props) {
               <LeadCaptureForm 
                 shortCode={data.short_code}
                 agentName={data.agent_name}
-                accentColor={accentColor}
               />
             </div>
             

@@ -40,5 +40,12 @@
       "old": "        theme_tokens = tokens_for(consumer_report_color(brand_row[0] if brand_row else None))",
       "new": "        theme_tokens = tokens_for(consumer_report_color((brand_row[1] or brand_row[0]) if brand_row else None))",
       "test": "apps/api/tests/test_report_pages_carry_the_pdf_theme.py"
+  },
+  {
+      "name": "B3 comes back: a closed /p page loses its theme (410 body without tokens)",
+      "file": "apps/api/src/api/routes/property.py",
+      "old": "                \"theme_tokens\": _public_page_tokens(cur, accent_color, account_id, theme),",
+      "new": "                \"theme_tokens\": None,",
+      "test": "apps/api/tests/test_closed_page_wears_the_theme.py"
   }
 ]

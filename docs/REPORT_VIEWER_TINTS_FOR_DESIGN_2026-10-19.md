@@ -9,18 +9,17 @@ is the reason to ask rather than act. You wrote that a tinted indigo panel *"com
 report, which is what the agent is selling."* These four are **inside the report**.
 
 
-> ## ANSWERED, 2026-11-04 — Design's digital-report handoff
+> ## CLOSED, 2026-11-05 — Design's round 2
 >
-> Design answered this relay with `docs/design-claude/mobilereports/design_handoff_digital_report/`:
-> the viewer wears the report's theme, and every brand colour on it is one of the PDF's derived
-> tokens, served by the API as `theme_tokens`, so nothing in the file reads `branding?.primary_color`
-> directly any more except one line. Nine of the fourteen hard-coded sites went with it.
+> Round 2 (`docs/design-claude/bpages/design_handoff_digital_report_r2/`) re-cut the two edits the
+> first handoff could not land: R9 turned the range card into the PDF's range panel on the fixed dark
+> neutral, with its label in `primary_on_dark`, and R22 turned the market note into the PDF's strip.
+> **No indigo or violet class remains** in `MobileReportViewer.tsx`, and **no line takes the agent's
+> brand directly**: every brand colour on `/r` is one of the PDF's derived tokens from `theme_tokens`.
+> The collision this relay named, three violet labels on a brand-coloured gradient, is gone with it.
 >
-> **What is left** is the two sites whose edits were cut before #265 rewrote them and were
-> rejected under the handoff rules (anchor moved): the range card, R9, and the market note, R22.
-> Counted now: `violet-200` ×3, `indigo-50` ×1, `violet-800` ×1, five sites. **One line still takes the agent's brand directly**: the range card's primary-to-accent gradient, under the three `violet-200` labels.
-> The collision the relay named is therefore still there, and it is exactly what R9, recut against
-> main, removes.
+> History, counted when each was true: fourteen hard-coded hue sites and five direct brand reads on
+> 2026-10-19; five and one after the 2026-11-04 handoff; none since round 2.
 
 ## The surface
 
