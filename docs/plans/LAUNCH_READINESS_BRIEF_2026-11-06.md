@@ -2,13 +2,13 @@
 
 **Date:** November 6, 2026
 **Owner:** Jerry
-**Status:** Proposed; awaiting Claude Code review before implementation
+**Status:** Reviewed by Claude Code; amendments and Jerry decisions incorporated; ready for merge and execution
 **Audit revision:** `28157e74c257efa6e4c7267ee40a8b93dd7c8223`
 **Planning revision:** `821f71ad03587cdc8243f0aaaf59ff698ddc8a50`
 
 TrendyReports needs a release-hardening cycle before broad paid acquisition. The core report product and its automated checks have improved substantially. The remaining audit findings affect account isolation, subscription correctness, comparable-sale accuracy, delivery recovery, and complete customer journeys. These findings determine the implementation order.
 
-The planning revision adds only a defect-board note after the audited revision. It changes no application code. Every implementation ticket must nevertheless reproduce its premise on the then-current `main` before changing anything.
+The planning revision adds only a defect-board note after the audited revision. It changes no application code. Claude checked all 31 tickets at `821f71ad`; premise reproduction is complete at the evidence depth stated in the review. Each builder rechecks current source and any intervening changes before editing, without making Claude's lane wait for LR-001.
 
 ## Business outcome
 
@@ -23,15 +23,15 @@ The accompanying plan contains **31 tickets**, covering every actionable issue f
 | Work | Focused engineering hours |
 |---|---:|
 | Baseline, backlog reconciliation, and enforced review | 10–18 |
-| Dependencies, tenant isolation, abuse controls, sessions, uploads, exports, headers | 26–48 |
-| Billing, entitlements, schedule capacity, and invitation consumption | 33–58 |
-| Sale-price accuracy, consumer delivery, PDF recovery, dispatch recovery, and UX | 37–66 |
-| Automated journeys, monitoring, restore, capacity, release acceptance, and CI parity | 40–70 |
-| **Known ticket total** | **146–260** |
-| **20 percent contingency** | **29.2–52** |
-| **Planning budget, rounded** | **180–315** |
+| Dependencies, tenant isolation, abuse controls, sessions, uploads, exports, headers | 33–57 |
+| Billing, entitlements, schedule capacity, and invitation consumption | 34–60 |
+| Sale-price accuracy, consumer delivery, PDF recovery, dispatch recovery, and UX | 36–64 |
+| Automated journeys, monitoring, restore, capacity, release acceptance, and CI parity | 51–83 |
+| **Known ticket total** | **164–282** |
+| **20 percent contingency** | **32.8–56.4** |
+| **Planning budget, rounded** | **200–340** |
 
-An initial working forecast is about **200–250 focused engineering hours**. At 40 focused hours per week, the reserved budget represents roughly **5–8 engineering weeks**, followed by or including a separately observed **3–5 business-day pilot**. Availability of review, provider accounts, and operators determines calendar duration. Two agents do not halve the calendar: implementation is sequential and review is a real gate.
+An initial working forecast is about **220–270 focused engineering hours**. At 40 focused hours per week, the reserved budget represents roughly **5–8.5 engineer-weeks of total effort**, followed by or including a separately observed **3–5 business-day pilot**. Availability of review, provider accounts, and operators determines calendar duration. The approved two lanes shorten the parallel portion of the calendar; review, shared-file handoffs, the migration slot, and the pilot still constrain elapsed time.
 
 Ticket estimates include diagnosis, implementation, targeted regression tests, review/rework, and a scoped deployment check. LR-030 covers additional cross-system acceptance work; it does not charge those per-ticket checks twice. Passive CI/provider waiting and pilot observation are elapsed time rather than additional engineering hours.
 
@@ -73,24 +73,18 @@ Ticket estimates include diagnosis, implementation, targeted regression tests, r
 
 There is no automatic waiver for a small issue. Any proposed deferral needs Jerry's explicit decision, a customer-impact explanation, an owner, and a revisit date. Until then, it remains in scope.
 
-## Decisions and access needed
+## Approved decisions and remaining access
 
-| Owner | Needed before |
-|---|---|
-| Jerry | LR-013: approve access rules for active, trialing, past_due, unpaid, incomplete, paused, and canceled subscriptions. |
-| Jerry | LR-014: confirm supported plan-change behavior and cancellation/refund handling for any discovered duplicate subscriptions. |
-| Jerry or legal owner | LR-025/LR-030: confirm the approved consent wording and retention requirements; engineering preserves it, not authors legal text. |
-| Jerry | LR-028/LR-029: agree recovery targets, expected pilot/launch workload, acceptable latency and provider-cost budget. |
-| Authorized operator | LR-002/LR-026: repository administration and an isolated test environment with test identities. |
-| Authorized operator | LR-011 onward: Stripe test-mode access; controlled mailbox/handsets and provider sandbox or approved test credentials. |
-| Claude Code | Review this packet, challenge the findings and migration designs, and state PASS or concrete amendments. |
+Jerry's [decisions and lane ownership](launch-readiness-2026-11-06/DECISIONS_AND_LANES.md) are binding: active/trialing full access; past_due seven days then Free; incomplete/unpaid Free; upgrades immediate/prorated; downgrades at period end; one subscription/customer; manual refunds; grandfather existing schedules; 20 lookups/visitor/hour; RTO four hours/RPO one day; approved report wording; needs-review uncertain sends with no automatic text resend; existing SVG conversion/new SVG rejection; retain the password-change initiating device; Codex as merger; and three to five Pacific Coast pilot agents.
 
-No passwords, tokens, or signing secrets belong in the documents or chat. Use normal sign-in and approved service access; never fabricate a production admin session.
+PCT legal still owns consent wording and retention. Four years is an expectation, not an approved duration. Paused-status policy, workload/latency/cost ceilings, trusted visitor-budget design, operator credentials, and failed-deploy retention for each Render service remain explicit inputs for their affected tickets. Historical asking-price reports get a read-only count before any action. No secrets belong in documents or chat; use normal approved sign-in, never a fabricated production admin session.
 
 ## Execution agreement
 
-Cursor is the proposed builder; Claude Code reviews every implementation PR. One designated merger applies an approved merge. Each ticket branches from the then-current `origin/main`, lists its verified base SHA, and completes build, verification, review, merge, and deployment checks before the next implementation ticket starts. Investigations may run in parallel, implementation may not.
+The reviewed [two-lane split](launch-readiness-2026-11-06/DECISIONS_AND_LANES.md) governs. Codex owns LR-001, release controls, database parity, security, billing/admission, restore and capacity. Claude owns reports, delivery, monitoring, and browser journeys. LR-030 is joint with Jerry. Each lane is sequential in its own worktree; cross-lane work may run in parallel. The other lane reviews each PR; Codex is the named merger after independent PASS and required checks.
 
-This documentation PR changes the plan only. It does not change application behavior, payments, infrastructure, active schedules, or migrations. Implementation starts after Claude reviews the packet and required policy decisions for the next ticket are available.
+Codex alone changes defect status tokens/counts/new numbers. At most one open migration PR exists across both lanes; it claims its number in the title and updates both schema guards. Claude's LR-018 property normalization precedes Codex's LR-015 edit of the same route. Required CI/plan shared-file ownership is recorded in the lane document.
 
-See [the execution plan](LAUNCH_READINESS_PLAN_2026-11-06.md) and [the Claude review brief](CLAUDE_REVIEW_BRIEF_2026-11-06.md).
+This documentation PR changes the plan only. After it merges, Codex starts LR-001 while Claude can start LR-019. Production mutations, historical replays, legal decisions, and the first migration's deploy-retention confirmation remain explicit operational steps.
+
+See [the execution plan](LAUNCH_READINESS_PLAN_2026-11-06.md), [the completed review handoff](CLAUDE_REVIEW_BRIEF_2026-11-06.md), and [Claude's review](https://github.com/easydeed/reportscompany/pull/272#issuecomment-6698368476).

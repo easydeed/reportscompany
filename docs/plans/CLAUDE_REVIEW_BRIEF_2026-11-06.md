@@ -1,39 +1,26 @@
-# Claude Code Review Brief for Launch Hardening
+# Claude Code Review Outcome for Launch Hardening
 
-**Requested action:** Review the proposed brief and ticket plan before implementation. Return PASS or precise amendments. Do not start an overlapping implementation from this handoff.
+**Review:** [PR 272 comment](https://github.com/easydeed/reportscompany/pull/272#issuecomment-6698368476). **Verdict:** AMEND, then start. **Result:** All 31 findings hold; the packet incorporates scope, dependency, hour, and lane amendments plus Jerry's subsequent decisions.
 
-Jerry requested a complete repair plan after the November 6 readiness audit. The packet is on branch `docs/launch-readiness-2026-11-06`, cut from main at `821f71ad03587cdc8243f0aaaf59ff698ddc8a50`. The audit examined `28157e74`; the additional commit is a defect-board note only.
+The audit revision is `28157e74`; review/planning revision `821f71ad` changes only the defect board. Codex's original local checkout was dirty; Claude's checkout was clean. Neither state is an assertion about every agent's working folder. Recorded CI results (3,849 passed/33 skipped/15 xfailed backend and 580 frontend tests) belong to the audited GitHub runs; Claude's local run (3,825/58/15) differed by environment and is not a product defect.
 
-Read:
+Read [the brief](LAUNCH_READINESS_BRIEF_2026-11-06.md), [execution ledger](LAUNCH_READINESS_PLAN_2026-11-06.md), and [approved decisions and file ownership](launch-readiness-2026-11-06/DECISIONS_AND_LANES.md).
 
-1. [Business brief](LAUNCH_READINESS_BRIEF_2026-11-06.md).
-2. [Execution plan and 31-ticket ledger](LAUNCH_READINESS_PLAN_2026-11-06.md).
-3. [Security and billing acceptance criteria](launch-readiness-2026-11-06/01-security-and-billing.md).
-4. [Report and delivery acceptance criteria](launch-readiness-2026-11-06/02-reports-and-delivery.md).
-5. [Operations, backlog reconciliation, and launch acceptance](launch-readiness-2026-11-06/03-operations-and-acceptance.md).
+## Amendments incorporated
 
-## What needs your review
+- Security scope includes standalone workspace lockfiles/deployment inventory; real hostname/path deletion vectors and missing-object truth; fixed-window rejection headers; trusted proxy IP for search and request; byte validation for all uploaded formats; both lead CSV exports; six JWT issuers/precision/outage behavior; and report-only CSP through next.config with same-origin framing.
+- Billing covers missing webhook configuration/metadata/price handling, current customer/subscription identity, deletion and period-field API-version behavior, worker deferred state, approved status allowances, the Customer.create race, all zero-limit evaluators/scheduled counts, every schedule reactivation/book handover, and boolean invite consumption/cancellation races.
+- Reports cover agent and consumer sale-price normalization/unknown status, real-schema failure fields without changing report_generations.error, a conditional delivery claim with existing attempt logs, jointly designed separate agent notification, public PDF claims/rate limits, reuse of queued schedule rows for dispatch recovery, independent market-wizard polling, and all four wording locations.
+- Operations first establish an always-running gate and proper path inputs, make E2E nonproduction by default without built-in credentials, extend existing DB guards, and preserve evidence-backed infrastructure verification.
+- Dependencies change for LR-016, LR-017, LR-022, LR-023, and LR-024 as recorded in the ledger. Both lanes may start after packet merge; LR-001 is no longer a gate on Claude's already-reviewed first ticket.
+- Estimate: **164–282 hours**, **200–340 reserved**, working forecast **220–270**. Per-ticket changes are in the ledger and packs.
 
-- Recheck the evidence, especially the cross-account storage deletion, after-execution limiter, Stripe transitions, sale/list-price confusion, nonexistent consumer failure column, and delivery ownership under concurrency. Sources and regression criteria are in each ticket.
-- Challenge assumptions. Advisory counts do not prove every advisory is reachable; low usage does not prove broken code; mocked provider reproduction does not prove live delivery. Preserve these distinctions.
-- Review the proposed durable billing/delivery/dispatch state before implementation. Prefer existing patterns and small additive migrations. Do not promise exactly-once external effects without provider support and a reconciliation path.
-- Confirm all audit findings are mapped, including secondary zero-limit, schedule-admission, invite-consumption, CSV/SVG/session/header issues. LR-001 must classify the 47 open/84 recorded older entries and price any additional live repairs.
-- Confirm the dependency order and realistic hours: **146–260 focused hours; 180–315 with reserve; working forecast 200–250**. Pilot observation and access waits affect calendar separately.
-- Confirm policy questions for Jerry: payment/grace states, supported plan changes, public-lookup budgets, delivery ambiguity, consent/retention, recovery targets, and expected load/cost envelope.
-- Review required-check path filtering before enabling repository rules. An unrelated docs PR must not wait forever for a deliberately skipped check.
-- Review migration rollout against `docs/runbooks/migrations-and-deploys.md`, especially previous-version retention for background workers. No blanket guard bypass or production migration is authorized by this docs PR.
+## Execution handoff
 
-## Proposed working agreement
+Codex starts LR-001 -> LR-002 -> LR-031, then owns security/billing/admission and LR-028/029. Claude starts LR-019 -> LR-018, then delivery/recovery, copy, monitoring, and E2E. Each lane is sequential with a separate worktree and independent review. LR-030 is joint with Jerry.
 
-Cursor builds each approved ticket on a fresh branch from the then-current main. Claude Code independently reviews the complete acceptance list. A designated merger merges only after PASS and required checks, then verifies the deployed result. Implementation is sequential; read-only investigation may be parallel. Do not implement the next overlapping concern while the current ticket is being reviewed.
+Codex alone edits board status/counts/new D-numbers; Claude supplies evidence and requested status changes. One open migration PR across the lanes, with a claimed number and both schema guards. Claude LR-018 owns property.py normalization before Codex LR-015's evaluator edit. Jerry must confirm failed-deploy previous-version retention before the first migration merge. Codex is the named merger after independent review; emergency review occurs within 24 hours.
 
-Every failure needs observable evidence: actual migrated SQL for column names, two real DB connections for concurrency, deterministic provider failures, and a bounded live check with approved test recipients when appropriate. Update the defect entry from the actual result, not from the existence of a test.
+Consent wording/retention remains with PCT legal. The decisions record distinguishes approved amounts/policies from unaddressed paused states, load targets, and operational access. Historical asking-price reports get a read-only count before any action. No uncertain text is automatically resent.
 
-## What to return
-
-1. PASS, or a list of amendments with file/section and rationale.
-2. Any finding you could not reproduce or that is already fixed, with current commit evidence.
-3. Any missing ticket, dependency, migration constraint, or estimate adjustment.
-4. Confirmation of the first implementation ticket: **LR-001**, followed by **LR-002** and **LR-031** before functional repairs.
-
-The packet changes documentation only. Application fixes, configuration changes, migrations, live sends, payment mutations, and historical replays have not started. Once the packet passes review, execute its approved sequence and record completion evidence per ticket.
+This amendment merge changes documentation only. It authorizes the reviewed sequence, not unreviewed migrations, payments, live replays, or legal policy.

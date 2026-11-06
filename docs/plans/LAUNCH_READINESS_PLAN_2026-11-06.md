@@ -1,15 +1,15 @@
 # TrendyReports Launch Readiness Execution Plan
 
-**Status:** Proposed; awaiting Claude Code review
+**Status:** Claude review amendments and Jerry decisions incorporated; execute after PR #272 merges
 **Scope:** November 6 audit findings, supporting hardening, and explicit reconciliation of the older backlog
 **Planning base:** `821f71ad03587cdc8243f0aaaf59ff698ddc8a50`
-**Roles:** Cursor builds; Claude Code reviews; a designated merger merges; Jerry owns policy and launch decisions.
+**Roles:** Codex and Claude Code build in disjoint lanes and review each other; Codex is Jerry's named merger; Jerry owns policy/launch decisions. [Decisions and file ownership](launch-readiness-2026-11-06/DECISIONS_AND_LANES.md) govern.
 
 Read the [business brief](LAUNCH_READINESS_BRIEF_2026-11-06.md) first. Ticket details are divided into [security and billing](launch-readiness-2026-11-06/01-security-and-billing.md), [reports and delivery](launch-readiness-2026-11-06/02-reports-and-delivery.md), and [operations and acceptance](launch-readiness-2026-11-06/03-operations-and-acceptance.md).
 
 ## Hours and scope boundaries
 
-The 31 tickets total **146–260 focused engineering hours**. A 20 percent reserve produces **175.2–312 hours**, rounded to a planning budget of **180–315 hours**. Working forecast: **200–250 hours**. These are planning estimates, not a fixed-price commitment.
+Claude's amended 31 tickets total **164–282 focused engineering hours**. A 20 percent reserve produces **196.8–338.4 hours**, rounded to a planning budget of **200–340 hours**. Working forecast: **220–270 hours**. These are planning estimates, not a fixed-price commitment.
 
 The range includes implementation, meaningful regression proof, review/rework, and scoped deployment verification. It assumes the current architecture remains in use, test-mode access is supplied, and no undocumented billing customization must be preserved. Provider latency and a **3–5 business-day observed pilot** affect elapsed time separately.
 
@@ -17,66 +17,66 @@ The estimate covers all issues identified in the audit, including secondary issu
 
 ## Ticket ledger
 
-All tickets begin `proposed`. The ticket ID is an execution identifier, not an invented defect-board D-number. LR-001 maps each to existing D-numbers or creates a new documented defect only when required.
+Tickets are ready after the reviewed amendments merge, subject to their stated policy/access dependencies. The ticket ID is an execution identifier, not an invented defect-board D-number. LR-001 maps each to existing D-numbers or creates a new documented defect only when required.
 
 Gate definitions: `PILOT` blocks the affected pilot feature; `PAID` blocks accepting subscription payments; `PUBLIC` blocks broad acquisition; `PROCESS` establishes release discipline. An item is not waived merely because another gate opens.
 
 | ID | Ticket | Gate | Hours | Depends on |
 |---|---|---|---:|---|
-| LR-001 | Reproduce findings and reconcile the full open backlog | PROCESS | 8–14 | Claude packet review |
+| LR-001 | Reproduce findings and reconcile the full open backlog | PROCESS | 8–14 | Reviewed amendments merged |
 | LR-002 | Enforce reviewed releases on main | PROCESS | 2–4 | 001 |
 | LR-003 | Patch and reconcile production dependencies | PILOT | 6–12 | 002 |
 | LR-004 | Authorize branding deletion by canonical account key | PILOT | 2–4 | 001 |
 | LR-005 | Reject throttled work before handler execution | PILOT | 4–7 | 001 |
-| LR-006 | Bound anonymous property lookup and provider cost | PILOT | 3–5 | 005 |
-| LR-007 | Validate or safely convert uploaded SVG assets | PILOT | 3–6 | 004 |
+| LR-006 | Bound anonymous property lookup and provider cost | PILOT | 6–10 | 005 |
+| LR-007 | Validate all uploaded image bytes; convert existing SVG logos | PILOT | 4–6 | 004 |
 | LR-008 | Neutralize spreadsheet formulas in lead exports | PUBLIC | 2–3 | 001 |
 | LR-009 | Revoke older sessions on password changes | PILOT | 4–7 | 001 |
-| LR-010 | Add browser response security controls | PUBLIC | 2–4 | 003 |
+| LR-010 | Add browser response security controls | PUBLIC | 5–8 | 003 |
 | LR-011 | Make webhook ingestion durable and retryable | PAID | 8–14 | 001 |
 | LR-012 | Reconcile current subscription state and old downgrades | PAID | 8–14 | 011 |
 | LR-013 | Enforce approved payment-status entitlements | PAID | 4–7 | 012 and Jerry policy |
 | LR-014 | Prevent duplicate subscription creation | PAID | 5–9 | 012, 013 |
-| LR-015 | Enforce zero report allowance exactly | PILOT | 2–4 | 001 |
-| LR-016 | Serialize schedule-capacity admission | PUBLIC | 3–5 | 015 |
-| LR-017 | Consume invitations atomically | PILOT | 3–5 | 009 |
-| LR-018 | Use recorded sale prices for sale-derived figures | PILOT | 3–5 | 001 |
-| LR-019 | Persist consumer failures against the actual schema | PILOT | 2–4 | 001 |
+| LR-015 | Enforce zero report allowance exactly | PILOT | 3–5 | 001 |
+| LR-016 | Serialize schedule-capacity admission | PUBLIC | 4–7 | 001; independent of 015 |
+| LR-017 | Consume invitations atomically | PILOT | 2–4 | 001; independent of 009 |
+| LR-018 | Use recorded sale prices for sale-derived figures | PILOT | 5–8 | Packet merge; source recheck |
+| LR-019 | Persist consumer failures against the actual schema | PILOT | 2–4 | Packet merge; source recheck |
 | LR-020 | Claim consumer delivery durably and preserve terminal state | PILOT | 10–18 | 019 |
 | LR-021 | Recover agent notifications independently | PILOT | 4–8 | 020 |
-| LR-022 | Recover missing PDFs with bounded viewer states | PILOT | 6–10 | 019, 020 |
-| LR-023 | Recover committed scheduled work after broker failure | PILOT | 8–14 | 005 |
-| LR-024 | Surface wizard failures and stop endless polling | PILOT | 3–5 | 022, 023 |
-| LR-025 | Match acquisition promises to report behavior | PUBLIC | 1–2 | 018 and wording confirmation |
-| LR-026 | Run isolated browser journeys automatically | PUBLIC | 10–18 | Functional tickets, 031 |
+| LR-022 | Recover missing PDFs with bounded viewer states | PILOT | 6–10 | 019 |
+| LR-023 | Recover committed scheduled work after broker failure | PILOT | 5–9 | 031 |
+| LR-024 | Surface wizard failures and stop endless polling | PILOT | 3–5 | Packet merge; independent of 022/023 |
+| LR-025 | Match acquisition promises to report behavior | PUBLIC | 1–2 | 018; wording approved |
+| LR-026 | Run isolated browser journeys automatically | PUBLIC | 20–30 | Functional tickets, 031 |
 | LR-027 | Monitor dependency readiness and stalled outcomes | PILOT | 8–14 | 011, 020, 021, 023 |
-| LR-028 | Prove backup restoration and operational recovery | PUBLIC | 6–10 | 001 and agreed targets |
+| LR-028 | Prove backup restoration and operational recovery | PUBLIC | 6–10 | 001; RTO/RPO approved |
 | LR-029 | Measure capacity, vendor limits, and per-report costs | PUBLIC | 6–10 | 003, 006, 020, 023, 027 |
 | LR-030 | Complete role-based acceptance and supervised pilot | PUBLIC | 8–14 | All other applicable tickets |
-| LR-031 | Match database CI to production and real failure tests | PROCESS | 2–4 | 001 |
+| LR-031 | Match database CI to production and real failure tests | PROCESS | 3–5 | 001 |
 
-## Recommended implementation sequence
+## Reviewed implementation lanes
 
-Dependency independence does not authorize concurrent implementations. This sequence front-loads protections and fast correctness fixes while leaving the larger state machines for focused review.
+1. **Codex:** LR-001 -> LR-002 -> LR-031 -> security LR-003 through LR-010 -> billing/admission LR-011 through LR-017 -> LR-028/LR-029 (**92–160 h**).
+2. **Claude Code:** LR-019 -> LR-018 -> LR-020/LR-021 (one reviewed state design, two PRs) -> LR-022 -> LR-024 -> LR-023 -> LR-025 -> LR-027 -> LR-026 (**64–108 h**).
+3. **Joint with Jerry:** LR-030 (**8–14 h**, plus pilot observation).
 
-1. **Establish the baseline and release process:** 001 → 002 → 031.
-2. **Close immediate security exposure:** 003 → 004 → 005 → 006 → 007 → 008 → 009 → 010 → 017.
-3. **Close report and delivery correctness:** 015 → 018 → 019 → 020 → 021 → 022 → 023 → 024 → 016 → 025.
-4. **Make paid state coherent:** 011 → 012 → 013 → 014.
-5. **Prove the release:** 027 → 026 → 028 → 029 → 030.
+Each lane works sequentially in its own worktree; the two lanes may run concurrently. Claude can begin LR-019 immediately after the amended packet merges while Codex reconciles LR-001. Dependencies remain real: LR-023 waits for LR-031; LR-027 needs Codex's webhook signal; LR-026 waits for functional work in both lanes. LR-016 and LR-017 are independent of LR-015 and LR-009 respectively; LR-022 needs LR-019 only; LR-024 is independent of consumer-PDF/dispatch tickets.
 
-If policy or access blocks a ticket, choose another dependency-ready ticket after reporting the blocked requirement. Never guess a billing, legal, retention, or refund policy to keep moving.
+File ownership is explicit in [decisions and lanes](launch-readiness-2026-11-06/DECISIONS_AND_LANES.md). Codex owns board statuses/counts/new D-numbers. Claude adds evidence and requests status changes. Only one open migration PR across the lanes; both guards move together and the number is claimed in the PR title. Claude's LR-018 edit of property.py precedes Codex LR-015; Codex's workflow edits merge before Claude's E2E workflow work.
+
+If policy or access blocks a ticket, report the concrete input needed and choose another dependency-ready ticket. User-approved decisions in the lane document supersede generic sequential-only repo guidance for this program.
 
 ## Ticket workflow
 
-1. Verify current `origin/main` and the exact base SHA. Use an isolated clean worktree; the existing working folder contains unrelated edits.
-2. Read the named files and applicable tests. Reproduce the reported premise. If fixed already, close the ticket by current evidence rather than rewriting it.
+1. Verify current `origin/main` and the exact base SHA. Use an isolated clean worktree and inspect its status; never assume another agent's checkout has the same local state.
+2. Read the named files and applicable tests. Use the review's completed reproduction and recheck intervening source changes. If fixed already, close by current evidence rather than rewriting; LR-001 does not block Claude's lane.
 3. Confirm the write scope and any migration/provider change in the PR description. Use a branch such as `fix/lr-004-branding-delete-ownership`, cut from current main.
 4. Implement one ticket. Import shared behavior; avoid a parallel pipeline. Keep new modules small and separate responsibilities.
 5. Test the failure, success, tenant boundary, and replay/concurrency cases relevant to that ticket. A mock alone cannot establish schema compatibility or real database locking.
 6. Review the actual staged diff and scope. Commit and push the ticket branch; attach the exact evidence and residual limits.
-7. Claude Code reviews the full acceptance list. A BLOCK stays blocked until fixed and re-reviewed. The reviewer does not approve its own implementation.
-8. The designated merger merges only after PASS and required checks. Verify the relevant deployed behavior using authorized test identities and recipients. Then start the next ticket.
+7. The other lane reviews the full acceptance list. A BLOCK stays blocked until fixed and re-reviewed. The reviewer does not approve its own implementation.
+8. Codex, Jerry's named merger, merges only after independent PASS and required checks. Verify the relevant deployed behavior using authorized test identities and recipients. Then start the next ticket in that lane.
 
 ## Common acceptance standard
 
@@ -94,27 +94,19 @@ For provider delivery, distinguish `accepted` from actually delivered. Do not cl
 
 ## Migrations and operational changes
 
-Follow [migrations and deploys](../runbooks/migrations-and-deploys.md). Reserve migration numbers from main when each ticket starts; do not assume 0064 remains available. Keep the API and worker `REQUIRED_MIGRATION` values synchronized and tested.
+Follow [migrations and deploys](../runbooks/migrations-and-deploys.md). Only one open migration PR may exist across both lanes. Claim the number in its title from current main; do not assume 0064 remains available. Keep the API and worker `REQUIRED_MIGRATION` values synchronized and tested.
 
-Each migration PR includes read-only prechecks, exact pending filenames, changes/backfills, verification queries, and an operator runbook. Prepare compatible additive schema before application code relies on it. Where the documented merge/startup-refusal sequence is used, verify previous-version retention for every affected service, including background workers, before the merge. If it cannot be guaranteed, review a compatible staged rollout first. Do not disable schema guards to hide an incomplete rollout.
+Each migration PR includes read-only prechecks, exact pending filenames, changes/backfills, verification queries, and an operator runbook. Prepare compatible additive schema before application code relies on it. Where the documented merge/startup-refusal sequence is used, Jerry confirms previous-version retention for every affected Render service, including worker, ticker, and bridge, and the result is recorded before the first migration merges. If it cannot be guaranteed, review a compatible staged rollout first. Do not disable schema guards to hide an incomplete rollout.
 
 Payment, messaging, migration, repository-rule, and infrastructure mutations are separately identified operational steps with before/after evidence. Test-mode providers and isolated data are the default for acceptance. Real delivery checks use approved recipients. No bulk replay, customer-data purge, automatic refunds, production load test, database-IP restriction, or service-tier purchase is implicit in a code fix.
 
 Rollback must preserve durable webhook/delivery/outbox evidence and consent data. Stop new side effects if needed; do not delete the evidence and retry. Reconcile pending/unknown work by its durable identifier before resuming it.
 
-## Decisions to resolve before dependent tickets
+## Policy and operating inputs
 
-| Decision | Required result | Ticket |
-|---|---|---|
-| Billing status policy | Approved allowance for active/trialing/past_due/unpaid/incomplete/paused/canceled, duration of grace, and cancellation effective time | 013 |
-| Subscription changes | Change-plan behavior, pending-checkout behavior, duplicate-subscription reconciliation and refund authority | 014 |
-| Public lookup allowance | Per-IP/page and global budgets, outage response, and acceptable shared-IP impact | 006 |
-| Delivery recovery | Supported provider idempotency and operator resolution for uncertain sends | 020, 021 |
-| Consent and retention | Approved wording and retention, without engineering-authored legal copy | 025, 030 |
-| Recovery targets | Acceptable recovery time and data-loss window, backup retention, authorized operators | 028 |
-| Capacity and costs | Pilot/launch volumes, peak concurrency, latency and vendor spend ceilings | 029 |
+The [approved decisions](launch-readiness-2026-11-06/DECISIONS_AND_LANES.md) set payment grace, upgrades/downgrades, single-subscription/portal behavior, manual refunds, grandfathered schedules, lookup budget, recovery targets, wording, SVG conversion/rejection, initiating-device retention, uncertain-send handling, merger/emergency review, and the Pacific Coast pilot cohort.
 
-Builders can prepare concrete options and tests before these decisions. They cannot silently select business/legal policy.
+Still pending: PCT legal consent/retention (four years is not approved), paused/other unaddressed Stripe state policy, visitor identification/shared-IP/outage design, workload/latency/spend ceilings, alert destination/access, and failed-deploy retention confirmation before a migration. The relevant ticket stops at its unresolved decision; independent work can continue.
 
 ## Launch acceptance matrix
 
@@ -138,4 +130,4 @@ Builders can prepare concrete options and tests before these decisions. They can
 
 Ticket lifecycle: `proposed` → `ready` → `in_progress` → `review` → `merged` → `verified` → `closed`. Use `blocked` with a concrete dependency and owner; never change status because a test merely exists.
 
-The docs-only PR is for Claude to review scope, evidence strength, architecture choices, dependencies, hours, and policy decisions. After that review, LR-001 starts. No application fixes or production changes are part of this packet.
+Claude reviewed PR #272 with AMEND, then start; the packet incorporates that review and Jerry's decisions. After merge, Codex starts LR-001 and Claude may start LR-019. Application fixes and production changes remain in their own reviewed tickets.
