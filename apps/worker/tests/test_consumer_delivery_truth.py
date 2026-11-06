@@ -137,7 +137,10 @@ def test_each_non_delivery_records_a_failure_with_its_own_reason(marker, defect)
 def test_the_failure_recorder_writes_failed_and_keeps_the_reason():
     src = _src("_record_consumer_delivery_failure")
     assert "status = 'failed'" in src
-    assert "error = %s" in src, "the reason is not persisted"
+    # LR-019: `error_message`, the column the table has. This asserted `error`,
+    # a column that never existed, so the text test passed while every
+    # failure write raised in production.
+    assert "error_message = %s" in src, "the reason is not persisted"
     assert "logger.error" in src, "a non-delivery is not surfaced in the logs either"
 
 
@@ -283,7 +286,7 @@ def test_the_failure_return_does_not_reference_a_variable_from_another_branch():
     was hiding the reason for the first.
     """
     code = _code_only(CONSUMER)
-    tail = code[code.index("if self.request.retries < self.max_retries"):]
+    tail = code[code.index("self.request.retries < self.max_retries"):]
     assert "sms_result" not in tail, (
         "the failure return still reads sms_result, which is unbound on the "
         "email and no-method paths"
@@ -295,7 +298,11 @@ def test_the_generic_message_does_not_overwrite_a_specific_one():
     The branches above record exactly why. This tail used to replace all of
     them with 'Delivery failed' — the one fact everyone already had.
     """
-    assert "COALESCE(NULLIF(error, ''), %s)" in CONSUMER, (
+    # LR-019: the tail now reads the branch's reason back from the real
+    # column and keeps it; 'Delivery failed' is only the fallback. Behaviour is
+    # proven against the database in test_consumer_failures_are_recorded.py.
+    assert "SELECT error_message FROM consumer_reports" in CONSUMER
+    assert 'or "Delivery failed"' in CONSUMER, (
         "the generic failure message overwrites the specific reason recorded "
         "by the branch that knew it"
     )

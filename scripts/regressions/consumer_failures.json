@@ -1,0 +1,23 @@
+[
+  {
+    "name": "LR-019 comes back: the failure recorder writes a column consumer_reports does not have",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        SET status = 'failed', error_message = %s\n        WHERE id = %s::uuid\n    \"\"\", (text, report_id))",
+    "new": "        SET status = 'failed', error = %s\n        WHERE id = %s::uuid\n    \"\"\", (text, report_id))",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "LR-019 comes back: a scheduled retry is caught and recorded as the error",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "    except Retry:\n",
+    "new": "    except ZeroDivisionError:\n",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "LR-019 comes back: a permanent SMS refusal is retried",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                        failure_retryable = not sms_failure_is_permanent(sms_result)\n",
+    "new": "                        failure_retryable = True\n",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  }
+]
