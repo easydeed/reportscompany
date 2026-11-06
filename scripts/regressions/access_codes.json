@@ -1,0 +1,23 @@
+[
+  {
+    "name": "D-359 comes back: a stored access code locks the public page again",
+    "file": "apps/api/src/api/routes/property.py",
+    "old": "        requires_access_code=False,",
+    "new": "        requires_access_code=bool(access_code),",
+    "test": "apps/api/tests/test_access_codes_are_retired.py"
+  },
+  {
+    "name": "D-359 comes back: the lead route refuses leads that carry no code",
+    "file": "apps/api/src/api/routes/leads.py",
+    "old": "        # 6. (Retired, D-359.) A stored access code is no longer checked: no page\n",
+    "new": "        if access_code and payload.access_code != access_code:\n            raise HTTPException(status_code=403, detail=\"Invalid access code\")\n        # 6. (Retired, D-359.) A stored access code is no longer checked: no page\n",
+    "test": "apps/api/tests/test_access_codes_are_retired.py"
+  },
+  {
+    "name": "D-359 comes back: the settings API stores a new code",
+    "file": "apps/api/src/api/routes/property.py",
+    "old": "        if updates.access_code:\n            raise HTTPException(\n                status_code=422,",
+    "new": "        if updates.access_code and False:\n            raise HTTPException(\n                status_code=422,",
+    "test": "apps/api/tests/test_access_codes_are_retired.py"
+  }
+]

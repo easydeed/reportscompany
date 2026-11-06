@@ -1730,12 +1730,15 @@ def update_landing_page_settings(
             else:
                 fields.append("max_leads = NULL")
         
-        if updates.access_code is not None:
-            if updates.access_code:
-                fields.append("access_code = %s")
-                values.append(updates.access_code)
-            else:
-                fields.append("access_code = NULL")
+        # D-359: access codes are retired. A code locked the public page with no
+        # way for any visitor to enter it, so a page with one was silently dead.
+        # A new code is refused; nothing writes the column, and codes already
+        # stored are left as they are (the public page and the lead route ignore them).
+        if updates.access_code:
+            raise HTTPException(
+                status_code=422,
+                detail="Access codes are no longer supported: a protected page could not be opened by anyone.",
+            )
         
         if not fields:
             raise HTTPException(status_code=400, detail="No fields to update")
@@ -2112,5 +2115,7 @@ def get_public_property_report(short_code: str):
         website_url=website_url,
         is_active=is_active,
         expires_at=expires_at.isoformat() if expires_at else None,
-        requires_access_code=bool(access_code),
+        # D-359: never locked. A stored code is ignored; nothing ever asked the
+        # visitor for it, so honouring it turned the lead page off.
+        requires_access_code=False,
     )

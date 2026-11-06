@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, RefreshCw, Eye, EyeOff, Calendar, Users, Lock, Unlock } from "lucide-react";
+import { ArrowLeft, Save, RefreshCw, Eye, EyeOff, Calendar, Users } from "lucide-react";
 
 interface ReportSettings {
   id: string;
@@ -35,8 +35,6 @@ export default function PropertyReportSettingsPage() {
   const [isActive, setIsActive] = useState(true);
   const [expiresAt, setExpiresAt] = useState("");
   const [maxLeads, setMaxLeads] = useState<string>("");
-  const [accessCode, setAccessCode] = useState("");
-  const [showAccessCode, setShowAccessCode] = useState(false);
   
   useEffect(() => {
     fetchSettings();
@@ -60,7 +58,6 @@ export default function PropertyReportSettingsPage() {
       setIsActive(data.is_active);
       setExpiresAt(data.expires_at ? data.expires_at.split("T")[0] : "");
       setMaxLeads(data.max_leads ? String(data.max_leads) : "");
-      setAccessCode(data.access_code || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load settings");
     } finally {
@@ -85,7 +82,7 @@ export default function PropertyReportSettingsPage() {
           is_active: isActive,
           expires_at: expiresAt ? `${expiresAt}T23:59:59Z` : null,
           max_leads: maxLeads ? parseInt(maxLeads) : null,
-          access_code: accessCode || null,
+          // D-359: access codes are retired; the field is gone and none is sent.
         }),
       });
       
@@ -338,38 +335,6 @@ export default function PropertyReportSettingsPage() {
               </p>
             </div>
             
-            {/* Access Code */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2">
-                {accessCode ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                Access Code (optional)
-              </label>
-              <div className="flex gap-2 max-w-xs">
-                <div className="relative flex-1">
-                  <input
-                    type={showAccessCode ? "text" : "password"}
-                    value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value)}
-                    placeholder="No password protection"
-                    className="w-full px-3 py-2 pr-10 border border-border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAccessCode(!showAccessCode)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showAccessCode ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Visitors must enter this code to view the landing page
-              </p>
-            </div>
           </div>
         </div>
         

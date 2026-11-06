@@ -236,7 +236,7 @@ async def capture_lead(payload: LeadCaptureInput, request: Request):
     3. is_active check
     4. expires_at check
     5. max_leads check
-    6. access_code check
+    6. (retired: access codes are ignored, D-359)
     7. IP block list check
     8. Rate limit check (5 per hour per IP)
     9. Duplicate email check (silent success)
@@ -318,10 +318,8 @@ async def capture_lead(payload: LeadCaptureInput, request: Request):
             if current_leads >= max_leads:
                 raise HTTPException(status_code=410, detail="This page is no longer accepting submissions")
         
-        # 6. Check access code (if set)
-        if access_code:
-            if payload.access_code != access_code:
-                raise HTTPException(status_code=403, detail="Invalid access code")
+        # 6. (Retired, D-359.) A stored access code is no longer checked: no page
+        # asks the visitor for one, so checking it refused every lead on that page.
         
         # 7. Check IP block list
         if check_ip_blocked(cur, client_ip):
