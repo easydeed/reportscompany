@@ -59,13 +59,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 85 | Observed, not yet triaged |
+| `recorded` | 84 | Observed, not yet triaged |
 | `open` | 47 | Real, unfixed |
-| `fixed` | 213 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 214 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
-| `accepted` | 1 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **359** | D-001 … D-359, contiguous, no duplicates |
+| `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
+| **Total** | **360** | D-001 … D-360, contiguous, no duplicates |
 
 **Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 0. (Sums to 47, the open total.)
 
@@ -16094,7 +16094,14 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-359 — A /p page with an access code can never be opened: nothing asks the visitor for the code
 
 **Severity:** BROKEN · found 2026-11-05 rendering Design's round-2 status page. An agent can set an access code on a property page (`/app/property/[id]/settings`, `access_code`). `GET /v1/property/public/{code}` then returns the page with `requires_access_code: true`, and `/p` renders only the "Access Code Required" status page, whose message says "Please enter the access code to continue". There is no field to enter it: no visitor-facing code input exists anywhere in `apps/web`, the public endpoint takes no code to unlock the page, and the lead form never sends `access_code`, which `POST /v1/leads/capture` checks. So a protected page is a dead end for every visitor, the agent's own included, and its lead form can never be reached.
-**Status:** `recorded`: needs a decision and a design. The code-entry step (where the visitor types the code, how the API checks it before returning the page, what the form sends) is a feature, not a style edit, so it is a question for Jerry and then Design (rule 7), plus an API change of ours. Until then the honest interim fix is the settings page warning that a code makes the page unreachable. Not changed in the round-2 PR.
+**Status:** `fixed` — `fix/d359-remove-access-codes`: **the setting is removed rather than code entry built** (Jerry, 2026-11-05: nobody asked for locked pages). The settings page no longer shows the field or sends a code; the settings API refuses a new code with 422 and no longer writes the column; the public endpoint always returns `requires_access_code: false`; the lead route no longer checks a code. Codes already stored are left in the database and ignored. Test: `apps/api/tests/test_access_codes_are_retired.py` (red on main); three mutations in `scripts/regressions/access_codes.json`. How many production pages were locked: `scripts/readonly/d359_locked_property_pages.sql`, read-only, for Jerry to run.
+
+---
+
+### D-360 — A /p link with an unknown code shows Next's default 404, not the themed status page
+
+**Severity:** ROUGH · found 2026-11-05 rendering Design's round-2 status pages. `/p/[code]` calls `notFound()` when the API answers 404, so an unknown or mistyped code gets Next's built-in "404 · This page could not be found" instead of the `StatusPage` the other closed cases (expired, inactive, error) now wear. No account is known for an unknown code, so the most a themed page could do is the neutral look the error case uses.
+**Status:** `accepted` — **Jerry, 2026-11-05: leave the default 404 as it is; note it.** Nothing to change. If it is ever revisited, it is a one-line mount of `StatusPage` on `NEUTRAL_TOKENS` in place of `notFound()`, a template edit for Design.
 
 ---
 
