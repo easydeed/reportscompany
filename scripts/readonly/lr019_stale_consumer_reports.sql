@@ -39,4 +39,16 @@ SELECT count(*) AS failed_without_reason
 FROM consumer_reports
 WHERE status = 'failed' AND (error_message IS NULL OR error_message = '');
 
+-- 4. Reports held for review: a send whose outcome is unknown (a timeout or 5xx after
+--    the provider may have accepted it). Never resent automatically; each needs a
+--    person to check the provider's own log (Twilio / Resend) and decide.
+SELECT coalesce(delivery_method, 'sms') AS delivery_method,
+       count(*)                          AS needs_review,
+       min(created_at)                   AS oldest,
+       max(created_at)                   AS newest
+FROM consumer_reports
+WHERE status = 'needs_review'
+GROUP BY 1
+ORDER BY 1;
+
 ROLLBACK;

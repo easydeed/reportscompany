@@ -16,8 +16,50 @@
   {
     "name": "LR-019 comes back: a permanent SMS refusal is retried",
     "file": "apps/worker/src/worker/tasks.py",
-    "old": "                        failure_retryable = not sms_failure_is_permanent(sms_result)\n",
-    "new": "                        failure_retryable = True\n",
+    "old": "        return SEND_REFUSED\n    if str(result.get(\"error\") or \"\").startswith(_SMS_NOT_ATTEMPTED):",
+    "new": "        return SEND_RETRY\n    if str(result.get(\"error\") or \"\").startswith(_SMS_NOT_ATTEMPTED):",
     "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "Codex #274 P1 comes back: an SMS with a lost answer is treated as refused and retried",
+    "file": "apps/worker/src/worker/sms/send.py",
+    "old": "            \"outcome_unknown\": True,\n",
+    "new": "",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "Codex #274 P1 comes back: an unknown SMS outcome is retried instead of held",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "    if result.get(\"outcome_unknown\"):\n        return SEND_UNKNOWN\n",
+    "new": "    if result.get(\"outcome_unknown\"):\n        return SEND_RETRY\n",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "Codex #274 P1 comes back: an email read timeout is retried instead of held",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "            return SEND_RETRY\n        return SEND_UNKNOWN\n    if status_code in (200, 201):",
+    "new": "            return SEND_RETRY\n        return SEND_RETRY\n    if status_code in (200, 201):",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "LR-019: a re-run of the task ignores the hold and texts the person again",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                if current_status == CONSUMER_NEEDS_REVIEW:\n",
+    "new": "                if current_status == 'never':\n",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "LR-019: an exception after the text went out marks the delivered report failed",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                          AND consumer_sms_sent_at IS NULL\n                          AND consumer_email_sent_at IS NULL\n",
+    "new": "",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "LR-019: the viewer refuses a held report whose link the person may have",
+    "file": "apps/api/src/api/routes/mobile_reports.py",
+    "old": "'pending', 'needs_review')",
+    "new": "'pending')",
+    "test": "apps/api/tests/test_held_consumer_report_stays_reachable.py"
   }
 ]

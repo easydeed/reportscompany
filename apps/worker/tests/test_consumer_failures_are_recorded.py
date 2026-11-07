@@ -1,7 +1,7 @@
 """Consumer delivery failures are recorded on the real schema (LR-019).
 
 Every failure write in `process_consumer_report` used `consumer_reports.error`,
-a column the table has never had (0039_lead_pages.sql:36 defines
+a column the table has never had (0038_mobile_reports.sql:36 defines
 `error_message`). Each one raised inside its own error handling, the outer
 handler's write raised too and was swallowed, and the row stayed at
 `processing` for good, so the viewer and the agent waited on a report that had
@@ -15,6 +15,13 @@ bounded reason that names no phone number, email address or key. Failures that
 another attempt could fix are retried and the row says so; failures that cannot
 be fixed by retrying are not; exhaustion is visible; success clears an earlier
 attempt's reason.
+
+An UNKNOWN outcome is neither. A timeout, a dropped connection or a 5xx can
+follow the provider accepting the message, so the person may already have it.
+Owner decision (DECISIONS_AND_LANES.md): mark it for review, alert, and never
+send it again automatically. Those rows are `needs_review`, the provider is
+called exactly once, and a second run of the task sends nothing. (Codex's
+review of #274 caught the first version retrying a Twilio timeout four times.)
 
 Red on main: every case leaves the row at `processing` (or raises on the
 missing column) instead of `failed` with a reason.
@@ -159,18 +166,73 @@ def test_sms_not_configured_is_failed_without_retrying(tasks, report, db, monkey
     assert "retrying" not in error and "gave up" not in error
 
 
-def test_sms_timeout_is_retried_visibly_and_exhaustion_is_recorded(tasks, report, db, monkeypatch):
+def _logged_sms_status(db, rid):
+    with psycopg.connect(db) as conn:
+        return [r[0] for r in conn.execute(
+            "SELECT status FROM sms_logs WHERE consumer_report_id = %s", (rid,))]
+
+
+def _credits(db, rid):
+    with psycopg.connect(db) as conn:
+        return conn.execute(
+            "SELECT a.sms_credits FROM consumer_reports cr JOIN users u ON u.id = cr.agent_id "
+            "JOIN accounts a ON a.id = u.account_id WHERE cr.id = %s", (rid,)).fetchone()[0]
+
+
+def test_an_sms_timeout_is_held_for_review_and_never_sent_again(tasks, report, db, monkeypatch, caplog):
+    """Twilio may have accepted the text before the answer was lost."""
+    def accepted_then_lost(n, to):
+        raise TimeoutError(f"timed out reading Twilio's answer about {to}")
+    fake = _twilio(monkeypatch, accepted_then_lost)
+    rid = report("sms")
+    result = tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
+    status, error, sms_at, _ = _row(db, rid)
+    assert len(fake.calls) == 1, "an unknown outcome must not be sent again"
+    assert status == "needs_review", status
+    assert "no answer from the SMS provider (TimeoutError" in error, error
+    assert "may have been delivered, so it was not sent again" in error
+    assert "retrying" not in error and "gave up" not in error
+    _assert_clean(error)
+    assert sms_at is None, "no proof of delivery, so no delivery timestamp"
+    assert _logged_sms_status(db, rid) == ["pending"], "the SMS log must not call it failed"
+    assert _credits(db, rid) == 10, "no credit is spent on a text we cannot prove went out"
+    assert result.get("needs_review") is True
+    assert any("CONSUMER_DELIVERY_NEEDS_REVIEW" in r.getMessage() and r.levelname == "CRITICAL"
+               for r in caplog.records), "the operator alert line was not written"
+
+    # A redelivery (acks_late) or a re-enqueue of the same report.
+    tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
+    status2, error2, *_ = _row(db, rid)
+    assert len(fake.calls) == 1, "a second run of the task sent the text again"
+    assert status2 == "needs_review" and error2 == error, "the hold was erased"
+
+
+def test_a_twilio_5xx_is_held_for_review(tasks, report, db, monkeypatch):
+    from twilio.base.exceptions import TwilioRestException
+
+    def server_error(n, to):
+        raise TwilioRestException(500, "uri", msg="Internal server error", code=20500)
+    fake = _twilio(monkeypatch, server_error)
+    rid = report("sms")
+    tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
+    status, error, *_ = _row(db, rid)
+    assert status == "needs_review" and len(fake.calls) == 1, (status, fake.calls)
+
+
+def test_an_sms_rate_limit_is_retried_visibly_and_exhaustion_is_recorded(tasks, report, db, monkeypatch):
+    """Twilio answered 429: it created nothing, so trying again is safe."""
+    from twilio.base.exceptions import TwilioRestException
     seen = []
 
-    def timeout(n, to):
+    def rate_limited(n, to):
         seen.append(_row(db, rid)[1])   # what the row said while this attempt ran
-        raise TimeoutError(f"timed out talking to Twilio about {to}")
-    fake = _twilio(monkeypatch, timeout)
+        raise TwilioRestException(429, "uri", msg="Too Many Requests", code=20429)
+    fake = _twilio(monkeypatch, rate_limited)
     rid = report("sms")
     tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
     status, error, *_ = _row(db, rid)
     attempts = tasks.process_consumer_report.max_retries + 1
-    assert len(fake.calls) == attempts, "a timeout is worth another attempt"
+    assert len(fake.calls) == attempts, "a refusal that created nothing is worth another attempt"
     assert seen[1] and "attempt 1 of 4; retrying" in seen[1], seen
     assert status == "failed"
     assert error.endswith(f"(gave up after {attempts} attempts)"), error
@@ -179,9 +241,11 @@ def test_sms_timeout_is_retried_visibly_and_exhaustion_is_recorded(tasks, report
 
 
 def test_a_success_after_a_failed_attempt_clears_the_reason(tasks, report, db, monkeypatch):
+    from twilio.base.exceptions import TwilioRestException
+
     def flaky(n, to):
         if n == 1:
-            raise TimeoutError("timed out")
+            raise TwilioRestException(429, "uri", msg="Too Many Requests", code=20429)
         return _sent(n, to)
     _twilio(monkeypatch, flaky)
     rid = report("sms")
@@ -190,6 +254,20 @@ def test_a_success_after_a_failed_attempt_clears_the_reason(tasks, report, db, m
     assert result["ok"] is True
     assert status == "sent" and sms_at is not None
     assert error is None, "a delivered report must not keep the earlier attempt's failure"
+
+
+def test_a_crash_after_the_text_went_out_does_not_mark_it_failed(tasks, report, db, monkeypatch):
+    """The send happened; an exception afterwards cannot undo it."""
+    _twilio(monkeypatch, _sent)
+
+    def boom(**k):
+        raise RuntimeError("agent notification broke")
+    monkeypatch.setattr(tasks, "send_agent_notification_sms", boom)
+    rid = report("sms")
+    assert tasks.process_consumer_report.apply(args=[rid]).failed()
+    status, error, sms_at, _ = _row(db, rid)
+    assert sms_at is not None
+    assert status == "sent" and error is None, (status, error)
 
 
 def test_no_phone_is_failed_without_retrying(tasks, report, db, monkeypatch):
@@ -241,8 +319,9 @@ def test_email_refused_with_a_4xx_is_failed_once(tasks, report, db, monkeypatch)
     assert len(calls) == 1 and "retrying" not in error and "gave up" not in error
 
 
-def test_email_timeout_is_retried_and_named_without_crashing(tasks, report, db, monkeypatch):
-    """The failure branch read `resp`, unbound when the call raised: NameError."""
+def test_an_email_read_timeout_is_held_and_named_without_crashing(tasks, report, db, monkeypatch):
+    """The failure branch read `resp`, unbound when the call raised: NameError.
+    And a read timeout can follow Resend accepting the email: held, not resent."""
     monkeypatch.setenv("RESEND_API_KEY", "re_test_not_a_real_key_123456")
     calls = []
 
@@ -252,12 +331,40 @@ def test_email_timeout_is_retried_and_named_without_crashing(tasks, report, db, 
     monkeypatch.setattr(tasks.httpx, "post", timeout)
     rid = report("email")
     tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
+    status, error, _, email_at = _row(db, rid)
+    assert status == "needs_review", (status, error)
+    assert "no response: ReadTimeout" in error, error
+    assert "may have been delivered" in error
+    assert len(calls) == 1 and email_at is None
+    _assert_clean(error)
+
+
+def test_an_email_5xx_is_held_for_review(tasks, report, db, monkeypatch):
+    monkeypatch.setenv("RESEND_API_KEY", "re_test_not_a_real_key_123456")
+    calls = []
+    monkeypatch.setattr(tasks.httpx, "post", lambda *a, **k: calls.append(1) or FakeResponse(503))
+    rid = report("email")
+    tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
+    status, error, *_ = _row(db, rid)
+    assert status == "needs_review" and "(status 503)" in error and len(calls) == 1
+
+
+def test_an_email_that_never_connected_is_retried_and_exhaustion_recorded(tasks, report, db, monkeypatch):
+    """No connection, no request: nothing reached Resend, so trying again is safe."""
+    monkeypatch.setenv("RESEND_API_KEY", "re_test_not_a_real_key_123456")
+    calls = []
+
+    def refused(*a, **k):
+        calls.append(1)
+        raise tasks.httpx.ConnectError("connection refused")
+    monkeypatch.setattr(tasks.httpx, "post", refused)
+    rid = report("email")
+    tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
     status, error, *_ = _row(db, rid)
     assert status == "failed"
-    assert "no response: ReadTimeout" in error, error
+    assert "no response: ConnectError" in error, error
     assert error.endswith("(gave up after 4 attempts)")
     assert len(calls) == 4
-    _assert_clean(error)
 
 
 def test_no_email_address_is_failed_without_retrying(tasks, report, db, monkeypatch):
@@ -295,3 +402,39 @@ def test_the_failure_text_is_bounded_and_scrubbed():
         "to [email] at [phone], Bearer [redacted]"
     assert consumer_failure_text("status 422, Twilio code 21610") == "status 422, Twilio code 21610"
     assert consumer_failure_text("") == "Delivery failed"
+
+
+def test_send_outcomes_are_classified_as_the_owner_decided():
+    """Retry only what created nothing; hold anything that may have gone out."""
+    import httpx
+    from worker.tasks import sms_outcome, email_outcome
+    assert sms_outcome({"success": True}) == "sent"
+    assert sms_outcome({"success": False, "error": "TimeoutError: x", "outcome_unknown": True}) == "unknown"
+    assert sms_outcome({"success": False, "error": "x", "error_code": 21610, "http_status": 400}) == "refused"
+    assert sms_outcome({"success": False, "error": "x", "error_code": 20429, "http_status": 429}) == "retry"
+    assert sms_outcome({"success": False, "error": "x", "error_code": 20500, "http_status": 500}) == "unknown"
+    assert sms_outcome({"success": False, "error": "Twilio not configured"}) == "refused"
+    assert sms_outcome({"success": False, "error": "Invalid phone number: [phone]"}) == "refused"
+    assert sms_outcome({"success": False, "error": "something we have never seen"}) == "unknown"
+    assert email_outcome(200, None) == "sent"
+    assert email_outcome(429, None) == "retry"
+    assert email_outcome(422, None) == "refused"
+    assert email_outcome(503, None) == "unknown"
+    assert email_outcome(202, None) == "unknown"
+    assert email_outcome(None, httpx.ConnectError("refused")) == "retry"
+    assert email_outcome(None, httpx.ConnectTimeout("slow")) == "retry"
+    assert email_outcome(None, httpx.ReadTimeout("lost")) == "unknown"
+    assert email_outcome(None, httpx.RemoteProtocolError("dropped")) == "unknown"
+    assert email_outcome(None, RuntimeError("?")) == "unknown"
+
+
+def test_send_sms_reports_a_lost_answer_as_unknown(monkeypatch):
+    """Codex's reproduction: the real send_sms, a client that accepts then times out."""
+    from worker.sms import send as sms_send
+    fake = FakeTwilio(lambda n, to: (_ for _ in ()).throw(TimeoutError("read timed out")))
+    monkeypatch.setattr(sms_send, "get_twilio_client", lambda: fake)
+    monkeypatch.setattr(sms_send, "TWILIO_PHONE_NUMBER", "+15555550000")
+    result = sms_send.send_sms(PHONE, "hello")
+    assert result["success"] is False and result["outcome_unknown"] is True
+    from worker.tasks import sms_outcome
+    assert sms_outcome(result) == "unknown"

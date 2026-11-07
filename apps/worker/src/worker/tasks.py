@@ -2331,7 +2331,7 @@ def _consumer_already_delivered(cur, report_id: str):
 # LR-019: what a consumer failure may say, and whether trying again can help.
 #
 # THE COLUMN IS `error_message`. Every failure write in this flow used `error`,
-# a column `consumer_reports` has never had (0039_lead_pages.sql:36), so each
+# a column `consumer_reports` has never had (0038_mobile_reports.sql:36), so each
 # one raised inside its own error handling. The specific reason was lost, the
 # outer handler's write raised too and was swallowed, and the row was left at
 # `processing` for good: the viewer and the agent waited on a report that had
@@ -2344,10 +2344,6 @@ _CONTACT_EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _CONTACT_PHONE = re.compile(r"\+?\d[\d\s().-]{5,}\d")
 _SECRET_TOKEN = re.compile(r"(?i)\b(bearer\s+|sk_[a-z]+_|re_)[A-Za-z0-9_-]{6,}")
 
-# Twilio error codes that no retry can fix: an invalid or unreachable number,
-# a recipient who replied STOP, a number that cannot take SMS.
-# https://www.twilio.com/docs/api/errors
-TWILIO_PERMANENT_CODES = frozenset({21211, 21214, 21217, 21408, 21610, 21612, 21614})
 
 
 def consumer_failure_text(reason) -> str:
@@ -2364,18 +2360,87 @@ def consumer_failure_text(reason) -> str:
     return text[:CONSUMER_FAILURE_MAX]
 
 
-def sms_failure_is_permanent(result: dict) -> bool:
-    """True when trying the same text again cannot succeed."""
-    error = str(result.get("error") or "")
-    if error == "Twilio not configured" or error.startswith("Invalid phone number"):
-        return True
-    return result.get("error_code") in TWILIO_PERMANENT_CODES
+# What became of one send we attempted, as far as we can know:
+#   SEND_SENT     the provider accepted it.
+#   SEND_RETRY    the provider refused it without creating a message, for a
+#                 reason that can pass (429), or the connection never opened.
+#                 Sending again cannot duplicate anything.
+#   SEND_REFUSED  refused for a reason another attempt cannot fix, or never
+#                 attempted (no configuration, an invalid number).
+#   SEND_UNKNOWN  the request may have reached the provider and the answer was
+#                 lost: a timeout, a dropped connection, a 5xx, anything we
+#                 cannot account for. The message may be in the person's hands.
+#
+# Owner decision (DECISIONS_AND_LANES.md, "Unknown send outcome"): an unknown
+# outcome is held for operator review and alerted, and is NEVER sent again
+# automatically. Twilio's message create and Resend's send give us no
+# idempotency key this flow relies on, so a resend can reach the person twice.
+SEND_SENT, SEND_RETRY, SEND_REFUSED, SEND_UNKNOWN = "sent", "retry", "refused", "unknown"
+
+# send_sms refusals made before any call to Twilio.
+_SMS_NOT_ATTEMPTED = ("Twilio not configured", "Invalid phone number")
 
 
-def email_status_is_permanent(status_code) -> bool:
-    """A 4xx other than 429 is a refusal of this message; 429, 5xx and no
-    response at all are worth another attempt."""
-    return isinstance(status_code, int) and 400 <= status_code < 500 and status_code != 429
+def sms_outcome(result: dict) -> str:
+    """Classify a `send_sms` result. Absence of evidence is not a refusal."""
+    if result.get("success"):
+        return SEND_SENT
+    if result.get("outcome_unknown"):
+        return SEND_UNKNOWN
+    status = result.get("http_status")
+    if result.get("error_code") is not None or status is not None:
+        # Twilio answered with an error, so it did not create the message.
+        if status == 429 or result.get("error_code") == 20429:
+            return SEND_RETRY
+        if isinstance(status, int) and status >= 500:
+            return SEND_UNKNOWN
+        return SEND_REFUSED
+    if str(result.get("error") or "").startswith(_SMS_NOT_ATTEMPTED):
+        return SEND_REFUSED
+    return SEND_UNKNOWN
+
+
+def email_outcome(status_code, error) -> str:
+    """Classify a Resend call: its HTTP status, or the exception it raised."""
+    if error is not None:
+        # Only a connection that never opened is proof nothing was sent.
+        if isinstance(error, (httpx.ConnectError, httpx.ConnectTimeout)):
+            return SEND_RETRY
+        return SEND_UNKNOWN
+    if status_code in (200, 201):
+        return SEND_SENT
+    if status_code == 429:
+        return SEND_RETRY
+    if isinstance(status_code, int) and 400 <= status_code < 500:
+        return SEND_REFUSED
+    return SEND_UNKNOWN
+
+
+CONSUMER_NEEDS_REVIEW = "needs_review"
+
+
+def _hold_consumer_delivery_for_review(cur, report_id: str, channel: str, reason: str) -> str:
+    """Record an unknown outcome: held, alerted, and never resent by this task.
+
+    `needs_review` is checked at the top of `process_consumer_report`, so a
+    redelivered or re-enqueued task stops before it can send again. The log
+    line is the operator alert until LR-027 routes it to a named person; its
+    tag is stable so that routing can match on it.
+    """
+    text = consumer_failure_text(
+        f"{reason}; the {channel} may have been delivered, so it was not sent "
+        "again. Needs operator review."
+    )
+    cur.execute("""
+        UPDATE consumer_reports
+        SET status = %s, error_message = %s
+        WHERE id = %s::uuid
+    """, (CONSUMER_NEEDS_REVIEW, text, report_id))
+    logger.critical(
+        "CONSUMER_DELIVERY_NEEDS_REVIEW report=%s channel=%s: %s",
+        report_id, channel, text,
+    )
+    return text
 
 
 def _record_consumer_delivery_failure(cur, report_id: str, reason: str):
@@ -2462,7 +2527,8 @@ def process_consumer_report(self, report_id: str):
                         u.first_name, u.last_name, u.phone as agent_phone,
                         a.id as account_id,
                         cr.consumer_email,
-                        COALESCE(cr.delivery_method, 'sms') as delivery_method
+                        COALESCE(cr.delivery_method, 'sms') as delivery_method,
+                        cr.status
                     FROM consumer_reports cr
                     JOIN users u ON u.id = cr.agent_id
                     JOIN accounts a ON a.id = u.account_id
@@ -2481,7 +2547,20 @@ def process_consumer_report(self, report_id: str):
                     agent_first, agent_last, agent_phone,
                     account_id,
                     consumer_email, delivery_method,
+                    current_status,
                 ) = row
+
+                # LR-019: a report whose last send has an unknown outcome is held
+                # for an operator. A redelivery (`acks_late`) or a re-enqueue
+                # must stop here: the status line below would erase the hold,
+                # and the send below could text the person a second time.
+                if current_status == CONSUMER_NEEDS_REVIEW:
+                    logger.critical(
+                        "CONSUMER_DELIVERY_NEEDS_REVIEW report=%s: task ran again "
+                        "on a held report; nothing was sent", report_id,
+                    )
+                    return {"ok": False, "report_id": report_id,
+                            "note": "held for operator review; not sent again"}
                 
                 agent_name = f"{agent_first} {agent_last}".strip()
                 full_address = f"{prop_address}, {prop_city}, {prop_state} {prop_zip}"
@@ -2838,9 +2917,11 @@ def process_consumer_report(self, report_id: str):
 
                 delivered = False
                 # LR-019: whether the failure recorded below is worth another
-                # attempt. Missing configuration and missing destinations are
-                # not; a provider timeout or 5xx is.
-                failure_retryable = True
+                # attempt. Only a refusal that created nothing and can pass
+                # (429, a connection that never opened) is retried.
+                failure_retryable = False
+                # LR-019: the send may have gone out; held, never resent.
+                held_for_review = False
 
                 if delivery_method == "sms" and consumer_phone:
                     sms_result = send_report_sms(
@@ -2851,6 +2932,7 @@ def process_consumer_report(self, report_id: str):
                     )
                     
                     sms_message = sms_result.get('message_body', f"Report link sent to {consumer_phone}")
+                    sms_state = sms_outcome(sms_result)
                     cur.execute("""
                         INSERT INTO sms_logs (
                             account_id, consumer_report_id, to_phone, from_phone,
@@ -2867,11 +2949,15 @@ def process_consumer_report(self, report_id: str):
                         sms_message,
                         sms_message,
                         sms_result.get('message_sid'),
-                        'sent' if sms_result.get('success') else 'failed',
+                        # An unknown outcome is not a failure. sms_logs' CHECK
+                        # (0035) allows sent/delivered/failed/pending, so it is
+                        # logged `pending`: not settled. consumer_reports holds
+                        # the hold (`needs_review`); a new log state is LR-020's.
+                        {SEND_SENT: 'sent', SEND_UNKNOWN: 'pending'}.get(sms_state, 'failed'),
                         sms_result.get('error')
                     ))
                     
-                    if sms_result.get('success'):
+                    if sms_state == SEND_SENT:
                         cur.execute("""
                             UPDATE consumer_reports 
                             SET status = 'sent',
@@ -2887,12 +2973,23 @@ def process_consumer_report(self, report_id: str):
                             WHERE id = %s::uuid
                         """, (account_id,))
                         delivered = True
+                    elif sms_state == SEND_UNKNOWN:
+                        # Codex review of #274: a timeout after Twilio accepted
+                        # the message looked like a refusal and was retried, so
+                        # the person could get the same text four times. No
+                        # credit is spent: we do not know a text went out.
+                        held_for_review = True
+                        _hold_consumer_delivery_for_review(
+                            cur, report_id, "text",
+                            "no answer from the SMS provider "
+                            f"({sms_result.get('error') or 'no reason given'})",
+                        )
                     else:
                         # LR-019. This branch logged the refusal to sms_logs and
                         # recorded nothing on the report, so the row ended with
                         # the generic "Delivery failed" and the reason Twilio
                         # gave was only in a log table nobody joins.
-                        failure_retryable = not sms_failure_is_permanent(sms_result)
+                        failure_retryable = sms_state == SEND_RETRY
                         _record_consumer_delivery_failure(
                             cur, report_id,
                             "the SMS provider did not accept the message: "
@@ -2909,7 +3006,6 @@ def process_consumer_report(self, report_id: str):
                         # to SMS the agent that they had a new lead. The agent
                         # chased someone who had received nothing, and no row
                         # anywhere contradicted the claim.
-                        failure_retryable = False
                         _record_consumer_delivery_failure(
                             cur, report_id,
                             "RESEND_API_KEY is not configured on the worker, so no "
@@ -2967,11 +3063,12 @@ def process_consumer_report(self, report_id: str):
                                 },
                                 timeout=15.0,
                             )
-                            email_sent = resp.status_code in (200, 201)
                         except Exception as email_err:
                             logger.warning(f"Resend email to consumer failed: {email_err}")
-                            email_error = f"{type(email_err).__name__}: {email_err}"
-                            email_sent = False
+                            email_error = email_err
+                        email_state = email_outcome(
+                            getattr(resp, "status_code", None), email_error)
+                        email_sent = email_state == SEND_SENT
 
                         if email_sent:
                             cur.execute("""
@@ -2993,13 +3090,22 @@ def process_consumer_report(self, report_id: str):
                             # branches up; §0.6 rule 4, re-run the survey after
                             # the fix.
                             status_code = getattr(resp, "status_code", None)
-                            failure_retryable = not email_status_is_permanent(status_code)
-                            _record_consumer_delivery_failure(
-                                cur, report_id,
-                                "the email provider did not accept the message "
-                                + (f"(status {status_code})" if status_code is not None
-                                   else f"(no response: {email_error or 'unknown error'})"),
-                            )
+                            said = (f"status {status_code}" if email_error is None else
+                                    f"no response: {type(email_error).__name__}: {email_error}")
+                            if email_state == SEND_UNKNOWN:
+                                # Codex review of #274: a read timeout or a 5xx
+                                # can follow Resend accepting the email.
+                                held_for_review = True
+                                _hold_consumer_delivery_for_review(
+                                    cur, report_id, "email",
+                                    f"the email provider's answer is unknown ({said})",
+                                )
+                            else:
+                                failure_retryable = email_state == SEND_RETRY
+                                _record_consumer_delivery_failure(
+                                    cur, report_id,
+                                    f"the email provider did not accept the message ({said})",
+                                )
 
                 else:
                     # D-032. Same claim, third trigger: no phone for SMS, no
@@ -3007,7 +3113,6 @@ def process_consumer_report(self, report_id: str):
                     # does not recognise. Nothing was sent and nothing could
                     # have been. The reason names the method, because "failed"
                     # without it sends whoever investigates back to the logs.
-                    failure_retryable = False
                     _record_consumer_delivery_failure(
                         cur, report_id,
                         f"no usable delivery method: delivery_method={delivery_method!r}, "
@@ -3047,6 +3152,12 @@ def process_consumer_report(self, report_id: str):
                     
                     logger.info(f"Consumer report processed successfully: {report_id}")
                     return {"ok": True, "report_id": report_id}
+                elif held_for_review:
+                    # Not retried, and the agent is not told a lead was
+                    # delivered: whether it was is the open question. The
+                    # agent-notification outcome is LR-021.
+                    return {"ok": False, "report_id": report_id,
+                            "needs_review": True}
                 else:
                     # The branches above have already written status='failed'
                     # with the SPECIFIC reason. This used to overwrite all of
@@ -3110,13 +3221,19 @@ def process_consumer_report(self, report_id: str):
         try:
             with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
                 with conn.cursor() as cur:
+                    # Not over a report already sent or held for review: an
+                    # exception after the send (the agent text, a later write)
+                    # does not undo the send, and `failed` would invite one.
                     cur.execute("""
                         UPDATE consumer_reports
                         SET status = 'failed', error_message = %s
                         WHERE id = %s::uuid
+                          AND status IS DISTINCT FROM %s
+                          AND consumer_sms_sent_at IS NULL
+                          AND consumer_email_sent_at IS NULL
                     """, (consumer_failure_text(
                         f"unexpected error while processing the report ({type(e).__name__}): {e}"
-                    ), report_id))
+                    ), report_id, CONSUMER_NEEDS_REVIEW))
         except Exception:
             logger.exception("CONSUMER REPORT %s: could not record the failure", report_id)
 
