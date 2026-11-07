@@ -20,7 +20,7 @@ D-191's investigator lacked hosted-CI evidence; the hosted results below supply 
 
 ## Fresh read-only production observations
 
-Observed 2026-11-06 against mr-staging-db; no migrations, sends, provider mutations or customer edits.
+Observed 2026-11-06 against mr-staging-db; no migrations, sends, provider mutations or customer edits. The [supplementary baseline](LR-001_SUPPLEMENT.md) adds actual plan values, override counts, database role/policy metadata and the GitHub reviewer-identity constraint. It updates source-only limitations in the initial investigator rows without claiming missing runtime proof.
 
 | Check | Observed result |
 | --- | --- |
