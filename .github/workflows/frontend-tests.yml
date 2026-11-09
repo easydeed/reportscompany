@@ -1,17 +1,10 @@
 name: Frontend Tests
+# Automatic selection is centralized in release-check.yml and scripts/release_gate.py.
+# Keep this workflow reusable; the final Release gate, not this conditional job, is required.
 on:
-  push:
-    paths:
-      - "apps/web/**"
-      - ".github/workflows/frontend-tests.yml"
-  pull_request:
-    paths:
-      - "apps/web/**"
-      # ITS OWN FILE, which `push` listed and `pull_request` did not. That is
-      # D-089's shape exactly — a job you can edit without triggering the job
-      # — and it meant a change to this workflow could be reviewed and merged
-      # without ever running it. `backend-tests.yml` lists itself in both.
-      - ".github/workflows/frontend-tests.yml"
+  workflow_call:
+  workflow_dispatch:
+
 jobs:
   test:
     # Pinned, not ubuntu-latest: latest moved to 26.04 on or before 2026-11-02 and the pinned

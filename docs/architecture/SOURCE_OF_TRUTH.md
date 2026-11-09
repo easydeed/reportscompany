@@ -169,11 +169,12 @@ Standalone Next.js preview apps for developing report layouts, schedule builders
 
 ### 2.7 CI/CD — `.github/workflows/`
 
-| Workflow | File | Triggers — **all are path-filtered; none runs on every PR** |
+| Workflow | File | Triggers and effective selection |
 |---|---|---|
-| Backend tests | `backend-tests.yml` | PR + push on `apps/api/**`, `apps/worker/**`, `tests/**`, `db/**`, `tools/**`, `scripts/**`, `pytest.ini`, `apps/web/templates/**`, `docs/DEFECT_LIST.md`, and its own file |
-| Frontend tests | `frontend-tests.yml` | PR + push on `apps/web/**` and its own file |
-| E2E tests | `e2e.yml` | **manual only** (`workflow_dispatch`) — disabled D-045 |
+| Release checks | `release-check.yml` | Every PR, push to main, merge group, or manual run; always emits Release gate. |
+| Backend tests | `backend-tests.yml` | Reusable/manual; selected by Release checks for `.github/workflows/**`, `.node-version`, `.npmrc`, `.nvmrc`, `.python-version`, `apps/api/**`, `apps/web/**`, `apps/worker/**`, `db/**`, `docker-compose.yml`, `docs/**`, `libs/shared/**`, `package-lock.json`, `package.json`, `packages/**`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `pytest.ini`, `scripts/**`, `scripts/release_gate.py`, `tests/**`, `tests/test_release_gate.py`, `tools/**`. |
+| Frontend tests | `frontend-tests.yml` | Reusable/manual; selected by Release checks for `.github/workflows/**`, `.node-version`, `.npmrc`, `.nvmrc`, `apps/web/**`, `e2e/**`, `package-lock.json`, `package.json`, `packages/**`, `playwright.config.ts`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `scripts/release_gate.py`, `tests/test_release_gate.py`. |
+| E2E tests | `e2e.yml` | **manual only** (workflow_dispatch); automatic isolated journeys remain LR-026. |
 
 > **THIS TABLE WAS WRONG ON EVERY ROW, ALL IN THE SAME DIRECTION: claiming coverage that does
 > not exist.** Corrected over 2026-09-30 and 2026-10-01.
@@ -194,8 +195,7 @@ Standalone Next.js preview apps for developing report layouts, schedule builders
 > are D-089's shape — *a job you can edit without triggering the job* — one file and one
 > directory over.
 >
-> **Keep the path lists here in step with the workflows.** A row that says only "PR + push" is
-> the failure this note is about.
+> **Current LR-002 arrangement:** the path lists above are effective selections from scripts/release_gate.py. Unknown executable/configuration changes run both suites; incomplete history runs both. The reusable jobs have no top-level path filters; one unfiltered final gate prevents a skipped-workflow deadlock. E2E path selection triggers frontend tests, not the manual Playwright journeys.
 
 ---
 
@@ -416,10 +416,10 @@ pytest tests/ -v
 ### CI Workflows
 
 ```bash
-# On PR + push, but ONLY when their path filters match — see §2.7 for the
-# lists. A PR touching only docs/ runs neither.
-.github/workflows/backend-tests.yml    # apps/api, apps/worker, tests, db, tools, scripts
-.github/workflows/frontend-tests.yml   # apps/web
+# Every PR and push to main gets a final Release gate. Effective selections: §2.7.
+.github/workflows/release-check.yml    # classifies full history; calls selected suites
+.github/workflows/backend-tests.yml    # reusable; docs/** also selects these tests
+.github/workflows/frontend-tests.yml   # reusable; includes typecheck and Jest
 
 # Manual only (workflow_dispatch). Does NOT run on PR or push.
 .github/workflows/e2e.yml              # disabled D-045
