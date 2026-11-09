@@ -65,16 +65,24 @@ def send_sms(
         
     except TwilioRestException as e:
         logger.error(f"Twilio error sending to {to_number}: {e.msg}")
+        # Twilio answered, so it refused the request: no message was created.
+        # `http_status` says whether asking again could help (429) and whether
+        # the answer itself is in doubt (5xx).
         return {
             "success": False,
             "error": str(e.msg),
-            "error_code": e.code
+            "error_code": e.code,
+            "http_status": e.status,
         }
     except Exception as e:
         logger.error(f"Unexpected error sending SMS to {to_number}: {e}")
+        # LR-019: no answer from Twilio. A timeout or a dropped connection can
+        # come after Twilio has accepted the message, so this is NOT proof the
+        # text was refused, and sending it again can text the person twice.
         return {
             "success": False,
-            "error": str(e)
+            "error": f"{type(e).__name__}: {e}",
+            "outcome_unknown": True,
         }
 
 
