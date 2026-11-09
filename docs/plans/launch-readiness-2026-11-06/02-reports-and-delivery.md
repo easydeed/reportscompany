@@ -13,6 +13,8 @@ Scope incorporates Claude review at `821f71ad`; evidence references are from aud
 
 **Rollout:** Jerry requests the read-only affected-report count first, for consumer and agent property paths, with valid/unknown sale/status distinctions. Stored comps retain close_price and list_price separately, so a strict rule can correct rerenders without a data migration. No historical rerender, resend, or notice until the count and a specific decision.
 
+**Historical consumer-send decision — CLOSED (Jerry, November 9, 2026):** The read-only production count identified 7 sent consumer reports (105 affected comparables), dated March 10–April 13, 2026. Jerry confirmed all 7 were test sends. No corrected reports go out; do not rerender or resend them. This closes the historical consumer-send question only; LR-018 implementation/review and the provisional agent-report inventory remain separate.
+
 ## LR-019 Record delivery failures in the real schema
 
 **Branch:** `fix/lr-019-consumer-failure-schema` · **Gate:** PILOT · **Hours:** 2–4 · **Depends:** Amended packet merged; review reproduction complete.
