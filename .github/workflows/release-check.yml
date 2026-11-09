@@ -1,0 +1,51 @@
+name: Release checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Classify changes
+    runs-on: ubuntu-24.04
+    outputs:
+      backend: ${{ steps.classify.outputs.backend }}
+      frontend: ${{ steps.classify.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: classify
+        name: Compare complete Git history
+        run: python3 scripts/release_gate.py
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/backend-tests.yml
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/frontend-tests.yml
+
+  gate:
+    name: Release gate
+    if: ${{ always() }}
+    needs: [changes, backend, frontend]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require successful selected suites
+        run: python3 scripts/release_gate.py --gate
+        env:
+          RELEASE_NEEDS: ${{ toJSON(needs) }}
