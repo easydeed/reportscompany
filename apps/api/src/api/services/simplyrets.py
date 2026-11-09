@@ -158,6 +158,70 @@ def build_comparables_params(
     return params
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LR-018 / D-377: AN ASKING PRICE IS NOT A SALE.
+#
+# Every comp builder had two fallbacks that together turned a listing into a
+# sale: the price was `closePrice or listPrice`, and a missing MLS status was
+# written as "Closed". A closed listing with no recorded close price therefore
+# entered the range, the median and $/sqft at what the seller ASKED, and an
+# "All" search could label an active listing a sale. The same rule lives in the
+# worker (`tasks._comp_sale_fields`); keep the two in step.
+# ─────────────────────────────────────────────────────────────────────────────
+SALE_STATUSES = ("closed", "sold")
+
+
+def _positive_or_none(value):
+    """The value when it is a positive number, else None (keeps its type)."""
+    try:
+        return value if float(value) > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def comp_sale_fields(listing: Dict, searched_status: Optional[str] = None) -> Dict:
+    """Status and prices for one raw SimplyRETS listing, without inventing either.
+
+    - status: the MLS status. When it is missing: "Closed" if a close price is
+      recorded (that is the evidence of a sale); else the status the search
+      asked for, when it asked for exactly one (the vendor filtered on it);
+      else "" (unknown). Never "Closed" by default.
+    - price: for a closed/sold comp, its recorded close price and nothing else;
+      for any other status, the list price (an active listing's only number).
+    """
+    sales = listing.get("sales") or {}
+    mls = listing.get("mls") or {}
+    close_price = _positive_or_none(sales.get("closePrice"))
+    list_price = _positive_or_none(listing.get("listPrice"))
+    status = str(mls.get("status") or "").strip()
+    if not status and close_price is not None:
+        status = "Closed"
+    if not status and searched_status and "," not in searched_status:
+        status = searched_status.strip()
+    is_sale = status.lower() in SALE_STATUSES
+    return {
+        "status": status,
+        "price": close_price if is_sale else list_price,
+        "close_price": close_price,
+        "list_price": list_price,
+    }
+
+
+def is_usable_comp(listing: Dict, searched_status: Optional[str] = None) -> bool:
+    """Can this listing stand as a comparable without a made-up number?
+
+    Not when its status is unknown, and not when it is a sale with no recorded
+    sale price. Applied inside the ladder, before results are counted, so a
+    level short of usable comps widens the search instead of padding the set.
+    """
+    fields = comp_sale_fields(listing, searched_status)
+    if not fields["status"]:
+        return False
+    if fields["status"].lower() in SALE_STATUSES:
+        return fields["close_price"] is not None
+    return True
+
+
 def normalize_listing(listing: Dict) -> Dict:
     """
     Normalize a SimplyRETS listing into a consistent format.
@@ -178,11 +242,12 @@ def normalize_listing(listing: Dict) -> Dict:
         "city": address.get("city", ""),
         "state": address.get("state", ""),
         "zip_code": address.get("postalCode", ""),
-        "list_price": listing.get("listPrice"),
-        # D-145: the feed nests these under `sales`.
-        "close_price": sales.get("closePrice"),
-        "price": sales.get("closePrice") or listing.get("listPrice") or 0,
-        "status": mls.get("status", ""),
+        # D-145: the feed nests the close fields under `sales`.
+        # LR-018: no list price stands in for a sale, no status is assumed.
+        "list_price": comp_sale_fields(listing)["list_price"],
+        "close_price": comp_sale_fields(listing)["close_price"],
+        "price": comp_sale_fields(listing)["price"] or 0,
+        "status": comp_sale_fields(listing)["status"],
         "bedrooms": prop.get("bedrooms"),
         "bathrooms": prop.get("bathsFull"),
         "sqft": prop.get("area"),

@@ -224,10 +224,12 @@ def test_the_close_date_is_read_from_the_one_place_the_feed_writes_it():
 
 def test_the_endpoint_drops_an_out_of_window_sale_the_vendor_returned(mock_auth):
     """The two halves together, through the real route."""
-    fresh = {"mlsId": "NEW", "sales": {"closeDate": _closed_since(10)},
+    # Close prices as a captured closed row has them (LR-018): the window is
+    # the only thing that differs between these two.
+    fresh = {"mlsId": "NEW", "sales": {"closeDate": _closed_since(10), "closePrice": 800000},
              "property": {"type": "RES"}, "address": {"full": "1 Fresh St"},
              "geo": {"lat": 34.1008, "lng": -117.7678}}
-    stale = {"mlsId": "OLD", "sales": {"closeDate": _closed_since(4 * 365)},
+    stale = {"mlsId": "OLD", "sales": {"closeDate": _closed_since(4 * 365), "closePrice": 800000},
              "property": {"type": "RES"}, "address": {"full": "2 Stale St"},
              "geo": {"lat": 34.1008, "lng": -117.7678}}
     _, body = _call("Closed", [fresh, stale])
@@ -295,7 +297,11 @@ def _closed_res(mls_id, days_ago):
     # survive the window filter for the ladder tests below to mean anything;
     # under `mls` they survived only because the filter could not see a date
     # on them at all.
-    return {"mlsId": mls_id, "sales": {"closeDate": _closed_since(days_ago)},
+    # LR-018: with the status and close price a captured closed row carries
+    # (tests/fixtures/listing_closed_minimal.json). A "sale" with no sale
+    # price is no longer a comp, so a row without one would test nothing.
+    return {"mlsId": mls_id, "mls": {"status": "Closed"}, "listPrice": 800000,
+            "sales": {"closeDate": _closed_since(days_ago), "closePrice": 800000},
             "property": {"type": "RES"}, "address": {"full": f"{mls_id} Any St"},
             "geo": {"lat": 34.1008, "lng": -117.7678}}
 
@@ -546,7 +552,10 @@ def test_an_all_status_search_has_no_vendor_window_so_the_client_pass_is_the_onl
     (property-wizard.tsx:53); the endpoint accepts All.
     """
     mixed = [
-        {"mlsId": "A1", "listPrice": 500000, "property": {"type": "RES"},
+        # `mls.status` as a captured active row has it
+        # (tests/fixtures/listing_active_minimal.json): in an All search a
+        # listing with no status and no sale is unknown, not active (LR-018).
+        {"mlsId": "A1", "mls": {"status": "Active"}, "listPrice": 500000, "property": {"type": "RES"},
          "address": {"full": "1 Active Ave"},
          "geo": {"lat": 34.1008, "lng": -117.7678}},
         _sold("R1", 30),

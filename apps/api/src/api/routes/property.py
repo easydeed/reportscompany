@@ -54,6 +54,8 @@ from ..services.simplyrets import (
     fetch_properties as simplyrets_fetch_properties,
     build_comparables_params,
     normalize_listing,
+    comp_sale_fields,
+    is_usable_comp,
 )
 from ..worker_client import enqueue_property_report
 from ..services.qr_service import generate_qr_code
@@ -801,6 +803,16 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                     label, before_window - len(filtered), before_window,
                     "minclosedate" in params,
                 )
+            # LR-018: drop what cannot stand as a comp (a sale with no recorded
+            # price, a listing with no status) BEFORE this level is counted, so
+            # a level short of real sales widens the search instead.
+            before_usable = len(filtered)
+            filtered = [lst for lst in filtered if is_usable_comp(lst, params.get("status"))]
+            if len(filtered) != before_usable:
+                logger.warning(
+                    "Comps %s: dropped %d of %d with no recorded sale price or no status",
+                    label, before_usable - len(filtered), before_usable,
+                )
 
             total_before_filter = len(raw)
 
@@ -849,21 +861,21 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
             geo = listing.get("geo") or {}
             mls_obj = listing.get("mls") or {}
             sales = listing.get("sales") or {}
-            
+            sale = comp_sale_fields(listing, status_map.get(payload.status, "Active"))
+
             comp = {
                 "mls_id": str(listing.get("mlsId") or ""),
                 "address": address_obj.get("full") or "",
                 "city": address_obj.get("city") or "",
                 "state": address_obj.get("state") or "",
                 "zip_code": address_obj.get("postalCode") or "",
-                # Close price FIRST. A closed comp's number is what it sold
-                # for; the asking price is history. This path had the
-                # precedence the other way round and the worker's copy had it
-                # this way (D-146) — a divergence that was invisible while
-                # `closePrice` read as None on both.
-                "price": sales.get("closePrice") or listing.get("listPrice") or 0,
-                "list_price": listing.get("listPrice"),
-                "close_price": sales.get("closePrice"),
+                # A closed comp's number is what it SOLD for (D-146), and
+                # only that: LR-018 removed the `or listPrice` that put an
+                # asking price in the range whenever the close price was
+                # missing. `is_usable_comp` has already dropped such a comp.
+                "price": sale["price"] or 0,
+                "list_price": sale["list_price"],
+                "close_price": sale["close_price"],
                 "bedrooms": prop.get("bedrooms") or 0,
                 "bathrooms": prop.get("bathsFull") or 0,
                 "sqft": prop.get("area") or 0,
@@ -871,7 +883,8 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                 "lot_size": prop.get("lotSize"),
                 "photo_url": (listing.get("photos") or [None])[0],
                 "photos": listing.get("photos") or [],
-                "status": mls_obj.get("status") or "Closed",
+                # LR-018: never assumed. "Closed" only with a recorded price.
+                "status": sale["status"],
                 "dom": mls_obj.get("daysOnMarket"),
                 "days_on_market": mls_obj.get("daysOnMarket"),
                 "list_date": listing.get("listDate"),

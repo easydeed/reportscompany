@@ -47,9 +47,26 @@ def _number(value) -> Optional[float]:
     return n if n > 0 else None
 
 
+def is_sale(c: Dict[str, Any]) -> bool:
+    """A closed or sold comp: its price must be what it sold for."""
+    return _closed(c)
+
+
+def sale_price(c: Dict[str, Any]) -> Optional[float]:
+    """What a closed comp SOLD for, or None when no sale price is recorded."""
+    return _price(c) if _closed(c) else None
+
+
 def _price(c: Dict[str, Any]) -> Optional[float]:
-    # The PDF reads `sale_price`, then `price`. The consumer worker stores the
-    # close price as both `price` and `close_price`; older rows used `sold_price`.
+    # LR-018 / D-377: for a sale, `close_price` is authoritative whenever the
+    # row carries the field (the worker and API shape). `price` there was
+    # `closePrice or listPrice`, so on a closed comp with no close price it
+    # held the ASKING price, and reading it first put that in the range, the
+    # median and $/sqft. Stored rows re-read correctly with no migration.
+    if _closed(c) and "close_price" in c:
+        return _number(c.get("close_price"))
+    # Otherwise: the PDF reads `sale_price`, then `price`; older rows used
+    # `sold_price`.
     for key in ("sale_price", "price", "close_price", "sold_price"):
         n = _number(c.get(key))
         if n is not None:

@@ -65,7 +65,8 @@ EXEMPT = {
     "sqft": "0 sqft on a dwelling is bad data; land carries None",
     "list_price": "a $0 list price is bad data, not a price",
     "close_price": "a $0 sale is bad data, not a sale",
-    "price": "as list_price",
+    # `price` WAS HERE, excusing the CMA market stats' `if c.get("price")`.
+    # LR-018 replaced that with a recorded `close_price` (excused above).
     "price_per_sqft": "a market with no sales has nothing to divide by, so "
                       "the metric is None rather than 0",
     # `bathrooms`, `year_built`, `lot_size` and `property.bedrooms` WERE HERE,

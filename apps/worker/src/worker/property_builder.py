@@ -1155,8 +1155,35 @@ class PropertyReportBuilder:
             if distance_raw and isinstance(distance_raw, (int, float)):
                 distance_formatted = f"{distance_raw:.1f} mi"
             
-            # Get raw price for stats calculations
-            raw_price = comp.get("price") or comp.get("close_price") or comp.get("sale_price") or comp.get("list_price")
+            # Get raw price for stats calculations.
+            #
+            # LR-018 / D-377: a SALE's price is its recorded sale price and
+            # nothing else. This read `price or ... or list_price`, so a closed
+            # comp with no close price was priced at what the seller asked and
+            # went into the range, the median and $/sqft.
+            comp_is_sale = str(comp.get("status") or "").strip().lower() in ("closed", "sold")
+            if comp_is_sale:
+                if "close_price" in comp:
+                    # Worker/API shape: `close_price` is authoritative, so a
+                    # stored report whose `price` fell back to the asking price
+                    # re-renders without it (no migration needed).
+                    raw_price = comp.get("close_price")
+                else:
+                    # Wizard shape: only `sale_price` survives the wizard.
+                    raw_price = comp.get("sale_price") or comp.get("price")
+                try:
+                    recorded = float(raw_price) > 0
+                except (TypeError, ValueError):
+                    recorded = False
+                if not recorded:
+                    # Not a comparable sale: there is no sale price to compare.
+                    logger.warning(
+                        "_build_comparables_context: dropped a %s comp with no recorded sale price",
+                        comp.get("status"),
+                    )
+                    continue
+            else:
+                raw_price = comp.get("price") or comp.get("list_price")
             
             # Generate map URL if we have coordinates
             map_image_url = comp.get("map_image_url")
@@ -1474,8 +1501,22 @@ class PropertyReportBuilder:
 
     @staticmethod
     def _extract_price(comp: Dict) -> Optional[float]:
-        """Extract a numeric price from a comp dict, checking all known field names."""
-        for key in ("price", "close_price", "sale_price", "list_price", "sold_price"):
+        """Extract a numeric price from a comp dict, checking all known field names.
+
+        LR-018 / D-377: for a SALE, only a sale price. This read `price` first
+        and fell back to `list_price`, so a closed comp with no close price
+        reached `_build_stats_context` (and from there the cover overview's
+        prompt) at its asking price. When the comp carries `close_price` (the
+        worker/API shape) that field is authoritative. An active or pending
+        comp keeps its list price: that is its only number (D-118).
+        """
+        status = str(comp.get("status") or "").strip().lower()
+        if status in ("closed", "sold"):
+            keys = (("close_price",) if "close_price" in comp
+                    else ("sale_price", "price", "sold_price"))
+        else:
+            keys = ("price", "close_price", "sale_price", "list_price", "sold_price")
+        for key in keys:
             val = comp.get(key)
             if val is not None and val != "" and val != "-":
                 try:
