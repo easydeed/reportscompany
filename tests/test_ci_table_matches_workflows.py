@@ -33,6 +33,11 @@ from pathlib import Path
 import pytest
 import yaml
 
+from scripts.release_gate import (
+    BACKEND_FILES, BACKEND_PREFIXES, FRONTEND_FILES, FRONTEND_PREFIXES,
+    SHARED_FILES, SHARED_PREFIXES,
+)
+
 REPO = Path(__file__).resolve().parents[1]
 WORKFLOWS = REPO / ".github/workflows"
 DOC = REPO / "docs/architecture/SOURCE_OF_TRUTH.md"
@@ -51,6 +56,22 @@ def _triggers(path: Path) -> dict:
 
 def _workflow_files():
     return sorted(WORKFLOWS.glob("*.yml")) + sorted(WORKFLOWS.glob("*.yaml"))
+
+
+def _effective_paths(wf):
+    """Reusable workflows inherit selection from the central classifier."""
+    paths = set()
+    for cfg in _triggers(wf).values():
+        if isinstance(cfg, dict):
+            paths.update(cfg.get("paths") or [])
+    if "workflow_call" in _triggers(wf):
+        files, prefixes = {
+            "backend-tests.yml": (BACKEND_FILES, BACKEND_PREFIXES),
+            "frontend-tests.yml": (FRONTEND_FILES, FRONTEND_PREFIXES),
+        }[wf.name]
+        paths.update(files | SHARED_FILES)
+        paths.update(p + "**" for p in prefixes + SHARED_PREFIXES)
+    return paths
 
 
 def _ci_table() -> dict:
@@ -83,10 +104,7 @@ def test_the_row_names_every_path_the_filter_carries(wf):
     row = _ci_table().get(wf.name)
     assert row, f"{wf.name} has no row (covered by the test above)"
 
-    paths = set()
-    for event, cfg in _triggers(wf).items():
-        if isinstance(cfg, dict):
-            paths.update(cfg.get("paths") or [])
+    paths = _effective_paths(wf)
     if not paths:
         return  # manual-only, or unfiltered; nothing to keep in step
 

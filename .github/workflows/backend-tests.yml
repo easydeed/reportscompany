@@ -1,64 +1,10 @@
 name: Backend Tests
-# `tests/**` IS IN THESE FILTERS AND WAS NOT (D-089). `pytest.ini`'s testpaths
-# have listed `tests` since 2026-09-03, so this workflow RUNS that suite — but
-# nothing here fired when it changed. A suite you can edit without triggering
-# the job that runs it is a suite whose breakage surfaces on someone else's
-# unrelated PR, which is how its 40 failures became "the known-red baseline"
-# instead of a thing anybody owned.
-#
-# `db/**` for the same reason, one step further out: a migration changes the
-# schema these suites assert against and did not trigger them either.
+# Automatic selection is centralized in release-check.yml and scripts/release_gate.py.
+# Keep this workflow reusable; the final Release gate, not this conditional job, is required.
 on:
-  push:
-    paths:
-      - "apps/api/**"
-      - "apps/worker/**"
-      - "tests/**"
-      - "db/**"
-      - "pytest.ini"
-      - "scripts/**"
-      # `tools/**` for the same reason as `tests/**` above, and it is a gap I
-      # made: test_sources_parse.py compiles every file under `tools/`, so the
-      # suite checks a tree that could not trigger it. D-089, one directory
-      # over.
-      - "tools/**"
-      # apps/web is a frontend project, but its seven trendy-*.html templates
-      # are a live render path (apps/web/lib/templates.ts's header explains how)
-      # and the colour lint below is the only thing checking them. Without this
-      # line a web template could gain a brand literal and the ratchet would not
-      # fire until something else touched the backend — the same "edit a file
-      # without triggering the job that checks it" gap D-089 was.
-      - "apps/web/templates/**"
-      # The defect board. tests/test_defect_list_counts.py and
-      # test_xfail_defect_links.py read it, and an edit to it alone (every
-      # board-only PR) ran nothing. D-348, the D-089 gap again.
-      - "docs/DEFECT_LIST.md"
-      - ".github/workflows/backend-tests.yml"
-  pull_request:
-    paths:
-      - "apps/api/**"
-      - "apps/worker/**"
-      - "tests/**"
-      - "db/**"
-      - "pytest.ini"
-      - "scripts/**"
-      # `tools/**` for the same reason as `tests/**` above, and it is a gap I
-      # made: test_sources_parse.py compiles every file under `tools/`, so the
-      # suite checks a tree that could not trigger it. D-089, one directory
-      # over.
-      - "tools/**"
-      # apps/web is a frontend project, but its seven trendy-*.html templates
-      # are a live render path (apps/web/lib/templates.ts's header explains how)
-      # and the colour lint below is the only thing checking them. Without this
-      # line a web template could gain a brand literal and the ratchet would not
-      # fire until something else touched the backend — the same "edit a file
-      # without triggering the job that checks it" gap D-089 was.
-      - "apps/web/templates/**"
-      # The defect board. tests/test_defect_list_counts.py and
-      # test_xfail_defect_links.py read it, and an edit to it alone (every
-      # board-only PR) ran nothing. D-348, the D-089 gap again.
-      - "docs/DEFECT_LIST.md"
-      - ".github/workflows/backend-tests.yml"
+  workflow_call:
+  workflow_dispatch:
+
 jobs:
   test:
     # Pinned, not ubuntu-latest: latest moved to 26.04 on or before 2026-11-02 and the pinned
