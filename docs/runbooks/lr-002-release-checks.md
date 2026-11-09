@@ -16,15 +16,15 @@ Shared runtime/lockfiles, workspace packages, classifier code/tests and workflow
 
 1. Obtain Claude's independent PASS for the exact head, plus green hosted results for the new workflow.
 2. Exercise a harmless failing suite in an isolated draft PR, verify Release gate fails, then restore it. Also verify a docs/unrelated-Markdown PR reaches a terminal gate. Retain run URLs and exact SHAs.
-3. Identify an eligible reviewer identity distinct from the PR author. Currently both agents author as easydeed and only easydeed has collaborator access. GitHub cannot count author self-approval. Jerry has been asked for the separate account. No invented identity or blanket admin bypass is an acceptable substitute.
-4. Read and save existing effective main branch protection/rulesets. Configure the final Release gate as required, reviewed PRs with stale approval handling, force-push/deletion restrictions, and the approved named-merger/emergency process. Record the actual GitHub App/source of the status context. Do not require the conditional backend/frontend check names.
-5. Verify the effective rules using the platform API and an ordinary builder identity. Demonstrate unreviewed/failing PRs cannot merge. Do not lock out the named recovery operator.
+3. Apply Jerry's November 9 policy: no separate reviewer account and no native required approval. Require a current-head cross-agent PASS comment as the merge process. GitHub will not enforce that comment as an independent identity approval; do not claim otherwise.
+4. Read and save existing effective main branch protection/rulesets. Require the final Release gate and a PR with zero required GitHub approvals. Enforce against administrators; disable direct and force pushes. Record the actual GitHub App/source of the status context. Do not require conditional backend/frontend check names, and do not add a blanket bypass.
+5. Verify effective main rules through the platform API, including admin enforcement. Prove rejected direct/force updates on a disposable protected test ref with the same policy, and prove a failing PR cannot merge. Never attempt a real direct/force test push to main; a no-op or dry-run push is not sufficient behavioral proof. Confirm the current-head PASS comment before ordinary merges and preserve Jerry's administrative recovery access.
 
-Native approval enforcement is **not complete** while the separate identity is unresolved. Installing the workflow alone does not enforce review or prevent an administrator from merging a red PR. D-361 remains open until the platform proof is recorded.
+The reviewer-identity decision is resolved. Native approval is intentionally not required; review is a recorded cross-agent process. Installing the workflow alone still does not enforce passing checks or stop direct/force pushes. D-361 remains open until the approved platform controls and proofs are recorded.
 
 ## Emergency and recovery
 
-Codex is the named merger after the other lane's PASS. An emergency must record reason, exact SHA, bypass actor/method and independent-review deadline within 24 hours. Ordinary work does not use that path. The smallest approved temporary relaxation must be restored and verified afterward; no recurring all-admin bypass.
+Codex handles ordinary merges after the other lane's current-head PASS and passing checks. Jerry alone is the emergency merger. An emergency must record reason, exact SHA, actor/method and independent-review deadline within 24 hours. Codex does not infer emergency authorization from a provider outage. Any temporary rule relaxation by Jerry must be restored and verified; no recurring all-admin bypass.
 
 If required gating is misconfigured, the authorized recovery operator restores the saved rules through repository administration, records why, and reapplies the corrected reviewed rule. This document contains no command that silently changes permissions or disables review.
 
