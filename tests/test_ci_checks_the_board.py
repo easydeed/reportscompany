@@ -7,11 +7,12 @@ listed the board, so a board-only PR ran nothing that checks it.
 from pathlib import Path
 
 import yaml
+from scripts.release_gate import classify_paths
 
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github/workflows/backend-tests.yml"
 
 
-def test_both_filters_list_the_board():
+def test_board_changes_require_backend_tests():
     on = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))[True]  # YAML reads `on:` as True
-    for event in ("push", "pull_request"):
-        assert "docs/DEFECT_LIST.md" in on[event]["paths"], event
+    assert "workflow_call" in on
+    assert classify_paths(["docs/DEFECT_LIST.md"])["backend"] is True
