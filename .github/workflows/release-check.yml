@@ -31,15 +31,11 @@ jobs:
   backend:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
-    # Temporary hosted negative proof; restored before review/merge.
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Intentional isolated failure
-        run: exit 1
+    uses: ./.github/workflows/backend-tests.yml
 
   frontend:
     needs: changes
-    if: false
+    if: needs.changes.outputs.frontend == 'true'
     uses: ./.github/workflows/frontend-tests.yml
 
   gate:
