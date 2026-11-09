@@ -1,0 +1,79 @@
+[
+  {
+    "name": "D-188 comes back: the running head sums every status",
+    "file": "apps/worker/src/worker/market_builder.py",
+    "old": "        total, noun = self._v2_headline_count()\n",
+    "new": "        total, noun = sum((data.get(\"counts\") or {}).values()), self._v2_headline_count()[1]\n",
+    "test": "apps/worker/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-188 comes back: the running head prints the report title",
+    "file": "apps/worker/src/worker/templates/market/_base/page_header.jinja2",
+    "old": "{{ total_count }} {{ count_noun }}",
+    "new": "{{ total_count }} {{ report_title }}",
+    "test": "apps/worker/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-168 comes back: a missing days on market becomes 0",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "if _known(comp.get(k)) is not None), None),",
+    "new": "if _known(comp.get(k)) is not None), 0),",
+    "test": "apps/worker/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-168 comes back: a missing bedroom count becomes 0",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "                \"bedrooms\": _known(comp.get(\"bedrooms\")),",
+    "new": "                \"bedrooms\": comp.get(\"bedrooms\") or 0,",
+    "test": "apps/worker/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-168 comes back: a missing distance becomes 0",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "\"distance_miles\": float(distance_raw) if isinstance(distance_raw, (int, float)) else None,",
+    "new": "\"distance_miles\": float(distance_raw) if isinstance(distance_raw, (int, float)) else 0,",
+    "test": "apps/worker/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-168 comes back: the CMA stores 0 for a missing bedroom count",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                            \"bedrooms\": prop_info.get(\"bedrooms\"),",
+    "new": "                            \"bedrooms\": prop_info.get(\"bedrooms\") or 0,",
+    "test": "apps/worker/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-106 comes back: the worker drops half baths",
+    "file": "apps/worker/src/worker/compute/extract.py",
+    "old": "    return (full or 0) + (half or 0) * 0.5",
+    "new": "    return (full or 0)",
+    "test": "apps/worker/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-106 comes back: the API drops half baths",
+    "file": "apps/api/src/api/services/simplyrets.py",
+    "old": "    return (full or 0) + (half or 0) * 0.5",
+    "new": "    return (full or 0)",
+    "test": "apps/api/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-168 comes back: the comps route stores 0 for a missing bedroom count",
+    "file": "apps/api/src/api/routes/property.py",
+    "old": "                \"bedrooms\": prop.get(\"bedrooms\"),",
+    "new": "                \"bedrooms\": prop.get(\"bedrooms\") or 0,",
+    "test": "apps/api/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-168 comes back: /r fills a missing count with 0",
+    "file": "apps/api/src/api/routes/mobile_reports.py",
+    "old": "        return value if value is not None and float(value) > 0 else None",
+    "new": "        return value if value is not None else 0",
+    "test": "apps/api/tests/test_report_numbers_are_true.py"
+  },
+  {
+    "name": "D-168 comes back: the wizard stores 0 for missing days on market",
+    "file": "apps/web/components/property-wizard/property-wizard.tsx",
+    "old": "dom: c.dom ?? c.days_on_market ?? null,",
+    "new": "dom: c.dom || c.days_on_market || 0,",
+    "test": "apps/api/tests/test_report_numbers_are_true.py"
+  }
+]

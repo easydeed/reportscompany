@@ -56,12 +56,13 @@ interface ReportData {
     city: string;
     sold_price: number;
     sold_date: string;
-    days_ago: number;
-    bedrooms: number;
-    bathrooms: number;
-    sqft: number;
-    price_per_sqft: number;
-    distance_miles: number;
+    // D-168: null when the record has no value; printed as a dash.
+    days_ago: number | null;
+    bedrooms: number | null;
+    bathrooms: number | null;
+    sqft: number | null;
+    price_per_sqft: number | null;
+    distance_miles: number | null;
     photo_url?: string;
   }>;
   comps_range: CompsRange | null;
@@ -434,10 +435,10 @@ function CompsTab({
           ) : (
             <div className="absolute inset-0 flex flex-col justify-end p-3">
               <span style={{ fontFamily: 'var(--display)', fontWeight: 'var(--display-weight)', fontSize: 28, lineHeight: 1, color: 'var(--primary-ink)' } as React.CSSProperties}>
-                {comp.distance_miles > 0 ? `${comp.distance_miles.toFixed(1)} mi` : comp.city}
+                {comp.distance_miles != null && comp.distance_miles > 0 ? `${comp.distance_miles.toFixed(1)} mi` : comp.city}
               </span>
               <span style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 4, color: '#5E636B' }}>
-                {comp.distance_miles > 0 ? 'From your home · no photo on file' : 'No photo on file'}
+                {comp.distance_miles != null && comp.distance_miles > 0 ? 'From your home · no photo on file' : 'No photo on file'}
               </span>
             </div>
           )}
@@ -453,15 +454,15 @@ function CompsTab({
           
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="text-center p-2 bg-gray-50 rounded">
-              <p className="text-lg font-semibold">{comp.bedrooms}</p>
+              <p className="text-lg font-semibold">{comp.bedrooms ?? '—'}</p>
               <p className="text-xs text-gray-500">Beds</p>
             </div>
             <div className="text-center p-2 bg-gray-50 rounded">
-              <p className="text-lg font-semibold">{comp.bathrooms}</p>
+              <p className="text-lg font-semibold">{comp.bathrooms ?? '—'}</p>
               <p className="text-xs text-gray-500">Baths</p>
             </div>
             <div className="text-center p-2 bg-gray-50 rounded">
-              <p className="text-lg font-semibold">{comp.sqft.toLocaleString()}</p>
+              <p className="text-lg font-semibold">{comp.sqft != null ? comp.sqft.toLocaleString() : '—'}</p>
               <p className="text-xs text-gray-500">Sqft</p>
             </div>
           </div>
@@ -473,13 +474,13 @@ function CompsTab({
             </span>
             <span className="text-gray-600">
               <MapPin className="w-4 h-4 inline mr-1" />
-              {comp.distance_miles > 0 ? `${comp.distance_miles.toFixed(1)} mi away` : '—'}
+              {comp.distance_miles != null && comp.distance_miles > 0 ? `${comp.distance_miles.toFixed(1)} mi away` : '—'}
             </span>
           </div>
 
           <div className="mt-3 pt-3 border-t">
             <p className="text-center font-semibold" style={{ color: 'var(--primary-ink)' }}>
-              {comp.price_per_sqft > 0 ? `$${comp.price_per_sqft}/sqft` : '—'}
+              {comp.price_per_sqft != null && comp.price_per_sqft > 0 ? `$${comp.price_per_sqft}/sqft` : '—'}
             </p>
           </div>
         </div>

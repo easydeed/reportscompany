@@ -51,6 +51,19 @@ class PropertyData(BaseModel):
     last_sale_price: Optional[int] = None
 
 
+def _present(value):
+    """A positive number as the record has it, else None (D-168).
+
+    For comp fields where 0 cannot be real: bedrooms, bathrooms, living area,
+    price per sq ft, distance. Comps stored before D-168 carry 0 for absent;
+    this is the rule the PDF applies to them (`V2_ZERO_IS_ABSENT`).
+    """
+    try:
+        return value if value is not None and float(value) > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
 class Comparable(BaseModel):
     address: str
     city: str
@@ -58,14 +71,17 @@ class Comparable(BaseModel):
     zip: str
     sold_price: int
     sold_date: str
-    days_ago: int
-    bedrooms: int
-    bathrooms: float
-    sqft: int
+    # D-168: None when the record has no value. These were required ints filled
+    # with `or 0`, so a comp with no bedroom count showed "0 Beds" to the
+    # homeowner. The viewer prints a dash for None.
+    days_ago: Optional[int] = None
+    bedrooms: Optional[int] = None
+    bathrooms: Optional[float] = None
+    sqft: Optional[int] = None
     lot_size: Optional[int] = None
     year_built: Optional[int] = None
-    price_per_sqft: int
-    distance_miles: float
+    price_per_sqft: Optional[int] = None
+    distance_miles: Optional[float] = None
     photo_url: Optional[str] = None
 
 
@@ -226,11 +242,12 @@ async def get_report_data(
                 sold_price = int(recorded)
             else:
                 sold_price = c.get("sold_price") or c.get("price") or c.get("close_price") or 0
-            sqft_val = c.get("sqft") or 0
+            # D-168: absent stays absent (see `_present`).
+            sqft_val = _present(c.get("sqft"))
 
             # price_per_sqft: compute if not stored
-            ppsf = c.get("price_per_sqft") or c.get("pricePerSqft") or 0
-            if not ppsf and sold_price and sqft_val:
+            ppsf = _present(c.get("price_per_sqft") or c.get("pricePerSqft"))
+            if ppsf is None and sold_price and sqft_val:
                 ppsf = int(sold_price / sqft_val)
 
             # sold_date: prefer stored, else format from close_date ISO string
@@ -244,15 +261,15 @@ async def get_report_data(
                     sold_date_str = close_date_raw[:10]
 
             # days_ago: compute from close_date if not stored
-            days_ago_val = c.get("days_ago") or c.get("daysAgo") or 0
-            if not days_ago_val and close_date_raw:
+            days_ago_val = c.get("days_ago") if c.get("days_ago") is not None else c.get("daysAgo")
+            if days_ago_val is None and close_date_raw:
                 try:
                     close_dt = datetime.fromisoformat(str(close_date_raw).replace("Z", "+00:00"))
                     days_ago_val = max(0, (datetime.now(close_dt.tzinfo) - close_dt).days)
                 except (ValueError, AttributeError):
                     pass
 
-            dist = c.get("distance_miles") or c.get("distanceMiles") or 0
+            dist = _present(c.get("distance_miles") or c.get("distanceMiles"))
 
             comp_list.append(Comparable(
                 address=c.get("address", ""),
@@ -262,13 +279,13 @@ async def get_report_data(
                 sold_price=sold_price,
                 sold_date=sold_date_str,
                 days_ago=days_ago_val,
-                bedrooms=c.get("bedrooms") or 0,
-                bathrooms=c.get("bathrooms") or 0,
-                sqft=sqft_val,
+                bedrooms=_present(c.get("bedrooms")),
+                bathrooms=_present(c.get("bathrooms")),
+                sqft=int(sqft_val) if sqft_val is not None else None,
                 lot_size=c.get("lot_size") or c.get("lotSize"),
                 year_built=c.get("year_built") or c.get("yearBuilt"),
                 price_per_sqft=ppsf,
-                distance_miles=round(float(dist), 1) if dist else 0,
+                distance_miles=round(float(dist), 1) if dist is not None else None,
                 photo_url=c.get("photo_url") or c.get("photoUrl")
             ))
         except Exception as e:

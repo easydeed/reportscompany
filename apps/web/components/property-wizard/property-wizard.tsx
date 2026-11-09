@@ -200,7 +200,10 @@ export function PropertyWizard() {
               c.price_per_sqft ||
               (price && compSqft ? Math.round(price / compSqft) : 0),
             status: c.status || status,
-            dom: c.dom || c.days_on_market || 0,
+            // D-168: a missing count stays missing. `|| 0` stored a comp with no
+            // days on market as one that sold the day it listed, and the PDF's
+            // average days on market counted it. `??` keeps a real 0.
+            dom: c.dom ?? c.days_on_market ?? null,
             photo_url: c.photo_url || (c.photos && c.photos[0]) || null,
             lat: c.lat || c.latitude,
             lng: c.lng || c.longitude,

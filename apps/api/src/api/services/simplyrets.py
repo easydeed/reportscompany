@@ -171,6 +171,29 @@ def build_comparables_params(
 SALE_STATUSES = ("closed", "sold")
 
 
+def baths_total(prop: Optional[Dict]) -> Optional[float]:
+    """Bathrooms from a SimplyRETS `property` object, in the decimal convention.
+
+    D-106. The feed sends `bathsFull` and `bathsHalf` and has no `bathrooms`
+    key, so every market listing shipped with no bath count, and every comp
+    read `bathsFull` alone (2 full baths and a powder room read "2").
+    Convention, Jerry 2026-11-09: halves count 0.5, so 2 full + 1 half = 2.5.
+    None when neither count is recorded: a missing count is not zero (D-168).
+    Same rule as the worker's `compute.extract.baths_total`; keep in step.
+    """
+    prop = prop or {}
+
+    def _num(v):
+        try:
+            return float(v) if v is not None and v != "" else None
+        except (TypeError, ValueError):
+            return None
+    full, half = _num(prop.get("bathsFull")), _num(prop.get("bathsHalf"))
+    if full is None and half is None:
+        return None
+    return (full or 0) + (half or 0) * 0.5
+
+
 def _positive_or_none(value):
     """The value when it is a positive number, else None (keeps its type)."""
     try:
@@ -249,7 +272,7 @@ def normalize_listing(listing: Dict) -> Dict:
         "price": comp_sale_fields(listing)["price"] or 0,
         "status": comp_sale_fields(listing)["status"],
         "bedrooms": prop.get("bedrooms"),
-        "bathrooms": prop.get("bathsFull"),
+        "bathrooms": baths_total(prop),
         "sqft": prop.get("area"),
         "lot_size": prop.get("lotSize"),
         "year_built": prop.get("yearBuilt"),
