@@ -7,7 +7,9 @@
 
 ## Status
 
-**Last reconciled:** 2026-09-29, against `main` at `b0c52f9`, at the close of Workstream D.
+**Last reconciled:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
+
+**Historical September 29 sweep retained below:** the following 36-entry depth table and conclusion describe `b0c52f9`, not the November 6 reconciliation.
 
 **HOW DEEP THIS SWEEP WENT, PER ENTRY RATHER THAN PER SWEEP** — §0.6's rule, because "swept, all
 36 checked" flattens three different claims into one:
@@ -59,15 +61,15 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 84 | Observed, not yet triaged |
-| `open` | 47 | Real, unfixed |
-| `fixed` | 214 | Corrected in code, with the branch or PR named on the entry |
+| `recorded` | 85 | Observed, not yet triaged |
+| `open` | 75 | Real, unfixed |
+| `fixed` | 213 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **360** | D-001 … D-360, contiguous, no duplicates |
+| **Total** | **388** | D-001 … D-388, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 5 · WRONG 21 · FRAGILE 21 · ROUGH 0. (Sums to 47, the open total.)
+**Open by severity:** BROKEN 9 · WRONG 39 · FRAGILE 27 · ROUGH 0. (Sums to 75, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -92,10 +94,10 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 > imports the test's `parse()`, so there is one reader and it is the one CI runs. Two
 > implementations of "how to read this document" is a second answer waiting to be believed.
 
-`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033, D-069 (`fix/consumer-delivery-truth`); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`); D-178 (`feat/market-closed-v2`).
+`fixed` — D-001, D-002, D-015, D-016, D-017, D-018, D-020, D-022 (`fix/p4-broken-defects`); D-005, D-007 (PR #24); D-038, D-039 (PR #29); D-040 (PR #30); D-044 (`fix/m5-responsive`); D-041, D-042 (`fix/frontend-ci`); D-049 (`fix/m4-nav-identity`); D-045 (`chore/disable-e2e-workflow`); D-046, D-048 (`fix/m3-copy-truth`); D-053 (`chore/migration-bootstrap-guard`); D-054 (`chore/collect-root-tests`); D-055 (`fix/insight-moi-guard`); D-059 (`fix/brand-color-validation`); D-058 (`fix/template-escaping`); D-061 (`fix/schedule-run-lifecycle`); D-035 (`0054_growth_plan_report_limit.sql`, applied 2026-09-09); D-066 (`fix/realtor-mark-default`); D-065 (`fix/email-log-commit`); D-063 (`fix/pdf-missing-explicit`); D-062 (`fix/acks-late`); D-064 (`fix/email-log-commit` — loss count zero, confirmed from the mailbox); D-072 (`fix/enqueue-after-commit`); D-067 (`fix/theme-cover-title`); D-071 (`fix/retry-policy-honest`); D-076 (`fix/vendor-query-idioms`); D-080, D-081 (`fix/pagination-by-count`); D-056 (`fix/inventory-moi`); D-060 (`fix/postal-address`); D-031, D-032, D-033 (`fix/consumer-delivery-truth`; D-069 reopened by LR-001 for concurrent delivery); D-070 (`chore/agreed-followups`); D-019 (`fix/d019-verified-sending`); D-037 (`fix/d037-bridge-durability`); D-074 (`fix/d074-close-date-window`); D-057 (`fix/d057-inventory-median-price`); D-087, D-088 (`fix/q-city-contamination`); D-089, D-090 (`fix/root-suite-mode`); D-091, D-092 (`fix/api-suite-drift`); D-095 (`fix/d095-d096-cache-key-and-limiter`); D-085 (`feat/workstream-c-email-rebuild`); D-099 (`fix/d099-readability-helpers`); D-093, D-094, D-009 (`fix/d093-d094-redis-and-free-plan` — D-009 closed as the Phase 2A filing of D-094); D-006 (`00df801`), D-003 (`cd94e27`) — both closed by the 2026-09-22 stale sweep, fixed long before and never recorded. D-107, D-108 (`feat/zero-rendering-and-band-cards`); D-112 (`fix/masthead-contrast-and-neutral-default`); D-113 (`fix/d113-trend-history-never-fetched`); D-111 (`chore/probe-365-window`); D-116, D-117 (`fix/e1-remove-owner-block`); D-118, D-132 (`fix/d118-remove-assessment-row`, completed by `feat/d118-last-sale-from-sitex`); D-133 (`feat/d118-last-sale-from-sitex`); D-138 (`fix/wizard-lookup-contract`); D-139 (`fix/cma-projection-gaps`); D-140 (`refactor/consumer-report-data-shared`); D-141 (`docs/d141-consumer-page-set`); D-120, D-137 (`fix/d137-absent-is-not-a-default`); D-174 (`fix/d174-api-defaults-name-a-retired-theme`); D-171 (`feat/display-ink-shared-token`); D-177 (`feat/market-closed-kind`); D-178 (`feat/market-closed-v2`).
 `closed-not-live` — D-025, D-026, D-029 (worker logs, 8/17); D-021 (production is test data, Jerry 2026-09-17); D-179 (**not reproducing** — four premises about `PDF_CONFIG`, `MARKET_PAGE_CONFIG` and `PAGE_1_CAPACITY` that are not in this repository; each absence named on the entry so the same report cannot re-file it). D-043, D-100, D-126, D-127, D-128, D-143 (2026-10-30 and 11-02: checked absent from what renders today rather than closed on a deletion — the retired themes' templates, and for D-043 a card no page mounts any more; `tests/test_closed_defects_stay_closed.py`).
 
-`accepted` — D-184 (Jerry, 2026-10-30: the open-houses page-1 grid spills to page 2, no change).
+`accepted` — D-184 (Jerry, 2026-10-30: the open-houses page-1 grid spills to page 2, no change); D-360 (Jerry, 2026-11-05: retain the default 404 for an unknown /p code).
 
 **A status claim with no pointer is not a status, it is an assertion.** `fixed` must name a branch or PR; `closed-not-live` must name the evidence. Anything that cannot be traced reverts to `open`. This is the standard the 2026-08-17 docs audit applied to `SOURCE_OF_TRUTH.md`, and it applies to entries written during this remediation too — four of the claims corrected in this pass were written today.
 
@@ -2999,7 +3001,9 @@ different fix, and because D-062 now reads as closed — this is the part that i
 
 ### D-069 — `process_consumer_report` re-sends the SMS and re-spends the credit if it is redelivered
 **Severity:** WRONG · **Affects:** consumer lead reports, on any worker death mid-task
-**Status:** `fixed` (`fix/consumer-delivery-truth`) — **a redelivery is refused before any provider is called**
+**Status:** `open` — LR-001 reconciliation, 2026-11-06; evidence below.
+
+**LR-001 evidence (2026-11-06, `fd859a28`):** Reopened for the remaining concurrency/crash window, not because the sequential guard vanished. `apps/worker/src/worker/tasks.py:2402` uses autocommit; `:2443` unconditionally writes processing; `:2778` is a plain timestamp read. Two synchronized actual task executions with fake providers made two SMS calls; replay of a delivered row ended processing. Claude independently confirmed the source in the #272 review. LR-020 owns atomic claiming/terminal state; D-379/LR-021 owns independent agent-notification recovery. Unknown text outcomes become needs review and are never automatically resent.
 
 `task_acks_late` is a **worker-wide** setting, so enabling it for D-062 changed the failure mode of
 every registered task, not just `generate_report`. Five are registered: `ping`, `keep_alive_ping`,
@@ -15891,7 +15895,9 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 ### D-330 — a schedule that fails to save shows nothing
 
 **Severity:** WRONG · found 2026-11-03 tracing the production walk-through. In the wizard's schedule branch, any failure other than unverified (403) or over-limit (429) is thrown and then caught, and the catch only reports in `send_now` mode (`unified-wizard/index.tsx:393-400`). Create Schedule stops spinning and the page says nothing.
-**Status:** `recorded` — show the error in schedule mode as well.
+**Status:** `open` — LR-001 reconciliation, 2026-11-06; evidence below.
+
+**LR-001 evidence (2026-11-06, `fd859a28`):** Current `apps/web/components/unified-wizard/index.tsx:397–401` sets an error only for deliveryMode send_now; schedule errors thrown at :393 are swallowed. Source-confirmed in both audits and Claude #272 review. LR-024 owns the repair; no fix is claimed here.
 
 ---
 
@@ -16009,8 +16015,10 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 
 ### D-347 — turning a paused schedule back on skips the schedule limit
 
-**Severity:** ROUGH · found 2026-11-03 tracing the production walk-through. The schedule limit is checked only on create (`routes/schedules.py:331-346`). `PATCH` with `active: true` checks verification and not the limit, so a Free account can pause, create a second schedule, and turn the first back on.
-**Status:** `recorded` — check the limit when a schedule is turned on.
+**Severity:** WRONG · found 2026-11-03 tracing the production walk-through. The schedule limit is checked only on create (`routes/schedules.py:331-346`). `PATCH` with `active: true` checks verification and not the limit, so a Free account can pause, create a second schedule, and turn the first back on.
+**Status:** `open` — LR-001 reconciliation, 2026-11-06; evidence below.
+
+**LR-001 evidence (2026-11-06, `fd859a28`):** Current PATCH active=true at `apps/api/src/api/routes/schedules.py:610` has no capacity check; creation also has an admission race. `services/seats.py:hand_over_book` moves active schedules and must preserve the approved compatibility rule. LR-016 owns all admission/reactivation paths. Jerry approved keeping existing schedules running while refusing new/reactivated schedules until below allowance. Source verified, not a live mutation test.
 
 ---
 
@@ -16104,6 +16112,263 @@ Older and quieter: 0056–0059 had been pending for weeks with fallbacks in code
 **Status:** `accepted` — **Jerry, 2026-11-05: leave the default 404 as it is; note it.** Nothing to change. If it is ever revisited, it is a one-line mount of `StatusPage` on `NEUTRAL_TOKENS` in place of `notFound()`, a template edit for Design.
 
 ---
+
+
+## November 6 launch readiness findings
+
+Source baseline: `fd859a28` (application code unchanged from the reviewed audit). [Claude review](https://github.com/easydeed/reportscompany/pull/272#issuecomment-6698368476) independently confirmed each mechanism at its stated depth. LR tickets are in `docs/plans/LAUNCH_READINESS_PLAN_2026-11-06.md`. Operational proof gaps stay recorded until measured; source-confirmed defects are open. These entries are not implementation fixes.
+
+### D-361 — Main has no enforced review and passing-check gate
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-002
+**Status:** `open`
+
+**Evidence:** Read-only GitHub queries for branch protection, effective main rules, and repository rulesets returned no enforced main rules. `.github/workflows/backend-tests.yml` and `frontend-tests.yml` use workflow-level path filters; making their names required without an always-running gate would strand unrelated PRs. Root/workspace lockfiles, .nvmrc, packages, and e2e also need explicit change classification. Platform state was observed, not inferred from missing config.
+
+**Acceptance:** Build an always-running gate, preserve conditional checks, enforce other-lane review, and record the named-merger/emergency path. Test a harmless failing/unreviewed PR and an unrelated docs PR.
+
+### D-362 — The deployed web dependency set includes published security advisories
+
+**Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-003
+**Status:** `open`
+
+**Evidence:** `apps/web/package.json` and `pnpm-lock.yaml` pin Next 16.0.7. The audit and Claude review each reported 61 production advisories: 4 critical, 29 high, 23 moderate, 5 low; 43 concern Next. Other app lockfiles pin 16.0.10. Feature/hosting applicability differs: this is not a claim that each advisory is exploitable on production or that a compromise occurred.
+
+**Acceptance:** Update the actual deployed workspace dependency sets to a currently patched supported combination; review residual applicability, frozen installs, build, typecheck, and changed journeys. Inventory standalone app deployments.
+
+### D-363 — Branding deletion authorizes a URL substring instead of the owned storage key
+
+**Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-004
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/upload.py:75–82` tests account ID anywhere in the URL; `services/upload.py:186–200` then extracts branding/ onward and deletes it. Actual functions with fake storage accepted another tenant key when the caller ID was in the host or preceding path. Query/fragment variants only yielded nonexistent keys in the review.
+
+**Acceptance:** Canonicalize and authorize the exact account key before storage access; foreign and malformed keys must never invoke deletion. Return truthful missing-object results.
+
+### D-364 — The account limiter executes an operation before returning 429
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-005
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/middleware/authn.py:387` calls the handler before the count>limit branch at :392. Actual middleware with limit one invoked the fake handler three times while returning 200/429/429. The 429 copies handler headers, including potential Set-Cookie/Content-Length. This is a fixed minute window, not a token bucket.
+
+**Acceptance:** Refuse before any handler side effect, return correct headers, and prove boundary/concurrent/degraded behavior without chargeable calls.
+
+### D-365 — Anonymous property lookup has no shared vendor-backed search budget
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-006
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/lead_pages.py:230–259` calls SiteX for public search. Auth skips /v1/cma and the global limiter skips no-account requests. The separate request limit is later and does not bound searches. Search and request web proxies do not correctly preserve visitor attribution (D-339); deployed forwarding trust needs inspection.
+
+**Acceptance:** Enforce Jerry's 20 lookups per visitor per hour through a trusted proxy/IP or reviewed visitor design, with shared/global provider safeguards and explicit outage behavior. No production flood is needed.
+
+### D-366 — Uploaded image bytes and declared format can disagree
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-007
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/services/upload.py:53–69` trusts MIME and skips SVG parsing; :107–147 derives storage type from the filename and uploads unchanged bytes. Claude stored non-image bytes declared SVG and named .gif as image/gif using fake storage. SVG active-content impact depends on serving/embedding; no production script execution is claimed.
+
+**Acceptance:** Validate actual bytes for every accepted format. Block new SVG uploads and safely convert existing uploaded SVG logos to PNG with preserved historical asset references, as Jerry approved.
+
+### D-367 — Both lead CSV exports preserve untrusted spreadsheet formulas
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-008
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/leads.py:619–633` and the admin export at `routes/admin.py:3513` pass publicly supplied fields to csv.writer without formula neutralization. Claude reproduced =HYPERLINK, @SUM, and tab-prefixed formula output. Quoting delimiters is not formula neutralization; execution depends on spreadsheet software.
+
+**Acceptance:** Apply shared export-boundary handling to both paths; verify ordinary international phones/text and dangerous prefixes in supported spreadsheet software. Do not alter stored lead text.
+
+### D-368 — Changing or resetting a password leaves previously issued sessions usable
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-009
+**Status:** `open`
+
+**Evidence:** `routes/users.py:272` and `routes/auth.py:771` write password_changed_at, but auth middleware never compares it to issued tokens. Claude reproduced 200 for a pre-change token. Six issuers include seven-day register/invite tokens; iat seconds versus DB microseconds matters. The users.py docstring overstates revocation.
+
+**Acceptance:** Revoke other devices while preserving the initiating device with a valid replacement token, including same-second issuance. Test all issuers, reset, disabled user, and outage behavior.
+
+### D-369 — Public web responses lack the planned browser security headers
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-010
+**Status:** `open`
+
+**Evidence:** Live GETs for landing/login/legal pages carried HSTS but no CSP, framing control, nosniff, or explicit referrer policy. `apps/web/next.config.ts` sets no headers; middleware covers /app and /admin only. Same-origin report frames are used. Missing headers alone is not proof of an XSS exploit.
+
+**Acceptance:** Set compatible headers globally through next.config; use frame-ancestors self and start CSP report-only. Measure and review exceptions before enforcement.
+
+### D-370 — Stripe processing failures are acknowledged as successfully received
+
+**Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-011
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/stripe_webhook.py:130–132,187–202` catches processing errors and returns received=true. Missing configuration at :58 and missing metadata/price mapping at :87–108 are also acknowledged. Actual handler with a fake DB failure returned success without the account mutation.
+
+**Acceptance:** Persist/reconcile truthful event outcomes by event ID. Ask for retry when durable receipt fails; make invalid/unmappable events observable rather than silently processed. Validate real-schema and test-mode replay.
+
+### D-371 — Old Stripe subscription events overwrite a newer current subscription
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-012
+**Status:** `open`
+
+**Evidence:** `stripe_webhook.py:111–123,151–182` updates by account metadata ID, without guarding current subscription/customer identity or event state. Actual handler SQL-path reproduction changed new Team to old Pro and then Free on old deletion. subscription.customer is not checked against stored stripe_customer_id.
+
+**Acceptance:** Bind transitions to authoritative current customer/subscription state, cover update/deletion/replay/ties, and verify the endpoint Stripe API version before interpreting period fields.
+
+### D-372 — A deferred downgrade survives replacement paid subscription activation
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-012
+**Status:** `open`
+
+**Evidence:** `stripe_webhook.py:151` schedules plan_downgrade_at/to; `services/billing_state.py:44` updates the replacement subscription but does not clear it. `services/usage.py:110–118` later applies the old downgrade. Actual function reproduction ended free/canceled while retaining the replacement subscription ID; worker raw-plan resolution also differs.
+
+**Acceptance:** Cancel obsolete deferred transitions when authoritative paid state changes; apply approved period-end semantics consistently in API and worker.
+
+### D-373 — Unpaid and incomplete subscriptions receive paid plan allowances
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-013
+**Status:** `open`
+
+**Evidence:** `stripe_webhook.py:105–123` writes the price plan regardless of status; `services/usage.py:77` and worker `limit_checker.py:44` do not resolve allowances from billing_status. Actual function fakes granted paid limits for incomplete/unpaid/past_due.
+
+**Acceptance:** Apply approved active/trialing full access, past_due seven days then Free, incomplete/unpaid Free, with durable grace start and matching worker checks. Paused and unaddressed states remain a policy dependency.
+
+### D-374 — Checkout can create duplicate Stripe customers and recurring subscriptions
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-014
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/billing.py:115–218` does not reconcile an existing subscription, serializes no Customer.create race at :167–186, and creates another subscription checkout attempt. The paid Change Plan path reaches it. This is source evidence, not a live double charge.
+
+**Acceptance:** One subscription/customer; route additional checkout to the portal, handle concurrent/pending attempts safely, upgrade now/prorated and downgrade at period end. Refunds remain manual.
+
+### D-375 — Zero allowances admit report generation and legacy evaluators treat zero as unlimited
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-015
+**Status:** `open`
+
+**Evidence:** `services/usage.py:180,294` preserves zero but divides by max(limit,1); worker `limit_checker.py:108` repeats the boundary. Review reproduced admission at usage zero and one for allowance zero. Legacy evaluate_report_limit at usage.py:409 (admin/property callers) treats limit<=0 as unlimited; worker counts omit scheduled rows.
+
+**Acceptance:** Keep explicit zero frozen and unlimited distinct across API/worker/legacy callers. Coordinate property.py after Claude LR-018 and prove real scheduled/manual accounting.
+
+### D-376 — Invitation acceptance and seat cancellation race the token used flag
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-017
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/auth.py:401–520` reads boolean used without locking, then changes password and marks used unconditionally. Claude's concurrent test succeeded twice in four of four runs; the last password won. Seat cancellation during acceptance has the same race.
+
+**Acceptance:** Consume the token/account mutation atomically; one accepted request/session, deterministic losing response, and cancellation/disabled-user safety against real PostgreSQL.
+
+### D-377 — Missing close prices and unknown MLS status become comparable sales
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-018
+**Status:** `open`
+
+**Evidence:** `worker/tasks.py:2568/2579`, API `routes/property.py:864/874`, `services/simplyrets.py:184`, and `schemas/property.py:225` substitute listPrice and/or Closed status. PDF _v2_closed_prices reads price first. Actual functions included a $950,000 asking price in consumer bounds/median/ppsf and agent PDF prices without a recorded sale. This remains after D-145 corrected the nested field path.
+
+**Acceptance:** Use valid recorded close prices and explicit closed/sold status for sale figures across both paths. Stored close_price/list_price allow correct rerenders without a migration. Run the read-only affected-row count before historical action.
+
+### D-378 — Consumer failure handling uses an error column the table does not have
+
+**Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-019
+**Status:** `open`
+
+**Evidence:** `apps/worker/src/worker/tasks.py:2354,2980,2996,3011` references consumer_reports.error; migration 0038 and production expose error_message. Read-only live schema inspection and SELECT error LIMIT 0 confirmed SQLSTATE 42703; Claude also reproduced against a migrated DB. The outer handler repeats the failure, leaving processing. report_generations.error at :3041 is valid and unrelated.
+
+**Acceptance:** Fix every consumer failure read/write against the existing schema; integrate provider refusal/missing-config/timeout/exhaustion tests with real SQL. Do not rename unrelated error columns.
+
+### D-379 — Delivered consumer replay prevents recovery of the agent notification
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-021
+**Status:** `open`
+
+**Evidence:** `apps/worker/src/worker/tasks.py:2778–2785` returns when consumer timestamps exist, before notification at :2938–2964. If delivery succeeded and the agent stage failed/interrupted, replay cannot recover only that stage. D-069/LR-020 covers consumer delivery ownership and terminal-state regression.
+
+**Acceptance:** Design one stage-state model with LR-020, ship separately recoverable agent notification in its own PR, preserve requester identity, and hold uncertain text outcomes for review.
+
+### D-380 — A missing PDF is reported as generating without starting generation
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-022
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/mobile_reports.py:353–368` schedules analytics only, and status at :378–389 repeatedly says generating for null pdf_url. Worker PDF failure is nonfatal, so sent-without-PDF is reachable. `MobileReportViewer.tsx:145–157` has unbounded polling. Actual handler/helper fakes queued only track_event; D-314's proxy fix is separate and still holds.
+
+**Acceptance:** Claim/rate-limit public PDF recovery, enqueue a real PDF-only task, and provide bounded ready/failed/retry states without resending a consumer message.
+
+### D-381 — A committed scheduled occurrence is not redispatched after broker publication fails
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-023
+**Status:** `open`
+
+**Evidence:** `apps/worker/src/worker/schedules_tick.py:630–646` commits queued rows and advances cadence before publication. Failed dispatch returns None at :370–377; sweep_stale_runs marks it failed instead of republishing. This was deliberate policy in test_enqueue_after_commit, not a regression of the fixed D-072 commit-before-publish invariant.
+
+**Acceptance:** Reuse queued report_generations/schedule_runs as the outbox and existing run-id delivery dedupe. Republish queued never-started work safely; preserve uncertainty handling and avoid a new table without need.
+
+### D-382 — The market report wizard ignores persistent status errors and polls indefinitely
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-024
+**Status:** `open`
+
+**Evidence:** `apps/web/components/unified-wizard/index.tsx:225–251` returns on non-ok status requests and ignores exceptions with no deadline/recovery state. It polls /v1/reports, not the consumer PDF endpoint. D-330 separately covers swallowed scheduled-submit errors in this component.
+
+**Acceptance:** Bound polling, distinguish auth/outage/slow/terminal states, stop timers on unmount, and offer a safe retry without duplicating the submitted operation.
+
+### D-383 — Live acquisition wording promises an estimate the product does not return
+
+**Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-025
+**Status:** `open`
+
+**Evidence:** Four locations remain: marketing/lead-capture.tsx, cma-funnel.tsx:212, lead-page-client.tsx:234, and marketing/property-reports.tsx:49/110. Consumer output deliberately shows comparable-sale bounds rather than a home estimate (D-350). Source checked by Claude; this is a promise mismatch, not a request for a valuation model.
+
+**Acceptance:** Apply Jerry's See what homes like yours sold for / Get my report wording everywhere identified, including the Home Value Page. Preserve legal-approved consent text.
+
+### D-384 — The manual browser suite defaults to production and built-in identities
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-026
+**Status:** `open`
+
+**Evidence:** `playwright.config.ts` defaults to the production web host and fallback credentials; `e2e/stripe.spec.ts` creates checkout sessions. Four specs contain 15 smoke tests. The workflow is intentionally manual-only (D-045 fixed the noisy automatic trigger); running it unconfigured is not a safe launch proof.
+
+**Acceptance:** Make nonproduction the fail-closed default with no built-in credentials, then automate isolated role journeys and provider doubles before requiring the gate.
+
+### D-385 — Dependency readiness and outcome alerting still require operational proof
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-027
+**Status:** `recorded`
+
+**Evidence:** `apps/api/src/api/routes/health.py:health` reports process/schema only; startup schema_guard deliberately starts if DB is unreachable. Repo inspection does not establish an operator receives stalled-job/webhook/provider alerts. This records missing proof, not a claim that no external monitor exists.
+
+**Acceptance:** Keep liveness cheap; prove bounded readiness plus received operator alerts for stale/unknown sends, ticker/dispatch/webhook backlog and outages. Claude owns delivery signals; Codex supplies webhook signals.
+
+### D-386 — The launch recovery target has not yet been demonstrated by a restore drill
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-028
+**Status:** `recorded`
+
+**Evidence:** The audited migration runbook describes schema deployment but no completed timed restoration evidence. Render metadata does not establish a successful restore. No backup absence or loss incident is claimed. Jerry approved four-hour recovery and at most one-day data loss.
+
+**Acceptance:** Restore to an isolated target, prove RTO<=4h/RPO<=24h and tenant/consent/payment integrity with all restored senders disabled; record operator and actual results.
+
+### D-387 — Launch load and provider cost envelope remain unmeasured
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-029
+**Status:** `recorded`
+
+**Evidence:** Read-only production counts at LR-001 baseline show one market-report generation and zero consumer/scheduled/email-log records over 30 days, with no active schedules. Low activity does not establish failure or capacity. Per-worker vendor-budget issue D-096 remains a related verification requirement.
+
+**Acceptance:** Agree a workload/latency/cost ceiling and measure isolated burst/queue/vendor behavior and unit costs before broad launch. Do not stress production or infer inadequate capacity solely from its tier.
+
+### D-388 — Database CI uses a different major version and leaves some DB proofs skippable
+
+**Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-031
+**Status:** `open`
+
+**Evidence:** `.github/workflows/backend-tests.yml` uses postgres:16; production metadata reports PostgreSQL 17.9. Nine API suites already require a CI DB and test_ci_runs_the_database_suites.py guards that work, but db_session/tenant-isolation and other skip-only fixtures need extension. This does not reopen D-285's repaired missing-database provisioning.
+
+**Acceptance:** Run migrated-schema checks on the supported production major and fail required CI when the remaining critical DB proofs cannot run; preserve existing guards and scratch schemas.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
