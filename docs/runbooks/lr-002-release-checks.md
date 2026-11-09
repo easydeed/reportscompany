@@ -12,6 +12,14 @@ Only the final **Release gate** is intended to become required. Its always condi
 
 Shared runtime/lockfiles, workspace packages, classifier code/tests and workflow changes select both suites. e2e changes select frontend typecheck/Jest; they do not run manual Playwright specs or claim LR-026 complete. See the effective path table in SOURCE_OF_TRUTH.md.
 
+All apps/web changes also select backend: cross-boundary backend tests read web source. Do not narrow this to templates without demonstrating coverage of every contract input.
+
+## Gate changes require explicit review
+
+A PR can edit the gate it is judged by: the workflow and classifier execute from its own merge tree. Required checks and zero native approvals do not prevent a PR from weakening its own checks. Any change to .github/workflows/** or scripts/release_gate.py must be called out as a gate change, and the independent reviewer's PASS must explicitly state that the gate logic was reviewed. Use the [release review checklist](release-review-checklist.md) before merge. A green check alone is not that review.
+
+Rapid consecutive main merges can cancel the older push run through cancel-in-progress. An older cancelled run is not proof of a product failure, and never substitutes for a passing exact-head PR check.
+
 ## Before enabling platform enforcement
 
 1. Obtain Claude's independent PASS for the exact head, plus green hosted results for the new workflow.

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.mark.parametrize("path,expected", [
     ("apps/api/poetry.lock", (True, False)),
     ("apps/worker/src/worker/tasks.py", (True, False)),
-    ("apps/web/app/page.tsx", (False, True)),
+    ("apps/web/app/page.tsx", (True, True)),
     ("apps/web/templates/social/story.html", (True, True)),
     ("tests/test_example.py", (True, False)),
     ("db/migrations/0064_example.sql", (True, False)),
@@ -48,6 +48,17 @@ def test_trigger_families(path, expected):
 def test_incomplete_comparison_and_mixed_changes():
     assert classify_paths(None) == {"backend": True, "frontend": True}
     assert classify_paths(["apps/api/a.py", "apps/web/a.ts"]) == classify_paths(None)
+
+
+@pytest.mark.parametrize("path", [
+    "apps/web/components/mobile-report/MobileReportViewer.tsx",
+    "apps/web/app/api/proxy/v1/reports/[id]/route.ts",
+    "apps/web/app/app/company/people/page.tsx",
+])
+def test_web_contract_inputs_require_backend_even_on_web_only_prs(path):
+    # API/root suites inspect these consumers. A web-only change must not
+    # defer discovering a broken contract until an unrelated backend PR.
+    assert classify_paths([path]) == {"backend": True, "frontend": True}
 
 
 @pytest.mark.parametrize("selected,results", itertools.product(

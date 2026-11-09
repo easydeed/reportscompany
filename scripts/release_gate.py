@@ -15,7 +15,8 @@ SHARED_FILES = {
 BACKEND_FILES = {"pytest.ini", ".python-version", "docker-compose.yml"}
 BACKEND_PREFIXES = (
     "apps/api/", "apps/worker/", "tests/", "db/", "scripts/", "tools/",
-    "libs/shared/", "apps/web/templates/", "docs/",
+    # Backend contract suites read web source, not only its HTML templates.
+    "libs/shared/", "apps/web/", "docs/",
 )
 FRONTEND_PREFIXES = ("apps/web/", "e2e/")
 FRONTEND_FILES = {"playwright.config.ts"}

@@ -172,7 +172,7 @@ Standalone Next.js preview apps for developing report layouts, schedule builders
 | Workflow | File | Triggers and effective selection |
 |---|---|---|
 | Release checks | `release-check.yml` | Every PR, push to main, merge group, or manual run; always emits Release gate. |
-| Backend tests | `backend-tests.yml` | Reusable/manual; selected by Release checks for `.github/workflows/**`, `.node-version`, `.npmrc`, `.nvmrc`, `.python-version`, `apps/api/**`, `apps/web/templates/**`, `apps/worker/**`, `db/**`, `docker-compose.yml`, `docs/**`, `libs/shared/**`, `package-lock.json`, `package.json`, `packages/**`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `pytest.ini`, `scripts/**`, `scripts/release_gate.py`, `tests/**`, `tests/test_release_gate.py`, `tools/**`. |
+| Backend tests | `backend-tests.yml` | Reusable/manual; selected by Release checks for `.github/workflows/**`, `.node-version`, `.npmrc`, `.nvmrc`, `.python-version`, `apps/api/**`, `apps/web/**`, `apps/worker/**`, `db/**`, `docker-compose.yml`, `docs/**`, `libs/shared/**`, `package-lock.json`, `package.json`, `packages/**`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `pytest.ini`, `scripts/**`, `scripts/release_gate.py`, `tests/**`, `tests/test_release_gate.py`, `tools/**`. |
 | Frontend tests | `frontend-tests.yml` | Reusable/manual; selected by Release checks for `.github/workflows/**`, `.node-version`, `.npmrc`, `.nvmrc`, `apps/web/**`, `e2e/**`, `package-lock.json`, `package.json`, `packages/**`, `playwright.config.ts`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `scripts/release_gate.py`, `tests/test_release_gate.py`. |
 | E2E tests | `e2e.yml` | **manual only** (workflow_dispatch); automatic isolated journeys remain LR-026. |
 
