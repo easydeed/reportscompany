@@ -58,8 +58,29 @@
   {
     "name": "LR-019: the viewer refuses a held report whose link the person may have",
     "file": "apps/api/src/api/routes/mobile_reports.py",
-    "old": "'pending', 'needs_review')",
-    "new": "'pending')",
+    "old": "'pending', 'needs_review', 'sending')",
+    "new": "'pending', 'sending')",
     "test": "apps/api/tests/test_held_consumer_report_stays_reachable.py"
+  },
+  {
+    "name": "Codex #274 re-review comes back: no claim is persisted before the provider call",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        SET status = %s\n        WHERE id = %s::uuid\n          AND status = 'processing'\n",
+    "new": "        SET status = status\n        WHERE id = %s::uuid\n          AND %s IS NOT NULL\n",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "Codex #274 re-review comes back: a run that finds an interrupted send sends again",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                if current_status == CONSUMER_SENDING:\n",
+    "new": "                if current_status == 'never':\n",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "Codex #274 re-review comes back: the handler marks an interrupted send failed",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "SET status = CASE WHEN status = %s THEN %s ELSE 'failed' END,",
+    "new": "SET status = CASE WHEN status = %s THEN 'failed' ELSE 'failed' END,",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
   }
 ]

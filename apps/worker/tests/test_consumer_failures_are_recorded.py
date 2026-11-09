@@ -200,11 +200,14 @@ def test_an_sms_timeout_is_held_for_review_and_never_sent_again(tasks, report, d
     assert any("CONSUMER_DELIVERY_NEEDS_REVIEW" in r.getMessage() and r.levelname == "CRITICAL"
                for r in caplog.records), "the operator alert line was not written"
 
-    # A redelivery (acks_late) or a re-enqueue of the same report.
-    tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
+    # A redelivery (acks_late) or a re-enqueue of the same report. It must stop
+    # at the top, before re-rendering or rewriting the report the person may
+    # already be reading, and before any send.
+    again = tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
     status2, error2, *_ = _row(db, rid)
     assert len(fake.calls) == 1, "a second run of the task sent the text again"
     assert status2 == "needs_review" and error2 == error, "the hold was erased"
+    assert again.get("note") == "held for operator review; not sent again", again
 
 
 def test_a_twilio_5xx_is_held_for_review(tasks, report, db, monkeypatch):
@@ -438,3 +441,151 @@ def test_send_sms_reports_a_lost_answer_as_unknown(monkeypatch):
     assert result["success"] is False and result["outcome_unknown"] is True
     from worker.tasks import sms_outcome
     assert sms_outcome(result) == "unknown"
+
+
+# ── a run that stops after the send started (Codex re-review of #274) ─────────
+#
+# The hold used to be written after the provider call, so anything that stopped
+# the run in between (the SMS log write failing, the hold write failing, the
+# worker dying) left the report `failed` or `processing`, and the next run sent
+# again. The send is now claimed (`sending`) before the call. These inject the
+# failures into the real database and run the task a second time.
+
+class WorkerDied(BaseException):
+    """Stands in for a worker process killed mid-task (not an Exception)."""
+
+
+def _refuse_writes(db, table, rid, when):
+    """A real database failure: a trigger that refuses one kind of write for this report."""
+    fn = f"lr019_refuse_{uuid.uuid4().hex[:8]}"
+    col = "consumer_report_id" if table == "sms_logs" else "id"
+    with psycopg.connect(db, autocommit=True) as conn:
+        conn.execute(f"CREATE FUNCTION {fn}() RETURNS trigger LANGUAGE plpgsql AS "
+                     f"$$ BEGIN RAISE EXCEPTION 'injected failure writing {table}'; END $$")
+        conn.execute(f"CREATE TRIGGER {fn} BEFORE INSERT OR UPDATE ON {table} FOR EACH ROW "
+                     f"WHEN (NEW.{col} = '{rid}'::uuid AND ({when})) EXECUTE FUNCTION {fn}()")
+
+    def drop():
+        with psycopg.connect(db, autocommit=True) as conn:
+            conn.execute(f"DROP TRIGGER IF EXISTS {fn} ON {table}")
+            conn.execute(f"DROP FUNCTION IF EXISTS {fn}()")
+    return drop
+
+
+def _run(tasks, rid):
+    try:
+        return tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
+    except WorkerDied:
+        return None
+
+
+def test_an_unknown_send_whose_sms_log_write_fails_is_still_held(tasks, report, db, monkeypatch):
+    fake = _twilio(monkeypatch, lambda n, to: (_ for _ in ()).throw(TimeoutError("lost")))
+    rid = report("sms")
+    drop = _refuse_writes(db, "sms_logs", rid, "TRUE")
+    try:
+        _run(tasks, rid)
+        status, error, *_ = _row(db, rid)
+        assert status == "needs_review", (status, error)
+    finally:
+        drop()
+    _run(tasks, rid)
+    assert len(fake.calls) == 1, "a later run sent the text again"
+    assert _row(db, rid)[0] == "needs_review"
+
+
+def test_a_sent_text_whose_sms_log_write_fails_stays_sent(tasks, report, db, monkeypatch):
+    fake = _twilio(monkeypatch, _sent)
+    rid = report("sms")
+    drop = _refuse_writes(db, "sms_logs", rid, "TRUE")
+    try:
+        _run(tasks, rid)
+    finally:
+        drop()
+    status, error, sms_at, _ = _row(db, rid)
+    assert status == "sent" and sms_at is not None, (status, error)
+    _run(tasks, rid)
+    assert len(fake.calls) == 1, "a later run sent the text again"
+
+
+def test_an_unknown_send_whose_hold_write_fails_is_not_sent_again(tasks, report, db, monkeypatch):
+    fake = _twilio(monkeypatch, lambda n, to: (_ for _ in ()).throw(TimeoutError("lost")))
+    rid = report("sms")
+    drop = _refuse_writes(db, "consumer_reports", rid, "NEW.status = 'needs_review'")
+    try:
+        _run(tasks, rid)
+        status, *_ = _row(db, rid)
+        assert status == "sending", f"the claim must survive a failed hold write, got {status}"
+    finally:
+        drop()
+    _run(tasks, rid)
+    status, error, *_ = _row(db, rid)
+    assert len(fake.calls) == 1, "a later run sent the text again"
+    assert status == "needs_review" and "stopped before its outcome was recorded" in error, error
+
+
+def test_a_worker_that_dies_mid_text_is_held_on_the_next_run(tasks, report, db, monkeypatch):
+    def accepted_then_died(n, to):
+        raise WorkerDied()
+    fake = _twilio(monkeypatch, accepted_then_died)
+    rid = report("sms")
+    _run(tasks, rid)
+    assert _row(db, rid)[0] == "sending"
+    _run(tasks, rid)                       # acks_late hands the task back
+    status, error, *_ = _row(db, rid)
+    assert len(fake.calls) == 1, "the redelivered task sent the text again"
+    assert status == "needs_review", (status, error)
+    assert "may have been delivered, so it was not sent again" in error
+    assert _credits(db, rid) == 10
+
+
+def test_a_worker_that_dies_mid_email_is_held_on_the_next_run(tasks, report, db, monkeypatch):
+    monkeypatch.setenv("RESEND_API_KEY", "re_test_not_a_real_key_123456")
+    calls = []
+
+    def died(*a, **k):
+        calls.append(1)
+        raise WorkerDied()
+    monkeypatch.setattr(tasks.httpx, "post", died)
+    rid = report("email")
+    _run(tasks, rid)
+    _run(tasks, rid)
+    status, *_ = _row(db, rid)
+    assert len(calls) == 1 and status == "needs_review", (calls, status)
+
+
+def test_a_run_that_finds_the_send_claimed_does_not_send(tasks, report, db, monkeypatch):
+    """Another run took the claim between this run's start and its send.
+
+    The claim is conditional, so this run stops without calling Twilio. (This
+    narrows LR-020's concurrent window; LR-020 still owns the atomic claim.)
+    """
+    fake = _twilio(monkeypatch, _sent)
+    rid = report("sms")
+    real_guard = tasks._consumer_already_delivered
+
+    def another_run_claims_first(cur, report_id):
+        with psycopg.connect(db, autocommit=True) as conn:
+            conn.execute("UPDATE consumer_reports SET status = 'sending' WHERE id = %s", (rid,))
+        return real_guard(cur, report_id)
+    monkeypatch.setattr(tasks, "_consumer_already_delivered", another_run_claims_first)
+    result = _run(tasks, rid)
+    assert fake.calls == [], "a run sent although another run held the send"
+    assert "another run holds this send" in result["note"]
+    assert _row(db, rid)[0] == "sending", "the other run's claim was disturbed"
+
+
+def test_a_sent_text_whose_status_write_fails_is_held_not_failed(tasks, report, db, monkeypatch):
+    """Twilio accepted it, then recording `sent` failed: the handler holds it."""
+    fake = _twilio(monkeypatch, _sent)
+    rid = report("sms")
+    drop = _refuse_writes(db, "consumer_reports", rid, "NEW.status = 'sent'")
+    try:
+        _run(tasks, rid)
+        status, error, *_ = _row(db, rid)
+        assert status == "needs_review", (status, error)
+        assert "after the send started" in error and "not sent again" in error
+    finally:
+        drop()
+    _run(tasks, rid)
+    assert len(fake.calls) == 1, "a later run sent the text again"

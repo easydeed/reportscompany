@@ -40,15 +40,19 @@ FROM consumer_reports
 WHERE status = 'failed' AND (error_message IS NULL OR error_message = '');
 
 -- 4. Reports held for review: a send whose outcome is unknown (a timeout or 5xx after
---    the provider may have accepted it). Never resent automatically; each needs a
---    person to check the provider's own log (Twilio / Resend) and decide.
+--    the provider may have accepted it, or a run that stopped after starting the send).
+--    Never resent automatically; each needs a person to check the provider's own log
+--    (Twilio / Resend) and decide. A 'sending' row older than an hour is the same case:
+--    its run stopped mid-send and no later run has picked it up yet.
 SELECT coalesce(delivery_method, 'sms') AS delivery_method,
-       count(*)                          AS needs_review,
+       status,
+       count(*)                          AS reports,
        min(created_at)                   AS oldest,
        max(created_at)                   AS newest
 FROM consumer_reports
 WHERE status = 'needs_review'
-GROUP BY 1
-ORDER BY 1;
+   OR (status = 'sending' AND created_at < now() - interval '1 hour')
+GROUP BY 1, 2
+ORDER BY 1, 2;
 
 ROLLBACK;

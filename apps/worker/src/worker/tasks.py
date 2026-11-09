@@ -2417,6 +2417,35 @@ def email_outcome(status_code, error) -> str:
 
 
 CONSUMER_NEEDS_REVIEW = "needs_review"
+# Written BEFORE the provider is called and replaced by the outcome after it.
+# A row still `sending` when a run starts, or when the outer handler runs, had
+# a send started whose outcome nobody recorded: that is an unknown outcome.
+CONSUMER_SENDING = "sending"
+
+
+def _claim_consumer_send(cur, report_id: str) -> bool:
+    """Persist "a send is in flight" before the irreversible call.
+
+    LR-019, Codex re-review of #274: the hold was written AFTER the send, so a
+    failed write in between (the SMS log, the hold itself) or a dead worker
+    left the row `failed`, and the next run sent again. With this committed
+    first (autocommit), every way the run can stop after the call leaves
+    `sending` or an outcome, and neither lets a later run send.
+
+    Conditional, so a second run that reaches here while the first holds the
+    claim does not send. That narrows LR-020's concurrent window; it is not
+    LR-020's atomic claim and does not close D-069.
+    """
+    cur.execute("""
+        UPDATE consumer_reports
+        SET status = %s
+        WHERE id = %s::uuid
+          AND status = 'processing'
+          AND consumer_sms_sent_at IS NULL
+          AND consumer_email_sent_at IS NULL
+        RETURNING id
+    """, (CONSUMER_SENDING, report_id))
+    return cur.fetchone() is not None
 
 
 def _hold_consumer_delivery_for_review(cur, report_id: str, channel: str, reason: str) -> str:
@@ -2554,6 +2583,19 @@ def process_consumer_report(self, report_id: str):
                 # for an operator. A redelivery (`acks_late`) or a re-enqueue
                 # must stop here: the status line below would erase the hold,
                 # and the send below could text the person a second time.
+                if current_status == CONSUMER_SENDING:
+                    # A previous run claimed the send and stopped before
+                    # recording what happened: the worker died, or a write
+                    # after the provider call failed and so did the handler's.
+                    _hold_consumer_delivery_for_review(
+                        cur, report_id,
+                        "text" if delivery_method == "sms" else "email",
+                        "a previous attempt started the send and stopped before "
+                        "its outcome was recorded",
+                    )
+                    return {"ok": False, "report_id": report_id,
+                            "needs_review": True,
+                            "note": "interrupted send held for review; not sent again"}
                 if current_status == CONSUMER_NEEDS_REVIEW:
                     logger.critical(
                         "CONSUMER_DELIVERY_NEEDS_REVIEW report=%s: task ran again "
@@ -2571,8 +2613,9 @@ def process_consumer_report(self, report_id: str):
                 
                 # Update status to processing
                 cur.execute("""
-                    UPDATE consumer_reports SET status = 'processing' WHERE id = %s::uuid
-                """, (report_id,))
+                    UPDATE consumer_reports SET status = 'processing'
+                    WHERE id = %s::uuid AND status NOT IN (%s, %s)
+                """, (report_id, CONSUMER_SENDING, CONSUMER_NEEDS_REVIEW))
                 
                 # Use existing property_data or build basic one
                 if existing_property_data and isinstance(existing_property_data, dict):
@@ -2924,54 +2967,30 @@ def process_consumer_report(self, report_id: str):
                 held_for_review = False
 
                 if delivery_method == "sms" and consumer_phone:
+                    if not _claim_consumer_send(cur, report_id):
+                        return {"ok": False, "report_id": report_id,
+                                "note": "another run holds this send; not sent"}
                     sms_result = send_report_sms(
                         to_phone=consumer_phone,
                         report_url=report_url,
                         agent_name=agent_name,
                         property_address=full_address
                     )
-                    
-                    sms_message = sms_result.get('message_body', f"Report link sent to {consumer_phone}")
                     sms_state = sms_outcome(sms_result)
-                    cur.execute("""
-                        INSERT INTO sms_logs (
-                            account_id, consumer_report_id, to_phone, from_phone,
-                            message, message_body, recipient_type, twilio_sid, 
-                            status, error_message, direction
-                        ) VALUES (
-                            %s::uuid, %s::uuid, %s, %s,
-                            %s, %s, 'consumer', %s, 
-                            %s, %s, 'outbound'
-                        )
-                    """, (
-                        account_id, report_id, consumer_phone, 
-                        os.environ.get("TWILIO_PHONE_NUMBER", ""),
-                        sms_message,
-                        sms_message,
-                        sms_result.get('message_sid'),
-                        # An unknown outcome is not a failure. sms_logs' CHECK
-                        # (0035) allows sent/delivered/failed/pending, so it is
-                        # logged `pending`: not settled. consumer_reports holds
-                        # the hold (`needs_review`); a new log state is LR-020's.
-                        {SEND_SENT: 'sent', SEND_UNKNOWN: 'pending'}.get(sms_state, 'failed'),
-                        sms_result.get('error')
-                    ))
-                    
+
+                    # LR-019: the outcome goes on the report FIRST, because it
+                    # is what stops a second send. The SMS log and the credit
+                    # come after it, and a failure in either can no longer
+                    # leave the report looking unsent.
                     if sms_state == SEND_SENT:
                         cur.execute("""
-                            UPDATE consumer_reports 
+                            UPDATE consumer_reports
                             SET status = 'sent',
                                 consumer_sms_sent_at = NOW(),
                                 consumer_sms_sid = %s,
                                 error_message = NULL
                             WHERE id = %s::uuid
                         """, (sms_result.get('message_sid'), report_id))
-                        # Decrement SMS credits for consumer delivery only
-                        cur.execute("""
-                            UPDATE accounts 
-                            SET sms_credits = GREATEST(sms_credits - 1, 0)
-                            WHERE id = %s::uuid
-                        """, (account_id,))
                         delivered = True
                     elif sms_state == SEND_UNKNOWN:
                         # Codex review of #274: a timeout after Twilio accepted
@@ -2995,6 +3014,39 @@ def process_consumer_report(self, report_id: str):
                             "the SMS provider did not accept the message: "
                             f"{sms_result.get('error') or 'no reason given'}",
                         )
+
+                    sms_message = sms_result.get('message_body', f"Report link sent to {consumer_phone}")
+                    cur.execute("""
+                        INSERT INTO sms_logs (
+                            account_id, consumer_report_id, to_phone, from_phone,
+                            message, message_body, recipient_type, twilio_sid,
+                            status, error_message, direction
+                        ) VALUES (
+                            %s::uuid, %s::uuid, %s, %s,
+                            %s, %s, 'consumer', %s,
+                            %s, %s, 'outbound'
+                        )
+                    """, (
+                        account_id, report_id, consumer_phone,
+                        os.environ.get("TWILIO_PHONE_NUMBER", ""),
+                        sms_message,
+                        sms_message,
+                        sms_result.get('message_sid'),
+                        # An unknown outcome is not a failure. sms_logs' CHECK
+                        # (0035) allows sent/delivered/failed/pending, so it is
+                        # logged `pending`: not settled. consumer_reports holds
+                        # the hold (`needs_review`); a new log state is LR-020's.
+                        {SEND_SENT: 'sent', SEND_UNKNOWN: 'pending'}.get(sms_state, 'failed'),
+                        sms_result.get('error')
+                    ))
+
+                    if delivered:
+                        # Decrement SMS credits for consumer delivery only
+                        cur.execute("""
+                            UPDATE accounts
+                            SET sms_credits = GREATEST(sms_credits - 1, 0)
+                            WHERE id = %s::uuid
+                        """, (account_id,))
 
                 elif delivery_method == "email" and consumer_email:
                     logger.info(f"Email delivery via Resend to {consumer_email} (report URL: {report_url})")
@@ -3042,6 +3094,9 @@ def process_consumer_report(self, report_id: str):
                             postal_address=_branding.get("postal_address"),
                         )
 
+                        if not _claim_consumer_send(cur, report_id):
+                            return {"ok": False, "report_id": report_id,
+                                    "note": "another run holds this send; not sent"}
                         # LR-019: bound before the call. A timeout raised before
                         # `resp` was assigned, and the failure branch's
                         # `getattr(resp, ...)` then raised NameError.
@@ -3224,16 +3279,33 @@ def process_consumer_report(self, report_id: str):
                     # Not over a report already sent or held for review: an
                     # exception after the send (the agent text, a later write)
                     # does not undo the send, and `failed` would invite one.
+                    # A report still `sending` had a send started and no
+                    # outcome recorded (Codex re-review of #274: the SMS log
+                    # or the hold write failed after the call), so it is held,
+                    # not failed.
+                    what = f"unexpected error while processing the report ({type(e).__name__}): {e}"
+                    held_text = consumer_failure_text(
+                        f"{what}; it happened after the send started, so the report "
+                        "may have been delivered and was not sent again. Needs operator review."
+                    )
                     cur.execute("""
                         UPDATE consumer_reports
-                        SET status = 'failed', error_message = %s
+                        SET status = CASE WHEN status = %s THEN %s ELSE 'failed' END,
+                            error_message = CASE WHEN status = %s THEN %s ELSE %s END
                         WHERE id = %s::uuid
                           AND status IS DISTINCT FROM %s
                           AND consumer_sms_sent_at IS NULL
                           AND consumer_email_sent_at IS NULL
-                    """, (consumer_failure_text(
-                        f"unexpected error while processing the report ({type(e).__name__}): {e}"
-                    ), report_id, CONSUMER_NEEDS_REVIEW))
+                        RETURNING status
+                    """, (CONSUMER_SENDING, CONSUMER_NEEDS_REVIEW,
+                          CONSUMER_SENDING, held_text, consumer_failure_text(what),
+                          report_id, CONSUMER_NEEDS_REVIEW))
+                    row = cur.fetchone()
+                    if row and row[0] == CONSUMER_NEEDS_REVIEW:
+                        logger.critical(
+                            "CONSUMER_DELIVERY_NEEDS_REVIEW report=%s: %s",
+                            report_id, held_text,
+                        )
         except Exception:
             logger.exception("CONSUMER REPORT %s: could not record the failure", report_id)
 
