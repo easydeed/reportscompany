@@ -16271,6 +16271,8 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 
 **Acceptance:** Use valid recorded close prices and explicit closed/sold status for sale figures across both paths. Stored close_price/list_price allow correct rerenders without a migration. Run the read-only affected-row count before historical action.
 
+**Historical consumer-send decision — CLOSED (Jerry, November 9, 2026):** The read-only production count identified 7 sent consumer reports (105 affected comparables), dated March 10–April 13, 2026. Jerry confirmed all 7 were test sends. No corrected reports go out; do not rerender or resend them. This closes the historical consumer-send question only; LR-018 implementation/review and the provisional agent-report inventory remain separate.
+
 ### D-378 — Consumer failure handling uses an error column the table does not have
 
 **Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-019
