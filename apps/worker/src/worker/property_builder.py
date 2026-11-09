@@ -733,6 +733,26 @@ def _known(value):
     return None if value is None or value == "" or value == ABSENT else value
 
 
+def _unpriced_sale(comp: Any) -> bool:
+    """A closed/sold comp with no recorded sale price (LR-018 / D-377).
+
+    The worker/API shape carries `close_price`, which is authoritative for a
+    sale; the wizard shape carries only `sale_price` (or `price`).
+    """
+    if not isinstance(comp, dict):
+        return False
+    if str(comp.get("status") or "").strip().lower() not in ("closed", "sold"):
+        return False
+    if "close_price" in comp:
+        value = comp.get("close_price")
+    else:
+        value = comp.get("sale_price") or comp.get("price") or comp.get("sold_price")
+    try:
+        return not float(value) > 0
+    except (TypeError, ValueError):
+        return True
+
+
 class PropertyReportBuilder:
     """
     Builds HTML property reports.
@@ -792,6 +812,16 @@ class PropertyReportBuilder:
     """
     
     def __init__(self, report_data: Dict[str, Any]):
+        # LR-018: a sale with no recorded sale price is not a comparable. It is
+        # dropped HERE, once, so every reader sees the same set: the comps
+        # page, the range, the stats behind the cover overview, the window and
+        # the radius (Codex review of #277: dropping it only from the comps
+        # list left it setting days on market, window and radius). The
+        # caller's dict is not modified.
+        comps = report_data.get("comparables")
+        if isinstance(comps, list):
+            report_data = {**report_data,
+                           "comparables": [c for c in comps if not _unpriced_sale(c)]}
         self.report_data = report_data
         self.report_type = report_data.get("report_type", "seller")
         self.accent_color = report_data.get("accent_color")

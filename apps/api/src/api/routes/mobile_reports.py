@@ -179,7 +179,9 @@ async def get_report_data(
     # an estimate the owner decided against; the second disagreed with the PDF
     # on window, radius and median. Both are recomputed from the stored comps
     # by the PDF's rules, which also corrects every report already sent.
-    summary = summarize_comps([c for c in comparables if isinstance(c, dict)])
+    # LR-018: the list and the summary are built from the same usable comps.
+    comparables = comp_summary.usable([c for c in comparables if isinstance(c, dict)])
+    summary = summarize_comps(comparables)
     
     # Build property data with fallbacks
     prop = PropertyData(

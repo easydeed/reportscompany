@@ -74,6 +74,14 @@ def _price(c: Dict[str, Any]) -> Optional[float]:
     return None
 
 
+def usable(comps: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The comps a report may show: every comp EXCEPT a sale with no recorded
+    sale price (LR-018). Every statistic and every list is computed from this
+    one set, so the window, radius and days on market describe the same homes
+    as the range (Codex review of #277: an excluded comp still set them)."""
+    return [c for c in comps if not (_closed(c) and _price(c) is None)]
+
+
 def closed_prices(comps: Iterable[Dict[str, Any]]) -> List[float]:
     return sorted(p for p in (_price(c) for c in comps if _closed(c)) if p is not None)
 
@@ -108,6 +116,7 @@ def radius_miles(comps: Iterable[Dict[str, Any]]) -> Optional[float]:
 
 
 def summarize(comps: List[Dict[str, Any]], today: Optional[date] = None) -> Dict[str, Any]:
+    comps = usable(comps)
     prices = closed_prices(comps)
     ppsf = sorted(
         p / s for p, s in ((_price(c), _number(c.get("sqft"))) for c in comps if _closed(c))

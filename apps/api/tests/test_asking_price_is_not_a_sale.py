@@ -170,3 +170,29 @@ def test_the_r_page_does_not_show_a_stored_asking_price_as_sold():
             conn.execute("DELETE FROM consumer_reports WHERE id = %s", (rid,))
             conn.execute("DELETE FROM users WHERE id = %s", (agent,))
             conn.execute("DELETE FROM accounts WHERE id = %s", (acc,))
+
+
+# ── Codex review of #277: the list and every statistic describe the same homes ──
+
+#: Two recorded sales and one excluded comp that is far away, old and slow:
+#: if it leaks into any statistic, that statistic moves a long way.
+AGREE = [
+    {"status": "Closed", "close_price": 610000, "price": 610000, "list_price": 620000,
+     "sqft": 1000, "close_date": _ago(40), "distance_miles": 0.4, "days_on_market": 10},
+    {"status": "Closed", "close_price": 640000, "price": 640000, "list_price": 650000,
+     "sqft": 1000, "close_date": _ago(60), "distance_miles": 0.5, "days_on_market": 20},
+    {"status": "Closed", "close_price": None, "price": 950000, "list_price": 950000,
+     "sqft": 1000, "close_date": _ago(2400), "distance_miles": 40.0, "days_on_market": 500},
+]
+
+
+def test_every_r_statistic_is_computed_from_the_comps_it_shows():
+    from api.services.comp_summary import summarize, usable
+    shown = usable(AGREE)
+    assert len(shown) == 2
+    s = summarize(AGREE)
+    assert s["homes_sold"] == s["range"]["count"] == len(shown) == 2
+    assert s["avg_days_on_market"] == 15, f"an excluded comp set days on market: {s}"
+    assert s["window_months"] == 6, f"an excluded comp set the window: {s}"
+    assert s["radius_miles"] == 0.5, f"an excluded comp set the radius: {s}"
+    assert summarize(AGREE) == summarize(shown), "the summary is not the summary of the shown comps"

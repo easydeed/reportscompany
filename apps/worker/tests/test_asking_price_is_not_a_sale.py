@@ -192,3 +192,30 @@ def test_an_active_comp_still_shows_its_list_price():
                          "sqft": 1000, "list_date": _ago(5), "address": "A1 St"}])
     assert [c["sale_price"] for c in ctx["comparables"]] == [899000]
     assert builder._v2_closed_prices(ctx["comparables"]) == []
+
+
+# ── Codex review of #277: the comps page and every statistic describe the same homes ──
+
+def test_every_pdf_statistic_is_computed_from_the_comps_it_shows():
+    agree = [
+        {"status": "Closed", "close_price": 610000, "price": 610000, "list_price": 620000,
+         "sqft": 1000, "close_date": _ago(40), "distance_miles": 0.4, "days_on_market": 10,
+         "address": "A1 St"},
+        {"status": "Closed", "close_price": 640000, "price": 640000, "list_price": 650000,
+         "sqft": 1000, "close_date": _ago(60), "distance_miles": 0.5, "days_on_market": 20,
+         "address": "A2 St"},
+        {"status": "Closed", "close_price": None, "price": 950000, "list_price": 950000,
+         "sqft": 1000, "close_date": _ago(2400), "distance_miles": 40.0, "days_on_market": 500,
+         "address": "Far Asking St"},
+    ]
+    builder, ctx = _v2(agree)
+    shown = [c["address"] for c in ctx["comparables"]]
+    assert shown == ["A1 St", "A2 St"] or sorted(shown) == ["A1 St", "A2 St"], shown
+    stats = ctx["stats"]
+    assert stats["total_comps"] == 2, stats
+    assert stats["max_distance"] == 0.5, f"an excluded comp set the radius: {stats['max_distance']}"
+    assert stats["avg_days_on_market"] == 15, f"an excluded comp set days on market: {stats}"
+    window = builder._window_months(builder.report_data["comparables"])
+    assert window == 6, f"an excluded comp set the window: {window} months"
+    assert agree[2]["address"] == "Far Asking St", "the caller's comps were modified"
+    assert len(agree) == 3

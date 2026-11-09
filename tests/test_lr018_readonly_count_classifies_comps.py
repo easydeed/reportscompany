@@ -3,14 +3,16 @@
 `scripts/readonly/lr018_asking_price_reports.sql` is what the operator runs
 against production before any decision about historical reports. Jerry's
 decision is to count first and change nothing. So the count has to be right:
-- an asking price shown as a sale is found in both stored shapes;
+- an asking price shown as a sale is DEFINITE only where the stored row can
+  prove it (the consumer shape, which keeps `close_price`);
+- in the agent shape a sale at the asking price is only POSSIBLE, with or
+  without a sold date: a genuine sale at asking has exactly that shape (Codex
+  review of #277);
+- a comp with no status, no list price to compare against, or only a legacy
+  `sold_price` is UNKNOWN, never silently clean;
 - a real recorded sale is not counted;
-- the agent shape's genuine ambiguity is reported as `possible`, not folded
-  into `definite`;
+- query 1 is by verdict (overlapping); query 2 counts each report once;
 - the script stays read-only and selects no contact details.
-
-This seeds one report per table with a comp of every kind, runs the script's
-own statements, and checks the verdicts.
 """
 import json
 import os
@@ -31,6 +33,21 @@ def _statements():
     return [p for p in parts if p.upper() not in ("BEGIN TRANSACTION READ ONLY", "ROLLBACK")]
 
 
+def _narrowed(stmt):
+    """The statement restricted to the seeded reports, so other rows do not count."""
+    out = (stmt.replace("FROM consumer_reports r,",
+                        "FROM (SELECT * FROM consumer_reports WHERE id = ANY(%(ids)s::uuid[])) r,")
+               .replace("FROM property_reports r,",
+                        "FROM (SELECT * FROM property_reports WHERE id = ANY(%(ids)s::uuid[])) r,"))
+    assert out.count("%(ids)s") == 2, "the script's table sources changed shape; update this test"
+    return out
+
+
+def _ago(days):
+    from datetime import date, timedelta
+    return (date.today() - timedelta(days=days)).isoformat()
+
+
 @pytest.fixture
 def seeded():
     if not DB_URL:
@@ -38,61 +55,95 @@ def seeded():
             pytest.fail("DATABASE_URL is not set in CI; this test must not skip there")
         pytest.skip("Set DATABASE_URL")
     tag = uuid.uuid4().hex[:8]
-    acc, user, cr, pr = (str(uuid.uuid4()) for _ in range(4))
-    consumer_comps = [
-        # asking price shown as a sale: no close price, counted as closed
-        {"status": "Closed", "price": 950000, "list_price": 950000, "close_price": None},
-        # a recorded sale
-        {"status": "Closed", "price": 610000, "list_price": 625000, "close_price": 610000},
-        # an active listing: never counted as a sale
-        {"status": "Active", "price": 700000, "list_price": 700000, "close_price": None},
-    ]
-    agent_comps = [
-        # collapsed to list price, no sold date: definite
-        {"status": "Closed", "sale_price": 880000, "list_price": 880000, "sold_date": ""},
-        # equal to list price but with a sold date: a sale at asking, or not: possible
-        {"status": "Closed", "sale_price": 640000, "list_price": 640000, "sold_date": "2026-09-01"},
-        # sold below asking: a recorded sale
-        {"status": "Sold", "sale_price": 590000, "list_price": 615000, "sold_date": "2026-08-12"},
-    ]
+    acc, user = str(uuid.uuid4()), str(uuid.uuid4())
+    ids = {k: str(uuid.uuid4()) for k in ("cr_affected", "cr_clean", "pr_mixed", "pr_unknown")}
+    consumer = {
+        "cr_affected": [
+            {"status": "Closed", "price": 950000, "list_price": 950000, "close_price": None},   # definite
+            {"status": "Closed", "price": 610000, "list_price": 625000, "close_price": 610000}, # recorded
+            {"status": "Active", "price": 700000, "list_price": 700000, "close_price": None},   # not a sale
+        ],
+        "cr_clean": [
+            {"status": "Closed", "price": 640000, "list_price": 650000, "close_price": 640000},
+        ],
+    }
+    agent = {
+        "pr_mixed": [
+            # equal to asking, no sold date: still only possible
+            {"status": "Closed", "sale_price": 880000, "list_price": 880000, "sold_date": ""},
+            # equal to asking, with a sold date: possible
+            {"status": "Closed", "sale_price": 640000, "list_price": 640000, "sold_date": _ago(30)},
+            # sold below asking: recorded
+            {"status": "Sold", "sale_price": 590000, "list_price": 615000, "sold_date": _ago(40)},
+            # no status: unknown
+            {"sale_price": 700000, "list_price": 700000},
+            # only a legacy sold_price: unknown
+            {"status": "Closed", "sold_price": 655000},
+            # a sale with nothing to compare against: unknown
+            {"status": "Closed", "sale_price": 600000, "sold_date": _ago(20)},
+        ],
+        "pr_unknown": [
+            {"sale_price": 720000, "list_price": 730000},
+        ],
+    }
     with psycopg.connect(DB_URL, autocommit=True) as conn:
         conn.execute("INSERT INTO accounts (id, name, slug, account_type, plan_slug) "
                      "VALUES (%s, 'LR-018 Count', %s, 'REGULAR', 'free')", (acc, f"lr018-{tag}"))
         conn.execute("INSERT INTO users (id, account_id, email, first_name, last_name) "
                      "VALUES (%s, %s, %s, 'Dana', 'Ortiz')", (user, acc, f"lr018-{tag}@example.com"))
-        conn.execute("INSERT INTO consumer_reports (id, agent_id, agent_code, consumer_phone, "
-                     "property_address, comparables, status) VALUES (%s, %s, 'L18', '6265550123', "
-                     "'1 Count St', %s, 'sent')", (cr, user, json.dumps(consumer_comps)))
-        conn.execute("INSERT INTO property_reports (id, account_id, report_type, property_address, "
-                     "property_city, property_state, property_zip, comparables, status) VALUES "
-                     "(%s, %s, 'seller', '2 Count St', 'La Verne', 'CA', '91750', %s, 'complete')",
-                     (pr, acc, json.dumps(agent_comps)))
-    yield {"consumer": cr, "agent": pr}
+        for key, comps in consumer.items():
+            conn.execute("INSERT INTO consumer_reports (id, agent_id, agent_code, consumer_phone, "
+                         "property_address, comparables, status) VALUES (%s, %s, 'L18', '6265550123', "
+                         "'1 Count St', %s, 'sent')", (ids[key], user, json.dumps(comps)))
+        for key, comps in agent.items():
+            conn.execute("INSERT INTO property_reports (id, account_id, report_type, property_address, "
+                         "property_city, property_state, property_zip, comparables, status) VALUES "
+                         "(%s, %s, 'seller', '2 Count St', 'La Verne', 'CA', '91750', %s, 'complete')",
+                         (ids[key], acc, json.dumps(comps)))
+    yield ids
     with psycopg.connect(DB_URL, autocommit=True) as conn:
-        conn.execute("DELETE FROM property_reports WHERE id = %s", (pr,))
-        conn.execute("DELETE FROM consumer_reports WHERE id = %s", (cr,))
+        for key in ("pr_mixed", "pr_unknown"):
+            conn.execute("DELETE FROM property_reports WHERE id = %s", (ids[key],))
+        for key in ("cr_affected", "cr_clean"):
+            conn.execute("DELETE FROM consumer_reports WHERE id = %s", (ids[key],))
         conn.execute("DELETE FROM users WHERE id = %s", (user,))
         conn.execute("DELETE FROM accounts WHERE id = %s", (acc,))
 
 
-def _run_first_query_for(conn, ids):
-    """The first SELECT, narrowed to the seeded reports so other rows do not count."""
-    first = _statements()[0]
-    narrowed = first.replace("FROM judged\nWHERE verdict IN ('definite', 'possible')",
-                             "FROM judged\nWHERE verdict IN ('definite', 'possible') AND id = ANY(%s::uuid[])")
-    assert narrowed != first, "the script's first query changed shape; update this test"
-    return conn.execute(narrowed, (ids,)).fetchall()
-
-
-def test_the_count_finds_asking_prices_in_both_shapes(seeded):
+def test_query_one_gives_every_comp_its_verdict(seeded):
     with psycopg.connect(DB_URL) as conn:
-        rows = _run_first_query_for(conn, [seeded["consumer"], seeded["agent"]])
-    got = {(source, verdict): (reports, comps) for source, _status, verdict, reports, comps, *_ in rows}
+        rows = conn.execute(_narrowed(_statements()[0]), {"ids": list(seeded.values())}).fetchall()
+    got = {(source, verdict): (reports, comps, undated)
+           for source, _status, verdict, reports, comps, undated, *_ in rows}
     assert got == {
-        ("consumer_reports", "definite"): (1, 1),   # the $950,000 asking price only
-        ("property_reports", "definite"): (1, 1),   # collapsed to list, no sold date
-        ("property_reports", "possible"): (1, 1),   # equal to list, with a sold date
+        ("consumer_reports", "definite"): (1, 1, 1),
+        ("property_reports", "possible"): (1, 2, 1),          # with and without a sold date
+        ("property_reports", "unknown: no status"): (2, 2, 2),
+        ("property_reports", "unknown: legacy sold_price"): (1, 1, 1),
+        ("property_reports", "unknown: no list price"): (1, 1, 0),
     }, got
+
+
+def test_query_two_counts_each_report_once_under_its_worst_verdict(seeded):
+    with psycopg.connect(DB_URL) as conn:
+        rows = conn.execute(_narrowed(_statements()[1]), {"ids": list(seeded.values())}).fetchall()
+    got = {(source, worst): reports for source, _status, worst, reports in rows}
+    assert got == {
+        ("consumer_reports", "definite"): 1,
+        ("consumer_reports", "clean"): 1,
+        ("property_reports", "possible"): 1,
+        ("property_reports", "unknown"): 1,
+    }, got
+    assert sum(got.values()) == len(seeded), "a report was counted twice or not at all"
+
+
+def test_the_two_copies_of_the_classification_are_identical():
+    """A read-only transaction cannot create a view, so the CTE is repeated."""
+    def block(stmt):
+        return stmt[:stmt.index("SELECT source, report_status") if "worst AS" not in stmt
+                    else stmt.index("worst AS")].strip().rstrip(",")
+    first, second = _statements()[0], _statements()[1]
+    assert block(first) == block(second)
 
 
 def test_every_statement_runs_and_the_script_is_read_only():
