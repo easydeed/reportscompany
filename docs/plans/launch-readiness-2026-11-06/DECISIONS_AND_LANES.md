@@ -30,6 +30,9 @@ The review verdict is **AMEND, then start**. All findings hold. The amendments i
 
 ## Decisions still needed for the affected ticket
 
+- November 9 scope decision: defer LR-032–LR-051's broader backlog until after the pilot. Bring forward only D-188/D-106/D-168 numeric repairs (Claude after LR-018) and D-014/D-274 read-only production hierarchy/RLS verification (Codex). No full additional backlog budget is approved. New confirmed isolation or wrong-number defects still trigger the pilot stop rule.
+- D-332 code ownership: Claude LR-023 owns schedules_tick.py changes; Codex LR-015 supplies the allowance function. Whether manual-market usage may stop scheduled sends is a separate open decision; do not infer it from the approved over-schedule-capacity grandfather rule.
+- GitHub native required approval needs a separate reviewer identity: both agent lanes currently open PRs as easydeed. Prepare the always-running gate, but do not misrepresent same-account comments as distinct-identity GitHub approval or enable an unusable requirement without resolving access.
 - Paused subscription access and any unaddressed Stripe states require an explicit policy before LR-013 closes. Cancellation follows the approved effective-period rules; do not infer immediate Free from a missing period field.
 - Define how the 20-per-visitor budget identifies visitors, handles shared networks, and behaves during limiter outage. The amount is approved; trusted attribution and abuse resistance still need design and review.
 - Pilot/launch peak volume, latency ceilings, provider cost/margin targets, and operator alert destination/access must be documented for LR-027/LR-029. Recovery targets and cohort are already approved.

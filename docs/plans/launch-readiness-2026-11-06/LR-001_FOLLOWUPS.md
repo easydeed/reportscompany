@@ -1,6 +1,6 @@
 # LR-001 proposed historical-backlog follow-ups
 
-Status: planning proposal for Claude/Jerry review, not an approved implementation expansion. Owner: Codex. These groups consolidate the individual evidence rows; referenced D entries remain authoritative. They are repair/discovery budgets, not a claim that every source concern is live in production. Product decisions and evidence can remove or narrow work. Shared groups are charged once.
+Status: deferred until after the pilot by Jerry, November 9. Owner: Codex. These groups remain an inventory, not an approved implementation expansion. Exceptions approved for the pilot are D-188/D-106/D-168 numeric repairs (Claude after LR-018) and the D-014/D-274 read-only production hierarchy/RLS check (Codex). Any newly confirmed cross-account exposure or wrong number follows the pilot stop rule. Original LR-001–LR-031 work remains in its reviewed lanes.
 
 ## Provisional estimate
 
@@ -179,4 +179,4 @@ Each group needs a concrete file list, sequential atomic branch/PR slices, accep
 
 D-036/D-096/D-339/D-347 remain within LR-027/LR-029/LR-006/LR-016. D-330 and the unified portion of D-329 remain LR-024; property refusal UX is LR-038. D-332 is LR-015/LR-023 and must match the existing-schedules policy. D-343's PDF/expiry promises must be explicitly included in LR-025. D-191 has fresh hosted-CI baseline evidence in the reconciliation; mandatory checks remain LR-002.
 
-The 21 superseded-source candidates are reviewed individually before status changes; output proof stays in LR-030. D-122's inaccessible-photo residual is included in LR-042. D-286 has a proposed repeatability proof in LR-049. D-047's original pricing promise is gone; any new AI-tier feature is an unapproved product change. No candidate is closed automatically by this document.
+After Claude's corrections there are 15 superseded-source candidates and three partial rows. D-047 remains current: its paid-tier AI promise survives on the billing page. D-188 is a current numeric pilot blocker; D-267 is a current AuthFrame inconsistency deferred beyond the pilot. D-097's legacy-print path, D-122's inaccessible avatar and D-123's empty map/street frames are explicit residuals. D-286 still needs loaded repeatability proof. No candidate is closed automatically by this document.

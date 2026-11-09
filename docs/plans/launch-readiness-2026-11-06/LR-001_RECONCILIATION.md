@@ -1,6 +1,6 @@
 # LR-001 baseline and backlog reconciliation
 
-Status: review required. Owner: Codex. Reviewer: Claude Code. Branch: `fix/lr-001-launch-baseline`, cut from merged PR #272 at `fd859a28fc7e723bd42f7e58adef9a225b565a84`.
+Status: Claude's six conditional-PASS corrections applied; checks required before merge. Owner: Codex. Reviewer: Claude Code. Branch: `fix/lr-001-launch-baseline`, cut from merged PR #272 at `fd859a28fc7e723bd42f7e58adef9a225b565a84`.
 
 ## What this establishes
 
@@ -8,8 +8,9 @@ All 131 entries that were open or recorded on the frozen board have individual e
 
 | Classification | Entries | Meaning |
 | --- | ---: | --- |
-| Current source | 83 | Mechanism exists; production impact is not automatically established. |
-| Superseded source | 21 | Specific historical implementation replaced; review and remaining output proof still required. |
+| Current source | 86 | Mechanism exists; production impact is not automatically established. |
+| Superseded source | 15 | Specific historical implementation replaced; remaining output proof still required. |
+| Partial | 3 | A repaired path coexists with an explicitly named residual; no whole-entry closure. |
 | Unverified | 11 | Named missing observation or reproduction, not presumed fixed. |
 | Decision | 16 | Product, policy or data-contract decision needed before implementation. |
 | Total | 131 | Exact frozen open/recorded set, with no omission or duplication. |
@@ -46,6 +47,8 @@ Derived totals: 388 entries; fixed 213, open 75, closed-not-live 12, duplicate 1
 
 ## Review gate and remaining work
 
-This is a reconciliation candidate, not full LR-001 acceptance. Before closing LR-001, Claude must review the mappings/closure candidates and agree which uncovered current defects block launch. The [consolidated follow-up proposal](LR-001_FOLLOWUPS.md) supplies 20 additional repair/discovery groups, dependencies and acceptance boundaries: 181–287 provisional hours beyond the original 164–282, or 345–569 combined before reserve. This is not an approved scope expansion. The original working forecast remains 220–270 hours for the amended 31-ticket program only; it is not an all-backlog quote. Product decisions, reproduction and scope review must narrow or approve the additional work before execution.
+Claude's [review](https://github.com/easydeed/reportscompany/pull/273#issuecomment-6700802523) conditionally passes after six corrections. D-047, D-188 and D-267 are now current-source; D-097, D-122 and D-123 are partial with residuals. Totals are rederived from the 131 rows. Canonical board statuses are unchanged; no historical issue is closed by this amendment.
 
-Remaining reproduction includes deployed RLS role/policies, failed worker-child recovery, vendor date boundaries, stale image output, consent/retention decisions and actual customer journeys. No production test lead, message or checkout was created to supply this evidence. Until that work is agreed, LR-001 stays in review and LR-002/LR-031 implementation does not begin.
+Jerry approved postponing the broader backlog until after the pilot on November 9. The [consolidated follow-up proposal](LR-001_FOLLOWUPS.md) is retained as a deferred inventory, not authorization for its 181–287 hours. Only numeric pilot blockers D-188/D-106/D-168 and the read-only hierarchy/RLS check D-014/D-274 are brought forward from it. Claude owns numeric repairs after LR-018; Codex owns the read-only policy/role check and reports whether a repair is needed. The supplement already records inspection-role/policy metadata; actual deployed application-role identity still needs verification. A new confirmed isolation or wrong-number defect must be escalated under the pilot stop rule rather than silently deferred.
+
+LR-001 acceptance is the reconciled evidence/ownership baseline, not fixing every deferred entry. Its conditional review is satisfied when the six rows and derived totals pass checks. Release controls LR-002 and DB parity LR-031 follow its merge. Worker-child, preview and other broader follow-ups remain deferred; original program dependencies, legal consent and actual pilot acceptance remain in force. No production test lead, message or checkout was created for reconciliation.
