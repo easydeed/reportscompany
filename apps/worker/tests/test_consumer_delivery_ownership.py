@@ -62,7 +62,9 @@ def r2(tasks, monkeypatch, tmp_path):
     store = {}
 
     def render(run_id, account_id, html_content, print_base=None, **k):
-        path = tmp_path / f"{uuid.uuid4().hex}.pdf"
+        # Production naming: both real renderers write PDF_DIR/<run_id>.pdf
+        # (Codex review of c57e505b: a fresh name per call hid the race).
+        path = tmp_path / f"{run_id}.pdf"
         path.write_bytes(f"PDF by {threading.current_thread().name}".encode())
         return str(path), None
 
@@ -594,3 +596,103 @@ def test_no_code_clears_delivery_evidence():
 def _account(db, rid):
     return str(_q(db, "SELECT u.account_id FROM consumer_reports cr JOIN users u ON u.id = cr.agent_id "
                       "WHERE cr.id = %s", rid)[0][0])
+
+
+# ── Codex review of c57e505b ────────────────────────────────────────────────
+
+def test_concurrent_generations_do_not_share_the_local_pdf_file(tasks, report, db, monkeypatch, tmp_path):
+    """The REAL renderer's file naming (PDF_DIR/<run_id>.pdf), with only its
+    HTTP call stubbed. A renders and pauses before upload; B renders the same
+    report; A uploads, publishes, claims and sends. The bytes at A's published
+    key must be A's. With run_id = report_id both renders wrote one file and A
+    uploaded B's bytes."""
+    from worker import pdf_engine
+    _twilio(monkeypatch, _sent)
+    monkeypatch.setattr(pdf_engine, "PDF_DIR", str(tmp_path))
+    monkeypatch.setattr(pdf_engine, "PDFSHIFT_API_KEY", "test-key-not-real-123456")
+
+    class Rendered:
+        def __init__(self):
+            self.content = f"PDF generation {threading.current_thread().name}".encode()
+            self.status_code = 200
+            self.headers = {}
+
+        def raise_for_status(self):
+            return None
+    monkeypatch.setattr(pdf_engine.httpx, "post", lambda *a, **k: Rendered())
+    monkeypatch.setattr(tasks, "render_pdf",
+                        lambda run_id, account_id, html_content=None, print_base=None, **k:
+                        pdf_engine.render_pdf_pdfshift(run_id=run_id, account_id=account_id,
+                                                       html_content=html_content, print_base=print_base))
+    a_rendered, b_rendered, a_sent = threading.Event(), threading.Event(), threading.Event()
+    store = {}
+
+    def upload(local_path, key, *a, **k):
+        if threading.current_thread().name == "run-a":
+            a_rendered.set()
+            assert b_rendered.wait(30)          # B renders while A waits to upload
+        else:
+            b_rendered.set()
+            assert a_sent.wait(30)              # B holds until A has sent
+        store[key] = Path(local_path).read_bytes()
+        return f"https://r2.test/{key}"
+    monkeypatch.setattr(tasks, "upload_to_r2", upload)
+    real_record = tasks.consumer_delivery.record_sms_sent
+
+    def record(*a, **k):
+        out = real_record(*a, **k)
+        a_sent.set()
+        return out
+    monkeypatch.setattr(tasks.consumer_delivery, "record_sms_sent", record)
+    rid = report("sms")
+    a, ra = _in_thread("run-a", lambda: _run(tasks, rid))
+    assert a_rendered.wait(30)
+    b, rb = _in_thread("run-b", lambda: _run(tasks, rid))
+    a.join(60)
+    b.join(60)
+    assert ra.get("result", {}).get("ok") is True, ra
+    *_x, pdf_url, sms_at, _em, _err = _report_row(db, rid)
+    assert sms_at is not None
+    assert store[pdf_url.split("https://r2.test/", 1)[1]] == b"PDF generation run-a", \
+        "the delivered generation's object holds another generation's bytes"
+
+
+def test_a_resolution_debits_the_attempts_account_not_the_agents_current_one(tasks, report, db, monkeypatch):
+    """Codex review of c57e505b: the debit and audit account come from the
+    attempt's journal row, written at the claim. An agent moved to another
+    account in between must not move the debit with them."""
+    from worker import consumer_delivery as cd
+    rid, attempt, _fake = _held_text(tasks, monkeypatch, report, db)
+    original = _account(db, rid)
+    other = str(uuid.uuid4())
+    agent = str(_q(db, "SELECT agent_id FROM consumer_reports WHERE id = %s", rid)[0][0])
+    with psycopg.connect(db, autocommit=True) as conn:
+        conn.execute("INSERT INTO accounts (id, name, slug, account_type, plan_slug, sms_credits) "
+                     "VALUES (%s, 'LR-020 Other', %s, 'REGULAR', 'free', 50)", (other, f"lr020-{other[:8]}"))
+        conn.execute("UPDATE users SET account_id = %s WHERE id = %s", (other, agent))
+    try:
+        with psycopg.connect(db, autocommit=True) as conn:
+            cd.resolve_sent(conn, rid, stage="consumer", attempt_id=attempt, provider_id="SMfound",
+                            evidence="Twilio log", operator="jerry")
+        credits = dict(_q(db, "SELECT id::text, sms_credits FROM accounts WHERE id IN (%s, %s)", original, other))
+        assert credits == {original: 9, other: 50}, credits
+    finally:
+        with psycopg.connect(db, autocommit=True) as conn:
+            conn.execute("UPDATE users SET account_id = %s WHERE id = %s", (original, agent))
+            conn.execute("DELETE FROM accounts WHERE id = %s", (other,))
+
+
+def test_a_resolution_refuses_an_attempt_of_another_report(tasks, report, db, monkeypatch):
+    from worker import consumer_delivery as cd
+    rid, attempt, _fake = _held_text(tasks, monkeypatch, report, db)
+    foreign = str(uuid.uuid4())
+    with psycopg.connect(db, autocommit=True) as conn:
+        conn.execute("INSERT INTO sms_logs (id, account_id, consumer_report_id, to_phone, from_phone, message, "
+                     "recipient_type, status) VALUES (%s, %s, %s, '+16265550199', '+15555550000', 'x', "
+                     "'consumer', 'pending')", (foreign, _account(db, rid), str(uuid.uuid4())))
+        conn.execute("UPDATE consumer_reports SET delivery_attempt_id = %s WHERE id = %s", (foreign, rid))
+        with pytest.raises(cd.ResolutionRefused):
+            cd.resolve_sent(conn, rid, stage="consumer", attempt_id=foreign, provider_id="SM1",
+                            evidence="e", operator="j")
+        conn.execute("DELETE FROM sms_logs WHERE id = %s", (foreign,))
+    assert _credits(db, rid) == 10

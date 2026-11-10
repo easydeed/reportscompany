@@ -113,6 +113,11 @@ def hold_stale_claim(cur, report_id, text: str):
 
 # ── Generation (§3.2) ─────────────────────────────────────────────────────────
 
+def pdf_render_id(report_id, generation_id) -> str:
+    """The renderer's run id, which names its local output file: one per generation."""
+    return f"consumer-{report_id}-{generation_id}"
+
+
 def pdf_object_key(account_id, report_id, generation_id) -> str:
     """One object per generation, so no upload can replace a delivered PDF."""
     return f"consumer-reports/{account_id}/{report_id}/{generation_id}.pdf"
@@ -455,14 +460,41 @@ def hold_stale(conn, report_id, *, stage, attempt_id, operator):
                     report_id, attempt_id, text)
 
 
-def _journal_channel(cur, attempt_id):
-    cur.execute("SELECT 'sms' FROM sms_logs WHERE id = %s::uuid "
-                "UNION ALL SELECT 'email' FROM email_log WHERE id = %s::uuid",
-                (str(attempt_id), str(attempt_id)))
+def _journal_attempt(cur, report_id, stage, attempt_id):
+    """The attempt's own journal row: (channel, account_id), validated.
+
+    The account comes from the row written at the claim, never from the
+    agent's CURRENT account (Codex review of c57e505b): an agent moved to
+    another account between the claim and the resolution must not move the
+    debit or the email audit with them. The row must belong to this report and
+    this stage, or nothing is resolved.
+    """
+    cur.execute("""
+        SELECT 'sms', account_id, consumer_report_id, recipient_type
+        FROM sms_logs WHERE id = %s::uuid
+    """, (str(attempt_id),))
     row = cur.fetchone()
+    if row is None and stage == "consumer":
+        # email_log has row-level security on the account. Look under the
+        # report's account; a row filed under another account is not found,
+        # which refuses the resolution rather than guessing.
+        cur.execute("""
+            SELECT set_config('app.current_account_id', u.account_id::text, true)
+            FROM consumer_reports cr JOIN users u ON u.id = cr.agent_id
+            WHERE cr.id = %s::uuid
+        """, (str(report_id),))
+        cur.execute("""
+            SELECT 'email', account_id, report_id, 'consumer'
+            FROM email_log WHERE id = %s::uuid
+        """, (str(attempt_id),))
+        row = cur.fetchone()
     if row is None:
-        raise ResolutionRefused(f"no journal row for attempt {attempt_id}")
-    return row[0]
+        raise ResolutionRefused(f"no journal row for attempt {attempt_id} on report {report_id}")
+    channel, account_id, journal_report, recipient = row
+    if str(journal_report) != str(report_id) or recipient != stage or account_id is None:
+        raise ResolutionRefused(
+            f"attempt {attempt_id} is not a {stage} attempt of report {report_id}")
+    return channel, account_id
 
 
 def _require(value, what):
@@ -484,7 +516,7 @@ def resolve_sent(conn, report_id, *, stage, attempt_id, provider_id, evidence, o
     c = _STAGE[stage]
     with conn.transaction():
         cur = conn.cursor()
-        channel = _journal_channel(cur, attempt_id)
+        channel, account_id = _journal_attempt(cur, report_id, stage, attempt_id)
         if stage == "consumer":
             column = "consumer_sms_sent_at" if channel == "sms" else "consumer_email_sent_at"
             sid_set = ", consumer_sms_sid = %s" if channel == "sms" else ""
@@ -495,13 +527,11 @@ def resolve_sent(conn, report_id, *, stage, attempt_id, provider_id, evidence, o
                     error_message = NULL
                 WHERE id = %s::uuid AND status = %s AND delivery_attempt_id = %s::uuid
                   AND {column} IS NULL
-                RETURNING (SELECT u.account_id FROM users u WHERE u.id = consumer_reports.agent_id)
+                RETURNING id
             """, params + [str(report_id), NEEDS_REVIEW, str(attempt_id)])
-            row = cur.fetchone()
-            if row is None:
+            if cur.fetchone() is None:
                 raise ResolutionRefused(
                     f"consumer attempt {attempt_id} on report {report_id} is not held, or is already recorded")
-            account_id = row[0]
             if channel == "sms":
                 cur.execute("UPDATE accounts SET sms_credits = GREATEST(sms_credits - 1, 0) "
                             "WHERE id = %s::uuid", (str(account_id),))
@@ -512,13 +542,11 @@ def resolve_sent(conn, report_id, *, stage, attempt_id, provider_id, evidence, o
                     agent_sms_sid = %s, {c['error']} = NULL
                 WHERE id = %s::uuid AND {c['status']} = %s AND {c['attempt']} = %s::uuid
                   AND agent_sms_sent_at IS NULL
-                RETURNING (SELECT u.account_id FROM users u WHERE u.id = consumer_reports.agent_id)
+                RETURNING id
             """, (sent_at, provider_id, str(report_id), NEEDS_REVIEW, str(attempt_id)))
-            row = cur.fetchone()
-            if row is None:
+            if cur.fetchone() is None:
                 raise ResolutionRefused(
                     f"agent attempt {attempt_id} on report {report_id} is not held, or is already recorded")
-            account_id = row[0]
         _resolve_journal(cur, channel, attempt_id, account_id, "sent", provider_id, evidence, operator)
 
 
@@ -535,7 +563,7 @@ def resolve_not_sent(conn, report_id, *, stage, attempt_id, evidence, operator):
     note = consumer_failure_note(f"resolved not sent by {operator}: {evidence}")
     with conn.transaction():
         cur = conn.cursor()
-        channel = _journal_channel(cur, attempt_id)
+        channel, account_id = _journal_attempt(cur, report_id, stage, attempt_id)
         guard = _NO_EVIDENCE if stage == "consumer" else "agent_sms_sent_at IS NULL"
         cur.execute(f"""
             UPDATE consumer_reports
@@ -543,13 +571,12 @@ def resolve_not_sent(conn, report_id, *, stage, attempt_id, evidence, operator):
                 {c['attempt']} = NULL, {c['claimed']} = NULL
             WHERE id = %s::uuid AND {c['status']} = %s AND {c['attempt']} = %s::uuid
               AND {guard}
-            RETURNING (SELECT u.account_id FROM users u WHERE u.id = consumer_reports.agent_id)
+            RETURNING id
         """, (note, str(report_id), NEEDS_REVIEW, str(attempt_id)))
-        row = cur.fetchone()
-        if row is None:
+        if cur.fetchone() is None:
             raise ResolutionRefused(
                 f"{stage} attempt {attempt_id} on report {report_id} is not held, or is already recorded")
-        _resolve_journal(cur, channel, attempt_id, row[0], "not_sent", None, evidence, operator)
+        _resolve_journal(cur, channel, attempt_id, account_id, "not_sent", None, evidence, operator)
 
 
 def consumer_failure_note(text, limit=500):

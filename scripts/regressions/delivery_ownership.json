@@ -124,5 +124,26 @@
     "old": "                  AND NOT EXISTS (SELECT 1 FROM consumer_reports cr WHERE cr.id = email_log.report_id)\n",
     "new": "",
     "test": "apps/api/tests/test_onboarding_ignores_consumer_emails.py"
+  },
+  {
+    "name": "Codex c57e505b P1: the render's local file is named by the report, shared by every generation",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    return f\"consumer-{report_id}-{generation_id}\"",
+    "new": "    return str(report_id)",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "Codex c57e505b: a resolution debits the agent's current account, not the attempt's",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "                cur.execute(\"UPDATE accounts SET sms_credits = GREATEST(sms_credits - 1, 0) \"\n                            \"WHERE id = %s::uuid\", (str(account_id),))",
+    "new": "                cur.execute(\"UPDATE accounts SET sms_credits = GREATEST(sms_credits - 1, 0) \"\n                            \"WHERE id = (SELECT u.account_id FROM consumer_reports cr JOIN users u ON u.id = cr.agent_id WHERE cr.id = %s::uuid)\", (str(report_id),))",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "Codex c57e505b: a resolution accepts another report's attempt",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    if str(journal_report) != str(report_id) or recipient != stage or account_id is None:",
+    "new": "    if account_id is None:",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
   }
 ]

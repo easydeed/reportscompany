@@ -2981,8 +2981,14 @@ def process_consumer_report(self, report_id: str):
                     logger.info("Embedding images as base64 for CMA PDF...")
                     html_content = embed_images_as_base64(html_content)
 
+                    # LR-020 §3.2 (Codex review of c57e505b): both renderers
+                    # write PDF_DIR/<run_id>.pdf, so `run_id=report_id` let
+                    # two generations of one report share a local file, and A
+                    # could upload B's bytes to A's key. With html_content
+                    # given, run_id only names that file (the print URL is
+                    # not used), so it carries the generation.
                     pdf_path, _ = render_pdf(
-                        run_id=str(report_id),
+                        run_id=consumer_delivery.pdf_render_id(report_id, generation_id),
                         account_id=str(account_id),
                         html_content=html_content,
                         print_base=DEV_BASE,
