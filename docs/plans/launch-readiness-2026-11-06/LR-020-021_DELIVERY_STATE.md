@@ -59,7 +59,7 @@ Verified against provider docs on 2026-11-10.
   - Same key and same payload: "the same response, without actually sending the email again."
   - Same key, different payload: `409 invalid_idempotent_request`.
   - Same key while the first request is still in flight: `409 concurrent_idempotent_requests`.
-- So an email attempt can carry a key that makes a repeat of that exact attempt safe. See Q1 for whether we use that.
+- So an email attempt can carry a key that makes a repeat of that exact attempt safe. Jerry decided to use it for one retry (§3.5).
 - The ticket text says SendGrid. The consumer path calls Resend (`:3176`), so Resend's behaviour is what applies.
 
 ## 3. The model
@@ -150,15 +150,24 @@ UPDATE accounts SET sms_credits = GREATEST(sms_credits - 1, 0) WHERE id=…;
 
   These values are already the D-083 vocabulary (0062). Readers this adds rows for:
   - **`onboarding.py:233`**'s "first report sent" check counts any `email_log` row with `status='sent' AND report_id IS NOT NULL`. A homeowner email would tick the agent's onboarding step. **It changes**: rows whose `report_id` is a `consumer_reports.id` are excluded.
-  - **`usage.py:109`** "recent emails" starts listing the home-value email sent to the lead. It is an email sent on the account's behalf, so I think it belongs there. Q2 asks.
+  - **`usage.py:109`** "recent emails" starts listing the home-value email sent to the lead. It is an email sent on the account's behalf, and it belongs there (Jerry, 2026-11-10).
   - **`admin.py`**'s sent/sending/failed counters start including consumer emails. They are deliveries, so that is correct.
   - **`unsubscribe.py:86`**'s candidate lookup gains the lead's address. The HMAC token still decides, so there is no weakening.
 
 ### 3.5 Email and the idempotency key
 
 Every consumer email attempt sends `Idempotency-Key: consumer-report:<report_id>:<delivery_attempt_id>`.
-- On its own this changes nothing in behaviour. It only makes a repeat of the same attempt harmless at the provider.
-- Whether a run may repeat an unknown-outcome email with the same key and payload within 24 hours is **Q1, a decision for Jerry**. Until he decides, an unknown email outcome is held exactly like an SMS one.
+- The key makes a repeat of the same attempt harmless at the provider.
+
+**Decision (Jerry, 2026-11-10): an email whose outcome is unknown gets exactly one automatic retry, with the same key, inside Resend's 24-hour window. A text is never resent automatically.**
+
+How the retry works:
+- **The retry is inline, in the run that made the first call.** It uses the same attempt id, so the same key, and the same request body already in memory. So the payload is byte-identical by construction: nothing is re-rendered and nothing new is stored.
+- **One retry only,** after a short pause, still well inside the 24 hours and inside `task_time_limit`. The retry's outcome is classified with `email_outcome` like any other call:
+  - **200/201: `sent`.** If the first call had already sent the email, Resend returns that original response and sends nothing new.
+  - **429, a connection that never opened, or `409 concurrent_idempotent_requests`: `needs_review`.** Each means nothing new was created by the retry, but the first call's fate is still unknown.
+  - **Another 4xx, a timeout or a 5xx: `needs_review`.** The same hold as a text.
+- **Nothing else retries an unknown email.** A run that dies mid-email leaves `sending`. A later run treats a stale claim as `needs_review`, as §3.1 says. It does not retry, because it does not hold the original payload.
 
 ### 3.6 Agent notification states (LR-021, fixes R5)
 
@@ -180,7 +189,7 @@ NULL ──consumer delivered──▶ sending ──▶ sent           (agent_s
 
   So a refused agent text never re-runs the consumer task, and the consumer task's retries never use up the agent's budget.
 - It never resends the homeowner's report, and the homeowner's `status` is never changed by this stage.
-- **Destination:** the agent's phone is read from `users.phone` when the claim is taken, and the `sms_logs.to_phone` row records it. A changed contact after a failed attempt goes to the new number. A `sent` notification is never repeated to a new number. Q3 asks.
+- **Destination:** the agent's phone is read from `users.phone` when the claim is taken, and the `sms_logs.to_phone` row records it. A changed contact after a failed attempt goes to the new number. A `sent` notification is never repeated to a new number. (Jerry, 2026-11-10: the current phone.)
 - **Name:** `requester_name(property_data)` or the generic fallback. Never the assessor's owner name. This is unchanged (D-156).
 - **Out of scope:** an agent *email* notification (D-340) is not added. The reconciliation note says LR-021 recovers the existing SMS notification only.
 
@@ -213,7 +222,12 @@ ALTER TABLE consumer_reports
 - **Two real executions synchronised at the send** (a barrier in the fake provider): one claim, one provider call, one `sms_logs` row, one debit. The same for email.
 - **Worker death before the send** (claim committed, process killed): the next run inside the window does nothing; after the window it holds; no second provider call.
 - **Provider refusal:** retryable (429) goes to `failed`, then a retry and a new attempt id. Final (400) is `failed` with no retry.
-- **Provider accepted and the answer was lost** (timeout after acceptance): `needs_review`, an alert, journal `pending`, no debit, no resend.
+- **Provider accepted and the answer was lost** (timeout after acceptance):
+  - **SMS:** `needs_review`, an alert, journal `pending`, no debit, no resend.
+  - **Email:** exactly one inline retry with the same `Idempotency-Key` and a byte-identical body.
+    - A 200 on the retry gives `sent`, with no second send.
+    - A second unknown, or a `409 concurrent_idempotent_requests`, gives `needs_review`.
+    - Never a third call.
 - **Timestamp write fails after acceptance:** the row stays `sending`; the outer handler or the next stale check gives `needs_review`; no second call.
 - **Stale claim versus live claim:** a live claim is not held (R2's false alert is gone).
 - **Retry exhaustion:** visible in `error_message`.
@@ -240,8 +254,8 @@ ALTER TABLE consumer_reports
   - A message found resolves to **sent**, with its SID and date. That applies the debit in the same transaction.
   - None found resolves to **release**: `failed`, retryable, so a run may send.
 - **Email evidence:** the Resend dashboard or logs for the recipient in the same window.
-  - With a key, a repeat call returns the original email id; see Q1.
-- **Tool:** `scripts/ops/resolve_consumer_delivery.py <report_id> --sent <sid>|--release --evidence "<text>" --operator <name>`.
+  - The attempt's idempotency key is `consumer-report:<report_id>:<delivery_attempt_id>`. Within 24 hours, Resend's logs for that key settle the question.
+- **Tool (in LR-020, minimal; Jerry 2026-11-10):** `scripts/ops/resolve_consumer_delivery.py <report_id> --sent <sid>|--release --evidence "<text>" --operator <name>`.
   - It only moves rows out of `needs_review`.
   - Each move is a conditional update.
   - It writes the operator and evidence into `error_message` and the journal row.
@@ -253,9 +267,11 @@ ALTER TABLE consumer_reports
   The second list is the candidate set for historical agent recovery, and it is **not** replayed automatically. A bounded, reviewed list with approved recipients is a separate step.
 - **Stale claims with no redelivery:** if a task message is lost outright, the row stays `sending` and nothing re-runs it. LR-020 provides the query for this; LR-027 alerts on it.
 
-## 7. Questions for review
+## 7. Decisions (Jerry, 2026-11-10)
 
-- **Q1 [JERRY]:** may an unknown-outcome **email** be repeated automatically with the same Resend idempotency key and the same payload, within 24 hours? Resend documents that this cannot send a second email. **Recommended: yes, once.** Then hold if the outcome is still unknown. **Default until answered: hold, same as SMS.** Texts are never repeated either way.
-- **Q2:** should the lead's home-value email appear in the agent's "recent emails" (`usage.py`)? **Recommended: yes.**
-- **Q3:** should a recovered agent notification go to the agent's **current** phone (recommended), or to the phone on file when the lead arrived?
-- **Q4:** is the operator resolution script in LR-020's scope (recommended), or LR-027's?
+- **Q1: yes.** An email whose outcome is unknown gets exactly one automatic retry, with the same Resend key, within 24 hours (§3.5). A text is never resent automatically.
+- **Q2: yes.** The lead's home-value email appears in the agent's recent emails (`usage.py`).
+- **Q3: the current phone.** A recovered agent notification goes to the agent's current phone.
+- **Q4: in LR-020.** A minimal held-send tool ships with LR-020 (§6).
+
+Code starts only after Codex's design PASS.
