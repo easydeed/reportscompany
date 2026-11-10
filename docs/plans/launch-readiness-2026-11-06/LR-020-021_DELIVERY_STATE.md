@@ -1,6 +1,6 @@
 # LR-020 / LR-021: one delivery state model
 
-**Status:** design, revision 2, for re-review. It amends revision 1 per Codex's review on #280 (AMEND 1–4). The tickets say "review one shared state model before coding, then ship two PRs". No code ships against this until it has a PASS.
+**Status:** design, revision 3, for re-review. It amends revision 1 per Codex's review on #280 (AMEND 1–4). The email replay is inline-only, per Codex's follow-up on `8b3a24b4`. The tickets say "review one shared state model before coding, then ship two PRs". No code ships against this until it has a PASS.
 
 **Tickets:**
 - **LR-020 (D-069):** claim and reconcile consumer delivery. Branch `fix/lr-020-consumer-delivery-ownership`. Carries the migration and the held-send tool.
@@ -88,8 +88,8 @@ There are two irreversible stages. Each has its own claim, journal row, evidence
 pending ─▶ processing ─publish(gen G)─▶ processing[G] ─claim(G)─▶ sending ─▶ sent           (terminal)
    ▲           ▲                                                  │  │     failed           (retryable / final)
    └─ failed ──┘ (retryable refusal only)                         │  │     needs_review     (operator only)
-                                                                  │  └─ email unknown ─▶ one replay (§3.4) ─▶ sent | needs_review
-                                                                  └─ stale claim ─▶ needs_review, or one replay (§3.4)
+                                                                  │  └─ email unknown ─▶ one inline replay, same run (§3.4) ─▶ sent | needs_review
+                                                                  └─ stale claim ─▶ needs_review (never a send or a replay)
 ```
 
 | From | To | Writer | Guard |
@@ -101,7 +101,7 @@ pending ─▶ processing ─publish(gen G)─▶ processing[G] ─claim(G)─�
 | `sending` | `failed` | outcome (a refusal known to have created nothing) | `status='sending' AND delivery_attempt_id = <mine>`. Also sets `delivery_attempt_id = NULL` and `delivery_claimed_at = NULL`, because nothing was sent, so a retry can publish and claim a **new** attempt. The journal row keeps the refused attempt. |
 | `sending` | `needs_review` | outcome | `status='sending' AND delivery_attempt_id = <mine>`. The claim stays, frozen, for the operator. |
 | `sending`, claim inside the window | (no write) | any other run | Return "in flight". No hold, no alert (fixes R2). |
-| `sending`, claim outside the window | `needs_review`, or one email replay | any later run | Re-claim, conditional on `delivery_attempt_id` and the old `delivery_claimed_at`. Then §3.4 decides between replay and hold. A NULL claim time (LR-019's rows) counts as stale. |
+| `sending`, claim outside the window | `needs_review` | any later run, or the outer handler | Conditional on `delivery_attempt_id` and a stale `delivery_claimed_at`. A later run never sends, and never replays: it lacks the original request body (§3.4). A NULL claim time (LR-019's rows) counts as stale. |
 | `needs_review` | `sent` / `failed` | **operator tool only** (§6) | Exact stage and attempt id. |
 
 **The window** is the existing `DUPLICATE_SEND_WINDOW_MINUTES` (10).
@@ -149,54 +149,44 @@ UPDATE sms_logs SET status='sent', twilio_sid=… WHERE id=<attempt>;
 - The existing `GREATEST(…, 0)` policy is kept.
 - Email never debits.
 
-### 3.4 The approved email replay: durable and race-safe (AMEND 1)
+### 3.4 The approved email replay: inline, one, same attempt (AMEND 1, narrowed)
 
 **Decision (Jerry, 2026-11-10):** an unknown-outcome consumer email gets exactly **one** automatic replay of the **same attempt**:
 - the same `Idempotency-Key`;
-- a byte-identical payload;
-- strictly inside the key's original 24-hour window.
+- an identical payload;
+- strictly inside the key's 24-hour window.
 
-Still unknown afterwards, or outside the window, means `needs_review`. A text is never replayed. A retryable refusal that created nothing (429, a connection that never opened) stays a separate case: `failed`, retried later as a **new** attempt with a new key.
+Still unknown afterwards means `needs_review`. A text is never replayed.
 
-**Durable fields on the email attempt row** (`email_log`, §4):
-- **`request_payload` (JSONB):** the exact request sent: `from`, `to`, `subject`, `html`, and the `Idempotency-Key` header. The consumer email has no `text` part and no attachments today; if either is added, it goes in here.
-  - Written in the claim transaction, before the first call.
-  - Never rewritten.
-  - The replay sends it as stored. Content, recipient and branding are never rebuilt.
-- **`idempotency_key`:** `consumer-report:<report_id>:<attempt_id>`. Set once at the claim.
-- **`key_expires_at`:** the row's `created_at` plus 24 hours.
-  - `created_at` is committed before the first request leaves, so this is never later than Resend's own expiry.
-  - Set once.
-  - No later run resets it.
-- **`replay_claimed_at`:** the one-replay budget.
+**Scope (Codex, follow-up on `8b3a24b4`).** The replay is **inline only**: it happens in the run that made the first call, while that run still owns the attempt.
+- It sends the **same request object already in memory**: the same `from`, `to`, `subject`, `html` and `Idempotency-Key`.
+- It does not re-render and stores no copy.
+- No other run, retry or redelivery ever replays. A run that finds a stale `sending` email attempt holds it, because it does not have the original body (§3.1).
+- So no request body is persisted, and the homeowner's email HTML is never written to the database.
 
-**The replay reservation:**
-```sql
-UPDATE email_log SET replay_claimed_at = NOW()
- WHERE id = <attempt> AND replay_claimed_at IS NULL
-   AND NOW() < key_expires_at - INTERVAL '10 minutes'
-RETURNING request_payload, idempotency_key;
-```
-- The reservation is atomic, so two workers, a restart or a redelivery can consume it at most once.
-- The 10-minute margin covers the 15-second request timeout, clock skew and queueing. No replay is made at or after the cutoff.
-
-**Who replays:**
-- **The owner, inline.** If the first call's outcome is unknown, the run that made it reserves the replay at once and sends the stored payload.
-- **A later run.** If the first run died after the call and before the replay reservation, a later run re-claims the stale claim (§3.1), then reserves and replays, if the budget and the window allow. Otherwise it holds.
+**Rules:**
+- **Exclusive ownership.** The replay is made only by the run whose `delivery_attempt_id` is the attempt, while `status='sending'`.
+  - Before replaying, the run re-checks that it still owns the attempt: one conditional `UPDATE … SET delivery_claimed_at = NOW() WHERE status='sending' AND delivery_attempt_id = <mine> RETURNING`.
+  - This also refreshes the claim, so another run cannot take it as stale during the replay.
+  - If no row comes back, the run does not replay; it records nothing beyond its journal note.
+- **A measured deadline.** The run records a monotonic start time immediately before the first HTTP call. It replays only if less than 24 hours − 10 minutes has elapsed since then. Inline, that is always true unless the process stalls; the check exists so that a stall cannot breach the window. The key is the attempt's (`consumer-report:<report_id>:<attempt_id>`), fixed at the claim.
+- **At most two HTTP calls per attempt**: the original and one replay. No loop.
+- **No other retry of an unknown email.** No outer or generic retry: an unknown outcome is never classed `failed`, never `self.retry()`'d, and never recovered by a new attempt.
+- **Retryable refusals stay separate.** A refusal known to have created nothing (429, or a connection that never opened) **on the first call** is `failed`, retried later as a **new** attempt with a new key.
 
 **Outcomes of the replay:**
 
 | Replay result | Result |
 |---|---|
-| 200 or 201 | `sent`. If the first call had sent the email, Resend returns that original response; no second email exists. Store the returned email id as `provider_message_id`. |
-| `409 concurrent_idempotent_requests` | `needs_review`. The first request may still be in flight, so its fate is unknown. The budget is spent. |
-| `409 invalid_idempotent_request` | `needs_review` plus an alert. The payload cannot differ, so this means a defect. |
-| 429, a connection that never opened | `needs_review`. The replay created nothing, but the first call's fate is still unknown. The budget is spent. |
+| 200 or 201 | `sent`. If the first call had sent the email, Resend returns that original response; there is no second email. The returned id is stored as `provider_message_id`. |
+| `409 concurrent_idempotent_requests` | `needs_review`. The first request may still be in flight. |
+| `409 invalid_idempotent_request` | `needs_review` plus an alert. The payload cannot differ, so this would be a defect. |
+| 429, a connection that never opened | `needs_review`. The replay created nothing; the first call's fate is still unknown. |
 | Another 4xx, a timeout, a 5xx | `needs_review`. |
-| A crash after the reservation | The claim goes stale and the next run holds it: `replay_claimed_at` is set, so there is no second replay. |
-| The reservation fails (budget spent, or past the cutoff) | `needs_review`. |
+| Ownership re-check fails, or the deadline has passed | No replay; `needs_review` if the run still owns the attempt. |
+| The process dies during the first call or the replay | The claim goes stale, and the next run or the outer handler holds it: `needs_review`, no further call. |
 
-**When in doubt, hold:** any state the run cannot establish as safe is `needs_review`.
+**When in doubt, hold.**
 
 ### 3.5 The journal, on the real schema (AMEND 4)
 
@@ -226,11 +216,13 @@ RETURNING request_payload, idempotency_key;
   - `report_id` = the consumer report id;
   - `provider='resend'`;
   - `to_emails`, `subject`;
-  - the §3.4 fields.
+  - `idempotency_key` (`consumer-report:<report_id>:<attempt_id>`), fixed at the claim.
+
+  No request body is stored (§3.4).
 - **Outcome:**
-  - `sent` plus `response_code` plus `provider_message_id`;
+  - `sent` plus `response_code` plus `provider_message_id` (the Resend email id);
   - `failed` plus `response_code` and `error`;
-  - unknown stays `sending` until the replay or the hold. The hold is visible on the report row.
+  - unknown stays `sending` until the inline replay settles it or the report is held. The hold is visible on the report row.
 - **Readers affected:**
   - **`usage.py`:** recent emails now include the home-value email (Q2: yes). The list is already scoped to `account_id`.
   - **`onboarding.py`:** the "first report sent" check must exclude rows whose `report_id` is a `consumer_reports.id` (Q2). This changes in LR-020, with a test.
@@ -287,9 +279,6 @@ ALTER TABLE consumer_reports
 
 ALTER TABLE email_log
   ADD COLUMN IF NOT EXISTS idempotency_key      TEXT,
-  ADD COLUMN IF NOT EXISTS key_expires_at       TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS request_payload      JSONB,
-  ADD COLUMN IF NOT EXISTS replay_claimed_at    TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS provider_message_id  TEXT,
   ADD COLUMN IF NOT EXISTS resolution           TEXT,
   ADD COLUMN IF NOT EXISTS resolved_at          TIMESTAMPTZ,
@@ -347,17 +336,23 @@ All tests run the real task against a database built by `run_migrations.py` from
 - **B publishes before A claims:** A's claim fails, B sends, and the link shows B's generation.
 - **Mutations:** the publication guard, the `generation_id` claim condition, the per-generation key.
 
-**LR-020, email replay (AMEND 1)**
-- **Unknown, then a 200 on the replay:** `sent`. The replay used the same key and a byte-identical stored payload, and the fake asserts it.
-- **Unknown, then unknown again:** `needs_review`; exactly two calls in total.
+**LR-020, email replay (AMEND 1, inline)**
+- **Unknown, then a 200 on the replay:** `sent`. The fake asserts exactly two calls, the same `Idempotency-Key`, and byte-identical bodies.
+- **Unknown, then unknown again:** `needs_review`. Exactly two calls, and no Celery retry is scheduled.
 - **`409 concurrent_idempotent_requests`** on the replay: `needs_review`.
 - **`409 invalid_idempotent_request`:** `needs_review` plus an alert.
-- **Two workers racing to replay:** exactly one replay call.
-- **A crash after the reservation:** the next run holds the report; no second replay.
-- **A crash before the reservation:** the next run replays once, with the stored payload, even if branding or the agent's details changed in between.
-- **Window boundary:** with the clock at the cutoff minus 1 s, and with `key_expires_at` already past, there is no replay; the report is held.
-- **A redelivery** does not reset `key_expires_at` or mint a new key.
-- **Mutations:** the reservation condition, the cutoff margin, the payload source.
+- **429 on the replay:** `needs_review`, not `failed`.
+- **429 on the first call:** `failed`, then a later **new** attempt with a **new** key. Distinct from unknown.
+- **Crash during the first call:** the next run holds; zero further calls.
+- **Crash during the replay:** the next run holds; zero further calls.
+- **Ownership lost before the replay:** with the claim re-taken by an operator `hold` or another run, there is no replay.
+- **Deadline:** with the measured elapsed time past 24 hours − 10 minutes (a clock injected in the test), there is no replay, and the report is held.
+- **Redelivery of an unknown email attempt:** the report is held, with no call. The run has no body to send.
+- **Mutations:**
+  - the ownership re-check;
+  - the deadline comparison;
+  - the call budget (a third call must fail a test);
+  - the replay reusing a re-rendered body instead of the in-memory one.
 
 **LR-020, held-send tool (AMEND 3):** see §6.
 
@@ -389,7 +384,7 @@ All tests run the real task against a database built by `run_migrations.py` from
 - age since the claim;
 - the recorded outcome text;
 - the SID or email id, if any;
-- for email, whether the replay was used, and `key_expires_at`;
+- for email, the idempotency key, and whether a replay was made (from the journal note);
 - destination masked to its last four characters.
 
 **`hold <report> --stage S --attempt A`.** Moves a stale `sending` to `needs_review`. The guard is the exact attempt plus a stale claim.
@@ -433,7 +428,7 @@ The second list is the candidate set for historical agent recovery. It is not re
 
 ## 7. Decisions (Jerry, 2026-11-10; approved, per Codex's review)
 
-- **Q1: yes.** One automatic replay of the same email attempt, with the same key and the same payload, strictly inside its 24-hour window (§3.4). Texts are never resent automatically.
+- **Q1: yes.** One automatic replay of the same email attempt, with the same key and the same payload, strictly inside its 24-hour window. Per Codex's follow-up, it is inline only, in the owning run; anything else holds (§3.4). Texts are never resent automatically.
 - **Q2: yes.** The home-value email appears in the account's recent emails, tenant-scoped. It is excluded from the onboarding first-report check.
 - **Q3: the current phone.** It is read when a new eligible attempt claims, and frozen in that attempt's journal row. Accepted and unknown attempts are never retargeted.
 - **Q4: in LR-020.** The minimal held-send list and resolution tool (§6).
