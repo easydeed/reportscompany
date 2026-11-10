@@ -145,5 +145,12 @@
     "old": "    if str(journal_report) != str(report_id) or recipient != stage or account_id is None:",
     "new": "    if account_id is None:",
     "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "the local PDF is left behind after upload",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                            os.remove(pdf_path)\n",
+    "new": "                            pass\n",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
   }
 ]

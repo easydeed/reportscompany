@@ -655,6 +655,10 @@ def test_concurrent_generations_do_not_share_the_local_pdf_file(tasks, report, d
     assert sms_at is not None
     assert store[pdf_url.split("https://r2.test/", 1)[1]] == b"PDF generation run-a", \
         "the delivered generation's object holds another generation's bytes"
+    # Each generation uploaded its own file (two objects, each its own bytes),
+    # and each local file was removed after its upload.
+    assert sorted(store.values()) == [b"PDF generation run-a", b"PDF generation run-b"], store
+    assert not list(tmp_path.glob("*.pdf")), "a generation's local PDF was left behind"
 
 
 def test_a_resolution_debits_the_attempts_account_not_the_agents_current_one(tasks, report, db, monkeypatch):

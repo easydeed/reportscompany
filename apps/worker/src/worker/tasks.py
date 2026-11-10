@@ -2997,7 +2997,16 @@ def process_consumer_report(self, report_id: str):
                     # LR-020 §3.2: one object per generation. The fixed key
                     # let a later run replace the PDF a person had been sent.
                     s3_key = consumer_delivery.pdf_object_key(account_id, report_id, generation_id)
-                    pdf_url = upload_to_r2(pdf_path, s3_key)
+                    try:
+                        pdf_url = upload_to_r2(pdf_path, s3_key)
+                    finally:
+                        # The local file is this generation's alone and is
+                        # done with once uploaded (or not): remove it, so
+                        # per-generation names do not pile up in PDF_DIR.
+                        try:
+                            os.remove(pdf_path)
+                        except OSError:
+                            pass
                     logger.info("CMA PDF uploaded: %s", pdf_url[:100] if pdf_url else "None")
 
                 except Exception as pdf_exc:
