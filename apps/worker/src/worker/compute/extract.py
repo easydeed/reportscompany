@@ -84,7 +84,7 @@ class PropertyDataExtractor:
                 
                 # Additional property details for gallery templates
                 beds = _int((pr or {}).get("bedrooms"))
-                baths = _float((pr or {}).get("bathrooms"))  # Keep as float (e.g., 2.5 baths)
+                baths = baths_total(pr)  # D-106: bathsFull + bathsHalf/2
                 street = (addr or {}).get("full") or (addr or {}).get("streetName")
                 
                 # Extract property subtype for better categorization
@@ -144,6 +144,22 @@ def _int(v):
         return int(v) if v is not None else None
     except: 
         return None
+
+def baths_total(pr) -> Optional[float]:
+    """Bathrooms from a SimplyRETS `property` object, in the decimal convention.
+
+    D-106. The feed sends `bathsFull` and `bathsHalf` and has no `bathrooms`
+    key, so every market listing shipped with no bath count, and every comp
+    read `bathsFull` alone (2 full baths and a powder room read "2").
+    Convention, Jerry 2026-11-09: halves count 0.5, so 2 full + 1 half = 2.5.
+    None when neither count is recorded: a missing count is not zero (D-168).
+    """
+    pr = pr or {}
+    full, half = _float(pr.get("bathsFull")), _float(pr.get("bathsHalf"))
+    if full is None and half is None:
+        return None
+    return (full or 0) + (half or 0) * 0.5
+
 
 def _float(v):
     """Convert to float, preserving fractional values (e.g., 2.5 bathrooms)."""

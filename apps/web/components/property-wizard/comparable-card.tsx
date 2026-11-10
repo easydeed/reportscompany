@@ -68,7 +68,7 @@ export function ComparableCard({
         <span className="flex items-center gap-1 text-xs text-[#5E636B]">
           <MapPin className="h-3 w-3" />
           {comp.distance_miles} mi ·{" "}
-          {isActive ? `Active${comp.dom > 0 ? ` · ${comp.dom} DOM` : ""}` : `Sold ${formattedDate}`}
+          {isActive ? `Active${comp.dom != null && comp.dom != null && comp.dom > 0 ? ` · ${comp.dom} DOM` : ""}` : `Sold ${formattedDate}`}
         </span>
       </span>
       <span className="text-sm font-semibold tabular-nums text-[#0F172A]">

@@ -5,7 +5,7 @@ from datetime import datetime, date
 logger = logging.getLogger(__name__)
 from psycopg import sql
 from .vendors.simplyrets import fetch_properties
-from .compute.extract import PropertyDataExtractor
+from .compute.extract import PropertyDataExtractor, baths_total
 from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
@@ -2806,9 +2806,12 @@ def process_consumer_report(self, report_id: str):
                             "price": sale["price"] or 0,
                             "list_price": sale["list_price"],
                             "close_price": sale["close_price"],
-                            "bedrooms": prop_info.get("bedrooms") or 0,
-                            "bathrooms": prop_info.get("bathsFull") or 0,
-                            "sqft": prop_info.get("area") or 0,
+                            # D-168: a missing count is stored missing, not 0
+                            # (a missing bedroom count is not a studio).
+                            # D-106: full + half/2, Jerry's convention.
+                            "bedrooms": prop_info.get("bedrooms"),
+                            "bathrooms": baths_total(prop_info),
+                            "sqft": prop_info.get("area"),
                             "year_built": prop_info.get("yearBuilt"),
                             "lot_size": prop_info.get("lotSize"),
                             "photo_url": photos[0] if photos else None,

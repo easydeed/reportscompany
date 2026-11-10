@@ -194,12 +194,9 @@ def sweep(path):
 #: one fails. An empty reason is not allowed — the point is that someone
 #: checked.
 ACKNOWLEDGED = {
-    ("bathrooms", "property.bathrooms"):
-        "D-106, OPEN. The feed does not send this key — absent from all 301 rows of the "
-        "2026-10-01 Downey capture, not merely from the two bundled fixtures. The bath count "
-        "lives at `bathsFull`/`bathsHalf`. Listed here so the run stays green while the "
-        "DEFECT ITSELF IS UNFIXED: remove this line when extract.py reads the right keys, and "
-        "the entry on the board is the source of truth for whether that has happened.",
+    # `("bathrooms", "property.bathrooms")` WAS HERE for D-106. Removed as its
+    # reason said to: extract.py now reads `bathsFull` and `bathsHalf`
+    # (`baths_total`, 2026-11-09), and the run shows both as `ok`.
     ("daysOnMarket", "daysOnMarket"):
         "D-105's retained fallback. `mls.daysOnMarket` is read first, and the "
         "top-level read only runs when that returned None, for deployments "

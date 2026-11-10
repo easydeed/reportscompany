@@ -1179,8 +1179,10 @@ class PropertyReportBuilder:
                 bool(image_url),
             )
 
-            # Frontend: distance_miles, Backend: distance
-            distance_raw = comp.get("distance") or comp.get("distance_miles", "")
+            # Frontend: distance_miles, Backend: distance. The first PRESENT
+            # value, not `a or b`: `or` skips a real 0.0 (D-168).
+            distance_raw = next((comp.get(k) for k in ("distance", "distance_miles")
+                                 if comp.get(k) is not None and comp.get(k) != ""), "")
             distance_formatted = distance_raw
             if distance_raw and isinstance(distance_raw, (int, float)):
                 distance_formatted = f"{distance_raw:.1f} mi"
@@ -1271,15 +1273,20 @@ class PropertyReportBuilder:
                 "price_label": price_label,            # "Sale Price" or "List Price"
                 "list_date": self._fmt_date(list_date_raw),
                 "status": status,
-                "days_on_market": comp.get("days_on_market") or comp.get("dom") or 0,
+                # D-168: a missing value stays missing. `or 0` made a comp with
+                # no days on market one that sold the day it listed, and a comp
+                # with no distance one at the subject's own address; neither is
+                # recoverable downstream. 0 is kept when the record says 0.
+                "days_on_market": next((_known(comp.get(k)) for k in ("days_on_market", "dom")
+                                        if _known(comp.get(k)) is not None), None),
                 "distance": distance_formatted,
-                "distance_miles": float(distance_raw) if isinstance(distance_raw, (int, float)) else 0,
+                "distance_miles": float(distance_raw) if isinstance(distance_raw, (int, float)) else None,
                 "sqft": comp_sqft,
                 "price_per_sqft": self._calc_price_per_sqft(raw_price, comp_sqft) or 0,
-                "bedrooms": comp.get("bedrooms") or 0,
-                "bathrooms": comp.get("bathrooms") or 0,
-                "year_built": comp.get("year_built") or 0,
-                "lot_size": comp.get("lot_size") or 0,
+                "bedrooms": _known(comp.get("bedrooms")),
+                "bathrooms": _known(comp.get("bathrooms")),
+                "year_built": _known(comp.get("year_built")),
+                "lot_size": _known(comp.get("lot_size")),
                 "lot_display": comp.get("lot_display") or "",
                 "hoa_fee": comp.get("hoa_fee"),
                 "hoa_frequency": comp.get("hoa_frequency") or "",
@@ -2095,11 +2102,11 @@ class PropertyReportBuilder:
 
     #: Comp fields where `0` cannot be a real value, so a zero IS an absence.
     #:
-    #: `_build_comparables_context` writes `comp.get(k) or 0` for seven numeric
-    #: fields, so by the time a template sees them an absent bedroom count and
-    #: a zero bedroom count are the same number (D-168). For these five the
-    #: distinction is recoverable, because no house has zero bedrooms, zero
-    #: bathrooms, zero living area, year built zero or a zero price per sq ft.
+    #: D-168 FIXED AT THE SOURCE (2026-11-09): `_build_comparables_context` now
+    #: keeps a missing value as None. This list stays for STORED comps written
+    #: before that fix, and by the wizard, whose zeros are absences: no house
+    #: has zero bedrooms, zero bathrooms, zero living area, year built zero or
+    #: a zero price per sq ft.
     #:
     #: `days_on_market` is NOT on this list and cannot be: 0 days on market is
     #: a real value and the design renders it "New". A comp with no DOM is
