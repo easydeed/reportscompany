@@ -2,15 +2,8 @@
   {
     "name": "LR-019 comes back: the failure recorder writes a column consumer_reports does not have",
     "file": "apps/worker/src/worker/tasks.py",
-    "old": "        SET status = 'failed', error_message = %s\n        WHERE id = %s::uuid\n    \"\"\", (text, report_id))",
-    "new": "        SET status = 'failed', error = %s\n        WHERE id = %s::uuid\n    \"\"\", (text, report_id))",
-    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
-  },
-  {
-    "name": "LR-019 comes back: a scheduled retry is caught and recorded as the error",
-    "file": "apps/worker/src/worker/tasks.py",
-    "old": "    except Retry:\n",
-    "new": "    except ZeroDivisionError:\n",
+    "old": "        SET status = 'failed', error_message = %s\n        WHERE id = %s::uuid\n          AND status = 'processing'\n",
+    "new": "        SET status = 'failed', error = %s\n        WHERE id = %s::uuid\n          AND status = 'processing'\n",
     "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
   },
   {
@@ -50,9 +43,9 @@
   },
   {
     "name": "LR-019: an exception after the text went out marks the delivered report failed",
-    "file": "apps/worker/src/worker/tasks.py",
-    "old": "                          AND consumer_sms_sent_at IS NULL\n                          AND consumer_email_sent_at IS NULL\n",
-    "new": "",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "        WHERE id = %s::uuid AND status = %s AND delivery_attempt_id = %s::uuid\n          AND {_NO_EVIDENCE}\n        RETURNING id\n    \"\"\", (NEEDS_REVIEW, text, str(report_id), SENDING, str(attempt_id)))\n    return cur.fetchone() is not None",
+    "new": "        WHERE id = %s::uuid AND %s IS NOT NULL AND delivery_attempt_id = %s::uuid\n        RETURNING id\n    \"\"\", (NEEDS_REVIEW, text, str(report_id), SENDING, str(attempt_id)))\n    return cur.fetchone() is not None",
     "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
   },
   {
@@ -64,9 +57,9 @@
   },
   {
     "name": "Codex #274 re-review comes back: no claim is persisted before the provider call",
-    "file": "apps/worker/src/worker/tasks.py",
-    "old": "        SET status = %s\n        WHERE id = %s::uuid\n          AND status = 'processing'\n",
-    "new": "        SET status = status\n        WHERE id = %s::uuid\n          AND %s IS NOT NULL\n",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    SET status = %s, delivery_claimed_at = NOW(), delivery_attempt_id = %s::uuid\n    WHERE id = %s::uuid\n      AND status = 'processing'\n",
+    "new": "    SET status = status, delivery_claimed_at = delivery_claimed_at, delivery_attempt_id = delivery_attempt_id\n    WHERE %s IS NOT NULL AND %s IS NOT NULL AND id = %s::uuid\n      AND status = 'processing'\n",
     "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
   },
   {
@@ -78,9 +71,9 @@
   },
   {
     "name": "Codex #274 re-review comes back: the handler marks an interrupted send failed",
-    "file": "apps/worker/src/worker/tasks.py",
-    "old": "SET status = CASE WHEN status = %s THEN %s ELSE 'failed' END,",
-    "new": "SET status = CASE WHEN status = %s THEN 'failed' ELSE 'failed' END,",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    \"\"\", (NEEDS_REVIEW, text, str(report_id), SENDING, str(attempt_id)))\n    return cur.fetchone() is not None",
+    "new": "    \"\"\", (\"failed\", text, str(report_id), SENDING, str(attempt_id)))\n    return cur.fetchone() is not None",
     "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
   }
 ]

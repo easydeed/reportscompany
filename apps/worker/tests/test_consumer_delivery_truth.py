@@ -88,6 +88,34 @@ def _code_only(src: str) -> str:
 
 CONSUMER = _src("process_consumer_report")
 
+# LR-020: the writes that record a delivery moved into one module, so that the
+# task, and later the operator's resolution tool, share the same guards.
+DELIVERY = (WORKER / "consumer_delivery.py").read_text()
+DELIVERY_TREE = ast.parse(DELIVERY)
+
+# The only functions allowed to record a consumer delivery: the provider
+# accepted it (the two record_* functions), or an operator recorded the
+# provider's own id for a held attempt (resolve_sent).
+RECORDERS = {"record_sms_sent", "record_email_sent", "resolve_sent"}
+
+
+def _delivery_fns_containing(fragment):
+    """Names of the consumer_delivery functions whose SQL contains `fragment`."""
+    found = set()
+    for fn in DELIVERY_TREE.body:
+        if isinstance(fn, ast.FunctionDef):
+            for n in ast.walk(fn):
+                if (isinstance(n, ast.Constant) and isinstance(n.value, str)
+                        and fragment in " ".join(n.value.split())):
+                    found.add(fn.name)
+    return found
+
+
+def _calls_in_consumer(name):
+    return [n for n in ast.walk(_fn("process_consumer_report"))
+            if isinstance(n, ast.Call)
+            and (getattr(n.func, "attr", None) or getattr(n.func, "id", None)) == name]
+
 
 def _sent_writes(src):
     """Every statement in `src` that claims a consumer report was delivered."""
@@ -112,11 +140,16 @@ def test_the_only_sent_writes_are_on_paths_that_actually_sent():
     survey missed.
     """
     claims = _sent_writes(CONSUMER)
-    assert len(claims) == 2, (
-        f"expected exactly two 'sent' writes in process_consumer_report — the "
-        f"SMS success path and the email success path — found {len(claims)}:\n"
+    assert claims == [], (
+        "process_consumer_report writes 'sent' itself again; LR-020 records a "
+        "delivery only through consumer_delivery.record_*_sent:\n"
         + "\n".join(f"  {c[:100]}" for c in claims)
     )
+    writers = _delivery_fns_containing("status = 'sent'")
+    assert writers and writers <= RECORDERS, f"'sent' is written by {sorted(writers)}"
+    # Exactly one call each, on the success path of its channel.
+    assert len(_calls_in_consumer("record_sms_sent")) == 1
+    assert len(_calls_in_consumer("record_email_sent")) == 1
 
 
 @pytest.mark.parametrize("marker,defect", [
@@ -155,6 +188,15 @@ def test_no_branch_stamps_a_sent_timestamp_without_sending():
         if isinstance(n, ast.Constant) and isinstance(n.value, str)
         and "consumer_email_sent_at = NOW()" in n.value
     ]
+    assert stamps == [], "the task stamps consumer_email_sent_at itself again"
+    stamps = [
+        " ".join(n.value.split())
+        for fn in DELIVERY_TREE.body if isinstance(fn, ast.FunctionDef) and fn.name == "record_email_sent"
+        for n in ast.walk(fn)
+        if isinstance(n, ast.Constant) and isinstance(n.value, str)
+        and "consumer_email_sent_at = NOW()" in n.value
+    ]
+    assert _delivery_fns_containing("consumer_email_sent_at = NOW()") <= RECORDERS
     assert len(stamps) == 1, (
         f"expected one email-sent timestamp write (the success path), found "
         f"{len(stamps)}"

@@ -86,22 +86,14 @@ def send_sms(
         }
 
 
-def send_report_sms(
-    to_phone: str,
-    report_url: str,
-    agent_name: str,
-    property_address: str,
-) -> dict:
+def report_sms_body(report_url: str, agent_name: str, property_address: str) -> str:
+    """The home value report text, exactly as sent.
+
+    LR-020: the delivery claim journals this body BEFORE the provider call
+    (`sms_logs.message` is NOT NULL), and `send_report_sms` sends this same
+    string, so what is on record is what the person received.
     """
-    Send the home value report SMS to consumer.
-    
-    Args:
-        to_phone: Consumer's phone number
-        report_url: URL to the mobile report viewer
-        agent_name: Agent's name
-        property_address: Property address for context
-    """
-    message = f"""Your Home Value Report is ready! 🏠
+    return f"""Your Home Value Report is ready! 🏠
 
 Property: {property_address}
 
@@ -111,7 +103,24 @@ View your personalized report:
 Questions? Reply to this text or contact {agent_name} directly.
 
 - TrendyReports"""
-    
+
+
+def send_report_sms(
+    to_phone: str,
+    report_url: str,
+    agent_name: str,
+    property_address: str,
+) -> dict:
+    """
+    Send the home value report SMS to consumer.
+
+    Args:
+        to_phone: Consumer's phone number
+        report_url: URL to the mobile report viewer
+        agent_name: Agent's name
+        property_address: Property address for context
+    """
+    message = report_sms_body(report_url, agent_name, property_address)
     result = send_sms(to_phone, message)
     result['message_body'] = message  # Include message for logging
     return result
