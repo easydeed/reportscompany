@@ -56,6 +56,7 @@ from ..services.simplyrets import (
     normalize_listing,
     comp_sale_fields,
     is_usable_comp,
+    baths_total,
 )
 from ..worker_client import enqueue_property_report
 from ..services.qr_service import generate_qr_code
@@ -876,9 +877,11 @@ async def get_comparables(payload: ComparablesRequest, request: Request):
                 "price": sale["price"] or 0,
                 "list_price": sale["list_price"],
                 "close_price": sale["close_price"],
-                "bedrooms": prop.get("bedrooms") or 0,
-                "bathrooms": prop.get("bathsFull") or 0,
-                "sqft": prop.get("area") or 0,
+                # D-168: missing stays missing (the wizard and the PDF show a
+                # dash); D-106: full + half/2, Jerry's convention.
+                "bedrooms": prop.get("bedrooms"),
+                "bathrooms": baths_total(prop),
+                "sqft": prop.get("area"),
                 "year_built": prop.get("yearBuilt"),
                 "lot_size": prop.get("lotSize"),
                 "photo_url": (listing.get("photos") or [None])[0],

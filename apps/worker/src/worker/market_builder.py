@@ -750,8 +750,12 @@ class MarketReportBuilder:
             "price_bands": "Price Bands",
             "new_listings": "New Listings",
         }
-        counts = data.get("counts") or {}
-        total = sum(counts.values()) if counts else data.get("total_listings", 0)
+        # D-188: the running head's count is the page's own headline count,
+        # with the page's own noun. It was `sum(counts.values())` beside the
+        # report title, so a closed report with A50/P20/C40 printed "110
+        # Closed Sales" on every page under a band that says 40, inventory
+        # doubled, and price bands read as "30 Price Bands".
+        total, noun = self._v2_headline_count()
         title = report_titles.get(self.report_type, "Market Report")
         city = data.get("city", "")
         return {
@@ -760,6 +764,7 @@ class MarketReportBuilder:
             "city": city,
             "lookback_days": data.get("lookback_days", 30),
             "total_count": total,
+            "count_noun": noun,
             # §7.1 — the masthead renders "<title> — <city>" on ONE line in a
             # box of fixed height. This is the size that keeps it there.
             "title_px": self._masthead_title_px(f"{title} — {city}" if city else title),
@@ -879,6 +884,35 @@ class MarketReportBuilder:
     # One band shape for every kind (fixed height, three rows) and one table
     # shape for the three table kinds. Only `closed` is wired; see V2_KINDS.
 
+    def _v2_headline_count(self):
+        """The one count each kind leads with, and the noun that names it.
+
+        D-188. The page-1 band prints this number and the running head on every
+        page prints the same number with this noun, from this one function, so
+        the two cannot disagree again. `(None, None)` for a kind with no count
+        to lead with; the running head then prints no count rather than one it
+        made up.
+        """
+        stats = self._build_stats_context()
+        kind = self.report_type
+        if kind == "closed":
+            return stats["closed_count"], "homes sold"
+        if kind in ("new_listings", "new_listings_gallery"):
+            return (stats["new_listings_count"] or len(
+                self.report_data.get("listings")
+                or self.report_data.get("listings_sample") or [])), "new listings"
+        if kind == "open_houses":
+            return len(self._v2_listing_rows()), "open houses"
+        if kind == "featured_listings":
+            return len(self._v2_listing_rows()), "featured homes"
+        if kind == "inventory":
+            return stats["active_count"], "homes for sale"
+        if kind == "price_bands":
+            return stats["active_count"], "active listings"
+        if kind == "market_snapshot":
+            return stats["closed_count"], "closed sales"
+        return None, None
+
     def _v2_band(self) -> Dict[str, Any]:
         """Design's page-1 band, for the kinds in `V2_KINDS`.
 
@@ -896,7 +930,7 @@ class MarketReportBuilder:
         if self.report_type == "closed":
             label = f"homes sold in {city}"
             ratio = stats["list_to_sale_pct"]
-            big = stats["closed_count"]
+            big, _ = self._v2_headline_count()
             cells = [
                 ("Median price", _v2_money(stats["median_close_price"])),
                 ("Avg. days", _v2_days(stats["avg_dom"])),
@@ -909,9 +943,7 @@ class MarketReportBuilder:
             # count / "new listings in {area}", price range / "this week",
             # Median list · Under $1M · Of inventory.
             label = f"new listings in {city}"
-            big = stats["new_listings_count"] or len(
-                self.report_data.get("listings")
-                or self.report_data.get("listings_sample") or [])
+            big, _ = self._v2_headline_count()
             low, high = self._v2_price_range()
             cells = [
                 ("Median list", _v2_money(stats["median_list_price"])),
@@ -932,7 +964,7 @@ class MarketReportBuilder:
             # viewings that do not exist. The days actually present are read
             # off the listings and named.
             label = "homes to see this weekend"
-            big = _v2_count(len(self._v2_listing_rows()))
+            big = _v2_count(self._v2_headline_count()[0])
             first, last, hoods = self._v2_open_house_span()
             cells = [
                 ("From", first or V2_NO_DATA),
@@ -963,7 +995,7 @@ class MarketReportBuilder:
             # "1.9 months" / "of inventory · seller's market", stats
             # Median list · New this week · Avg. days listed.
             label = f"homes for sale in {city}"
-            big = _v2_count(stats["active_count"])
+            big = _v2_count(self._v2_headline_count()[0])
             cells = [
                 ("Median list", _v2_money(stats["median_list_price"])),
                 ("New this week", self._v2_new_this_week()),
@@ -1834,6 +1866,7 @@ class MarketReportBuilder:
             "lookback_days": header_ctx.get("lookback_days") or 30,
             "subtitle_text": subtitle_text,
             "total_count": header_ctx.get("total_count"),
+            "count_noun": header_ctx.get("count_noun"),
             "agent": self._build_agent_context(),
         }
         template = self.env.get_template("_base/page_header.jinja2")

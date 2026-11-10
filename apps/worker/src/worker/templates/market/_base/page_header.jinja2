@@ -91,8 +91,10 @@
   </span>
   {# D-108: 0 is a result. A running head reading "0 New Listings" is the
      honest continuation of a page-1 masthead that says the same. #}
-  {% if total_count is not none %}
-  <span class="rh-meta">{{ total_count }} {{ report_title }}</span>
+  {# D-188: the page's own headline count and noun (`_v2_headline_count`),
+     never a sum across statuses beside the report title. #}
+  {% if total_count is not none and count_noun %}
+  <span class="rh-meta">{{ total_count }} {{ count_noun }}</span>
   {% endif %}
 </div>
 <div class="rh-gap"></div>

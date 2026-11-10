@@ -49,7 +49,7 @@ export interface Comparable {
   distance_miles: number;
   price_per_sqft: number;
   status: string;
-  dom: number;
+  dom: number | null;
   photo_url: string | null;
   lat?: number;
   lng?: number;
