@@ -47,14 +47,39 @@ def _number(value) -> Optional[float]:
     return n if n > 0 else None
 
 
+def is_sale(c: Dict[str, Any]) -> bool:
+    """A closed or sold comp: its price must be what it sold for."""
+    return _closed(c)
+
+
+def sale_price(c: Dict[str, Any]) -> Optional[float]:
+    """What a closed comp SOLD for, or None when no sale price is recorded."""
+    return _price(c) if _closed(c) else None
+
+
 def _price(c: Dict[str, Any]) -> Optional[float]:
-    # The PDF reads `sale_price`, then `price`. The consumer worker stores the
-    # close price as both `price` and `close_price`; older rows used `sold_price`.
+    # LR-018 / D-377: for a sale, `close_price` is authoritative whenever the
+    # row carries the field (the worker and API shape). `price` there was
+    # `closePrice or listPrice`, so on a closed comp with no close price it
+    # held the ASKING price, and reading it first put that in the range, the
+    # median and $/sqft. Stored rows re-read correctly with no migration.
+    if _closed(c) and "close_price" in c:
+        return _number(c.get("close_price"))
+    # Otherwise: the PDF reads `sale_price`, then `price`; older rows used
+    # `sold_price`.
     for key in ("sale_price", "price", "close_price", "sold_price"):
         n = _number(c.get(key))
         if n is not None:
             return n
     return None
+
+
+def usable(comps: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """The comps a report may show: every comp EXCEPT a sale with no recorded
+    sale price (LR-018). Every statistic and every list is computed from this
+    one set, so the window, radius and days on market describe the same homes
+    as the range (Codex review of #277: an excluded comp still set them)."""
+    return [c for c in comps if not (_closed(c) and _price(c) is None)]
 
 
 def closed_prices(comps: Iterable[Dict[str, Any]]) -> List[float]:
@@ -91,6 +116,7 @@ def radius_miles(comps: Iterable[Dict[str, Any]]) -> Optional[float]:
 
 
 def summarize(comps: List[Dict[str, Any]], today: Optional[date] = None) -> Dict[str, Any]:
+    comps = usable(comps)
     prices = closed_prices(comps)
     ppsf = sorted(
         p / s for p, s in ((_price(c), _number(c.get("sqft"))) for c in comps if _closed(c))

@@ -1,0 +1,65 @@
+[
+  {
+    "name": "LR-018 comes back: the CMA keeps a closed listing with no close price",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "raw_comps = [l for l in raw_comps if _is_usable_comp(l)]",
+    "new": "raw_comps = list(raw_comps)",
+    "test": "apps/worker/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "LR-018 comes back: the worker prices a sale at its asking price",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "\"price\": close_price if is_sale else list_price,",
+    "new": "\"price\": close_price or list_price,",
+    "test": "apps/worker/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "LR-018 comes back: the comps endpoint keeps a sale with no sale price",
+    "file": "apps/api/src/api/routes/property.py",
+    "old": "filtered = [lst for lst in filtered if is_usable_comp(lst, params.get(\"status\"))]",
+    "new": "filtered = list(filtered)",
+    "test": "apps/api/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "LR-018 comes back: the API prices a sale at its asking price",
+    "file": "apps/api/src/api/services/simplyrets.py",
+    "old": "\"price\": close_price if is_sale else list_price,",
+    "new": "\"price\": close_price or list_price,",
+    "test": "apps/api/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "LR-018 comes back: the API assumes a missing status is Closed",
+    "file": "apps/api/src/api/services/simplyrets.py",
+    "old": "    if not status and close_price is not None:\n        status = \"Closed\"\n",
+    "new": "    if not status:\n        status = \"Closed\"\n",
+    "test": "apps/api/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "LR-018 comes back: /r reads a stored asking price before close_price",
+    "file": "apps/api/src/api/services/comp_summary.py",
+    "old": "    if _closed(c) and \"close_price\" in c:\n        return _number(c.get(\"close_price\"))\n",
+    "new": "",
+    "test": "apps/api/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "LR-018 comes back: the PDF builder keeps a sale with no recorded sale price",
+    "file": "apps/worker/src/worker/property_builder.py",
+    "old": "                           \"comparables\": [c for c in comps if not _unpriced_sale(c)]}",
+    "new": "                           \"comparables\": list(comps)}",
+    "test": "apps/worker/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "Codex #277 comes back: /r statistics include a comp the page does not show",
+    "file": "apps/api/src/api/services/comp_summary.py",
+    "old": "    comps = usable(comps)\n    prices = closed_prices(comps)",
+    "new": "    prices = closed_prices(comps)",
+    "test": "apps/api/tests/test_asking_price_is_not_a_sale.py"
+  },
+  {
+    "name": "Codex #277 comes back: the count calls an agent sale at asking definite",
+    "file": "scripts/readonly/lr018_asking_price_reports.sql",
+    "old": "             WHEN coalesce(sale_price, price) = list_price                   THEN 'possible'\n             ELSE 'recorded sale'\n           END AS verdict\n    FROM num\n)\nSELECT source, report_status, verdict,",
+    "new": "             WHEN coalesce(sale_price, price) = list_price AND NOT has_sale_date THEN 'definite'\n             WHEN coalesce(sale_price, price) = list_price                   THEN 'possible'\n             ELSE 'recorded sale'\n           END AS verdict\n    FROM num\n)\nSELECT source, report_status, verdict,",
+    "test": "tests/test_lr018_readonly_count_classifies_comps.py"
+  }
+]

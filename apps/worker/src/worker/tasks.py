@@ -93,6 +93,63 @@ def _resolve_simplyrets_type(sitex_use_code: Optional[str]) -> tuple:
     return ("residential", "SingleFamilyResidence")
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# LR-018 / D-377: AN ASKING PRICE IS NOT A SALE.
+#
+# The CMA comp builder wrote `closePrice or listPrice` as the price and a
+# missing MLS status as "Closed", so a closed listing with no recorded close
+# price entered the homeowner's range, median and $/sqft at what the seller
+# ASKED. Same rule as the API (`services/simplyrets.comp_sale_fields`); keep the
+# two in step.
+# ─────────────────────────────────────────────────────────────────────────────
+_SALE_STATUSES = ("closed", "sold")
+
+
+def _positive_or_none(value):
+    """The value when it is a positive number, else None (keeps its type)."""
+    try:
+        return value if float(value) > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _comp_sale_fields(listing: dict, searched_status: Optional[str] = "Closed") -> dict:
+    """Status and prices for one raw SimplyRETS listing, without inventing either.
+
+    status: the MLS status; when missing, "Closed" ONLY if a close price is
+    recorded, else "" (unknown). price: a sale's recorded close price and
+    nothing else; any other status's list price.
+    """
+    sales = listing.get("sales") or {}
+    mls = listing.get("mls") or {}
+    close_price = _positive_or_none(sales.get("closePrice"))
+    list_price = _positive_or_none(listing.get("listPrice"))
+    status = str(mls.get("status") or "").strip()
+    if not status and close_price is not None:
+        status = "Closed"
+    if not status and searched_status and "," not in searched_status:
+        # The CMA search asks for closed sales only; with no close price this
+        # is still not usable (`_is_usable_comp`), but it is not "unknown".
+        status = searched_status
+    is_sale = status.lower() in _SALE_STATUSES
+    return {
+        "status": status,
+        "price": close_price if is_sale else list_price,
+        "close_price": close_price,
+        "list_price": list_price,
+    }
+
+
+def _is_usable_comp(listing: dict) -> bool:
+    """Not a comp: an unknown status, or a sale with no recorded sale price."""
+    fields = _comp_sale_fields(listing)
+    if not fields["status"]:
+        return False
+    if fields["status"].lower() in _SALE_STATUSES:
+        return fields["close_price"] is not None
+    return True
+
+
 def _post_filter_by_property_type(listings: list, simplyrets_subtype: Optional[str]) -> list:
     """Post-filter SimplyRETS listings to match subject property type."""
     if not simplyrets_subtype:
@@ -2511,7 +2568,10 @@ def consumer_comps_range(comparables):
     for c in comparables or []:
         if str(c.get("status") or "").strip().lower() not in ("closed", "sold"):
             continue
-        for key in ("sale_price", "price", "close_price"):
+        # LR-018: `close_price` is authoritative when the comp carries it; the
+        # API's `comp_summary._price` applies the same rule.
+        keys = ("close_price",) if "close_price" in c else ("sale_price", "price", "close_price")
+        for key in keys:
             try:
                 price = float(c.get(key) or 0)
             except (TypeError, ValueError):
@@ -2704,7 +2764,10 @@ def process_consumer_report(self, report_id: str):
                         logger.warning("[CMA] %s: params=%s", label, sr_params)
                         raw_comps = fetch_properties(sr_params, limit=25)
                         raw_comps = _post_filter_by_property_type(raw_comps, sr_subtype)
-                        logger.warning("[CMA] %s: %d results after type filter", label, len(raw_comps))
+                        # LR-018: counted only once unusable comps are gone, so
+                        # a level short of real sales widens the search.
+                        raw_comps = [l for l in raw_comps if _is_usable_comp(l)]
+                        logger.warning("[CMA] %s: %d results after type and sale-price filter", label, len(raw_comps))
                         if len(raw_comps) >= 3:
                             break
 
@@ -2725,6 +2788,7 @@ def process_consumer_report(self, report_id: str):
                         sales = listing.get("sales") or {}
                         photos = listing.get("photos") or []
 
+                        sale = _comp_sale_fields(listing)
                         dist = None
                         if subject_lat and subject_lng and geo.get("lat") and geo.get("lng"):
                             dist = _haversine(subject_lat, subject_lng, geo["lat"], geo["lng"])
@@ -2735,13 +2799,13 @@ def process_consumer_report(self, report_id: str):
                             "city": addr_obj.get("city") or "",
                             "state": addr_obj.get("state") or "",
                             "zip_code": addr_obj.get("postalCode") or "",
-                            # `sales.closePrice`, not the top level (D-145).
-                            # The precedence here was always right; the path
-                            # was not, so the fallback to listPrice fired on
-                            # every closed comp.
-                            "price": sales.get("closePrice") or listing.get("listPrice") or 0,
-                            "list_price": listing.get("listPrice"),
-                            "close_price": sales.get("closePrice"),
+                            # `sales.closePrice`, not the top level (D-145),
+                            # and nothing in its place (LR-018): the old
+                            # `or listPrice` put an asking price in the range
+                            # whenever the close price was missing.
+                            "price": sale["price"] or 0,
+                            "list_price": sale["list_price"],
+                            "close_price": sale["close_price"],
                             "bedrooms": prop_info.get("bedrooms") or 0,
                             "bathrooms": prop_info.get("bathsFull") or 0,
                             "sqft": prop_info.get("area") or 0,
@@ -2749,7 +2813,8 @@ def process_consumer_report(self, report_id: str):
                             "lot_size": prop_info.get("lotSize"),
                             "photo_url": photos[0] if photos else None,
                             "photos": photos,
-                            "status": mls_obj.get("status") or "Closed",
+                            # LR-018: never assumed; "Closed" only with a price.
+                            "status": sale["status"],
                             "dom": mls_obj.get("daysOnMarket"),
                             "days_on_market": mls_obj.get("daysOnMarket"),
                             "list_date": listing.get("listDate"),
@@ -2770,8 +2835,12 @@ def process_consumer_report(self, report_id: str):
                         )
 
                     # Market stats from normalized comps
-                    comp_prices = [c["price"] for c in comparables if c.get("price")]
-                    comp_ppsf = [c["price"] / c["sqft"] for c in comparables if c.get("price") and c.get("sqft")]
+                    # LR-018: sale figures from recorded sales only. An active
+                    # or pending comp's price is an asking price.
+                    sold = [c for c in comparables
+                            if str(c.get("status") or "").lower() in _SALE_STATUSES and c.get("close_price")]
+                    comp_prices = [c["close_price"] for c in sold]
+                    comp_ppsf = [c["close_price"] / c["sqft"] for c in sold if c.get("sqft")]
                     comp_dom = [c["days_on_market"] for c in comparables if c.get("days_on_market") is not None]
 
                     if comp_prices:
@@ -2780,7 +2849,7 @@ def process_consumer_report(self, report_id: str):
                             "median_price": sorted_prices[len(sorted_prices) // 2],
                             "avg_price_per_sqft": int(sum(comp_ppsf) / len(comp_ppsf)) if comp_ppsf else None,
                             "avg_days_on_market": int(sum(comp_dom) / len(comp_dom)) if comp_dom else None,
-                            "total_sold_last_6mo": len(comparables),
+                            "total_sold_last_6mo": len(sold),
                         }
                         logger.info("Market stats: %s", market_stats)
 

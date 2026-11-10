@@ -16,6 +16,7 @@ import logging
 
 from ..db import db_conn, fetchone_dict, fetchall_dicts
 from ..services.comp_summary import summarize as summarize_comps
+from ..services import comp_summary
 from ..services.report_theme import consumer_report_color, resolve_theme_id, tokens_for
 
 logger = logging.getLogger(__name__)
@@ -178,7 +179,9 @@ async def get_report_data(
     # an estimate the owner decided against; the second disagreed with the PDF
     # on window, radius and median. Both are recomputed from the stored comps
     # by the PDF's rules, which also corrects every report already sent.
-    summary = summarize_comps([c for c in comparables if isinstance(c, dict)])
+    # LR-018: the list and the summary are built from the same usable comps.
+    comparables = comp_summary.usable([c for c in comparables if isinstance(c, dict)])
+    summary = summarize_comps(comparables)
     
     # Build property data with fallbacks
     prop = PropertyData(
@@ -214,7 +217,15 @@ async def get_report_data(
     comp_list = []
     for c in comparables:
         try:
-            sold_price = c.get("sold_price") or c.get("price") or c.get("close_price") or 0
+            # LR-018: a sale shows what it sold for, by the same rule as the
+            # range above; a sale with no recorded price is not a comparable.
+            if comp_summary.is_sale(c):
+                recorded = comp_summary.sale_price(c)
+                if recorded is None:
+                    continue
+                sold_price = int(recorded)
+            else:
+                sold_price = c.get("sold_price") or c.get("price") or c.get("close_price") or 0
             sqft_val = c.get("sqft") or 0
 
             # price_per_sqft: compute if not stored

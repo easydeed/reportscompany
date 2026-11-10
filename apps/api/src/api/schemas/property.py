@@ -220,13 +220,17 @@ def normalize_comparable(raw: dict) -> dict:
     # `listPrice` is the only number there is. It is the last resort, after
     # the real sale price has been looked for in both shapes.
     sales = raw.get("sales") or {}
-    sale_price = _parse_float(
-        raw.get("sale_price") or 
-        sales.get("closePrice") or 
-        raw.get("price") or 
-        raw.get("listPrice") or
-        0
-    )
+    if isinstance(raw.get("sales"), dict):
+        # LR-018: a raw vendor row. Its sale price is `sales.closePrice` and
+        # nothing else; the list price is what the seller asked.
+        sale_price = _parse_float(raw.get("sale_price") or sales.get("closePrice") or 0)
+    else:
+        sale_price = _parse_float(
+            raw.get("sale_price") or
+            raw.get("price") or
+            raw.get("listPrice") or
+            0
+        )
     
     list_price = _parse_float(raw.get("list_price") or raw.get("listPrice"))
     
