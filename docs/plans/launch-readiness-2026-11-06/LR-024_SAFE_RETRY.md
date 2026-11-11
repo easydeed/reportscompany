@@ -50,6 +50,8 @@ Both schema guards move `REQUIRED_MIGRATION` to 0066.
 4. **Hit with a different hash:** 409 `idempotency_key_reused`, and nothing is created.
 5. **Miss:** the existing path runs unchanged. The key row is inserted in **the same transaction** as the `report_generations` or `schedules` INSERT. A refusal or error rolls the key back with the resource, so a key is stored only for something that exists, and a retry after a refusal runs fresh.
 
+**The two Next proxies must forward it.** `apps/web/app/api/proxy/v1/reports/route.ts` and `…/schedules/route.ts` each build a fresh header set: the cookie or Bearer token plus `Content-Type`. As they stand, they would drop the key silently. Both forward `Idempotency-Key` and pass `Idempotent-Replayed` back. A proxy test pins each one.
+
 **What it deliberately does not do:**
 - **Store response bodies.** It replays the resource's current state, which is what a client polling the report wants.
 - **Cover the report enqueue after commit.** If the enqueue failed, the replay shows `failed` and the wizard shows the terminal failure. A crash between the commit and the enqueue leaves a `pending` report. That predates this ticket and is recorded below; the bounded wait in §3 now shows it as "taking longer than usual" instead of spinning.
@@ -104,7 +106,7 @@ Both schema guards move `REQUIRED_MIGRATION` to 0066.
   - no header behaves as today;
   - a malformed key gets 422.
   - Each test is red on `main`, where a second report is created.
-- **Web (Jest):** every row of both tables above; the key is reused after a lost response and changes after an edit; timers stop on unmount and on retry; focus moves to the new heading; a schedule failure shows its error.
+- **Web (Jest):** both proxies forward the key; every row of both tables above; the key is reused after a lost response and changes after an edit; timers stop on unmount and on retry; focus moves to the new heading; a schedule failure shows its error.
 - **Mutations:** a spec covering the lock, the hash comparison, the same-transaction insert, the reused key, the deadline, the consecutive-error count and the schedule error path.
 - **Renders:** each changed state at 390px, 820px and desktop, on the real wizard with the proxy answered per state, with a keyboard pass.
 
