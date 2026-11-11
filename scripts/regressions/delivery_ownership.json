@@ -51,8 +51,8 @@
   {
     "name": "R4: the journal holds a different body from the one sent",
     "file": "apps/worker/src/worker/consumer_delivery.py",
-    "old": "(str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, body))",
-    "new": "(str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, \"\"))",
+    "old": "            VALUES (%s::uuid, %s::uuid, %s::uuid, %s, %s, %s, %s, 'consumer', 'pending', 'outbound')\n        \"\"\", (str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, body))",
+    "new": "            VALUES (%s::uuid, %s::uuid, %s::uuid, %s, %s, %s, %s, 'consumer', 'pending', 'outbound')\n        \"\"\", (str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, \"\"))",
     "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
   },
   {

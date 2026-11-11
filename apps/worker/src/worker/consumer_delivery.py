@@ -601,3 +601,157 @@ def _resolve_journal(cur, channel, attempt_id, account_id, resolution, provider_
             WHERE id = %s::uuid
         """, ("sent" if resolution == "sent" else "failed", provider_id,
               resolution, operator, evidence, str(attempt_id)))
+
+
+# ── The agent's new-lead text (LR-021, §3.6) ─────────────────────────────────
+#
+# Its own claim, journal row, evidence (`agent_sms_sent_at`) and outcome, using
+# the same rules as the consumer stage. It never changes the consumer's status
+# and never spends a credit. An unknown outcome is held, never resent.
+
+# Automatic recovery is for a lead that is still fresh. The ticket's rollout:
+# "Historical notification replay needs a bounded reviewed list and approved
+# recipients; it is not automatic." Without a bound, re-running a report
+# delivered weeks ago would text its agent about a stale lead.
+AGENT_RECOVERY_HOURS = int(os.getenv("AGENT_NOTIFY_RECOVERY_HOURS", "24"))
+
+_AGENT_ELIGIBLE = """
+      (cr.consumer_sms_sent_at IS NOT NULL OR cr.consumer_email_sent_at IS NOT NULL)
+  AND cr.agent_sms_sent_at IS NULL
+  AND (cr.agent_notify_status IS NULL OR cr.agent_notify_status = 'failed')
+  AND GREATEST(cr.consumer_sms_sent_at, cr.consumer_email_sent_at)
+        > NOW() - make_interval(hours => %(recovery_hours)s)
+"""
+
+
+def agent_stage(cur, report_id):
+    """(status, claim is stale, eligible now) for the report's agent notification."""
+    cur.execute(f"""
+        SELECT cr.agent_notify_status,
+               (cr.agent_notify_claimed_at IS NULL
+                OR cr.agent_notify_claimed_at < NOW() - make_interval(mins => %(window)s)),
+               ({_AGENT_ELIGIBLE})
+        FROM consumer_reports cr WHERE cr.id = %(rid)s::uuid
+    """, {"window": CLAIM_WINDOW_MINUTES, "rid": str(report_id), "recovery_hours": AGENT_RECOVERY_HOURS})
+    return cur.fetchone()
+
+
+def hold_stale_agent_claim(cur, report_id, text):
+    """Hold an agent `sending` claim nobody settled. Never a send."""
+    cur.execute("""
+        UPDATE consumer_reports SET agent_notify_status = %s, agent_notify_error = %s
+        WHERE id = %s::uuid AND agent_notify_status = %s
+          AND (agent_notify_claimed_at IS NULL
+               OR agent_notify_claimed_at < NOW() - make_interval(mins => %s))
+          AND agent_sms_sent_at IS NULL
+        RETURNING agent_notify_attempt_id
+    """, (NEEDS_REVIEW, text, str(report_id), SENDING, CLAIM_WINDOW_MINUTES))
+    row = cur.fetchone()
+    if row is not None:
+        logger.critical("AGENT_NOTIFY_NEEDS_REVIEW report=%s attempt=%s: %s", report_id, row[0], text)
+    return row is not None
+
+
+def settle_agent_without_claim(cur, report_id, *, status, text, require_no_phone=False):
+    """Record `skipped` (no agent phone) or `failed` (nothing could be sent), only if eligible."""
+    phone_cond = "AND NULLIF(btrim(u.phone), '') IS NULL" if require_no_phone else ""
+    cur.execute(f"""
+        UPDATE consumer_reports cr SET agent_notify_status = %(status)s, agent_notify_error = %(text)s
+        FROM users u
+        WHERE cr.id = %(rid)s::uuid AND u.id = cr.agent_id AND {_AGENT_ELIGIBLE} {phone_cond}
+        RETURNING cr.id
+    """, {"status": status, "text": text, "rid": str(report_id), "recovery_hours": AGENT_RECOVERY_HOURS})
+    return cur.fetchone() is not None
+
+
+def claim_agent_notification(conn, report_id, *, from_phone, build_body):
+    """Claim the agent text, reading the agent's CURRENT phone, and journal it.
+
+    Returns (attempt_id, to_phone, body, account_id), or None if not eligible
+    or the agent has no phone. `build_body(row)` builds the exact text from the
+    claimed row; the journal holds that text, and that text is what is sent.
+    The destination is frozen in the journal row: a later attempt reads the
+    then-current phone, an accepted or unknown attempt is never retargeted.
+    """
+    attempt_id = uuid.uuid4()
+    with conn.transaction():
+        cur = conn.cursor()
+        cur.execute(f"""
+            UPDATE consumer_reports cr
+            SET agent_notify_status = %(sending)s, agent_notify_claimed_at = NOW(),
+                agent_notify_attempt_id = %(attempt)s::uuid, agent_notify_error = NULL
+            FROM users u
+            WHERE cr.id = %(rid)s::uuid AND u.id = cr.agent_id
+              AND NULLIF(btrim(u.phone), '') IS NOT NULL
+              AND {_AGENT_ELIGIBLE}
+            RETURNING u.phone, u.account_id, cr.property_data, cr.property_address, cr.property_city,
+                      cr.property_state, cr.property_zip, cr.consumer_phone, cr.consumer_email
+        """, {"sending": SENDING, "attempt": str(attempt_id), "rid": str(report_id),
+              "recovery_hours": AGENT_RECOVERY_HOURS})
+        row = cur.fetchone()
+        if row is None:
+            return None
+        to_phone, account_id = row[0].strip(), row[1]
+        body = build_body(row)
+        cur.execute("""
+            INSERT INTO sms_logs (id, account_id, consumer_report_id, to_phone, from_phone,
+                                  message, message_body, recipient_type, status, direction)
+            VALUES (%s::uuid, %s::uuid, %s::uuid, %s, %s, %s, %s, 'agent', 'pending', 'outbound')
+        """, (str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, body))
+    return attempt_id, to_phone, body, account_id
+
+
+def record_agent_sent(conn, report_id, attempt_id, *, sid) -> bool:
+    """Twilio accepted the agent text. Evidence only where NULL. No credit."""
+    with conn.transaction():
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE consumer_reports
+            SET agent_notify_status = 'sent', agent_sms_sent_at = NOW(), agent_sms_sid = %s,
+                agent_notify_error = NULL
+            WHERE id = %s::uuid AND agent_sms_sent_at IS NULL
+            RETURNING id
+        """, (sid, str(report_id)))
+        recorded = cur.fetchone() is not None
+    _journal(conn, "UPDATE sms_logs SET status = 'sent', twilio_sid = %s, error_message = NULL "
+                   "WHERE id = %s::uuid", (sid, str(attempt_id)))
+    try:
+        _warn_if_resolved_not_sent(conn.cursor(), "sms_logs", attempt_id, report_id)
+    except Exception:
+        pass
+    return recorded
+
+
+def release_agent_refused(conn, report_id, attempt_id, *, text) -> bool:
+    """Twilio refused the agent text, so nothing was sent: `failed`, claim released."""
+    with conn.transaction():
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE consumer_reports
+            SET agent_notify_status = 'failed', agent_notify_error = %s,
+                agent_notify_attempt_id = NULL, agent_notify_claimed_at = NULL
+            WHERE id = %s::uuid AND agent_notify_status = %s AND agent_notify_attempt_id = %s::uuid
+              AND agent_sms_sent_at IS NULL
+            RETURNING id
+        """, (text, str(report_id), SENDING, str(attempt_id)))
+        owned = cur.fetchone() is not None
+    _journal(conn, "UPDATE sms_logs SET status = 'failed', error_message = %s WHERE id = %s::uuid",
+             (text, str(attempt_id)))
+    return owned
+
+
+def hold_agent_attempt(conn, report_id, attempt_id, *, text) -> bool:
+    """The agent text's outcome is unknown: held for an operator, never resent."""
+    with conn.transaction():
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE consumer_reports SET agent_notify_status = %s, agent_notify_error = %s
+            WHERE id = %s::uuid AND agent_notify_status = %s AND agent_notify_attempt_id = %s::uuid
+              AND agent_sms_sent_at IS NULL
+            RETURNING id
+        """, (NEEDS_REVIEW, text, str(report_id), SENDING, str(attempt_id)))
+        owned = cur.fetchone() is not None
+    _journal(conn, "UPDATE sms_logs SET error_message = %s WHERE id = %s::uuid", (text, str(attempt_id)))
+    if owned:
+        logger.critical("AGENT_NOTIFY_NEEDS_REVIEW report=%s attempt=%s: %s", report_id, attempt_id, text)
+    return owned

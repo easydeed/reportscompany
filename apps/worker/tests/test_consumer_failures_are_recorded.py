@@ -263,9 +263,10 @@ def test_a_crash_after_the_text_went_out_does_not_mark_it_failed(tasks, report, 
     """The send happened; an exception afterwards cannot undo it."""
     _twilio(monkeypatch, _sent)
 
-    def boom(**k):
+    def boom(*a, **k):
         raise RuntimeError("agent notification broke")
-    monkeypatch.setattr(tasks, "send_agent_notification_sms", boom)
+    # LR-021: the agent text is its own stage, `_notify_agent`.
+    monkeypatch.setattr(tasks, "_notify_agent", boom)
     rid = report("sms")
     assert tasks.process_consumer_report.apply(args=[rid]).failed()
     status, error, sms_at, _ = _row(db, rid)
