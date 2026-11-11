@@ -105,9 +105,6 @@ export async function classifySubmit(res: Response | null, product: Product): Pr
   return { kind: "invalid", message: messageFrom(body) || "This request couldn't be accepted. Please check your choices." }
 }
 
-/** Outcomes after which the same request may safely be sent again with the same key. */
-export const UNKNOWN_OUTCOME: ReadonlySet<SubmitOutcome["kind"]> = new Set(["offline", "server_error", "session_expired"])
-
 /**
  * One key per payload. The same payload sent again (a retry) reuses its key,
  * so the API replays it; a different payload, or anything after `release`,
@@ -116,12 +113,12 @@ export const UNKNOWN_OUTCOME: ReadonlySet<SubmitOutcome["kind"]> = new Set(["off
 export const SAFE_RETRY_MAX_AGE_MS = 6 * 24 * 60 * 60 * 1000
 
 export class IdempotencyKeys {
-  private current: { payload: string; key: string; firstSentAt: number } | null = null
+  private current: { payload: string; key: string; firstSentAt: number; uncertain: boolean } | null = null
   constructor(private readonly make: () => string = newKey, private readonly clock: () => number = Date.now) {}
 
   keyFor(payload: string): string {
     if (!this.current || this.current.payload !== payload) {
-      this.current = { payload, key: this.make(), firstSentAt: this.clock() }
+      this.current = { payload, key: this.make(), firstSentAt: this.clock(), uncertain: false }
     }
     return this.current.key
   }
@@ -137,6 +134,19 @@ export class IdempotencyKeys {
     if (!this.current) return false
     const age = this.clock() - this.current.firstSentAt
     return age >= 0 && age <= SAFE_RETRY_MAX_AGE_MS
+  }
+
+  /**
+   * An answer for this key was unknown (offline, 5xx, 401): it may have created
+   * something. Kept until the key is released, so a later "nothing was created
+   * by THIS attempt" is never read as proof about the earlier one (Codex).
+   */
+  markUncertain() {
+    if (this.current) this.current.uncertain = true
+  }
+
+  get uncertain(): boolean {
+    return !!this.current?.uncertain
   }
 
   /** After a success, once the request's resource exists, or on an explicit new request. */
@@ -229,6 +239,7 @@ export async function watchReport(reportId: string, opts: WatchOptions = {}): Pr
 /** What each problem says and offers. Copy only; the component wires the actions. */
 export type ProblemKind =
   | "offline" | "server_error" | "session_expired" | "invalid" | "unknown" | "gone" | "unavailable"
+  | "unavailable_after_unknown"
   | "failed" | "slow" | "unreachable" | "status_session_expired" | "not_found"
 
 export type ProblemAction =
@@ -262,6 +273,14 @@ export const PROBLEMS: Record<ProblemKind, { title: string; sub: string; actions
     title: "We can't tell whether your earlier request went through",
     sub: "Check your list before sending it again: if it went through, it's there. If you were signed out, sign in again in a new tab first.",
     actions: ["go_list", "send_new"],
+  },
+  // The same answer after an earlier unknown one for this key: this attempt
+  // created nothing, but the earlier one may have. The key is kept, so the
+  // retry still cannot make a second one.
+  unavailable_after_unknown: {
+    title: "We can't create this right now",
+    sub: "We're updating the service. This attempt created nothing, but your earlier attempt may have gone through. Try again in a few minutes: it won't create a second one.",
+    actions: ["edit", "retry_submit"],
   },
   unavailable: {
     title: "We can't create this right now",

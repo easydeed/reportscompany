@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, EmailStr, constr, model_validator
 from typing import List, Optional, Dict, Any, Literal, Union
 from datetime import datetime
@@ -6,7 +6,7 @@ import json
 import traceback
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
 from ..crmls_cities import VALID_CITY_NAMES
-from ..services import get_full_plan_usage
+from ..services import get_full_plan_usage, idempotency
 from ..services.schedule_utils import compute_next_run as _compute_next_run
 from ..verification import block_unverified_send, manual_emails
 
@@ -285,17 +285,79 @@ def validate_schedule_params(cadence: str, weekly_dow: Optional[int], monthly_do
 
 
 # ====== Routes ======
+def _schedule_out(row) -> dict:
+    """One schedule as the API returns it: create, GET and an LR-024 replay alike."""
+    recipients_raw = row[12]  # Shifted by 1 due to timezone
+    return {
+        "id": row[0],
+        "name": row[1],
+        "report_type": row[2],
+        "city": row[3],
+        "zip_codes": row[4],
+        "lookback_days": row[5],
+        "cadence": row[6],
+        "weekly_dow": row[7],
+        "monthly_dom": row[8],
+        "send_hour": row[9],
+        "send_minute": row[10],
+        "timezone": row[11],  # PASS S2
+        "recipients": recipients_raw,  # Raw for backwards compat
+        "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
+        "include_attachment": row[13],
+        "active": row[14],
+        "last_run_at": row[15].isoformat() if row[15] else None,
+        "next_run_at": row[16].isoformat() if row[16] else None,
+        "created_at": row[17].isoformat(),
+        "filters": row[18] if row[18] else {}  # NEW: filters
+    }
+
+
+_SCHEDULE_ROW = """
+    SELECT id::text, name, report_type, city, zip_codes, lookback_days,
+           cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
+           recipients, include_attachment, active,
+           last_run_at, next_run_at, created_at, filters
+    FROM schedules
+    WHERE id = %s::uuid AND account_id = %s
+"""
+
+
 @router.post("/schedules", status_code=status.HTTP_201_CREATED)
 def create_schedule(
     payload: ScheduleCreate, 
     request: Request, 
+    response: Response,
     account_id: str = Depends(require_account_id)
 ):
     """
     Create a new schedule.
     Validates cadence-specific parameters and stores with RLS.
     Supports typed recipients (contact, sponsored_agent, manual_email).
+    Takes no Idempotency-Key; the keyed route below does (LR-024).
     """
+    return _create_schedule(payload, response, account_id, claim=None)
+
+
+@router.post("/idempotent/schedules", status_code=status.HTTP_201_CREATED)
+def create_schedule_idempotent(
+    payload: ScheduleCreate,
+    request: Request,
+    response: Response,
+    account_id: str = Depends(require_account_id),
+):
+    """The same create, keyed (LR-024, design rev 3).
+
+    Requires `Idempotency-Key`. A retry with the same key and body returns the
+    schedule the first request made, as it is now; a schedule deleted since is
+    410 and is never recreated. This route exists only in this release, so an
+    older API answers 404 here.
+    """
+    claim = idempotency.claim_for(request, idempotency.SCHEDULES, payload)
+    return _create_schedule(payload, response, account_id, claim=claim)
+
+
+def _create_schedule(payload: ScheduleCreate, response: Response, account_id: str,
+                     claim: Optional[idempotency.Claim]):
     try:
         # Validate cadence params
         validate_schedule_params(payload.cadence, payload.weekly_dow, payload.monthly_dom)
@@ -316,6 +378,18 @@ def create_schedule(
     try:
         with db_conn() as (conn, cur):
             set_rls(conn, account_id)
+
+            # LR-024: a keyed retry replays what the first request made, before
+            # any verification or limit check.
+            if claim is not None:
+                existing = idempotency.lookup(cur, account_id, claim)
+                if existing is not None:
+                    cur.execute(_SCHEDULE_ROW, (existing, account_id))
+                    replay = cur.fetchone()
+                    if not replay:
+                        idempotency.gone(existing)
+                    response.headers[idempotency.REPLAYED_HEADER] = "true"
+                    return _schedule_out(replay)
 
             # D-019. A schedule is a standing instruction to email people, so
             # it is gated on the same fact a send is. Checked before the plan
@@ -396,31 +470,12 @@ def create_schedule(
             ))
             
             row = cur.fetchone()
+
+            if claim is not None:
+                # Same transaction as the schedule: a failure from here on leaves neither.
+                idempotency.record(cur, account_id, claim, row[0])
             conn.commit()
-            
-            recipients_raw = row[12]  # Shifted by 1 due to timezone
-            return {
-                "id": row[0],
-                "name": row[1],
-                "report_type": row[2],
-                "city": row[3],
-                "zip_codes": row[4],
-                "lookback_days": row[5],
-                "cadence": row[6],
-                "weekly_dow": row[7],
-                "monthly_dom": row[8],
-                "send_hour": row[9],
-                "send_minute": row[10],
-                "timezone": row[11],  # PASS S2
-                "recipients": recipients_raw,  # Raw for backwards compat
-                "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
-                "include_attachment": row[13],
-                "active": row[14],
-                "last_run_at": row[15].isoformat() if row[15] else None,
-                "next_run_at": row[16].isoformat() if row[16] else None,
-                "created_at": row[17].isoformat(),
-                "filters": row[18] if row[18] else {}  # NEW: filters
-            }
+            return _schedule_out(row)
     except HTTPException:
         raise
     except Exception as e:
@@ -502,42 +557,13 @@ def get_schedule(
         set_rls(conn, account_id)
         
         # CRITICAL: Always filter by account_id for data isolation
-        cur.execute("""
-            SELECT id::text, name, report_type, city, zip_codes, lookback_days,
-                   cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone,
-                   recipients, include_attachment, active,
-                   last_run_at, next_run_at, created_at, filters
-            FROM schedules
-            WHERE id = %s::uuid AND account_id = %s
-        """, (schedule_id, account_id))
+        cur.execute(_SCHEDULE_ROW, (schedule_id, account_id))
         
         row = cur.fetchone()
         if not row:
             raise HTTPException(status_code=404, detail="Schedule not found")
         
-        recipients_raw = row[12]  # Shifted by 1 due to timezone
-        return {
-            "id": row[0],
-            "name": row[1],
-            "report_type": row[2],
-            "city": row[3],
-            "zip_codes": row[4],
-            "lookback_days": row[5],
-            "cadence": row[6],
-            "weekly_dow": row[7],
-            "monthly_dom": row[8],
-            "send_hour": row[9],
-            "send_minute": row[10],
-            "timezone": row[11],  # PASS S2
-            "recipients": recipients_raw,  # Raw for backwards compat
-            "resolved_recipients": decode_recipients(recipients_raw),  # Decoded for frontend
-            "include_attachment": row[13],
-            "active": row[14],
-            "last_run_at": row[15].isoformat() if row[15] else None,
-            "next_run_at": row[16].isoformat() if row[16] else None,
-            "created_at": row[17].isoformat(),
-            "filters": row[18] if row[18] else {}  # NEW: filters
-        }
+        return _schedule_out(row)
 
 
 @router.patch("/schedules/{schedule_id}")

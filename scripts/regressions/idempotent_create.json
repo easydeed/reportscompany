@@ -1,0 +1,93 @@
+[
+  {
+    "name": "I1 no per-key lock: concurrent retries race",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "    cur.execute(\"SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))\",\n                (f\"{claim.endpoint}:{account_id}:{claim.key}\",))\n",
+    "new": "",
+    "test": "apps/api/tests/test_idempotent_create.py -k concurrent"
+  },
+  {
+    "name": "I2 an expired key is treated as new",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "    if expired:\n        raise HTTPException(status_code=410",
+    "new": "    if False:\n        raise HTTPException(status_code=410",
+    "test": "apps/api/tests/test_idempotent_create.py -k window"
+  },
+  {
+    "name": "I3 a reused key with a different body replays",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "    if request_hash != claim.request_hash:",
+    "new": "    if False:",
+    "test": "apps/api/tests/test_idempotent_create.py -k different_request"
+  },
+  {
+    "name": "I4 the key is not looked up per account",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "        WHERE account_id = %s::uuid AND endpoint = %s AND idem_key = %s",
+    "new": "        WHERE %s::uuid IS NOT NULL AND endpoint = %s AND idem_key = %s",
+    "test": "apps/api/tests/test_idempotent_create.py -k belongs_to_its_account"
+  },
+  {
+    "name": "I5 the key is not looked up per endpoint",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "        WHERE account_id = %s::uuid AND endpoint = %s AND idem_key = %s",
+    "new": "        WHERE account_id = %s::uuid AND %s IS NOT NULL AND idem_key = %s",
+    "test": "apps/api/tests/test_idempotent_create.py -k belongs_to_its_endpoint"
+  },
+  {
+    "name": "I6 the fingerprint keeps the client's nested key order",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "json.dumps(payload.model_dump(mode=\"json\"), sort_keys=True,",
+    "new": "json.dumps(payload.model_dump(mode=\"json\"), sort_keys=False,",
+    "test": "apps/api/tests/test_idempotent_create.py -k fingerprint"
+  },
+  {
+    "name": "I7 the key format is not checked",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "    if not _KEY.match(key):",
+    "new": "    if False:",
+    "test": "apps/api/tests/test_idempotent_create.py -k well_formed"
+  },
+  {
+    "name": "I8 the keyed route does not require a key",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "    if key is None or not key.strip():\n        raise HTTPException(status_code=422, detail={",
+    "new": "    if False:\n        raise HTTPException(status_code=422, detail={",
+    "test": "apps/api/tests/test_idempotent_create.py -k well_formed"
+  },
+  {
+    "name": "I9 the report's key is never recorded",
+    "file": "apps/api/src/api/routes/reports.py",
+    "old": "            idempotency.record(cur, account_id, claim, row[\"id\"])",
+    "new": "            pass",
+    "test": "apps/api/tests/test_idempotent_create.py -k retried_report"
+  },
+  {
+    "name": "I10 the report replay is not served (falls through to create)",
+    "file": "apps/api/src/api/routes/reports.py",
+    "old": "            if existing is not None:\n                cur.execute(\n                    \"SELECT id::text, status FROM report_generations",
+    "new": "            if False:\n                cur.execute(\n                    \"SELECT id::text, status FROM report_generations",
+    "test": "apps/api/tests/test_idempotent_create.py -k retried_report"
+  },
+  {
+    "name": "I11 a deleted schedule's key falls through and recreates it",
+    "file": "apps/api/src/api/routes/schedules.py",
+    "old": "                if existing is not None:\n                    cur.execute(_SCHEDULE_ROW, (existing, account_id))",
+    "new": "                if existing is not None and False:\n                    cur.execute(_SCHEDULE_ROW, (existing, account_id))",
+    "test": "apps/api/tests/test_idempotent_create.py -k deleted_schedule"
+  },
+  {
+    "name": "I12 the schedule's key is written outside its transaction",
+    "file": "apps/api/src/api/routes/schedules.py",
+    "old": "                idempotency.record(cur, account_id, claim, row[0])\n            conn.commit()",
+    "new": "                conn.commit()\n                idempotency.record(cur, account_id, claim, row[0])",
+    "test": "apps/api/tests/test_idempotent_create.py -k leaves_neither"
+  },
+  {
+    "name": "I13 the old route starts honouring (and storing) a key",
+    "file": "apps/api/src/api/routes/reports.py",
+    "old": "    return _create_report(payload, response, bg, account_id, claim=None)",
+    "new": "    return _create_report(payload, response, bg, account_id, claim=idempotency.Claim(idempotency.REPORTS, request.headers.get('Idempotency-Key') or 'none-given', idempotency.fingerprint(payload)))",
+    "test": "apps/api/tests/test_idempotent_create.py -k old_routes"
+  }
+]

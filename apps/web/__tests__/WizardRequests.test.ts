@@ -6,7 +6,7 @@
  * read used/limit from the top level while the API puts them in `detail`.
  */
 import {
-  IdempotencyKeys, MAX_STATUS_ERRORS, PROBLEMS, SLOW_AFTER_MS, STATUS_INTERVAL_MS, UNKNOWN_OUTCOME,
+  IdempotencyKeys, MAX_STATUS_ERRORS, PROBLEMS, SLOW_AFTER_MS, STATUS_INTERVAL_MS,
   classifySubmit, limitMessage, watchReport,
 } from "@/lib/wizard-requests"
 
@@ -50,10 +50,6 @@ describe("a submit's answer", () => {
       .toEqual({ kind: "invalid", message: "'Atlantis' is not a recognized CRMLS city." })
     const fastapi = { detail: [{ loc: ["body", "name"], msg: "Field required" }] }
     expect(await classifySubmit(json(422, fastapi), "schedules")).toEqual({ kind: "invalid", message: "Field required" })
-  })
-
-  it("only outcomes that may have landed keep the key", () => {
-    expect([...UNKNOWN_OUTCOME].sort()).toEqual(["offline", "server_error", "session_expired"])
   })
 })
 
@@ -254,5 +250,34 @@ describe("rev 2/3: a safe retry is promised only when it is safe", () => {
       expect(PROBLEMS[kind].actions).not.toContain("retry_submit")
     }
     expect(PROBLEMS.unknown.sub).not.toMatch(/won't create a second/)
+  })
+})
+
+describe("an unavailable answer proves only that THIS attempt created nothing (Codex, design PASS)", () => {
+  it("an earlier unknown answer for the key is remembered until the key is released", () => {
+    const keys = new IdempotencyKeys(() => "k")
+    keys.keyFor("payload")
+    expect(keys.uncertain).toBe(false)
+    keys.markUncertain()
+    keys.keyFor("payload")
+    expect(keys.uncertain).toBe(true)
+    keys.release()
+    keys.keyFor("payload")
+    expect(keys.uncertain).toBe(false)
+  })
+
+  it("an edit (a new key) starts certain", () => {
+    const keys = new IdempotencyKeys()
+    keys.keyFor("a")
+    keys.markUncertain()
+    keys.keyFor("b")
+    expect(keys.uncertain).toBe(false)
+  })
+
+  it("after an unknown answer the message never claims nothing was created", () => {
+    expect(PROBLEMS.unavailable.sub).toMatch(/Nothing was created/)
+    expect(PROBLEMS.unavailable_after_unknown.sub).not.toMatch(/Nothing was created/)
+    expect(PROBLEMS.unavailable_after_unknown.sub).toMatch(/earlier attempt may have gone through/)
+    expect(PROBLEMS.unavailable_after_unknown.actions).toEqual(["edit", "retry_submit"])
   })
 })

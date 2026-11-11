@@ -1,0 +1,114 @@
+[
+  {
+    "name": "W1 the report wait has no deadline",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "const deadline = setTimeout(() => stop(\"slow\"), ",
+    "new": "const deadline = setTimeout(() => undefined, ",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W2 failed checks need not be consecutive",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "      errors = 0\n",
+    "new": "",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W3 leaving the page does not stop the wait",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  else opts.signal?.addEventListener(\"abort\", onCancel)\n",
+    "new": "",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W4 a retry gets a new key (a duplicate)",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "    if (!this.current || this.current.payload !== payload) {",
+    "new": "    if (true) {",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W5 a clock that moved back still promises a safe retry",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "    return age >= 0 && age <= SAFE_RETRY_MAX_AGE_MS",
+    "new": "    return age <= SAFE_RETRY_MAX_AGE_MS",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W6 an old key still promises a safe retry",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "    return age >= 0 && age <= SAFE_RETRY_MAX_AGE_MS",
+    "new": "    return age >= 0",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W7 a 401 on submit reads as an invalid request",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  if (res.ok) return { kind: \"created\", body }\n  if (res.status === 401) return { kind: \"session_expired\" }\n",
+    "new": "  if (res.ok) return { kind: \"created\", body }\n",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W8 D-329 limit numbers read from the top level again",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  return detail && typeof detail === \"object\" && !Array.isArray(detail) ? { ...body, ...(detail as Json) } : body",
+    "new": "  return body",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W9 a deleted resource reads as an invalid request",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "    if (code === \"idempotent_resource_gone\") return { kind: \"gone\" }\n",
+    "new": "",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W10 an unsupported API reads as a server error",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  if (res.status === 503 && body.error === \"idempotent_create_unavailable\") return { kind: \"unavailable\" }\n",
+    "new": "",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W11 an earlier unknown answer is forgotten",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "    if (this.current) this.current.uncertain = true",
+    "new": "    void 0",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W12 the reports proxy sends a keyed create to the unkeyed route",
+    "file": "apps/web/app/api/proxy/v1/reports/route.ts",
+    "old": "${key ? \"/v1/idempotent/reports\" : \"/v1/reports\"}",
+    "new": "/v1/reports",
+    "test": "__tests__/WizardProxyIdempotency.route.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W13 the schedules proxy drops the key",
+    "file": "apps/web/app/api/proxy/v1/schedules/route.ts",
+    "old": "        ...(key ? { 'Idempotency-Key': key } : {}),\n",
+    "new": "",
+    "test": "__tests__/WizardProxyIdempotency.route.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W14 a 404 on the keyed route passes through (no 'nothing was created')",
+    "file": "apps/web/app/api/proxy/v1/schedules/route.ts",
+    "old": "    if (key && response.status === 404) return idempotentCreateUnavailable();\n",
+    "new": "",
+    "test": "__tests__/WizardProxyIdempotency.route.test.ts",
+    "runner": "jest"
+  }
+]

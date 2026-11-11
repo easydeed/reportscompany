@@ -424,8 +424,16 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         showProblem("gone")
         return
       case "unavailable":
-        // An API without the key contract ran nothing; the key is kept.
-        showProblem("unavailable")
+        // An API without the key contract ran nothing THIS time; the key is
+        // kept. After an earlier unknown answer for this key, that earlier
+        // attempt may still have created something (Codex, design PASS).
+        if (!keysRef.current.uncertain) {
+          showProblem("unavailable")
+        } else if (keysRef.current.retryIsSafe()) {
+          showProblem("unavailable_after_unknown")
+        } else {
+          showProblem("unknown", unknownMessage(isReport))
+        }
         return
       case "key_expired":
         showProblem("unknown", unknownMessage(isReport))
@@ -434,6 +442,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         // offline, server_error, session_expired: the request may have landed.
         // The key is kept either way (never rotated behind the person's back);
         // "Try again" is offered only when the replay is known to be safe.
+        keysRef.current.markUncertain()
         if (!keysRef.current.retryIsSafe()) {
           showProblem("unknown", unknownMessage(isReport))
           return
