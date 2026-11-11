@@ -1,6 +1,7 @@
 from .app import celery
 import os, re, time, json, psycopg, redis, hmac, hashlib, httpx, logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+import uuid
 
 logger = logging.getLogger(__name__)
 from psycopg import sql
@@ -30,7 +31,8 @@ from .limit_checker import check_usage_limit, log_limit_decision_worker
 from .utils.photo_proxy import proxy_report_photos_inplace
 from .property_tasks.property_report import embed_images_as_base64
 from .filter_resolver import compute_market_stats, resolve_filters, build_filters_label, elastic_widen_filters
-from .sms import send_report_sms, send_agent_notification_sms
+from .sms import send_report_sms, send_agent_notification_sms, report_sms_body
+from . import consumer_delivery
 from celery.exceptions import Retry
 import boto3
 from botocore.client import Config
@@ -2480,53 +2482,35 @@ CONSUMER_NEEDS_REVIEW = "needs_review"
 CONSUMER_SENDING = "sending"
 
 
-def _claim_consumer_send(cur, report_id: str) -> bool:
-    """Persist "a send is in flight" before the irreversible call.
-
-    LR-019, Codex re-review of #274: the hold was written AFTER the send, so a
-    failed write in between (the SMS log, the hold itself) or a dead worker
-    left the row `failed`, and the next run sent again. With this committed
-    first (autocommit), every way the run can stop after the call leaves
-    `sending` or an outcome, and neither lets a later run send.
-
-    Conditional, so a second run that reaches here while the first holds the
-    claim does not send. That narrows LR-020's concurrent window; it is not
-    LR-020's atomic claim and does not close D-069.
-    """
-    cur.execute("""
-        UPDATE consumer_reports
-        SET status = %s
-        WHERE id = %s::uuid
-          AND status = 'processing'
-          AND consumer_sms_sent_at IS NULL
-          AND consumer_email_sent_at IS NULL
-        RETURNING id
-    """, (CONSUMER_SENDING, report_id))
-    return cur.fetchone() is not None
-
-
-def _hold_consumer_delivery_for_review(cur, report_id: str, channel: str, reason: str) -> str:
-    """Record an unknown outcome: held, alerted, and never resent by this task.
-
-    `needs_review` is checked at the top of `process_consumer_report`, so a
-    redelivered or re-enqueued task stops before it can send again. The log
-    line is the operator alert until LR-027 routes it to a named person; its
-    tag is stable so that routing can match on it.
-    """
-    text = consumer_failure_text(
+def _held_text(channel: str, reason: str) -> str:
+    """The stored reason for a hold: what happened, and that nothing was resent."""
+    return consumer_failure_text(
         f"{reason}; the {channel} may have been delivered, so it was not sent "
         "again. Needs operator review."
     )
-    cur.execute("""
-        UPDATE consumer_reports
-        SET status = %s, error_message = %s
-        WHERE id = %s::uuid
-    """, (CONSUMER_NEEDS_REVIEW, text, report_id))
-    logger.critical(
-        "CONSUMER_DELIVERY_NEEDS_REVIEW report=%s channel=%s: %s",
-        report_id, channel, text,
-    )
-    return text
+
+
+def _post_consumer_email(request: dict):
+    """One Resend call. Returns (response, exception); exactly one is None."""
+    try:
+        return httpx.post(request["url"], headers=request["headers"],
+                          json=request["json"], timeout=15.0), None
+    except Exception as e:
+        logger.warning("Resend email to consumer failed: %s", type(e).__name__)
+        return None, e
+
+
+def _resend_email_id(resp):
+    try:
+        return (resp.json() or {}).get("id")
+    except Exception:
+        return None
+
+
+def _resend_said(resp, error) -> str:
+    if error is None:
+        return f"status {getattr(resp, 'status_code', None)}"
+    return f"no response: {type(error).__name__}: {error}"
 
 
 def _record_consumer_delivery_failure(cur, report_id: str, reason: str):
@@ -2552,10 +2536,15 @@ def _record_consumer_delivery_failure(cur, report_id: str, reason: str):
     from the table.
     """
     text = consumer_failure_text(reason)
+    # LR-020: only while this run holds no claim, and never over a claim, a
+    # hold or a delivery (Rule 1). Used where nothing could be sent.
     cur.execute("""
         UPDATE consumer_reports
         SET status = 'failed', error_message = %s
         WHERE id = %s::uuid
+          AND status = 'processing'
+          AND delivery_attempt_id IS NULL
+          AND consumer_sms_sent_at IS NULL AND consumer_email_sent_at IS NULL
     """, (text, report_id))
     logger.error("CONSUMER REPORT %s: not delivered — %s", report_id, text)
 
@@ -2603,7 +2592,13 @@ def process_consumer_report(self, report_id: str):
     from datetime import datetime, timedelta
     
     logger.info(f"Processing consumer report: {report_id}")
-    
+
+    # LR-020: what this run owns, for the outer handler. A run that claimed a
+    # delivery may only hold its own attempt; a run that claimed nothing may
+    # only fail a report nobody else has claimed or published over.
+    my_attempt = None
+    generation_id = None
+
     try:
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
@@ -2617,7 +2612,8 @@ def process_consumer_report(self, report_id: str):
                         a.id as account_id,
                         cr.consumer_email,
                         COALESCE(cr.delivery_method, 'sms') as delivery_method,
-                        cr.status
+                        cr.status,
+                        cr.consumer_sms_sent_at, cr.consumer_email_sent_at
                     FROM consumer_reports cr
                     JOIN users u ON u.id = cr.agent_id
                     JOIN accounts a ON a.id = u.account_id
@@ -2637,21 +2633,39 @@ def process_consumer_report(self, report_id: str):
                     account_id,
                     consumer_email, delivery_method,
                     current_status,
+                    sms_sent_at, email_sent_at,
                 ) = row
+
+                # LR-020 §3.1 (R1): a delivered report is finished. No status
+                # write, no new comps or PDF behind a link the person already
+                # holds, no send. (LR-021 resumes the agent text from here.)
+                if sms_sent_at or email_sent_at or current_status == "sent":
+                    logger.info("CONSUMER REPORT %s: already delivered; nothing regenerated or sent",
+                                report_id)
+                    return {"ok": True, "report_id": report_id,
+                            "note": "already delivered; nothing regenerated or sent"}
 
                 # LR-019: a report whose last send has an unknown outcome is held
                 # for an operator. A redelivery (`acks_late`) or a re-enqueue
                 # must stop here: the status line below would erase the hold,
                 # and the send below could text the person a second time.
                 if current_status == CONSUMER_SENDING:
-                    # A previous run claimed the send and stopped before
-                    # recording what happened: the worker died, or a write
-                    # after the provider call failed and so did the handler's.
-                    _hold_consumer_delivery_for_review(
+                    channel = "text" if delivery_method == "sms" else "email"
+                    # LR-020 (R2): a claim inside the window belongs to a run
+                    # that is still sending. Holding it raised a false alert,
+                    # and that run's outcome then overwrote the hold.
+                    if not consumer_delivery.claim_is_stale(cur, report_id):
+                        return {"ok": False, "report_id": report_id,
+                                "note": "another run is sending this report; nothing done"}
+                    # A stale claim: a run started the send and nobody recorded
+                    # its outcome (the worker died, or a write after the call
+                    # failed and so did the handler's). Held, never resent: a
+                    # later run has no copy of an email to replay, and a text
+                    # is never sent twice.
+                    consumer_delivery.hold_stale_claim(
                         cur, report_id,
-                        "text" if delivery_method == "sms" else "email",
-                        "a previous attempt started the send and stopped before "
-                        "its outcome was recorded",
+                        _held_text(channel, "a previous attempt started the send and stopped "
+                                            "before its outcome was recorded"),
                     )
                     return {"ok": False, "report_id": report_id,
                             "needs_review": True,
@@ -2671,11 +2685,19 @@ def process_consumer_report(self, report_id: str):
                 base_url = os.environ.get("FRONTEND_URL", "https://www.trendyreports.io")
                 report_url = f"{base_url}/r/{report_id}"
                 
-                # Update status to processing
-                cur.execute("""
-                    UPDATE consumer_reports SET status = 'processing'
-                    WHERE id = %s::uuid AND status NOT IN (%s, %s)
-                """, (report_id, CONSUMER_SENDING, CONSUMER_NEEDS_REVIEW))
+                # LR-020: `processing` only from pending, processing or failed,
+                # with nothing claimed or delivered. It used to be written over
+                # `sent` too (R1).
+                if not consumer_delivery.start_processing(cur, report_id):
+                    return {"ok": False, "report_id": report_id,
+                            "note": f"status {current_status!r}: not processed"}
+                # email_log has row-level security on the account.
+                cur.execute("SELECT set_config('app.current_account_id', %s, false)",
+                            (str(account_id),))
+                # §3.2: this run's comps, values and PDF are one generation.
+                # Only the run that publishes the current generation can claim
+                # its delivery.
+                generation_id = uuid.uuid4()
                 
                 # Use existing property_data or build basic one
                 if existing_property_data and isinstance(existing_property_data, dict):
@@ -2959,15 +2981,32 @@ def process_consumer_report(self, report_id: str):
                     logger.info("Embedding images as base64 for CMA PDF...")
                     html_content = embed_images_as_base64(html_content)
 
+                    # LR-020 §3.2 (Codex review of c57e505b): both renderers
+                    # write PDF_DIR/<run_id>.pdf, so `run_id=report_id` let
+                    # two generations of one report share a local file, and A
+                    # could upload B's bytes to A's key. With html_content
+                    # given, run_id only names that file (the print URL is
+                    # not used), so it carries the generation.
                     pdf_path, _ = render_pdf(
-                        run_id=str(report_id),
+                        run_id=consumer_delivery.pdf_render_id(report_id, generation_id),
                         account_id=str(account_id),
                         html_content=html_content,
                         print_base=DEV_BASE,
                     )
 
-                    s3_key = f"consumer-reports/{account_id}/{report_id}.pdf"
-                    pdf_url = upload_to_r2(pdf_path, s3_key)
+                    # LR-020 §3.2: one object per generation. The fixed key
+                    # let a later run replace the PDF a person had been sent.
+                    s3_key = consumer_delivery.pdf_object_key(account_id, report_id, generation_id)
+                    try:
+                        pdf_url = upload_to_r2(pdf_path, s3_key)
+                    finally:
+                        # The local file is this generation's alone and is
+                        # done with once uploaded (or not): remove it, so
+                        # per-generation names do not pile up in PDF_DIR.
+                        try:
+                            os.remove(pdf_path)
+                        except OSError:
+                            pass
                     logger.info("CMA PDF uploaded: %s", pdf_url[:100] if pdf_url else "None")
 
                 except Exception as pdf_exc:
@@ -2977,35 +3016,23 @@ def process_consumer_report(self, report_id: str):
                 # =============================================
                 # UPDATE DATABASE WITH ALL DATA
                 # =============================================
-                update_params = [
-                    json.dumps(property_data),
-                    json.dumps(comparables),
-                    json.dumps(value_estimate),
-                    json.dumps(market_stats),
-                    pdf_url,
-                    report_id,
-                ]
-                if pdf_url:
-                    cur.execute("""
-                        UPDATE consumer_reports
-                        SET property_data = %s::jsonb,
-                            comparables = %s::jsonb,
-                            value_estimate = %s::jsonb,
-                            market_stats = %s::jsonb,
-                            pdf_url = %s,
-                            pdf_generated_at = NOW()
-                        WHERE id = %s::uuid
-                    """, update_params)
-                else:
-                    cur.execute("""
-                        UPDATE consumer_reports
-                        SET property_data = %s::jsonb,
-                            comparables = %s::jsonb,
-                            value_estimate = %s::jsonb,
-                            market_stats = %s::jsonb
-                        WHERE id = %s::uuid
-                    """, update_params[:4] + [report_id])
-                
+                # LR-020 §3.2: publish this generation only while nothing is
+                # claimed or delivered. A run that loses here stops: another
+                # run's generation is current or already on its way.
+                published = consumer_delivery.publish_generation(
+                    cur, report_id, generation_id,
+                    property_data_json=json.dumps(property_data),
+                    comparables_json=json.dumps(comparables),
+                    value_estimate_json=json.dumps(value_estimate),
+                    market_stats_json=json.dumps(market_stats),
+                    pdf_url=pdf_url,
+                )
+                if not published:
+                    logger.warning("CONSUMER REPORT %s: generation %s not published; "
+                                   "another run's is current or claimed", report_id, generation_id)
+                    return {"ok": False, "report_id": report_id,
+                            "note": "another run's generation is current or claimed; nothing sent"}
+
                 # =============================================
                 # DELIVER REPORT (SMS or Email)
                 # =============================================
@@ -3039,89 +3066,66 @@ def process_consumer_report(self, report_id: str):
                 held_for_review = False
 
                 if delivery_method == "sms" and consumer_phone:
-                    if not _claim_consumer_send(cur, report_id):
-                        return {"ok": False, "report_id": report_id,
-                                "note": "another run holds this send; not sent"}
-                    sms_result = send_report_sms(
-                        to_phone=consumer_phone,
-                        report_url=report_url,
-                        agent_name=agent_name,
-                        property_address=full_address
-                    )
-                    sms_state = sms_outcome(sms_result)
-
-                    # LR-019: the outcome goes on the report FIRST, because it
-                    # is what stops a second send. The SMS log and the credit
-                    # come after it, and a failure in either can no longer
-                    # leave the report looking unsent.
-                    if sms_state == SEND_SENT:
-                        cur.execute("""
-                            UPDATE consumer_reports
-                            SET status = 'sent',
-                                consumer_sms_sent_at = NOW(),
-                                consumer_sms_sid = %s,
-                                error_message = NULL
-                            WHERE id = %s::uuid
-                        """, (sms_result.get('message_sid'), report_id))
-                        delivered = True
-                    elif sms_state == SEND_UNKNOWN:
-                        # Codex review of #274: a timeout after Twilio accepted
-                        # the message looked like a refusal and was retried, so
-                        # the person could get the same text four times. No
-                        # credit is spent: we do not know a text went out.
-                        held_for_review = True
-                        _hold_consumer_delivery_for_review(
-                            cur, report_id, "text",
-                            "no answer from the SMS provider "
-                            f"({sms_result.get('error') or 'no reason given'})",
-                        )
-                    else:
-                        # LR-019. This branch logged the refusal to sms_logs and
-                        # recorded nothing on the report, so the row ended with
-                        # the generic "Delivery failed" and the reason Twilio
-                        # gave was only in a log table nobody joins.
-                        failure_retryable = sms_state == SEND_RETRY
+                    from .sms import send as sms_send
+                    if sms_send.get_twilio_client() is None or not sms_send.TWILIO_PHONE_NUMBER:
+                        # Nothing can be sent, so nothing is claimed or journalled.
                         _record_consumer_delivery_failure(
                             cur, report_id,
-                            "the SMS provider did not accept the message: "
-                            f"{sms_result.get('error') or 'no reason given'}",
+                            "the SMS provider did not accept the message: Twilio not configured",
                         )
-
-                    sms_message = sms_result.get('message_body', f"Report link sent to {consumer_phone}")
-                    cur.execute("""
-                        INSERT INTO sms_logs (
-                            account_id, consumer_report_id, to_phone, from_phone,
-                            message, message_body, recipient_type, twilio_sid,
-                            status, error_message, direction
-                        ) VALUES (
-                            %s::uuid, %s::uuid, %s, %s,
-                            %s, %s, 'consumer', %s,
-                            %s, %s, 'outbound'
+                    else:
+                        # LR-020 §3.5: the claim journals the exact body before
+                        # the call; send_report_sms sends the same string.
+                        attempt_id = consumer_delivery.claim_sms(
+                            conn, report_id, generation_id,
+                            account_id=account_id, to_phone=consumer_phone,
+                            from_phone=sms_send.TWILIO_PHONE_NUMBER,
+                            body=report_sms_body(report_url=report_url, agent_name=agent_name,
+                                                 property_address=full_address),
                         )
-                    """, (
-                        account_id, report_id, consumer_phone,
-                        os.environ.get("TWILIO_PHONE_NUMBER", ""),
-                        sms_message,
-                        sms_message,
-                        sms_result.get('message_sid'),
-                        # An unknown outcome is not a failure. sms_logs' CHECK
-                        # (0035) allows sent/delivered/failed/pending, so it is
-                        # logged `pending`: not settled. consumer_reports holds
-                        # the hold (`needs_review`); a new log state is LR-020's.
-                        {SEND_SENT: 'sent', SEND_UNKNOWN: 'pending'}.get(sms_state, 'failed'),
-                        sms_result.get('error')
-                    ))
+                        if attempt_id is None:
+                            return {"ok": False, "report_id": report_id,
+                                    "note": "another run holds this send, or its generation "
+                                            "is current; not sent"}
+                        my_attempt = attempt_id
+                        sms_result = send_report_sms(
+                            to_phone=consumer_phone,
+                            report_url=report_url,
+                            agent_name=agent_name,
+                            property_address=full_address
+                        )
+                        sms_state = sms_outcome(sms_result)
 
-                    if delivered:
-                        # Decrement SMS credits for consumer delivery only
-                        cur.execute("""
-                            UPDATE accounts
-                            SET sms_credits = GREATEST(sms_credits - 1, 0)
-                            WHERE id = %s::uuid
-                        """, (account_id,))
+                        if sms_state == SEND_SENT:
+                            # §3.3: evidence, the one credit and the journal in
+                            # one transaction; the debit only if the evidence
+                            # went from NULL to set.
+                            consumer_delivery.record_sms_sent(
+                                conn, report_id, attempt_id,
+                                account_id=account_id, sid=sms_result.get("message_sid"))
+                            delivered = True
+                        elif sms_state == SEND_UNKNOWN:
+                            # Twilio may have accepted it. Held, alerted, never
+                            # resent, no credit spent (owner decision).
+                            held_for_review = True
+                            consumer_delivery.hold_attempt(
+                                conn, report_id, attempt_id, channel="sms",
+                                text=_held_text("text", "no answer from the SMS provider "
+                                                f"({sms_result.get('error') or 'no reason given'})"),
+                            )
+                        else:
+                            # Refused, so nothing was sent: the claim is released
+                            # and a retry is a new attempt.
+                            failure_retryable = sms_state == SEND_RETRY
+                            consumer_delivery.release_refused(
+                                conn, report_id, attempt_id, channel="sms",
+                                text=consumer_failure_text(
+                                    "the SMS provider did not accept the message: "
+                                    f"{sms_result.get('error') or 'no reason given'}"),
+                            )
 
                 elif delivery_method == "email" and consumer_email:
-                    logger.info(f"Email delivery via Resend to {consumer_email} (report URL: {report_url})")
+                    logger.info(f"Email delivery via Resend (report URL: {report_url})")
                     resend_key = os.environ.get("RESEND_API_KEY", "")
                     if not resend_key:
                         # D-031. This wrote status='sent' AND a
@@ -3165,74 +3169,83 @@ def process_consumer_report(self, report_id: str):
                             logo_url=email_logo or brand_logo,
                             postal_address=_branding.get("postal_address"),
                         )
+                        subject = "Your Home Value Report is Ready"
 
-                        if not _claim_consumer_send(cur, report_id):
+                        claimed = consumer_delivery.claim_email(
+                            conn, report_id, generation_id,
+                            account_id=account_id, to_email=consumer_email, subject=subject)
+                        if claimed is None:
                             return {"ok": False, "report_id": report_id,
-                                    "note": "another run holds this send; not sent"}
-                        # LR-019: bound before the call. A timeout raised before
-                        # `resp` was assigned, and the failure branch's
-                        # `getattr(resp, ...)` then raised NameError.
-                        resp = None
-                        email_error = None
-                        try:
-                            from_addr = os.environ.get("EMAIL_FROM_ADDRESS", "TrendyReports <noreply@trendyreports.io>")
-                            resp = httpx.post(
-                                "https://api.resend.com/emails",
-                                headers={
-                                    "Authorization": f"Bearer {resend_key}",
-                                    "Content-Type": "application/json",
-                                },
-                                json={
-                                    "from": from_addr,
-                                    "to": [consumer_email],
-                                    "subject": "Your Home Value Report is Ready",
-                                    "html": email_html,
-                                },
-                                timeout=15.0,
-                            )
-                        except Exception as email_err:
-                            logger.warning(f"Resend email to consumer failed: {email_err}")
-                            email_error = email_err
-                        email_state = email_outcome(
-                            getattr(resp, "status_code", None), email_error)
-                        email_sent = email_state == SEND_SENT
+                                    "note": "another run holds this send, or its generation "
+                                            "is current; not sent"}
+                        attempt_id, idempotency_key = claimed
+                        my_attempt = attempt_id
 
-                        if email_sent:
-                            cur.execute("""
-                                UPDATE consumer_reports
-                                SET status = 'sent', consumer_email_sent_at = NOW(),
-                                    error_message = NULL
-                                WHERE id = %s::uuid
-                            """, (report_id,))
+                        # LR-020 §3.4: ONE request object, built once. The one
+                        # approved replay sends this same object, so the key and
+                        # the payload cannot differ; nothing is re-rendered and
+                        # nothing is stored.
+                        email_request = {
+                            "url": "https://api.resend.com/emails",
+                            "headers": {
+                                "Authorization": f"Bearer {resend_key}",
+                                "Content-Type": "application/json",
+                                "Idempotency-Key": idempotency_key,
+                            },
+                            "json": {
+                                "from": os.environ.get("EMAIL_FROM_ADDRESS",
+                                                       "TrendyReports <noreply@trendyreports.io>"),
+                                "to": [consumer_email],
+                                "subject": subject,
+                                "html": email_html,
+                            },
+                        }
+                        first_call_started = time.monotonic()
+                        resp, email_error = _post_consumer_email(email_request)
+                        email_state = email_outcome(getattr(resp, "status_code", None), email_error)
+                        said = _resend_said(resp, email_error)
+
+                        if email_state == SEND_UNKNOWN:
+                            # Jerry, 2026-11-10: one replay of the same attempt,
+                            # same key, inside the key's 24 hours. Only this run,
+                            # only while it still owns the attempt (the re-check
+                            # also refreshes the claim), at most two calls.
+                            elapsed = timedelta(seconds=time.monotonic() - first_call_started)
+                            if (consumer_delivery.replay_deadline_ok(elapsed)
+                                    and consumer_delivery.refresh_ownership(cur, report_id, attempt_id)):
+                                resp, email_error = _post_consumer_email(email_request)
+                                replay_state = email_outcome(
+                                    getattr(resp, "status_code", None), email_error)
+                                said = f"{said}; one replay with the same key: {_resend_said(resp, email_error)}"
+                                # Only a 200 settles the first call. Anything
+                                # else, a 409 or a 429 included, leaves it unknown.
+                                email_state = SEND_SENT if replay_state == SEND_SENT else SEND_UNKNOWN
+
+                        status_code = getattr(resp, "status_code", None)
+                        if email_state == SEND_SENT:
+                            consumer_delivery.record_email_sent(
+                                conn, report_id, attempt_id, account_id=account_id,
+                                response_code=status_code,
+                                provider_message_id=_resend_email_id(resp))
                             delivered = True
-                            logger.info(f"CMA report email sent to {consumer_email}")
+                            logger.info("CMA report email sent (report %s)", report_id)
+                        elif email_state == SEND_UNKNOWN:
+                            # Codex review of #274: a read timeout or a 5xx can
+                            # follow Resend accepting the email.
+                            held_for_review = True
+                            consumer_delivery.hold_attempt(
+                                conn, report_id, attempt_id, channel="email",
+                                account_id=account_id,
+                                text=_held_text("email", f"the email provider's answer is unknown ({said})"),
+                            )
                         else:
-                            # NOT IN THE ORIGINAL SURVEY, and the most direct
-                            # instance of the shape in this file: the code logs
-                            # "delivery failed" and the very next statement
-                            # records success. Resend rejected the message, or
-                            # the call raised — and the row said sent, with a
-                            # timestamp, and the agent got their lead
-                            # notification. Found while fixing D-031 two
-                            # branches up; §0.6 rule 4, re-run the survey after
-                            # the fix.
-                            status_code = getattr(resp, "status_code", None)
-                            said = (f"status {status_code}" if email_error is None else
-                                    f"no response: {type(email_error).__name__}: {email_error}")
-                            if email_state == SEND_UNKNOWN:
-                                # Codex review of #274: a read timeout or a 5xx
-                                # can follow Resend accepting the email.
-                                held_for_review = True
-                                _hold_consumer_delivery_for_review(
-                                    cur, report_id, "email",
-                                    f"the email provider's answer is unknown ({said})",
-                                )
-                            else:
-                                failure_retryable = email_state == SEND_RETRY
-                                _record_consumer_delivery_failure(
-                                    cur, report_id,
-                                    f"the email provider did not accept the message ({said})",
-                                )
+                            failure_retryable = email_state == SEND_RETRY
+                            consumer_delivery.release_refused(
+                                conn, report_id, attempt_id, channel="email",
+                                account_id=account_id, response_code=status_code,
+                                text=consumer_failure_text(
+                                    f"the email provider did not accept the message ({said})"),
+                            )
 
                 else:
                     # D-032. Same claim, third trigger: no phone for SMS, no
@@ -3315,6 +3328,8 @@ def process_consumer_report(self, report_id: str):
                             UPDATE consumer_reports
                             SET status = 'failed', error_message = %s
                             WHERE id = %s::uuid
+                              AND status = 'failed' AND delivery_attempt_id IS NULL
+                              AND consumer_sms_sent_at IS NULL AND consumer_email_sent_at IS NULL
                         """, (note, report_id))
                         raise self.retry(countdown=60 * (self.request.retries + 1))
 
@@ -3324,6 +3339,8 @@ def process_consumer_report(self, report_id: str):
                         UPDATE consumer_reports
                         SET status = 'failed', error_message = %s
                         WHERE id = %s::uuid
+                          AND status = 'failed' AND delivery_attempt_id IS NULL
+                          AND consumer_sms_sent_at IS NULL AND consumer_email_sent_at IS NULL
                     """, (final, report_id))
 
                     # `sms_result` is bound only inside the SMS branch. On the
@@ -3360,24 +3377,19 @@ def process_consumer_report(self, report_id: str):
                         f"{what}; it happened after the send started, so the report "
                         "may have been delivered and was not sent again. Needs operator review."
                     )
-                    cur.execute("""
-                        UPDATE consumer_reports
-                        SET status = CASE WHEN status = %s THEN %s ELSE 'failed' END,
-                            error_message = CASE WHEN status = %s THEN %s ELSE %s END
-                        WHERE id = %s::uuid
-                          AND status IS DISTINCT FROM %s
-                          AND consumer_sms_sent_at IS NULL
-                          AND consumer_email_sent_at IS NULL
-                        RETURNING status
-                    """, (CONSUMER_SENDING, CONSUMER_NEEDS_REVIEW,
-                          CONSUMER_SENDING, held_text, consumer_failure_text(what),
-                          report_id, CONSUMER_NEEDS_REVIEW))
-                    row = cur.fetchone()
-                    if row and row[0] == CONSUMER_NEEDS_REVIEW:
-                        logger.critical(
-                            "CONSUMER_DELIVERY_NEEDS_REVIEW report=%s: %s",
-                            report_id, held_text,
-                        )
+                    # LR-020: a run that claimed a delivery holds its OWN
+                    # attempt and nothing else; a run that claimed nothing
+                    # fails the report only if nobody else has claimed it or
+                    # published over it.
+                    if my_attempt is not None:
+                        if consumer_delivery.hold_on_exception(cur, report_id, my_attempt, held_text):
+                            logger.critical(
+                                "CONSUMER_DELIVERY_NEEDS_REVIEW report=%s attempt=%s: %s",
+                                report_id, my_attempt, held_text,
+                            )
+                    else:
+                        consumer_delivery.fail_on_exception(
+                            cur, report_id, generation_id, consumer_failure_text(what))
         except Exception:
             logger.exception("CONSUMER REPORT %s: could not record the failure", report_id)
 

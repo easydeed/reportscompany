@@ -32,7 +32,7 @@ import logging
 import os
 import sys
 
-REQUIRED_MIGRATION = "0063_leads_consent_text.sql"
+REQUIRED_MIGRATION = "0064_delivery_ownership.sql"
 
 logger = logging.getLogger("schema_guard")
 

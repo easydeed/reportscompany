@@ -324,12 +324,16 @@ def test_email_refused_with_a_4xx_is_failed_once(tasks, report, db, monkeypatch)
 
 def test_an_email_read_timeout_is_held_and_named_without_crashing(tasks, report, db, monkeypatch):
     """The failure branch read `resp`, unbound when the call raised: NameError.
-    And a read timeout can follow Resend accepting the email: held, not resent."""
+    And a read timeout can follow Resend accepting the email: held, not resent.
+
+    LR-020: Jerry approved ONE replay of the same attempt with the same
+    Idempotency-Key (Resend sends nothing new for a repeated key), so an
+    unknown email makes exactly two calls, both with one key, then holds."""
     monkeypatch.setenv("RESEND_API_KEY", "re_test_not_a_real_key_123456")
     calls = []
 
     def timeout(*a, **k):
-        calls.append(1)
+        calls.append(k.get("headers", {}).get("Idempotency-Key"))
         raise tasks.httpx.ReadTimeout(f"timed out sending to {EMAIL}")
     monkeypatch.setattr(tasks.httpx, "post", timeout)
     rid = report("email")
@@ -338,7 +342,8 @@ def test_an_email_read_timeout_is_held_and_named_without_crashing(tasks, report,
     assert status == "needs_review", (status, error)
     assert "no response: ReadTimeout" in error, error
     assert "may have been delivered" in error
-    assert len(calls) == 1 and email_at is None
+    assert len(calls) == 2 and email_at is None, calls
+    assert calls[0] and calls[0] == calls[1], "the replay must reuse the attempt's key"
     _assert_clean(error)
 
 
@@ -349,7 +354,8 @@ def test_an_email_5xx_is_held_for_review(tasks, report, db, monkeypatch):
     rid = report("email")
     tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
     status, error, *_ = _row(db, rid)
-    assert status == "needs_review" and "(status 503)" in error and len(calls) == 1
+    assert status == "needs_review" and "(status 503" in error, error
+    assert len(calls) == 2, "an unknown email gets one replay with the same key, then is held"
 
 
 def test_an_email_that_never_connected_is_retried_and_exhaustion_recorded(tasks, report, db, monkeypatch):
@@ -472,6 +478,20 @@ def _refuse_writes(db, table, rid, when):
     return drop
 
 
+def _age_claim(db, rid, minutes=None):
+    """Move the claim back past the window, as an acks_late redelivery finds it.
+
+    LR-020 (R2): a claim inside DUPLICATE_SEND_WINDOW_MINUTES belongs to a run
+    that may still be sending, so a run that finds it does nothing. The broker
+    hands a dead run's task back after visibility_timeout (900 s), by which
+    time the claim is stale."""
+    from worker import consumer_delivery
+    minutes = minutes or consumer_delivery.CLAIM_WINDOW_MINUTES + 1
+    with psycopg.connect(db, autocommit=True) as conn:
+        conn.execute("UPDATE consumer_reports SET delivery_claimed_at = NOW() - make_interval(mins => %s) "
+                     "WHERE id = %s", (minutes, rid))
+
+
 def _run(tasks, rid):
     try:
         return tasks.process_consumer_report.apply(args=[rid]).get(propagate=False)
@@ -479,10 +499,27 @@ def _run(tasks, rid):
         return None
 
 
+def test_a_journal_that_cannot_be_written_stops_the_send_before_it_starts(tasks, report, db, monkeypatch):
+    """LR-020 §3.5: the claim journals the attempt before the call, in the same
+    transaction. If that row cannot be written there is no claim and no send."""
+    fake = _twilio(monkeypatch, _sent)
+    rid = report("sms")
+    drop = _refuse_writes(db, "sms_logs", rid, "TRUE")
+    try:
+        _run(tasks, rid)
+        status, error, sms_at, _ = _row(db, rid)
+        assert fake.calls == [], "a text was sent with no journal row for it"
+        assert status == "failed" and sms_at is None, (status, error)
+    finally:
+        drop()
+
+
 def test_an_unknown_send_whose_sms_log_write_fails_is_still_held(tasks, report, db, monkeypatch):
     fake = _twilio(monkeypatch, lambda n, to: (_ for _ in ()).throw(TimeoutError("lost")))
     rid = report("sms")
-    drop = _refuse_writes(db, "sms_logs", rid, "TRUE")
+    # The claim's journal INSERT is allowed (no error yet); the note written
+    # with the hold is refused.
+    drop = _refuse_writes(db, "sms_logs", rid, "NEW.error_message IS NOT NULL")
     try:
         _run(tasks, rid)
         status, error, *_ = _row(db, rid)
@@ -497,15 +534,21 @@ def test_an_unknown_send_whose_sms_log_write_fails_is_still_held(tasks, report, 
 def test_a_sent_text_whose_sms_log_write_fails_stays_sent(tasks, report, db, monkeypatch):
     fake = _twilio(monkeypatch, _sent)
     rid = report("sms")
-    drop = _refuse_writes(db, "sms_logs", rid, "TRUE")
+    # The claim's journal INSERT is allowed; the update to `sent` is refused.
+    drop = _refuse_writes(db, "sms_logs", rid, "NEW.status = 'sent'")
     try:
         _run(tasks, rid)
     finally:
         drop()
     status, error, sms_at, _ = _row(db, rid)
     assert status == "sent" and sms_at is not None, (status, error)
+    assert _credits(db, rid) == 9, "the evidence and its one credit are one write"
     _run(tasks, rid)
-    assert len(fake.calls) == 1, "a later run sent the text again"
+    to_lead = [c for c in fake.calls if c.endswith(PHONE)]
+    assert len(to_lead) == 1, "a later run sent the text again"
+    # A log row that could not be updated no longer aborts the run, so the
+    # agent is told about the delivered lead (one text, to the agent's phone).
+    assert len(fake.calls) == 2, fake.calls
 
 
 def test_an_unknown_send_whose_hold_write_fails_is_not_sent_again(tasks, report, db, monkeypatch):
@@ -518,6 +561,7 @@ def test_an_unknown_send_whose_hold_write_fails_is_not_sent_again(tasks, report,
         assert status == "sending", f"the claim must survive a failed hold write, got {status}"
     finally:
         drop()
+    _age_claim(db, rid)
     _run(tasks, rid)
     status, error, *_ = _row(db, rid)
     assert len(fake.calls) == 1, "a later run sent the text again"
@@ -531,6 +575,10 @@ def test_a_worker_that_dies_mid_text_is_held_on_the_next_run(tasks, report, db, 
     rid = report("sms")
     _run(tasks, rid)
     assert _row(db, rid)[0] == "sending"
+    early = _run(tasks, rid)               # a second run while the claim is live
+    assert _row(db, rid)[0] == "sending" and len(fake.calls) == 1, "a live claim was disturbed"
+    assert "another run is sending" in early["note"], early
+    _age_claim(db, rid)
     _run(tasks, rid)                       # acks_late hands the task back
     status, error, *_ = _row(db, rid)
     assert len(fake.calls) == 1, "the redelivered task sent the text again"
@@ -549,6 +597,7 @@ def test_a_worker_that_dies_mid_email_is_held_on_the_next_run(tasks, report, db,
     monkeypatch.setattr(tasks.httpx, "post", died)
     rid = report("email")
     _run(tasks, rid)
+    _age_claim(db, rid)
     _run(tasks, rid)
     status, *_ = _row(db, rid)
     assert len(calls) == 1 and status == "needs_review", (calls, status)

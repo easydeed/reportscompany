@@ -240,6 +240,10 @@ def check_auto_completions(cur, user_id: str, account_id: str, account_type: str
                   AND status = 'sent'
                   AND report_id IS NOT NULL
                   AND COALESCE(array_length(to_emails, 1), 0) > 0
+                  -- LR-020: the home-value email to a lead is journalled here
+                  -- too (report_id = the consumer report). It is not the
+                  -- agent's first report.
+                  AND NOT EXISTS (SELECT 1 FROM consumer_reports cr WHERE cr.id = email_log.report_id)
                 LIMIT 1
             )
         """, (account_id,))

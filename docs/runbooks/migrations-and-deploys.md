@@ -21,6 +21,15 @@ version already running keeps serving.
 4. Deploy again (Render: "Deploy latest commit") on the API and worker services.
    `GET /health` returns `"schema": "NNNN_name.sql"` once the new code is live.
 
+### Lock waits
+
+`run_migrations.py` runs each file whole in one transaction. A migration that
+alters a busy table should start with `SET LOCAL lock_timeout = '5s';` (0064
+does). An `ALTER TABLE … ADD COLUMN` with no default rewrites no rows, but it
+still takes a brief ACCESS EXCLUSIVE lock; without a timeout it can queue behind
+a long transaction and block every reader queued behind it. With one, it fails
+fast, the transaction rolls back whole, and you simply run it again.
+
 ## The bypass
 
 For an urgent fix that has to ship while a migration is deliberately held back,

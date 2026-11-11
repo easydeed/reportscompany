@@ -1,0 +1,156 @@
+[
+  {
+    "name": "R1b: any run can claim, not only the current generation's publisher",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "      AND generation_id = %s::uuid\n",
+    "new": "      AND (generation_id = %s::uuid OR TRUE)\n",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "R1b: publication ignores a claim or a delivery",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "        WHERE id = %s::uuid\n          AND status = 'processing'\n          AND delivery_attempt_id IS NULL\n          AND {_NO_EVIDENCE}\n        RETURNING id\n    \"\"\", (property_data_json",
+    "new": "        WHERE id = %s::uuid\n        RETURNING id\n    \"\"\", (property_data_json",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "R1b: one fixed PDF key, so a later run replaces the delivered PDF",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    return f\"consumer-reports/{account_id}/{report_id}/{generation_id}.pdf\"",
+    "new": "    return f\"consumer-reports/{account_id}/{report_id}.pdf\"",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "R1: a replay of a delivered report is not stopped at the top",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                if sms_sent_at or email_sent_at or current_status == \"sent\":",
+    "new": "                if False:",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "R2: a live claim is held as if it were stale",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                    if not consumer_delivery.claim_is_stale(cur, report_id):",
+    "new": "                    if False:",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "R3: the credit is debited whether or not the evidence was recorded",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "        if recorded:\n            # Consumer SMS is the only delivery that spends a credit.",
+    "new": "        if True:\n            # Consumer SMS is the only delivery that spends a credit.",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "R3: the evidence is overwritten, so a second record debits again",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "            WHERE id = %s::uuid AND consumer_sms_sent_at IS NULL\n            RETURNING id\n        \"\"\", (sid, str(report_id)))",
+    "new": "            WHERE id = %s::uuid\n            RETURNING id\n        \"\"\", (sid, str(report_id)))",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "R4: the journal holds a different body from the one sent",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "(str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, body))",
+    "new": "(str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, \"\"))",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "email replay: no ownership re-check",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                                    and consumer_delivery.refresh_ownership(cur, report_id, attempt_id)):",
+    "new": "                                    and True):",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "email replay: no deadline",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    return elapsed < EMAIL_KEY_LIFETIME - EMAIL_REPLAY_MARGIN",
+    "new": "    return True",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "email replay: a 429 or 409 on the replay is taken at face value",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                                email_state = SEND_SENT if replay_state == SEND_SENT else SEND_UNKNOWN",
+    "new": "                                email_state = replay_state",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "email replay: the replay re-renders its body",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                                resp, email_error = _post_consumer_email(email_request)\n                                replay_state",
+    "new": "                                email_request = dict(email_request, json=dict(email_request[\"json\"], html=email_html + \" \"))\n                                resp, email_error = _post_consumer_email(email_request)\n                                replay_state",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "email: no idempotency key",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                                \"Idempotency-Key\": idempotency_key,\n",
+    "new": "",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "held sends: --sent without a provider id",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    provider_id = _require(provider_id, \"--provider-id (the Twilio SID or Resend email id)\")",
+    "new": "    provider_id = provider_id or None",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "held sends: resolution accepts the wrong attempt",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "                WHERE id = %s::uuid AND status = %s AND delivery_attempt_id = %s::uuid\n                  AND {column} IS NULL",
+    "new": "                WHERE id = %s::uuid AND status = %s AND (delivery_attempt_id = %s::uuid OR TRUE)\n                  AND {column} IS NULL",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "held sends: hold takes a live claim",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "                   OR {c['claimed']} < NOW() - make_interval(mins => %s))\n            RETURNING id\n        \"\"\", (NEEDS_REVIEW, text, str(report_id), SENDING, str(attempt_id), CLAIM_WINDOW_MINUTES))",
+    "new": "                   OR {c['claimed']} < NOW() + make_interval(mins => %s))\n            RETURNING id\n        \"\"\", (NEEDS_REVIEW, text, str(report_id), SENDING, str(attempt_id), CLAIM_WINDOW_MINUTES))",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "outer handler: a run that claimed fails its send instead of holding it",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                    if my_attempt is not None:",
+    "new": "                    if False:",
+    "test": "apps/worker/tests/test_consumer_failures_are_recorded.py"
+  },
+  {
+    "name": "onboarding: a lead's email completes the agent's first-report step",
+    "file": "apps/api/src/api/routes/onboarding.py",
+    "old": "                  AND NOT EXISTS (SELECT 1 FROM consumer_reports cr WHERE cr.id = email_log.report_id)\n",
+    "new": "",
+    "test": "apps/api/tests/test_onboarding_ignores_consumer_emails.py"
+  },
+  {
+    "name": "Codex c57e505b P1: the render's local file is named by the report, shared by every generation",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    return f\"consumer-{report_id}-{generation_id}\"",
+    "new": "    return str(report_id)",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "Codex c57e505b: a resolution debits the agent's current account, not the attempt's",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "                cur.execute(\"UPDATE accounts SET sms_credits = GREATEST(sms_credits - 1, 0) \"\n                            \"WHERE id = %s::uuid\", (str(account_id),))",
+    "new": "                cur.execute(\"UPDATE accounts SET sms_credits = GREATEST(sms_credits - 1, 0) \"\n                            \"WHERE id = (SELECT u.account_id FROM consumer_reports cr JOIN users u ON u.id = cr.agent_id WHERE cr.id = %s::uuid)\", (str(report_id),))",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "Codex c57e505b: a resolution accepts another report's attempt",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "    if str(journal_report) != str(report_id) or recipient != stage or account_id is None:",
+    "new": "    if account_id is None:",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  },
+  {
+    "name": "the local PDF is left behind after upload",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                            os.remove(pdf_path)\n",
+    "new": "                            pass\n",
+    "test": "apps/worker/tests/test_consumer_delivery_ownership.py"
+  }
+]
