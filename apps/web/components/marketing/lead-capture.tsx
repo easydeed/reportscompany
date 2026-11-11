@@ -23,7 +23,7 @@ import {
 export const LEAD_CONTACT = DEMO_CONTACTS[3];
 
 export function LeadCapture() {
-  const { primary, area } = useLandingTheme();
+  const { primary } = useLandingTheme();
 
   return (
     <SplitSection white id="lead-capture">
@@ -48,9 +48,9 @@ export function LeadCapture() {
               className="text-[28px] font-extrabold leading-[1.05] tracking-[-0.03em] text-[#0F172A]"
               style={{ textWrap: "balance" } as CSSProperties}
             >
-              What&apos;s your {area} home worth today?
+              See what homes like yours sold for
             </div>
-            <div className="text-sm text-[#64748B]">Based on this month&apos;s closed sales near you.</div>
+            <div className="text-sm text-[#64748B]">Based on the last 6 months of sales near you.</div>
             <div className="flex h-[50px] items-center rounded-xl border-[1.5px] border-[#D6D3CB] px-4 text-[15px] text-[#0F172A]">
               {DEMO_LEAD.address}
             </div>
@@ -58,7 +58,7 @@ export function LeadCapture() {
               className="flex h-[50px] items-center justify-center rounded-xl text-base font-semibold text-white"
               style={{ background: primary }}
             >
-              Get my estimate
+              Get my report
             </div>
             <div className="text-center text-xs text-[#94A3B8]">Takes 10 seconds · No obligation</div>
           </div>

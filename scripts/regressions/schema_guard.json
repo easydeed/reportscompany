@@ -2,8 +2,8 @@
   {
     "name": "G1 a new migration lands and the required one is not moved",
     "file": "apps/api/src/api/schema_guard.py",
-    "old": "REQUIRED_MIGRATION = \"0066_request_idempotency.sql\"",
-    "new": "REQUIRED_MIGRATION = \"0065_consumer_pdf_recovery.sql\"",
+    "old": "REQUIRED_MIGRATION = \"0067_lead_page_description_default.sql\"",
+    "new": "REQUIRED_MIGRATION = \"0066_request_idempotency.sql\"",
     "test": "tests/test_schema_guard.py"
   },
   {

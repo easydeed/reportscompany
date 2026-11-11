@@ -32,7 +32,7 @@ import logging
 import os
 import sys
 
-REQUIRED_MIGRATION = "0066_request_idempotency.sql"
+REQUIRED_MIGRATION = "0067_lead_page_description_default.sql"
 
 logger = logging.getLogger("schema_guard")
 

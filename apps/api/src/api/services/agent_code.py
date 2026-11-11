@@ -146,7 +146,7 @@ def get_agent_by_code(cursor, agent_code: str) -> Optional[dict]:
         "photo_url": row[8],
         "license_number": row[9],
         "agent_code": row[10],
-        "landing_page_headline": row[11] or "What's Your Home Worth?",
+        "landing_page_headline": row[11] or "See what homes like yours sold for",
         "landing_page_subheadline": row[12] or "Get a free, professional property report in seconds.",
         "landing_page_theme_color": row[13] or "#4F46E5",
         "landing_page_enabled": row[14] if row[14] is not None else True,

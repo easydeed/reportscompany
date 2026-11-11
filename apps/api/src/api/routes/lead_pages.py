@@ -218,7 +218,7 @@ async def get_landing_page_info(
             phone=agent.get("phone"),
             email=agent.get("email"),
             license_number=agent.get("license_number"),
-            headline=agent.get("landing_page_headline", "What's Your Home Worth?"),
+            headline=agent.get("landing_page_headline", "See what homes like yours sold for"),
             subheadline=agent.get("landing_page_subheadline", "Get a free, professional property report in seconds."),
             theme_color=primary,
             accent_color=accent,
