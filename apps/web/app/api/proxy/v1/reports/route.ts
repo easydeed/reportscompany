@@ -31,23 +31,29 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
+  // LR-024: the wizard's Idempotency-Key must reach the API, or a retry after
+  // a lost answer creates a second report.
+  const key = req.headers.get("idempotency-key");
 
   const res = await fetch(`${API_BASE}/v1/reports`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       cookie: req.headers.get("cookie") || "",
+      ...(key ? { "Idempotency-Key": key } : {}),
     },
     body: JSON.stringify(body),
     cache: "no-store",
   });
 
   const text = await res.text();
-  
+  const replayed = res.headers.get("idempotent-replayed");
+
   return new NextResponse(text, {
     status: res.status,
     headers: {
       "Content-Type": res.headers.get("content-type") || "application/json",
+      ...(replayed ? { "Idempotent-Replayed": replayed } : {}),
     },
   });
 }

@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils"
 import { SharedEmailPreview, PREVIEW_DEFAULT_PRIMARY, PREVIEW_DEFAULT_ACCENT } from "@/components/shared/email-preview"
 import { ReportThumb } from "@/components/shared/report-thumb"
 import { VerificationRequired } from "@/components/shared/verification-required"
-import { readVerificationRefusal, type VerificationRefusal } from "@/lib/verification"
+import { type VerificationRefusal } from "@/lib/verification"
+import {
+  ACTION_LABELS, IdempotencyKeys, PROBLEMS, classifySubmit, watchReport,
+  type ProblemAction, type ProblemKind,
+} from "@/lib/wizard-requests"
 import { StepStory } from "./step-story"
 import { StepAudience } from "./step-audience"
 import { StepWhereWhen } from "./step-where-when"
@@ -39,7 +43,10 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
 }
 
 type GenerationState =
-  | "idle" | "creating" | "polling" | "complete" | "error" | "limit_reached"
+  | "idle" | "creating" | "polling" | "complete" | "limit_reached"
+  // LR-024: every other way a submit or the wait can end. Which one, and what
+  // it offers, is `problem.kind` (lib/wizard-requests PROBLEMS).
+  | "problem"
   // D-019. A distinct state rather than folding into "error": this is a
   // refusal with a specific remedy, and "Try Again" — which is what the
   // error card offers — is the one action that cannot possibly help.
@@ -90,7 +97,12 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const [verificationRefusal, setVerificationRefusal] = useState<VerificationRefusal | null>(null)
   const [limitInfo, setLimitInfo] = useState<{ product: string; used: number; limit: number } | null>(null)
   const [pollingStage, setPollingStage] = useState(0)
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [problem, setProblem] = useState<{ kind: ProblemKind; message?: string } | null>(null)
+  // LR-024: one status watch at a time, aborted on unmount and on retry.
+  const watchRef = useRef<AbortController | null>(null)
+  // One Idempotency-Key per payload: a retry replays instead of duplicating.
+  const keysRef = useRef(new IdempotencyKeys())
+  const problemHeadingRef = useRef<HTMLHeadingElement | null>(null)
 
   const selectedReport = REPORT_TYPES.find(r => r.id === state.reportType)
   const needsAudience = selectedReport?.hasAudienceStep ?? false
@@ -216,39 +228,65 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     if (idx > 0) setStep(effectiveSteps[idx - 1])
   }
 
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
-    }
-  }, [])
+  useEffect(() => () => { watchRef.current?.abort() }, [])
 
-  function startPolling(reportId: string) {
+  // A new problem's heading takes focus, so keyboard and screen-reader users land on it.
+  useEffect(() => {
+    if (generationState === "problem") problemHeadingRef.current?.focus()
+  }, [generationState, problem])
+
+  function showProblem(kind: ProblemKind, message?: string) {
+    setProblem({ kind, message })
+    setGenerationState("problem")
+  }
+
+  // LR-024 (D-382): a bounded wait. It used to poll every 3 s forever and
+  // ignore every failed check.
+  async function watch(reportId: string) {
+    watchRef.current?.abort()
+    const mine = new AbortController()
+    watchRef.current = mine
+    setProblem(null)
     setGenerationState("polling")
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/proxy/v1/reports/${reportId}`)
-        if (!res.ok) return
-        const data = await res.json()
-        if (data.status === "completed" || data.status === "complete") {
-          if (pollingRef.current) clearInterval(pollingRef.current)
-          pollingRef.current = null
-          setPdfUrl(data.pdf_url || null)
-          setGenerationState("complete")
-          // Refresh the reports list cache so /app/reports shows the new
-          // row immediately instead of waiting out the staleTime window.
-          queryClient.invalidateQueries({ queryKey: ["reports"] })
-          if (data.pdf_url) {
-            window.open(data.pdf_url, "_blank")
-            if (state.downloadPdf) triggerDownload(data.pdf_url)
-          }
-        } else if (data.status === "failed") {
-          if (pollingRef.current) clearInterval(pollingRef.current)
-          pollingRef.current = null
-          setGenerationError("Report generation failed. Please try again.")
-          setGenerationState("error")
-        }
-      } catch { /* ignore polling errors */ }
-    }, 3000)
+    const outcome = await watchReport(reportId, { signal: mine.signal })
+    if (watchRef.current !== mine || !outcome) return
+    watchRef.current = null
+    if (outcome.kind === "complete") {
+      setPdfUrl(outcome.pdfUrl)
+      setGenerationState("complete")
+      // Refresh the reports list cache so /app/reports shows the new
+      // row immediately instead of waiting out the staleTime window.
+      queryClient.invalidateQueries({ queryKey: ["reports"] })
+      if (outcome.pdfUrl) {
+        window.open(outcome.pdfUrl, "_blank")
+        if (state.downloadPdf) triggerDownload(outcome.pdfUrl)
+      }
+      return
+    }
+    showProblem(outcome.kind === "session_expired" ? "status_session_expired" : outcome.kind)
+  }
+
+  function runAction(action: ProblemAction) {
+    switch (action) {
+      case "retry_submit":
+      case "new_report":
+        void handleSubmit()
+        return
+      case "edit":
+        setProblem(null)
+        setGenerationState("idle")
+        return
+      case "keep_waiting":
+      case "check_again":
+        if (generatedReportId) void watch(generatedReportId)
+        return
+      case "go_reports":
+        queryClient.invalidateQueries({ queryKey: ["reports"] })
+        router.push("/app/reports")
+        return
+      case "sign_in":
+        return // a link; see ProblemActions
+    }
   }
 
   function triggerDownload(url: string) {
@@ -262,145 +300,105 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   }
 
   async function handleSubmit() {
-    if (!state.reportType) return
+    if (!state.reportType || isSubmitting) return
+    watchRef.current?.abort()
     setIsSubmitting(true)
+    setProblem(null)
+    setGenerationError(null)
 
     const reportType = state.reportType
     const filters = state.audience && state.audience !== "all"
       ? AUDIENCE_FILTER_PRESETS[state.audience] || null
       : null
+    const recipients = state.recipients.map(r => {
+      if (r.type === "manual_email") return r.email;
+      if (r.type === "contact") return { type: "contact", id: r.id };
+      if (r.type === "group") return { type: "group", id: r.id };
+      return r;
+    })
+    const isReport = state.deliveryMode === "send_now"
+    const body = isReport
+      ? {
+          report_type: reportType,
+          city: state.areaType === "city" ? state.city : null,
+          zips: state.areaType === "zip" ? state.zipCodes : null,
+          lookback_days: state.lookbackDays,
+          filters,
+          theme_id: themeId,
+          accent_color: branding.accentColor,
+          ...(state.sendViaEmail && state.recipients.length > 0 && {
+            send_email: true,
+            recipients,
+          }),
+        }
+      : {
+          name: state.scheduleName,
+          report_type: reportType,
+          city: state.areaType === "city" ? state.city : null,
+          zip_codes: state.areaType === "zip" ? state.zipCodes : null,
+          lookback_days: state.lookbackDays,
+          cadence: state.cadence,
+          weekly_dow: state.cadence === "weekly" ? state.dayOfWeek : null,
+          monthly_dom: state.cadence === "monthly" ? state.dayOfMonth : null,
+          send_hour: state.sendHour,
+          send_minute: state.sendMinute,
+          timezone: state.timezone,
+          recipients,
+          include_attachment: true,
+          active: true,
+          filters,
+        }
+    const product = isReport ? "market_reports" : "schedules"
+    const payload = JSON.stringify(body)
+    // LR-024: the same payload sent again (a retry after a lost answer or a
+    // 5xx) carries the same key, so the API replays it instead of creating a
+    // second report or schedule.
+    const key = keysRef.current.keyFor(`${product}:${payload}`)
+    if (isReport) setGenerationState("creating")
 
+    let res: Response | null = null
     try {
-      if (state.deliveryMode === "send_now") {
-        setGenerationState("creating")
-        const res = await fetch("/api/proxy/v1/reports", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            report_type: reportType,
-            city: state.areaType === "city" ? state.city : null,
-            zips: state.areaType === "zip" ? state.zipCodes : null,
-            lookback_days: state.lookbackDays,
-            filters,
-            theme_id: themeId,
-            accent_color: branding.accentColor,
-            ...(state.sendViaEmail && state.recipients.length > 0 && {
-              send_email: true,
-              recipients: state.recipients.map(r => {
-                if (r.type === "manual_email") return r.email;
-                if (r.type === "contact") return { type: "contact", id: r.id };
-                if (r.type === "group") return { type: "group", id: r.id };
-                return r;
-              }),
-            }),
-          }),
-        })
-        if (!res.ok) {
-          // D-019, checked before the 429 branch because the two are not
-          // alternatives: a 403 here never carries limit fields, and reading it
-          // as a generic error is what would turn "confirm your email" into
-          // "Something went wrong" with a Try Again button.
-          const refusal = readVerificationRefusal(await res.clone().json().catch(() => ({})))
-          if (refusal) {
-            setVerificationRefusal(refusal)
-            setGenerationState("verification_required")
-            setIsSubmitting(false)
-            return
-          }
-          if (res.status === 429) {
-            const errData = await res.json().catch(() => ({}))
-            const productLabels: Record<string, string> = {
-              market_reports: "Market Report",
-              schedules: "Schedule",
-              property_reports: "Property Report",
-            }
-            const productLabel = errData.product ? (productLabels[errData.product] || "Report") : "Market Report"
-            const used = errData.used ?? null
-            const limit = errData.limit ?? null
-            const detail = used !== null && limit !== null
-              ? `You've used ${used} of ${limit} ${productLabel.toLowerCase()}s this month.`
-              : errData.detail || errData.message || `You've reached your ${productLabel.toLowerCase()} limit.`
-            setGenerationError(`${productLabel} limit reached — ${detail}`)
-            setGenerationState("limit_reached")
-            setIsSubmitting(false)
-            return
-          }
-          const errData = await res.json().catch(() => ({}))
-          throw new Error(errData.detail || errData.message || "Failed to create report")
+      res = await fetch(isReport ? "/api/proxy/v1/reports" : "/api/proxy/v1/schedules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+        body: payload,
+      })
+    } catch {
+      res = null
+    }
+    const outcome = await classifySubmit(res, product)
+    setIsSubmitting(false)
+
+    // D-330: the same outcomes for "Generate" and "Create Schedule". A schedule
+    // failure used to clear the spinner and show nothing.
+    switch (outcome.kind) {
+      case "created": {
+        keysRef.current.release()
+        if (!isReport) {
+          router.push("/app/schedules")
+          return
         }
-        const data = await res.json()
-        const reportId = data.report_id || data.id
+        const reportId = String(outcome.body.report_id || outcome.body.id)
         setGeneratedReportId(reportId)
-        startPolling(reportId)
-      } else {
-        const res = await fetch("/api/proxy/v1/schedules", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: state.scheduleName,
-            report_type: reportType,
-            city: state.areaType === "city" ? state.city : null,
-            zip_codes: state.areaType === "zip" ? state.zipCodes : null,
-            lookback_days: state.lookbackDays,
-            cadence: state.cadence,
-            weekly_dow: state.cadence === "weekly" ? state.dayOfWeek : null,
-            monthly_dom: state.cadence === "monthly" ? state.dayOfMonth : null,
-            send_hour: state.sendHour,
-            send_minute: state.sendMinute,
-            timezone: state.timezone,
-            recipients: state.recipients.map(r => {
-              if (r.type === "manual_email") return r.email;
-              if (r.type === "contact") return { type: "contact", id: r.id };
-              if (r.type === "group") return { type: "group", id: r.id };
-              return r;
-            }),
-            include_attachment: true,
-            active: true,
-            filters,
-          }),
-        })
-        if (!res.ok) {
-          // D-019, checked before the 429 branch because the two are not
-          // alternatives: a 403 here never carries limit fields, and reading it
-          // as a generic error is what would turn "confirm your email" into
-          // "Something went wrong" with a Try Again button.
-          const refusal = readVerificationRefusal(await res.clone().json().catch(() => ({})))
-          if (refusal) {
-            setVerificationRefusal(refusal)
-            setGenerationState("verification_required")
-            setIsSubmitting(false)
-            return
-          }
-          if (res.status === 429) {
-            const errData = await res.json().catch(() => ({}))
-            const productLabels: Record<string, string> = {
-              market_reports: "Market Report",
-              schedules: "Schedule",
-              property_reports: "Property Report",
-            }
-            const productLabel = errData.product ? (productLabels[errData.product] || "Report") : "Schedule"
-            const used = errData.used ?? null
-            const limit = errData.limit ?? null
-            const detail = used !== null && limit !== null
-              ? `You've used ${used} of ${limit} ${productLabel.toLowerCase()}s.`
-              : errData.detail || errData.message || `You've reached your ${productLabel.toLowerCase()} limit.`
-            setGenerationError(`${productLabel} limit reached — ${detail}`)
-            setGenerationState("limit_reached")
-            setIsSubmitting(false)
-            return
-          }
-          const errData = await res.json().catch(() => ({}))
-          throw new Error(errData.detail || errData.message || "Failed to create schedule")
-        }
-        router.push("/app/schedules")
+        void watch(reportId)
+        return
       }
-    } catch (err) {
-      if (state.deliveryMode === "send_now") {
-        setGenerationError(err instanceof Error ? err.message : "Something went wrong")
-        setGenerationState("error")
-      }
-    } finally {
-      setIsSubmitting(false)
+      case "verification":
+        // D-019: a refusal with its own remedy, never "Try again".
+        setVerificationRefusal(outcome.refusal)
+        setGenerationState("verification_required")
+        return
+      case "limit":
+        setGenerationError(`${outcome.title} — ${outcome.detail}`)
+        setGenerationState("limit_reached")
+        return
+      case "invalid":
+        showProblem("invalid", outcome.message)
+        return
+      default:
+        // offline, server_error, session_expired (UNKNOWN_OUTCOME): the request
+        // may have landed, so the key is kept and "Try again" replays it.
+        showProblem(outcome.kind)
     }
   }
 
@@ -460,6 +458,9 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     : "Generate Report"
 
   const resetForNew = () => {
+    watchRef.current?.abort()
+    keysRef.current.release()
+    setProblem(null)
     setState({ ...INITIAL_STATE })
     setStep(0)
     setGenerationState("idle")
@@ -749,33 +750,33 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                 />
               )}
 
-              {generationState === "error" && (
-                <>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FEE2E2]">
-                    <AlertCircle className="h-[22px] w-[22px] text-[#B91C1C]" />
+              {generationState === "problem" && problem && (
+                <div aria-live="polite" className="flex flex-1 flex-col gap-7">
+                  <span
+                    className={cn(
+                      "flex h-12 w-12 items-center justify-center rounded-full",
+                      problem.kind === "slow" || problem.kind === "unreachable" ? "bg-[#FEF3C7]" : "bg-[#FEE2E2]",
+                    )}
+                  >
+                    <AlertCircle
+                      className={cn(
+                        "h-[22px] w-[22px]",
+                        problem.kind === "slow" || problem.kind === "unreachable" ? "text-[#B45309]" : "text-[#B91C1C]",
+                      )}
+                    />
                   </span>
-                  <StepHeader title="Generation failed" sub={generationError || "Something went wrong."} />
-                  <div className="mt-auto flex gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGenerationState("idle")
-                        setGenerationError(null)
-                        setIsSubmitting(false)
-                      }}
-                      className="h-[46px] rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold"
+                  <div className="flex flex-col gap-2">
+                    <h2
+                      ref={problemHeadingRef}
+                      tabIndex={-1}
+                      className="m-0 text-[28px] font-extrabold leading-[1.1] tracking-[-0.03em] text-[#0F172A] focus:outline-none"
                     >
-                      Go Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSubmit}
-                      className="inline-flex h-[46px] items-center rounded-[9px] bg-[#0F172A] px-5 text-sm font-semibold text-white"
-                    >
-                      Try Again
-                    </button>
+                      {PROBLEMS[problem.kind].title}
+                    </h2>
+                    <p className="m-0 text-[15px] text-[#64748B]">{problem.message || PROBLEMS[problem.kind].sub}</p>
                   </div>
-                </>
+                  <ProblemActions actions={PROBLEMS[problem.kind].actions} onAct={runAction} busy={isSubmitting} />
+                </div>
               )}
             </div>
           )}
@@ -828,6 +829,40 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
           </span>
         </section>
       </div>
+    </div>
+  )
+}
+
+function ProblemActions({
+  actions,
+  onAct,
+  busy,
+}: {
+  actions: ProblemAction[]
+  onAct: (action: ProblemAction) => void
+  busy: boolean
+}) {
+  return (
+    <div className="mt-auto flex flex-wrap gap-2.5">
+      {actions.map((action, i) => {
+        const primary = i === actions.length - 1
+        const cls = primary
+          ? "inline-flex h-[46px] items-center rounded-[9px] bg-[#0F172A] px-5 text-sm font-semibold text-white disabled:opacity-60"
+          : "inline-flex h-[46px] items-center rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold"
+        if (action === "sign_in") {
+          // A new tab, so this one keeps the choices for the retry.
+          return (
+            <a key={action} href="/login" target="_blank" rel="noopener noreferrer" className={cls}>
+              {ACTION_LABELS[action]}
+            </a>
+          )
+        }
+        return (
+          <button key={action} type="button" onClick={() => onAct(action)} disabled={busy} className={cls}>
+            {ACTION_LABELS[action]}
+          </button>
+        )
+      })}
     </div>
   )
 }
