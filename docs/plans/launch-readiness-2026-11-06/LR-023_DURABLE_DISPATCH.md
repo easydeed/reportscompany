@@ -1,6 +1,6 @@
 # LR-023: a committed scheduled send survives a broker failure (D-381), and schedules never use the manual allowance (D-332)
 
-Design rev 1, written for Codex design review before code. Builder: Claude.
+Design rev 2: answers Codex's AMEND on rev 1 (§9). Written for design re-review before code. Builder: Claude.
 The facts below were verified at `main` `dbdb0f70`.
 
 ## 1. What is wrong today
@@ -27,151 +27,244 @@ The counters themselves already follow the rule. Both exclude scheduled runs (`a
 
 The 80% warning (`:664–676`) already says "Reports your schedules make don't count toward this" and stays as it is.
 
-## 2. The occurrence and its states
+## 2. The occurrence, tracked or legacy
 
-An occurrence is one `schedule_runs` row: one durable identity, created once by the tick that claimed the schedule. Its `report_run_id`, which is `report_generations.id`, is the Celery task's `run_id` argument and the key `_already_delivered(account_id, run_id)` deduplicates delivery on. Every publish of an occurrence, first or republished, sends the same `run_id`. Nothing creates a second occurrence for the same due time.
+An occurrence is one `schedule_runs` row: one durable identity, created once by the tick that claimed the schedule. Its `report_run_id` (= `report_generations.id`) is the Celery task's `run_id` argument. Every publish of the occurrence, first or republished, carries that same `run_id`. Nothing creates a second occurrence for one due time.
 
-Migration **0068** adds four columns to `schedule_runs`:
+**Migration 0068.** LR-025 (#287) took 0067 after rev 1 was reviewed. 0068 adds these columns to `schedule_runs`:
 
 | Column | Meaning |
 |---|---|
-| `dispatched_at timestamptz NULL` | When a publish of this occurrence was **acknowledged by the broker** and recorded. NULL means it has not been, or the outcome is unknown. |
-| `dispatch_attempts int NOT NULL DEFAULT 0` | Publish attempts made, whether or not they succeeded. |
-| `last_dispatch_at timestamptz NULL` | When the last attempt started; used for backoff. |
-| `last_dispatch_error text NULL` | The last publish failure, for operators. |
+| `recovery_tracked boolean NOT NULL DEFAULT false` | **The explicit boundary (AMEND 1).** Only the new ticker sets it, to `true`, on the insert. Every existing row, and any row an old ticker writes during the rollout, stays `false` and is **legacy**. Nothing is inferred from timestamps, and there is no backfill. |
+| `dispatched_at timestamptz` | A publish the broker acknowledged, recorded after the fact. NULL means not yet, or unknown. |
+| `dispatch_attempts int NOT NULL DEFAULT 0` | Publishes attempted, the first included. |
+| `last_dispatch_at timestamptz` | When the last publish attempt started; used for backoff. |
+| `last_dispatch_error text` | The last publish failure, for operators. |
+| `owner_token uuid`, `lease_at timestamptz` | The execution lease: who holds the occurrence, and since when (AMEND 2). |
+| `send_claimed_at timestamptz`, `send_token uuid` | The durable pre-send claim (AMEND 3). Once set, it is never cleared. |
 
-- **Backfill:** every existing row gets `dispatched_at = created_at` and `dispatch_attempts = 1`. Pre-0068 occurrences are treated as published, so the new code never republishes old sends ("no replay of old scheduled sends"). They keep today's stale path.
-- **Index:** a partial index on `(created_at) WHERE status = 'queued' AND started_at IS NULL`.
-- **Rollout:** the migration also takes `SET LOCAL lock_timeout = '5s'`, and both schema guards advance to 0068.
+- **Index:** a partial index on `(created_at) WHERE recovery_tracked AND status IN ('queued', 'processing')`.
+- **New statuses:** `cancelled`, `expired`, `blocked_unverified`, `needs_review`. `status` is free text since 0006, so no constraint changes.
+- **Rollout:** the migration takes `SET LOCAL lock_timeout = '5s'`, and both schema guards advance to 0068.
 
-| `status` | `started_at` | `dispatched_at` | What it means |
-|---|---|---|---|
-| queued | NULL | NULL | Committed, and no publish is known to have succeeded: never attempted, failed, or crashed before the acknowledgement was recorded. **Republishable.** |
-| queued | NULL | set | Published and waiting for a worker. |
-| processing | set | any | A worker claimed it. |
-| completed / failed / skipped_* | — | — | Terminal, as today. |
-| **cancelled** (new value) | NULL | any | Never started, and its schedule was paused or deleted, or its account deactivated, before a republish. `error` says which. |
+**Legacy rows keep today's behaviour exactly.** The worker uses the current start update for them. The sweep's existing pass (fail "never picked up" after 30 minutes, "died while running" after 6) applies to `NOT recovery_tracked` rows only. A legacy row is never republished, leased or send-claimed. The D-332 veto removal applies to them too, because it is a policy change, not a recovery mechanism.
 
-## 3. Publishing, and every crash window
+**Every time below is measured from the occurrence's `created_at`, never from a retry.** The **horizon** is `created_at + 6 h`, which Jerry approved on 2026-11-11.
 
-The ticker transaction is unchanged up to the commit. Then:
+## 3. Publishing (the ticker and the sweep share one routine)
 
-1. `UPDATE schedule_runs SET dispatch_attempts = dispatch_attempts + 1, last_dispatch_at = now() WHERE id = $run` and commit.
-2. `send_task(... run_id = report_run_id ...)`.
-3. On success: `UPDATE ... SET dispatched_at = now() WHERE id = $run AND dispatched_at IS NULL` and commit. On failure: `SET last_dispatch_error = $err` and commit. Both are best effort; if this write fails, the row stays republishable.
+1. In the claiming transaction, or the sweep's locked transaction: `dispatch_attempts += 1`, `last_dispatch_at = now()`. Commit.
+2. `send_task(run_id = report_run_id)`.
+3. On success, `dispatched_at = now() WHERE dispatched_at IS NULL`. On failure, `last_dispatch_error`. Either write is best effort; if it fails, the row stays recoverable.
 
-| Crash or failure point | State left behind | Recovery |
-|---|---|---|
-| Before the commit | Nothing; the lock expires | The next tick claims the schedule again (today's behaviour). |
-| After the commit, before step 1 or 2 | queued, `dispatched_at` NULL | The sweep republishes it after `REPUBLISH_AFTER`. |
-| The broker refuses the publish | queued, NULL, `last_dispatch_error` set | The sweep republishes it with backoff. |
-| After a successful publish, before the acknowledgement is recorded | queued, NULL, **and a message in the broker** | The sweep republishes it, giving two messages for one occurrence. That is safe; see §4. |
-| Published, then the broker loses it (a restart without persistence) | queued, `dispatched_at` set, never started | After `STALE_QUEUED_MINUTES` the sweep republishes it once more within the bounds below, instead of failing it. |
+The crash windows are those of rev 1, and all of them are now safe through §4. For example, a publish that succeeded but whose acknowledgement was never recorded leads to one extra message, and the lease makes that message a no-op.
 
-## 4. Duplicate publication cannot duplicate work or delivery
+## 4. The execution lease: the first thing the worker does
 
-Two messages for one occurrence are expected, by design, in the post-publish crash window and when a sweep republishes during a backlog. The worker takes a **start claim** at the top of `generate_report`, for scheduled runs only, replacing today's unconditional `UPDATE ... started_at = NOW() WHERE started_at IS NULL`:
+The worker decides first, before **any** write to `report_generations` (status, `input_params`, artifacts). For a tracked run it executes, in one transaction:
 
 ```sql
-UPDATE schedule_runs SET status = 'processing', started_at = now()
-WHERE report_run_id = $run AND started_at IS NULL AND status = 'queued'
-RETURNING id
+UPDATE schedule_runs sr
+SET status = 'processing', started_at = COALESCE(sr.started_at, now()),
+    owner_token = $tok, lease_at = now()
+FROM schedules s JOIN accounts a ON a.id = s.account_id
+WHERE sr.report_run_id = $run AND sr.recovery_tracked
+  AND sr.send_claimed_at IS NULL
+  AND (sr.status = 'queued'
+       OR (sr.status = 'processing' AND sr.lease_at < now() - STALE_STARTED))
+  AND sr.created_at > now() - HORIZON
+  AND s.id = sr.schedule_id AND s.active AND COALESCE(a.is_active, true)
+  AND <account_can_send: an active user with a confirmed email>
+RETURNING sr.owner_token
 ```
 
-- **Claimed:** proceed.
-- **Not claimed**, so another message already started this occurrence. Look at the row:
-  - **terminal:** return `duplicate_message` and do nothing;
-  - **`processing`, started within `STALE_STARTED_MINUTES` (6):** a live concurrent attempt, so return `duplicate_message`;
-  - **`processing`, started earlier than that:** a dead attempt being redelivered by `task_acks_late`. Proceed, as today, so the D-068 recovery is kept.
+- **One row, so exactly one owner wins.** A second concurrent claim waits on the row lock. It then sees `lease_at` refreshed, or a terminal status, and matches nothing. Two delayed duplicates of a stale run cannot both proceed (AMEND 2).
+- **When nothing is claimed**, the worker locks the row (`SELECT ... FOR UPDATE`) and writes exactly one truthful outcome, if one is due. Each of these is terminal and is never retried. AMEND 4 comes from this: **a delayed message is judged by the worker itself, with no sweep in between.**
 
-Delivery stays behind `_already_delivered(run_id)`: `sent` blocks forever, and `sending` blocks inside its window. So even if a duplicate passed the start claim, it could not send twice. Usage is not touched, because scheduled runs are not counted.
+| Row state, under lock | Outcome written |
+|---|---|
+| queued or stale-processing, past the horizon, no send claim | `expired`: "not sent: it could not start within 6 hours of its scheduled time" |
+| …schedule paused | `cancelled`: "not sent: the schedule was paused before it ran" |
+| …account inactive | `cancelled`: "not sent: the account was deactivated before it ran" |
+| …no confirmed sender | `blocked_unverified`, plus the same `email_log` refusal row the ticker writes |
+| stale-processing with `send_claimed_at` set and no recorded outcome | `needs_review` (§5) |
+| terminal, or processing under a live lease | nothing: return `duplicate_message` |
 
-## 5. The sweep: republish, cancel, or give up, bounded
+- **Every later write by an owner is conditioned on its token.** That covers `schedule_runs` terminal status, the send claim, and `report_generations` status and URLs; the last are written as `... WHERE id = $run AND EXISTS (SELECT 1 FROM schedule_runs WHERE report_run_id = $run AND owner_token = $tok)`. When a write matches nothing, this owner was superseded: it stops, sends nothing and settles nothing.
+- **The lease is refreshed** (`lease_at = now()`, token-conditioned) between the render stages. A long but live run is therefore never mistaken for a dead one. Today p99 is 41 s, the maximum 80 s, and `task_time_limit` 300 s, against a 6-minute stale window.
 
-`sweep_stale_runs` gains a republish pass that runs before the existing stale pass. Each tick:
+## 5. Delivery: at most one provider call per occurrence, failing closed
 
-1. **Select** with `FOR UPDATE SKIP LOCKED`, so concurrent tickers never take the same row. The candidates are rows where:
-   - `status = 'queued' AND started_at IS NULL`, and
-   - either `dispatched_at IS NULL AND created_at < now() - REPUBLISH_AFTER`,
-   - or `dispatched_at IS NOT NULL AND dispatched_at < now() - STALE_QUEUED_MINUTES` (a lost message),
-   - and `last_dispatch_at` is NULL or older than the backoff.
-2. **For each candidate, decide inside the same transaction:**
-   - **Schedule paused (`schedules.active = false`) or account inactive (`accounts.is_active = false`):** set `status = 'cancelled'` and `error = 'not sent: schedule paused before it could be dispatched'` (or the account-inactive reason). A deleted schedule's runs are already removed by `ON DELETE CASCADE`.
-   - **`dispatch_attempts >= MAX_DISPATCH_ATTEMPTS`, or `created_at` older than `DISPATCH_HORIZON`:** set `status = 'failed'` and `error = 'not dispatched: the queue was unavailable for N attempts over M minutes'`, and log it at error level for operators and LR-027.
-   - **Otherwise:** increment `dispatch_attempts`, set `last_dispatch_at`, commit, then publish and record the acknowledgement as in §3.
-3. **The existing stale pass** keeps "died while running" (started, never terminal) exactly as it is. A row that was never started now reaches `failed` only through the bounded give-up in step 2, never on the first stale window.
+`send_schedule_email` (SendGrid) takes no idempotency key, so an unknown outcome cannot be safely repeated. Jerry's standing rule, the LR-020 policy, applies here too: **an unknown send outcome becomes `needs_review` and is never re-sent automatically.**
 
-**Bounds.** These are environment variables, like the existing windows. The 6-hour horizon was approved by Jerry on 2026-11-11; the others are proposed:
+1. **Pre-send claim.** It is committed **before** the provider call, in one transaction that also re-checks eligibility:
+   ```sql
+   UPDATE schedule_runs sr SET send_claimed_at = now(), send_token = $tok
+   FROM schedules s JOIN accounts a ON a.id = s.account_id
+   WHERE sr.report_run_id = $run AND sr.owner_token = $tok AND sr.send_claimed_at IS NULL
+     AND s.id = sr.schedule_id AND s.active AND COALESCE(a.is_active, true) AND <account_can_send>
+   RETURNING 1
+   ```
+   - **Zero rows:** no send. An ineligible row gets its truthful terminal state (§4 table); a superseded owner stops.
+   - **Any error** (the database is unreachable, a timeout, the commit fails): **no send**. The run then becomes `needs_review` through the lease path. Today's lookup returns None and goes on to send, and the email_log insert lets the provider call go ahead when it fails. Neither is the barrier for tracked runs any more.
+2. **Send** through the existing `_send_and_log_report_email`, unchanged:
+   - current recipients, resolved at send time;
+   - send-time suppression;
+   - the D-110 empty-result hold;
+   - the `email_log` journal.
 
-| Setting | Default | Why |
+   `_already_delivered` stays as a second layer. Nothing relies on it.
+3. **Record the outcome** under the token, then commit:
+
+| Provider result | `schedule_runs` | Retried automatically? |
 |---|---|---|
-| `REPUBLISH_AFTER` | 2 min | Longer than a normal ticker pass, so a publish that is in flight is not raced. |
-| Backoff | 2, 4, 8, 16 min | Doubles per attempt. |
-| `MAX_DISPATCH_ATTEMPTS` | 6 | |
-| `DISPATCH_HORIZON` | 6 h | A 9 a.m. report is still sent on the same working day. After that the run fails visibly rather than arriving at night or the next day. |
+| 2xx | `completed` | — |
+| A definite rejection (4xx response) | `failed` (`failed_email: <code>`) | No: one provider call per occurrence |
+| An exception, a timeout, a connection drop, or a 5xx with no definite answer | `needs_review`: "outcome unknown: the provider may have accepted this email" | **No** |
+| The process dies after the claim and before this write | Still `processing`, `send_claimed_at` set. The next lease attempt or sweep finds it stale and writes `needs_review` | **No** |
+| The outcome write fails after a 2xx | The same as the row above. The `email_log` journal still holds the 2xx for the operator to check | **No** |
 
-**What a republished send uses** (unchanged code, stated here because the acceptance names it):
-- **Recipients:** whatever the schedule holds at delivery time, because `tasks.py:2091` reads `schedules.recipients` when it sends.
-- **Unsubscribes:** suppression is applied at send time, so a recipient who unsubscribed after the occurrence was committed is still filtered.
-- **Unverified accounts:** the ticker refuses them before an occurrence exists, so a republish never sees one.
+`needs_review` runs are listed for operators in the sweep's error log, with run, schedule and account. LR-027 alerts on them, and the LR-020 held-send tooling is the model for resolving them by hand. Nothing in this PR resends them.
 
-## 6. D-332: the vetoes and the copy
+## 6. The sweep, for tracked rows: recover, then give up visibly
+
+Each tick, the sweep selects tracked `queued` and `processing` rows `FOR UPDATE SKIP LOCKED`, so concurrent tickers never take the same row. It decides per row in that transaction:
+
+1. **Terminal checks first** (§4 table):
+   - past the horizon with no send claim → `expired`;
+   - stale with a send claim → `needs_review`;
+   - never started, and the schedule is paused, the account inactive or the sender unverified → `cancelled` or `blocked_unverified`.
+2. **Recoverable candidates:**
+   - **(a)** queued, `dispatched_at IS NULL`, `created_at < now() - 2 min`;
+   - **(b)** queued, `dispatched_at < now() - 30 min` (a message the broker lost);
+   - **(c)** processing, `lease_at < now() - 6 min`, no send claim (a dead owner).
+
+   For each, the backoff must have elapsed since `last_dispatch_at`: 2, 4, 8, then 16 minutes, capped at 16.
+3. **`dispatch_attempts >= 6`** (six publishes in total, the first included) → `failed`: "not dispatched: the queue was unavailable for 6 attempts". Otherwise, republish (§3).
+
+**Rev 1's 6-minute "died while running → failed" step no longer applies to tracked rows (AMEND 2).** A dead owner's row is recovered by case (c), and becomes terminal only through the give-up or the horizon. The timeline:
+- the worker dies at t;
+- at t + 6 min the lease is stale, and the sweep republishes;
+- the new message takes the lease;
+- the broker's `acks_late` redelivery arrives at t + 15 min (`visibility_timeout` 900 s), finds a fresh lease or a terminal row, and is a no-op.
+
+If the sweep is not running, the redelivery at t + 15 takes the stale lease itself.
+
+## 7. D-332: the vetoes and the copy
 
 - **Remove the ticker veto** (`schedules_tick.py:577–596`) and the worker veto (`tasks.py:1444–1482`). `check_usage_limit` stays for manual work. `skipped_limit` remains a valid historical status that nothing writes any more.
-- **Limit-reached email.** Replace the scheduled-send sentences with:
+- **Limit-reached email** (`email.py:689–702`) and its policy comment (`:653–657`):
   - "Your scheduled reports keep sending: they don't count toward this limit."
-  - The lead becomes "You can make N more while you decide. After that, new reports pause until {date}." plus that line.
-  - Drop "Sends skipped before then aren't re-sent", which describes a behaviour that no longer exists.
-  - Keep "Nothing is deleted" and the upgrade line.
-  - Correct the policy comment at `:653–657`.
+  - The lead becomes "You can make N more while you decide. After that, new reports pause until {date}."
+  - Drop "Sends skipped before then aren't re-sent".
+  - Keep the upgrade line.
   - Tested with the existing fake sender.
-- **Wizard line** (`step-deliver.tsx:44`). Codex coordinates the wizard copy (DECISIONS_AND_LANES). Proposed: "Scheduled runs don't use your monthly report allowance. Each one pulls fresh data when it runs." **Codex: should this line change in this PR, or in yours?** Either way the email and the wizard must state the same rule.
-- **Schedule capacity** (how many active schedules a plan admits) stays LR-016. Existing schedules are never bulk-paused, and the 43 inactive schedules are not activated.
+- **Wizard** (`step-deliver.tsx:44`). Codex delegated this one literal swap to this PR: "Scheduled runs don't use your monthly report allowance. Each one pulls fresh data when it runs." I will make no other wizard change. This PR carries a copy regression test and a before/after render of the schedule step.
+- **Other tickets' scope:** LR-015 owns the manual allowance function, and LR-016 owns schedule-capacity admission. Existing schedules are never bulk-paused, and the 43 inactive schedules are not activated.
 
-## 7. Tests and proof
+## 8. Tests, proof and rollout
 
-**Real PostgreSQL, with the publish faked:**
-- A broker failure on the first publish, then the sweep republishes and acknowledges: one occurrence, one message accepted.
-- A crash after the commit and before the publish, then a republish.
-- A crash after a successful publish and before the acknowledgement: two messages, one start claim, one delivery.
-- Concurrent sweeps (two connections) never republish the same row.
-- Backoff and attempt counting.
-- Give-up at `MAX_DISPATCH_ATTEMPTS` and at the horizon, with the visible error text.
-- A paused schedule or inactive account becomes `cancelled`.
-- Backfilled pre-0068 rows are never republished.
-- A lost published message is republished, not failed.
-- The start claim:
-  - a terminal run gets a duplicate no-op;
-  - a recent `processing` run gets a duplicate no-op;
-  - an old `processing` run (an `acks_late` redelivery) proceeds.
+**Real PostgreSQL.** The publish and the provider are faked where noted.
+
+- **Legacy boundary (AMEND 1):** legacy `queued` rows, both inside and outside the 6-hour range, are never republished or leased. They follow the legacy stale path. A row an old ticker writes after the migration is legacy.
+- **Publishing:**
+  - the first publish fails, the sweep republishes, and the publish is acknowledged;
+  - a crash after the commit and before the publish;
+  - a crash after the publish and before the acknowledgement: two messages, one lease, one send;
+  - backoff 2/4/8/16;
+  - the attempt boundary: the 6th publish is allowed and the 7th refused;
+  - concurrent sweeps on two connections never select the same row.
+- **Lease (AMEND 2):**
+  - two simultaneous stale takeovers, exactly one winner;
+  - a superseded owner's writes match nothing (`report_generations` included);
+  - a duplicate message makes no `report_generations` write at all;
+  - the sweep at t + 6 republishes and does **not** fail the row;
+  - the redelivery at t + 15 is a no-op after the takeover;
+  - the redelivery at t + 15 with no sweep takes the lease;
+  - a live owner refreshing its lease is never taken over.
+- **Delivery (AMEND 3):**
+  - the pre-send claim is committed before the provider call;
+  - the provider accepts and the answer is lost (exception after acceptance) → `needs_review`, and a later redelivery or republish does not send;
+  - the process dies after the claim → `needs_review` through the lease and through the sweep;
+  - a definite 4xx → `failed`, not resent;
+  - the claim's database write fails → no provider call;
+  - the duplicate lookup or journal insert fails → still exactly one provider call, because the claim is the barrier;
+  - the outcome write fails after a 2xx → `needs_review`, not resent.
+- **Eligibility over time (AMEND 4).** Each case below has no intervening sweep:
+  - delivery after the horizon → the worker writes `expired`;
+  - the schedule is paused after the tick → `cancelled` at the lease;
+  - the schedule is paused after the lease and before the send → `cancelled` at the send claim;
+  - the account is deactivated → `cancelled`;
+  - the sender loses verification → `blocked_unverified` plus the `email_log` refusal;
+  - recipients change before a republish → the current recipients get it;
+  - a recipient unsubscribes before a republish → suppressed;
+  - the horizon boundaries: `created_at + 6 h − 1 s` claims, and `+ 6 h + 1 s` expires.
 - **Allowance:** an account at, over, or with zero manual allowance still gets an occurrence, a dispatch and a send, and its manual counter does not move.
-- **Changed recipients** before a republish: the current recipients receive it. **Unsubscribe** before a republish: suppressed.
-- **Email copy:** the fake sender's HTML carries the new sentence and none of the old ones.
+- **Copy:** the email's HTML from the fake sender carries the new sentence and none of the old ones; the wizard line is asserted, and the schedule step rendered before and after.
 
-**Handoff proof, live, on local Redis and Celery plus real PostgreSQL:** stop Redis, run a tick, and see the occurrence `queued` and undispatched. Start Redis, and see the next tick's sweep republish it, the worker run it once, and exactly one `email_log` `sent` row (fake provider). Then force the post-publish crash, and see two messages, one delivery.
+**Handoff proof, live, on local Redis and Celery plus real PostgreSQL:**
+- stop Redis, tick, and see a tracked occurrence queued and undispatched;
+- start Redis, see the sweep republish it and the worker run it once, with one `sent` (fake provider);
+- kill the worker mid-run, see the takeover at 6 minutes, and the 15-minute redelivery do nothing;
+- inject an unknown provider outcome and see `needs_review`, with nothing sent again.
 
-**Mutations:** for each of the following, a test must fail:
-- the start claim removed;
+**Planted-bug checks.** Each must make a test fail:
+- the marker not set by the ticker;
+- the marker ignored by the sweep;
 - `SKIP LOCKED` removed;
-- the acknowledgement written before the publish;
-- the backfill omitted;
-- the attempt cap removed;
-- the horizon removed;
+- the lease condition removed;
+- the token condition dropped from a terminal write;
+- the lease taken after the `report_generations` write;
+- the send claim made after the provider call;
+- the claim made fail-open;
+- an unknown outcome resent;
+- the horizon removed from the worker;
+- the attempt cap off by one;
 - the ticker veto restored;
 - the worker veto restored;
-- the old email sentence restored.
+- the old email sentence restored;
+- the old wizard line restored.
 
-## 8. Rollout
+**Rollout:**
+1. Migration 0068 is additive, with no backfill and no new table. It takes the next migration slot after #287's 0067.
+2. The handoff includes a read-only inventory of legacy rows:
+   ```sql
+   SELECT status, count(*), min(created_at), max(created_at)
+   FROM schedule_runs
+   WHERE status IN ('queued', 'processing')
+   GROUP BY status;
+   ```
+3. Runbook: Codex code PASS, a green exact-head gate, Jerry runs `--status` (exactly 0068 pending) and applies it, then the merge.
+4. The schema guards make the new ticker and worker refuse to start before 0068.
+5. **Rollback:** the old code ignores the columns, and the vetoes return with it.
 
-- One migration, 0068: additive columns, a backfill, a partial index, no new table. LR-025 (#287) takes 0067 first; LR-023 takes the slot after it.
-- **Runbook:** Codex PASS, a green exact-head gate, Jerry runs `--status` (exactly 0068 pending) and applies it, then the merge.
-- **Deploy order:** the schema guards make the new worker and ticker refuse to start against 0066, so the migration goes first. An old worker with the new schema ignores the new columns safely.
-- **Rollback:** the old code ignores the columns, and the ticker veto returns with it.
-- **Operators:** run outcomes appear in `schedule_runs` (`cancelled`, and `failed` with the not-dispatched reason) and in error logs. Alerting on them is LR-027.
+## 9. Codex's AMEND on rev 1, and the answers
 
-## 9. Out of scope, recorded
+1. **Backfilled rows were still selected:** fixed by an explicit `recovery_tracked` marker that only the new ticker sets. There is no backfill and no inference from timestamps. Legacy rows follow only the legacy path, and the tests cover rows inside and outside 6 h (§2).
+2. **Dead-start recovery and the 6-minute sweep:**
+   - one conditional `UPDATE` takes a lease token, so exactly one owner wins;
+   - every later write is token-conditioned;
+   - the decision is made before any `report_generations` write;
+   - for tracked rows, the 6-minute terminal step is replaced by recovery.
 
-- Manual-report bridge-down detection: D-036, LR-027.
-- Per-recipient suppression visibility: D-333, a follow-up.
-- Real task retries for transient render failures: the `tasks.py:1394` note.
-- Schedule-capacity admission: LR-016.
+   The timeline at 6 and 15 minutes, and two simultaneous takeovers, are tested (§4, §6).
+3. **The delivery guard is not proof:**
+   - a durable pre-send claim is committed before the provider call, and it fails closed;
+   - one provider call per occurrence;
+   - an unknown or unrecorded outcome becomes `needs_review` and is never resent automatically;
+   - the existing helpers are reused, with no second provider path.
+
+   Accepted-but-answer-lost, failed bookkeeping and failed lookup or journal are all tested (§5).
+4. **A delayed worker, and verification over time:** the worker's lease checks the horizon, the schedule's state, the account's state and the sender's verification. The pre-send claim checks them again. Every case is tested with no intervening sweep (§4, §5, §8).
+
+**Bounds as Codex asked:**
+- the 6-hour hard horizon from the original occurrence, never reset by a retry;
+- 6 publishes in total, the first included;
+- capped 2/4/8/16-minute backoff;
+- the exact boundaries pinned in tests.
+
+**Out of scope, recorded:**
+- manual-report bridge-down detection: D-036, LR-027;
+- per-recipient suppression visibility: D-333;
+- real task retries for transient render failures: the `tasks.py:1394` note;
+- a tool for resolving scheduled `needs_review` runs: it follows LR-020's held-send pattern, as a follow-up.
