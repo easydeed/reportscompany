@@ -31,7 +31,7 @@ The 80% warning (`:664–676`) already says "Reports your schedules make don't c
 
 An occurrence is one `schedule_runs` row: one durable identity, created once by the tick that claimed the schedule. Its `report_run_id`, which is `report_generations.id`, is the Celery task's `run_id` argument and the key `_already_delivered(account_id, run_id)` deduplicates delivery on. Every publish of an occurrence, first or republished, sends the same `run_id`. Nothing creates a second occurrence for the same due time.
 
-Migration **0067** adds four columns to `schedule_runs`:
+Migration **0068** adds four columns to `schedule_runs`:
 
 | Column | Meaning |
 |---|---|
@@ -40,9 +40,9 @@ Migration **0067** adds four columns to `schedule_runs`:
 | `last_dispatch_at timestamptz NULL` | When the last attempt started; used for backoff. |
 | `last_dispatch_error text NULL` | The last publish failure, for operators. |
 
-- **Backfill:** every existing row gets `dispatched_at = created_at` and `dispatch_attempts = 1`. Pre-0067 occurrences are treated as published, so the new code never republishes old sends ("no replay of old scheduled sends"). They keep today's stale path.
+- **Backfill:** every existing row gets `dispatched_at = created_at` and `dispatch_attempts = 1`. Pre-0068 occurrences are treated as published, so the new code never republishes old sends ("no replay of old scheduled sends"). They keep today's stale path.
 - **Index:** a partial index on `(created_at) WHERE status = 'queued' AND started_at IS NULL`.
-- **Rollout:** the migration also takes `SET LOCAL lock_timeout = '5s'`, and both schema guards advance to 0067.
+- **Rollout:** the migration also takes `SET LOCAL lock_timeout = '5s'`, and both schema guards advance to 0068.
 
 | `status` | `started_at` | `dispatched_at` | What it means |
 |---|---|---|---|
@@ -101,7 +101,7 @@ Delivery stays behind `_already_delivered(run_id)`: `sent` blocks forever, and `
    - **Otherwise:** increment `dispatch_attempts`, set `last_dispatch_at`, commit, then publish and record the acknowledgement as in §3.
 3. **The existing stale pass** keeps "died while running" (started, never terminal) exactly as it is. A row that was never started now reaches `failed` only through the bounded give-up in step 2, never on the first stale window.
 
-**Proposed bounds.** These are environment variables, like the existing windows. Jerry may change the horizon, which is a product call:
+**Bounds.** These are environment variables, like the existing windows. The 6-hour horizon was approved by Jerry on 2026-11-11; the others are proposed:
 
 | Setting | Default | Why |
 |---|---|---|
@@ -138,7 +138,7 @@ Delivery stays behind `_already_delivered(run_id)`: `sent` blocks forever, and `
 - Backoff and attempt counting.
 - Give-up at `MAX_DISPATCH_ATTEMPTS` and at the horizon, with the visible error text.
 - A paused schedule or inactive account becomes `cancelled`.
-- Backfilled pre-0067 rows are never republished.
+- Backfilled pre-0068 rows are never republished.
 - A lost published message is republished, not failed.
 - The start claim:
   - a terminal run gets a duplicate no-op;
@@ -163,8 +163,8 @@ Delivery stays behind `_already_delivered(run_id)`: `sent` blocks forever, and `
 
 ## 8. Rollout
 
-- One migration, 0067: additive columns, a backfill, a partial index, no new table. It claims the single migration slot; none is open now.
-- **Runbook:** Codex PASS, a green exact-head gate, Jerry runs `--status` (exactly 0067 pending) and applies it, then the merge.
+- One migration, 0068: additive columns, a backfill, a partial index, no new table. LR-025 (#287) takes 0067 first; LR-023 takes the slot after it.
+- **Runbook:** Codex PASS, a green exact-head gate, Jerry runs `--status` (exactly 0068 pending) and applies it, then the merge.
 - **Deploy order:** the schema guards make the new worker and ticker refuse to start against 0066, so the migration goes first. An old worker with the new schema ignores the new columns safely.
 - **Rollback:** the old code ignores the columns, and the ticker veto returns with it.
 - **Operators:** run outcomes appear in `schedule_runs` (`cancelled`, and `failed` with the not-dispatched reason) and in error logs. Alerting on them is LR-027.
