@@ -230,6 +230,51 @@ def test_the_fingerprint_is_the_validated_request(client, account):
     assert _count("report_generations", aid) == 2
 
 
+def _schedule_id(r):
+    assert r.status_code == 201, r.text
+    return r.json()["id"]
+
+
+@pytest.mark.parametrize("form", ["null", "empty", "only_nulls"])
+def test_schedule_filters_absent_null_and_empty_are_one_request(client, account, form):
+    """Codex code review: all of these store `{}` (schedules.py), so they are
+    the same request and must hash alike; a real filter is a different one."""
+    aid, auth = account()
+    key = _key()
+    first = _schedule_id(_keyed(client, auth, "schedules", SCHEDULE, key))  # filters omitted
+    variant = {"null": None, "empty": {}, "only_nulls": {"minbeds": None, "price_strategy": None}}[form]
+    again = _keyed(client, auth, "schedules", {**SCHEDULE, "filters": variant}, key)
+    assert again.headers.get("Idempotent-Replayed") == "true", again.text
+    assert _schedule_id(again) == first
+    real_filter = _keyed(client, auth, "schedules", {**SCHEDULE, "filters": {"minbeds": 2}}, key)
+    assert real_filter.status_code == 409, "a real filter is a different request"
+    assert _count("schedules", aid) == 1 and _count("request_idempotency", aid) == 1
+
+
+def test_schedule_filter_key_order_and_values(client, account):
+    aid, auth = account()
+    key = _key()
+    first = _schedule_id(_keyed(client, auth, "schedules", {**SCHEDULE, "filters": {"minprice": 1, "maxprice": 2}}, key))
+    same = _keyed(client, auth, "schedules", {**SCHEDULE, "filters": {"maxprice": 2, "minprice": 1, "subtype": None}}, key)
+    assert _schedule_id(same) == first
+    assert _keyed(client, auth, "schedules", {**SCHEDULE, "filters": {"minprice": 1, "maxprice": 3}}, key).status_code == 409
+    assert _count("schedules", aid) == 1
+
+
+@pytest.mark.parametrize("field", ["filters", "additional_params"])
+def test_report_null_and_empty_object_are_one_request(client, account, field):
+    """reports.py stores `payload.<field> or {}`: null, omitted and {} are one request."""
+    aid, auth = account()
+    key = _key()
+    first = _keyed(client, auth, "reports", REPORT, key).json()["report_id"]
+    for variant in (None, {}):
+        again = _keyed(client, auth, "reports", {**REPORT, field: variant}, key)
+        assert again.headers.get("Idempotent-Replayed") == "true", (variant, again.text)
+        assert again.json()["report_id"] == first
+    assert _keyed(client, auth, "reports", {**REPORT, field: {"x": 1}}, key).status_code == 409
+    assert _count("report_generations", aid) == 1
+
+
 # ── nothing half-done ───────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("what, table", [("reports", "report_generations"), ("schedules", "schedules")])

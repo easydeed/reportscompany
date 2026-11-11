@@ -21,7 +21,8 @@
 import { readVerificationRefusal, type VerificationRefusal } from "@/lib/verification"
 
 export type SubmitOutcome =
-  | { kind: "created"; body: Record<string, unknown> }
+  // The id is validated: a create whose answer can't be read is "unreadable".
+  | { kind: "created"; resourceId: string }
   | { kind: "verification"; refusal: VerificationRefusal }
   | { kind: "limit"; title: string; detail: string }
   | { kind: "invalid"; message: string }
@@ -34,6 +35,10 @@ export type SubmitOutcome =
   | { kind: "gone" }
   // 503 from the proxy: this API predates the key contract and ran nothing.
   | { kind: "unavailable" }
+  // A 2xx whose body was cut off, empty, or had no valid id (Codex code
+  // review). The create may well have happened: an unknown outcome, retried
+  // with the same key, never read as a create of nothing.
+  | { kind: "unreadable" }
 
 export type ReportOutcome =
   | { kind: "complete"; pdfUrl: string | null }
@@ -85,11 +90,29 @@ export function limitMessage(body: Json, fallback: Product): { title: string; de
   return { title: `${label} limit reached`, detail }
 }
 
+const RESOURCE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** The id a create answered with: `report_id` for a report, `id` for a schedule; a UUID or nothing. */
+function createdId(body: unknown, product: Product): string | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null
+  const id = (body as Json)[product === "schedules" ? "id" : "report_id"]
+  return typeof id === "string" && RESOURCE_ID.test(id) ? id : null
+}
+
 /** One answer from POST /v1/reports or /v1/schedules (or the error fetch threw). */
 export async function classifySubmit(res: Response | null, product: Product): Promise<SubmitOutcome> {
   if (!res) return { kind: "offline" }
+  if (res.ok) {
+    let created: unknown
+    try {
+      created = await res.json()
+    } catch {
+      return { kind: "unreadable" }
+    }
+    const resourceId = createdId(created, product)
+    return resourceId ? { kind: "created", resourceId } : { kind: "unreadable" }
+  }
   const body: Json = await res.json().catch(() => ({}))
-  if (res.ok) return { kind: "created", body }
   if (res.status === 401) return { kind: "session_expired" }
   // D-019: checked before the 429 branch; a 403 never carries limit fields.
   const refusal = readVerificationRefusal(body)
@@ -153,6 +176,43 @@ export class IdempotencyKeys {
   release() {
     this.current = null
   }
+}
+
+/** Answers after which the request may or may not have been created. */
+const UNKNOWN_OUTCOMES = new Set<SubmitOutcome["kind"]>(["offline", "server_error", "session_expired", "unreadable"])
+
+const CREATE_URL: Record<Product, string> = {
+  market_reports: "/api/proxy/v1/reports",
+  schedules: "/api/proxy/v1/schedules",
+}
+
+/**
+ * Send one create with this payload's key and keep the key's books: a create
+ * releases it (the same payload sent again is a new request); an unknown
+ * outcome marks it uncertain and keeps it, so "Try again" sends it again and
+ * the API replays the original. The wizard's submit is this call.
+ */
+export async function sendCreate(
+  keys: IdempotencyKeys,
+  product: Product,
+  payload: string,
+  fetchFn: (input: string, init?: RequestInit) => Promise<Response> = (input, init) => fetch(input, init),
+): Promise<SubmitOutcome> {
+  const key = keys.keyFor(`${product}:${payload}`)
+  let res: Response | null = null
+  try {
+    res = await fetchFn(CREATE_URL[product], {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+      body: payload,
+    })
+  } catch {
+    res = null
+  }
+  const outcome = await classifySubmit(res, product)
+  if (outcome.kind === "created") keys.release()
+  else if (UNKNOWN_OUTCOMES.has(outcome.kind)) keys.markUncertain()
+  return outcome
 }
 
 function newKey(): string {
@@ -239,6 +299,7 @@ export async function watchReport(reportId: string, opts: WatchOptions = {}): Pr
 /** What each problem says and offers. Copy only; the component wires the actions. */
 export type ProblemKind =
   | "offline" | "server_error" | "session_expired" | "invalid" | "unknown" | "gone" | "unavailable"
+  | "unreadable"
   | "unavailable_after_unknown"
   | "failed" | "slow" | "unreachable" | "status_session_expired" | "not_found"
 
@@ -261,6 +322,12 @@ export const PROBLEMS: Record<ProblemKind, { title: string; sub: string; actions
     title: "Your session has expired",
     sub: "Sign in again in a new tab, then come back and try again. Your choices are kept.",
     actions: ["sign_in", "retry_submit"],
+  },
+  // A 2xx the page couldn't read: shown only while the retry is safe.
+  unreadable: {
+    title: "We didn't get a clear answer",
+    sub: "Your request may have gone through. Try again: it won't create a second one. Your choices are kept.",
+    actions: ["edit", "retry_submit"],
   },
   invalid: {
     title: "This couldn't be accepted",

@@ -7,16 +7,23 @@
  */
 import {
   IdempotencyKeys, MAX_STATUS_ERRORS, PROBLEMS, SLOW_AFTER_MS, STATUS_INTERVAL_MS,
-  classifySubmit, limitMessage, watchReport,
+  classifySubmit, limitMessage, sendCreate, watchReport,
 } from "@/lib/wizard-requests"
 
 const json = (status: number, body: unknown) =>
   ({ status, ok: status >= 200 && status < 300, json: async () => body }) as unknown as Response
+/** A response whose body never arrives whole: json() throws, as on a cut connection. */
+const unreadable = (status: number) =>
+  ({ status, ok: status >= 200 && status < 300, json: async () => { throw new SyntaxError("Unexpected end of JSON input") } }) as unknown as Response
+const R1 = "6f1c2b9e-1d2a-4c3b-9e8f-0a1b2c3d4e5f"
+const S1 = "0b5d7a2c-3e4f-4a6b-8c9d-1e2f3a4b5c6d"
 
 describe("a submit's answer", () => {
-  it("a create is created", async () => {
-    expect(await classifySubmit(json(202, { report_id: "r1", status: "pending" }), "market_reports"))
-      .toEqual({ kind: "created", body: { report_id: "r1", status: "pending" } })
+  it("a create is created, with the id it made", async () => {
+    expect(await classifySubmit(json(202, { report_id: R1, status: "pending" }), "market_reports"))
+      .toEqual({ kind: "created", resourceId: R1 })
+    expect(await classifySubmit(json(201, { id: S1, name: "Weekly" }), "schedules"))
+      .toEqual({ kind: "created", resourceId: S1 })
   })
 
   it("no answer at all is offline", async () => {
@@ -279,5 +286,97 @@ describe("an unavailable answer proves only that THIS attempt created nothing (C
     expect(PROBLEMS.unavailable_after_unknown.sub).not.toMatch(/Nothing was created/)
     expect(PROBLEMS.unavailable_after_unknown.sub).toMatch(/earlier attempt may have gone through/)
     expect(PROBLEMS.unavailable_after_unknown.actions).toEqual(["edit", "retry_submit"])
+  })
+})
+
+describe("Codex code review: a 2xx the page can't read is an unknown outcome, not a create", () => {
+  const PRODUCTS = [
+    ["market_reports", { report_id: R1, status: "pending" }, R1, "/api/proxy/v1/reports"],
+    ["schedules", { id: S1, name: "Weekly" }, S1, "/api/proxy/v1/schedules"],
+  ] as const
+
+  describe.each(PRODUCTS)("%s", (product, good, id) => {
+    it.each([
+      ["a body cut off mid-read", unreadable(product === "schedules" ? 201 : 202)],
+      ["an empty body", unreadable(200)],
+      ["a JSON null", json(202, null)],
+      ["a JSON array", json(202, [id])],
+      ["no id at all", json(202, { status: "pending" })],
+      ["an id that isn't one", json(202, product === "schedules" ? { id: "undefined" } : { report_id: "undefined" })],
+      ["a number for an id", json(202, product === "schedules" ? { id: 42 } : { report_id: 42 })],
+      ["the other product's id field", json(202, product === "schedules" ? { report_id: id } : { schedule_id: id })],
+    ])("%s", async (_, res) => {
+      expect(await classifySubmit(res, product)).toEqual({ kind: "unreadable" })
+    })
+
+    it("a well-formed success is still created", async () => {
+      expect(await classifySubmit(json(202, good), product)).toEqual({ kind: "created", resourceId: id })
+    })
+  })
+
+  it("its problem promises a safe retry and offers it", () => {
+    expect(PROBLEMS.unreadable.actions).toContain("retry_submit")
+    expect(PROBLEMS.unreadable.sub).toMatch(/may have gone through/)
+    expect(PROBLEMS.unreadable.sub).toMatch(/won't create a second one/)
+  })
+
+  describe.each(PRODUCTS)("%s: the retry is the same request", (product, good, id, url) => {
+    const counter = () => { let n = 0; return () => `key-${++n}-abcdef` }
+
+    it("an unreadable success keeps the key; the retry sends it again and gets the ORIGINAL id", async () => {
+      const keys = new IdempotencyKeys(counter())
+      const api = jest.fn()
+        .mockResolvedValueOnce(unreadable(202))
+        .mockResolvedValueOnce(json(202, good))
+      const payload = JSON.stringify({ report_type: "market_snapshot" })
+
+      const first = await sendCreate(keys, product, payload, api)
+      expect(first).toEqual({ kind: "unreadable" })
+      expect(keys.uncertain).toBe(true)
+      expect(keys.retryIsSafe()).toBe(true)
+
+      const retry = await sendCreate(keys, product, payload, api)
+      expect(retry).toEqual({ kind: "created", resourceId: id })
+      const sent = api.mock.calls.map(([to, init]) => [to, new Headers(init.headers).get("Idempotency-Key")])
+      expect(sent).toEqual([[url, "key-1-abcdef"], [url, "key-1-abcdef"]])
+    })
+
+    it("a genuine success releases the key: the same payload sent again is a new request", async () => {
+      const keys = new IdempotencyKeys(counter())
+      const api = jest.fn().mockResolvedValue(json(202, good))
+      const payload = JSON.stringify({ report_type: "market_snapshot" })
+      await sendCreate(keys, product, payload, api)
+      await sendCreate(keys, product, payload, api)
+      const used = api.mock.calls.map(([, init]) => new Headers(init.headers).get("Idempotency-Key"))
+      expect(used).toEqual(["key-1-abcdef", "key-2-abcdef"])
+      expect(keys.uncertain).toBe(false)
+    })
+
+    it.each([
+      ["no answer", () => Promise.reject(new TypeError("Failed to fetch"))],
+      ["a 502", () => Promise.resolve(json(502, {}))],
+      ["a 401", () => Promise.resolve(json(401, {}))],
+      ["an unreadable 2xx", () => Promise.resolve(unreadable(202))],
+    ])("%s marks the key uncertain and keeps it", async (_, answer) => {
+      const keys = new IdempotencyKeys(counter())
+      const api = jest.fn().mockImplementationOnce(answer).mockResolvedValueOnce(json(202, good))
+      const payload = "{}"
+      await sendCreate(keys, product, payload, api)
+      expect(keys.uncertain).toBe(true)
+      await sendCreate(keys, product, payload, api)
+      const used = api.mock.calls.map(([, init]) => new Headers(init.headers).get("Idempotency-Key"))
+      expect(used).toEqual(["key-1-abcdef", "key-1-abcdef"])
+    })
+  })
+
+  it("a replayed report is watched by its original id, never /reports/undefined", async () => {
+    const keys = new IdempotencyKeys(() => "key-only-abcdef")
+    const api = jest.fn().mockResolvedValueOnce(unreadable(202)).mockResolvedValueOnce(json(202, { report_id: R1, status: "pending" }))
+    expect((await sendCreate(keys, "market_reports", "{}", api)).kind).toBe("unreadable")
+    const retry = await sendCreate(keys, "market_reports", "{}", api)
+    if (retry.kind !== "created") throw new Error(`expected created, got ${retry.kind}`)
+    const status = jest.fn().mockResolvedValue(json(200, { status: "completed", pdf_url: "https://x/r.pdf" }))
+    expect(await watchReport(retry.resourceId, { fetchFn: status, intervalMs: 1 })).toEqual({ kind: "complete", pdfUrl: "https://x/r.pdf" })
+    expect(status.mock.calls.map(([u]) => u)).toEqual([`/api/proxy/v1/reports/${R1}`])
   })
 })

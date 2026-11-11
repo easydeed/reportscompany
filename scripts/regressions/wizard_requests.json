@@ -50,8 +50,8 @@
   {
     "name": "W7 a 401 on submit reads as an invalid request",
     "file": "apps/web/lib/wizard-requests.ts",
-    "old": "  if (res.ok) return { kind: \"created\", body }\n  if (res.status === 401) return { kind: \"session_expired\" }\n",
-    "new": "  if (res.ok) return { kind: \"created\", body }\n",
+    "old": "  const body: Json = await res.json().catch(() => ({}))\n  if (res.status === 401) return { kind: \"session_expired\" }\n",
+    "new": "  const body: Json = await res.json().catch(() => ({}))\n",
     "test": "__tests__/WizardRequests.test.ts",
     "runner": "jest"
   },
@@ -109,6 +109,62 @@
     "old": "    if (key && response.status === 404) return idempotentCreateUnavailable();\n",
     "new": "",
     "test": "__tests__/WizardProxyIdempotency.route.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W15 an unreadable 2xx body is read as a create (Codex's case)",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "    } catch {\n      return { kind: \"unreadable\" }\n    }\n",
+    "new": "    } catch {\n      return { kind: \"created\", resourceId: String(undefined) }\n    }\n",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W16 a 2xx without a valid id is still a create",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "    return resourceId ? { kind: \"created\", resourceId } : { kind: \"unreadable\" }\n",
+    "new": "    return { kind: \"created\", resourceId: String(resourceId) }\n",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W17 any string is accepted as an id",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  return typeof id === \"string\" && RESOURCE_ID.test(id) ? id : null\n",
+    "new": "  return typeof id === \"string\" ? id : null\n",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W18 a report accepts the schedule's id field",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  const id = (body as Json)[product === \"schedules\" ? \"id\" : \"report_id\"]\n",
+    "new": "  const id = (body as Json).report_id ?? (body as Json).id\n",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W19 an unreadable answer is not an unknown outcome (key not marked)",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "\"session_expired\", \"unreadable\"])",
+    "new": "\"session_expired\"])",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W20 an unknown outcome releases the key (the retry is a new request)",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  else if (UNKNOWN_OUTCOMES.has(outcome.kind)) keys.markUncertain()\n",
+    "new": "  else keys.release()\n",
+    "test": "__tests__/WizardRequests.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "W21 a success keeps the key (the next send replays the old one)",
+    "file": "apps/web/lib/wizard-requests.ts",
+    "old": "  if (outcome.kind === \"created\") keys.release()\n",
+    "new": "  if (outcome.kind === \"created\") void 0\n",
+    "test": "__tests__/WizardRequests.test.ts",
     "runner": "jest"
   }
 ]

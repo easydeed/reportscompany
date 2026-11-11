@@ -224,3 +224,10 @@ Otherwise an unknown outcome shows **"We can't tell whether your earlier request
 - Rollback: roll the web back with or before the API. An API-only rollback is fail-closed (unavailable, never duplicated).
 - The rev 2 account capability flag is dropped as unnecessary.
 - Tests: §5's mixed-version cases, including a change of API version between the first send and the retry in both directions.
+
+## 9. Code review round 1: Codex's BLOCK on 1b4390bc, and the fixes
+
+1. **A 2xx whose body can't be read is an unknown outcome, not a create.** `classifySubmit` reads a success's body and requires the id it made (`report_id` for a report, `id` for a schedule, a UUID). A body that is cut off, empty, not an object, or has no valid id is `unreadable`. It is treated like a lost answer: the key is kept and marked uncertain, and "Try again" (only while the retry is safe) sends the same key, so the API replays the original and the wizard watches **that** id. A well-formed success still releases the key, so sending the same payload again is a new request. `sendCreate` keeps the key's books, and the wizard's submit is that call, so the tests exercise the code path the wizard runs.
+2. **Equivalent forms hash alike, by hashing what the route stores.** The fingerprint replaces fields with the value the route actually stores for them, computed by the same helper the route stores with: a schedule's omitted, null, `{}` and all-null `filters` all store `{}`; a report's null and `{}` `filters` and `additional_params` both store `{}`. A real filter, a different value, or a different array order still gets 409.
+
+Found while proving it, not fixed here: `GET /v1/reports/{id}` answers 500 for a malformed id (for example `undefined`) instead of 404.

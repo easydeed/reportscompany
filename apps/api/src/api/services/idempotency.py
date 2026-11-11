@@ -28,7 +28,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
@@ -66,7 +66,7 @@ def require_key(request: Request) -> str:
     return key
 
 
-def fingerprint(payload: BaseModel) -> str:
+def fingerprint(payload: BaseModel, stored_as: Optional[Dict[str, Any]] = None) -> str:
     """SHA-256 of the VALIDATED request, canonically serialized.
 
     Keys are sorted at every depth and defaults are filled by the model, so
@@ -74,14 +74,20 @@ def fingerprint(payload: BaseModel) -> str:
     all hash alike; array order is kept (it is part of the request). Values
     the server resolves later (the account's default theme or accent) are not
     in the model, so they cannot make a replay look different.
+
+    `stored_as` replaces fields with the value the route actually stores for
+    them, so forms the route treats as one request hash alike: an omitted,
+    null or empty `filters` all store `{}` (Codex code review). The route
+    computes it with the same helper it stores with, so the two cannot drift.
     """
-    canonical = json.dumps(payload.model_dump(mode="json"), sort_keys=True,
-                           separators=(",", ":"), ensure_ascii=False)
+    form = {**payload.model_dump(mode="json"), **(stored_as or {})}
+    canonical = json.dumps(form, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def claim_for(request: Request, endpoint: str, payload: BaseModel) -> Claim:
-    return Claim(endpoint, require_key(request), fingerprint(payload))
+def claim_for(request: Request, endpoint: str, payload: BaseModel,
+              stored_as: Optional[Dict[str, Any]] = None) -> Claim:
+    return Claim(endpoint, require_key(request), fingerprint(payload, stored_as))
 
 
 def lookup(cur, account_id: str, claim: Claim) -> Optional[str]:

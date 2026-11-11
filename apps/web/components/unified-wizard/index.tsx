@@ -11,7 +11,7 @@ import { ReportThumb } from "@/components/shared/report-thumb"
 import { VerificationRequired } from "@/components/shared/verification-required"
 import { type VerificationRefusal } from "@/lib/verification"
 import {
-  ACTION_LABELS, IdempotencyKeys, PROBLEMS, classifySubmit, watchReport,
+  ACTION_LABELS, IdempotencyKeys, PROBLEMS, sendCreate, watchReport,
   type ProblemAction, type ProblemKind,
 } from "@/lib/wizard-requests"
 import { StepStory } from "./step-story"
@@ -374,38 +374,23 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
           filters,
         }
     const product = isReport ? "market_reports" : "schedules"
-    const payload = JSON.stringify(body)
-    // LR-024: the same payload sent again (a retry after a lost answer or a
-    // 5xx) carries the same key, so the API replays it instead of creating a
-    // second report or schedule.
-    const key = keysRef.current.keyFor(`${product}:${payload}`)
     if (isReport) setGenerationState("creating")
-
-    let res: Response | null = null
-    try {
-      res = await fetch(isReport ? "/api/proxy/v1/reports" : "/api/proxy/v1/schedules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": key },
-        body: payload,
-      })
-    } catch {
-      res = null
-    }
-    const outcome = await classifySubmit(res, product)
+    // LR-024: the same payload sent again (a retry after a lost or unreadable
+    // answer, or a 5xx) carries the same key, so the API replays it instead of
+    // creating a second report or schedule. sendCreate keeps the key's books.
+    const outcome = await sendCreate(keysRef.current, product, JSON.stringify(body))
     setIsSubmitting(false)
 
     // D-330: the same outcomes for "Generate" and "Create Schedule". A schedule
     // failure used to clear the spinner and show nothing.
     switch (outcome.kind) {
       case "created": {
-        keysRef.current.release()
         if (!isReport) {
           router.push("/app/schedules")
           return
         }
-        const reportId = String(outcome.body.report_id || outcome.body.id)
-        setGeneratedReportId(reportId)
-        void watch(reportId)
+        setGeneratedReportId(outcome.resourceId)
+        void watch(outcome.resourceId)
         return
       }
       case "verification":
@@ -439,10 +424,10 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         showProblem("unknown", unknownMessage(isReport))
         return
       default:
-        // offline, server_error, session_expired: the request may have landed.
-        // The key is kept either way (never rotated behind the person's back);
-        // "Try again" is offered only when the replay is known to be safe.
-        keysRef.current.markUncertain()
+        // offline, server_error, session_expired, unreadable: the request may
+        // have landed. sendCreate kept the key and marked it uncertain (never
+        // rotated behind the person's back); "Try again" is offered only when
+        // the replay is known to be safe.
         if (!keysRef.current.retryIsSafe()) {
           showProblem("unknown", unknownMessage(isReport))
           return

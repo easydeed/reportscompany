@@ -37,8 +37,8 @@
   {
     "name": "I6 the fingerprint keeps the client's nested key order",
     "file": "apps/api/src/api/services/idempotency.py",
-    "old": "json.dumps(payload.model_dump(mode=\"json\"), sort_keys=True,",
-    "new": "json.dumps(payload.model_dump(mode=\"json\"), sort_keys=False,",
+    "old": "canonical = json.dumps(form, sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False)",
+    "new": "canonical = json.dumps(form, sort_keys=False, separators=(\",\", \":\"), ensure_ascii=False)",
     "test": "apps/api/tests/test_idempotent_create.py -k fingerprint"
   },
   {
@@ -89,5 +89,33 @@
     "old": "    return _create_report(payload, response, bg, account_id, claim=None)",
     "new": "    return _create_report(payload, response, bg, account_id, claim=idempotency.Claim(idempotency.REPORTS, request.headers.get('Idempotency-Key') or 'none-given', idempotency.fingerprint(payload)))",
     "test": "apps/api/tests/test_idempotent_create.py -k old_routes"
+  },
+  {
+    "name": "I14 the fingerprint ignores what the route stores (null filters != omitted)",
+    "file": "apps/api/src/api/services/idempotency.py",
+    "old": "    form = {**payload.model_dump(mode=\"json\"), **(stored_as or {})}\n",
+    "new": "    form = payload.model_dump(mode=\"json\")\n",
+    "test": "apps/api/tests/test_idempotent_create.py -k 'null_and_empty or absent_null'"
+  },
+  {
+    "name": "I15 the schedule route hashes raw filters, not what it stores",
+    "file": "apps/api/src/api/routes/schedules.py",
+    "old": "stored_as={\"filters\": _stored_filters(payload.filters)})",
+    "new": "stored_as=None)",
+    "test": "apps/api/tests/test_idempotent_create.py -k absent_null"
+  },
+  {
+    "name": "I16 the report route hashes raw objects, not what it stores",
+    "file": "apps/api/src/api/routes/reports.py",
+    "old": "payload, stored_as=_stored_objects(payload))",
+    "new": "payload, stored_as=None)",
+    "test": "apps/api/tests/test_idempotent_create.py -k null_and_empty"
+  },
+  {
+    "name": "I17 the stored filters collapse a real filter to {}",
+    "file": "apps/api/src/api/routes/schedules.py",
+    "old": "    return filters.model_dump(mode=\"json\", exclude_none=True) if filters else {}\n",
+    "new": "    return {}\n",
+    "test": "apps/api/tests/test_idempotent_create.py -k 'absent_null or filter_key'"
   }
 ]

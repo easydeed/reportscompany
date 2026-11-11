@@ -53,6 +53,12 @@ class ReportFilters(BaseModel):
                 raise ValueError("minprice cannot exceed maxprice")
         return self
 
+def _stored_filters(filters: Optional[ReportFilters]) -> Dict[str, Any]:
+    """What a schedule stores for `filters`: omitted, null, {} and all-null are all `{}`.
+    The idempotency fingerprint hashes this same value (LR-024)."""
+    return filters.model_dump(mode="json", exclude_none=True) if filters else {}
+
+
 router = APIRouter(prefix="/v1")
 
 # ====== Recipient Schemas ======
@@ -352,7 +358,8 @@ def create_schedule_idempotent(
     410 and is never recreated. This route exists only in this release, so an
     older API answers 404 here.
     """
-    claim = idempotency.claim_for(request, idempotency.SCHEDULES, payload)
+    claim = idempotency.claim_for(request, idempotency.SCHEDULES, payload,
+                                  stored_as={"filters": _stored_filters(payload.filters)})
     return _create_schedule(payload, response, account_id, claim=claim)
 
 
@@ -440,7 +447,7 @@ def _create_schedule(payload: ScheduleCreate, response: Response, account_id: st
                 zip_codes_array = "{" + ",".join(payload.zip_codes) + "}"
             
             # Serialize filters to JSON (empty dict if None)
-            filters_json = json.dumps(payload.filters.model_dump(exclude_none=True) if payload.filters else {})
+            filters_json = json.dumps(_stored_filters(payload.filters))
 
             # Pre-compute next_run_at so the schedule never fires immediately on first tick
             first_run_at = _compute_next_run(

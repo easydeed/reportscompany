@@ -168,8 +168,14 @@ def create_report_idempotent(
     again. This route exists only in this release, so an older API answers
     404 here and never treats a keyed request as an unkeyed one.
     """
-    claim = idempotency.claim_for(request, idempotency.REPORTS, payload)
+    claim = idempotency.claim_for(request, idempotency.REPORTS, payload, stored_as=_stored_objects(payload))
     return _create_report(payload, response, bg, account_id, claim=claim)
+
+
+def _stored_objects(payload: ReportCreate) -> dict:
+    """What a report stores for its object fields: null, omitted and {} are all `{}`.
+    The idempotency fingerprint hashes these same values (LR-024)."""
+    return {"filters": payload.filters or {}, "additional_params": payload.additional_params or {}}
 
 
 def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTasks,
@@ -186,8 +192,7 @@ def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTask
         "zips": payload.zips,
         "polygon": payload.polygon,
         "lookback_days": payload.lookback_days,
-        "filters": payload.filters or {},
-        "additional_params": payload.additional_params or {},
+        **_stored_objects(payload),
         "send_email": payload.send_email,
         "recipients": payload.recipients,
     }
