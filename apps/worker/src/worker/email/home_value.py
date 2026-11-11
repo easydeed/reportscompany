@@ -78,7 +78,9 @@ def home_value_email_html(
     postal_line = (f"{brand_name} · {postal}" if postal else
                    f"{PLATFORM_SENDER_LABEL} · {PLATFORM_POSTAL_ADDRESS} · on behalf of {agent_name}")
 
-    as_of = _today().strftime("%B %-d, %Y")
+    # Unpadded day. A dash flag in strftime is a ValueError on Windows.
+    _as_of = _today()
+    as_of = f"{_as_of.strftime('%B')} {_as_of.day}, {_as_of.year}"
     return _ENV.get_template("home_value.jinja2").render(
         primary=tk["primary"], on_primary=tk["on_primary"], dark_ink=tk["dark_ink"],
         cta_edge=tk["cta_edge"],

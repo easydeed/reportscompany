@@ -2273,7 +2273,9 @@ def schedule_email_html(
     else:
         postal_line = f"{PLATFORM_SENDER_LABEL} · {PLATFORM_POSTAL_ADDRESS} · on behalf of {agent_name}"
 
-    as_of = _today().strftime("%B %-d, %Y")
+    # Unpadded day. A dash flag in strftime is a ValueError on Windows.
+    _as_of = _today()
+    as_of = f"{_as_of.strftime('%B')} {_as_of.day}, {_as_of.year}"
     signature_html = _build_signature(
         primary=tk["primary"], on_primary=tk["on_primary"], ink=tk["ink"],
         photo_url=rep_photo_url, initials=_initials(agent_name), agent_name=agent_name,
