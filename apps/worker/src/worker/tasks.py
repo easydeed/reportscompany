@@ -2574,6 +2574,144 @@ def consumer_comps_range(comparables):
     return {"low": int(prices[0]), "high": int(prices[-1]), "count": len(prices)}
 
 
+def _consumer_branding_defaults() -> dict:
+    return {
+        "primary_color": None, "secondary_color": None, "brand_logo": None, "email_logo": None,
+        "theme_id": _theme_registry.DEFAULT_THEME_ID, "account_name": "", "job_title": None,
+        "license_number": None, "agent_photo": None, "company_name": "", "agent_email": "",
+    }
+
+
+def _consumer_branding(cur, account_id, agent_id) -> dict:
+    """The account's branding and THE REPORT'S OWN AGENT's details (D-306)."""
+    cur.execute("""
+        SELECT
+            a.primary_color, a.secondary_color,
+            a.logo_url, a.email_logo_url,
+            a.default_theme_id, a.name,
+            u.job_title, u.license_number,
+            COALESCE(u.photo_url, u.avatar_url),
+            u.company_name, u.email
+        FROM accounts a
+        JOIN users u ON u.account_id = a.id
+        WHERE a.id = %s::uuid AND u.id = %s::uuid
+    """, (str(account_id), str(agent_id)))
+    row = cur.fetchone()
+    if not row:
+        brand = _consumer_branding_defaults()
+        brand.update(primary_color="#1B365D", secondary_color="#B8860B",
+                     job_title="", license_number="", agent_photo="")
+        return brand
+    (primary_color, secondary_color, brand_logo, email_logo, theme_id, account_name,
+     job_title, license_number, agent_photo, company_name, agent_email) = row
+    return {
+        "primary_color": primary_color, "secondary_color": secondary_color,
+        "brand_logo": brand_logo, "email_logo": email_logo, "theme_id": theme_id,
+        "account_name": account_name, "job_title": job_title, "license_number": license_number,
+        "agent_photo": agent_photo, "company_name": company_name, "agent_email": agent_email,
+    }
+
+
+def _render_consumer_pdf(*, report_id, account_id, generation_id, property_data, comparables,
+                         prop_address, prop_city, prop_state, prop_zip, agent_name, agent_phone,
+                         brand) -> tuple:
+    """Render the homeowner's PDF and upload it to its own object. Returns (url, key).
+
+    Shared by the delivery task and the recovery task (LR-022), so a recovered
+    PDF is built by the same code from the same stored data. Raises on failure.
+    """
+    # D-140: the report data is built by one function, never a literal here.
+    from .consumer_report_data import build_consumer_report_data
+    from .property_builder import PropertyReportBuilder
+
+    report_data_for_pdf = build_consumer_report_data(
+        property_data=property_data,
+        prop_address=prop_address,
+        prop_city=prop_city,
+        prop_state=prop_state,
+        prop_zip=prop_zip,
+        comparables=comparables,
+        theme_id=brand["theme_id"],
+        primary_color=brand["primary_color"],
+        secondary_color=brand["secondary_color"],
+        brand_logo=brand["brand_logo"],
+        account_name=brand["account_name"],
+        agent_name=agent_name,
+        agent_phone=agent_phone,
+        agent_email=brand["agent_email"],
+        job_title=brand["job_title"],
+        license_number=brand["license_number"],
+        agent_photo=brand["agent_photo"],
+        company_name=brand["company_name"],
+    )
+    html_content = PropertyReportBuilder(report_data_for_pdf).render_html()
+    logger.info("CMA PDF HTML rendered: %d chars", len(html_content))
+    html_content = embed_images_as_base64(html_content)
+
+    # LR-020 §3.2: both renderers write PDF_DIR/<run_id>.pdf, so the run id
+    # carries the generation (Codex review of c57e505b); with html_content
+    # given, run_id only names that local file.
+    pdf_path, _ = render_pdf(
+        run_id=consumer_delivery.pdf_render_id(report_id, generation_id),
+        account_id=str(account_id),
+        html_content=html_content,
+        print_base=DEV_BASE,
+    )
+    # One object per generation: no upload can replace a delivered PDF.
+    s3_key = consumer_delivery.pdf_object_key(account_id, report_id, generation_id)
+    try:
+        pdf_url = upload_to_r2(pdf_path, s3_key)
+    finally:
+        # The local file is this generation's alone and is done with once
+        # uploaded (or not): remove it, so names do not pile up in PDF_DIR.
+        try:
+            os.remove(pdf_path)
+        except OSError:
+            pass
+    logger.info("CMA PDF uploaded: %s", pdf_url[:100] if pdf_url else "None")
+    return pdf_url, s3_key
+
+
+@celery.task(name="generate_consumer_report_pdf")
+def generate_consumer_report_pdf(report_id: str):
+    """Render the PDF a delivered report is missing (LR-022).
+
+    Queued by the API's download button when a sent report has no PDF (its
+    render failed during delivery). It claims the job, renders from the
+    report's STORED data with the account's current theme (Jerry,
+    2026-11-11: render a missing PDF only, into a new object, never replace
+    one), and records ready or failed. It never touches the delivery, the
+    report's data or any send.
+    """
+    from .consumer_report_data import build_consumer_report_data  # noqa: F401  (import check)
+    with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+        cur = conn.cursor()
+        claimed = consumer_delivery.claim_pdf_generation(cur, report_id)
+        if claimed is None:
+            return {"ok": False, "report_id": str(report_id), "note": "not claimed: a PDF exists, "
+                    "another run is generating it, or the report is not delivered"}
+        (rid, account_id, agent_id, property_data, comparables, addr, city, state, zip_code,
+         agent_first, agent_last, agent_phone, claim_id) = claimed
+        try:
+            brand = _consumer_branding(cur, account_id, agent_id)
+            pdf_url, pdf_key = _render_consumer_pdf(
+                report_id=rid, account_id=account_id, generation_id=claim_id,
+                property_data=property_data or {}, comparables=comparables or [],
+                prop_address=addr, prop_city=city, prop_state=state, prop_zip=zip_code,
+                agent_name=f"{agent_first or ''} {agent_last or ''}".strip(),
+                agent_phone=agent_phone, brand=brand,
+            )
+            if not pdf_url:
+                raise RuntimeError("the upload returned no URL")
+        except Exception as exc:
+            text = consumer_failure_text(f"the PDF could not be generated ({type(exc).__name__}): {exc}")
+            consumer_delivery.fail_pdf_generation(cur, rid, claim_id, text)
+            logger.error("CONSUMER PDF %s: generation failed: %s", rid, text)
+            return {"ok": False, "report_id": str(rid), "error": text}
+        recorded = consumer_delivery.finish_pdf_generation(cur, rid, claim_id, pdf_url=pdf_url, pdf_key=pdf_key)
+        return {"ok": recorded, "report_id": str(rid), "pdf_key": pdf_key}
+
+
 def _notify_agent(report_id) -> dict:
     """Tell the agent about a delivered lead, once (LR-021, design §3.6).
 
@@ -3002,122 +3140,29 @@ def process_consumer_report(self, report_id: str):
                 # GENERATE BRANDED PDF REPORT
                 # =============================================
                 pdf_url = None
-                company_name = ""
-                account_name = ""
-                agent_email_addr = ""
+                pdf_key = None
                 # Defaults for the email, which is built after this block and
-                # whether or not it succeeds: these used to be assigned only
-                # inside the `try`, so a failure there left them unbound.
-                primary_color = None
-                brand_logo = email_logo = None
-                job_title = license_number = agent_photo = None
+                # whether or not it succeeds.
+                brand = _consumer_branding_defaults()
                 try:
-                    cur.execute("""
-                        SELECT
-                            a.primary_color, a.secondary_color,
-                            a.logo_url, a.email_logo_url,
-                            a.default_theme_id, a.name,
-                            a.website_url,
-                            u.job_title, u.license_number,
-                            COALESCE(u.photo_url, u.avatar_url),
-                            u.company_name, u.email
-                        FROM accounts a
-                        JOIN users u ON u.account_id = a.id
-                        WHERE a.id = %s::uuid AND u.id = %s::uuid
-                    """, (account_id, agent_id))
-                    # D-306: THE REPORT'S OWN AGENT. This was `LIMIT 1` over
-                    # every user on the account, so on an account with more
-                    # than one user the PDF and the email could carry another
-                    # user's photo, email and licence number.
-                    brand_row = cur.fetchone()
-
-                    if brand_row:
-                        (
-                            primary_color, secondary_color,
-                            brand_logo, email_logo,
-                            default_theme_id, account_name,
-                            website_url,
-                            job_title, license_number,
-                            agent_photo, company_name, agent_email_addr,
-                        ) = brand_row
-                    else:
-                        primary_color = "#1B365D"
-                        secondary_color = "#B8860B"
-                        brand_logo = email_logo = None
-                        default_theme_id = _theme_registry.DEFAULT_THEME_ID
-                        account_name = ""
-                        website_url = ""
-                        job_title = license_number = agent_photo = company_name = agent_email_addr = ""
-
-                    # D-140. This dict used to be a literal here. It is the
-                    # third and worst place the consumer path drops fields
-                    # (D-139) — the one that discarded data already stored on
-                    # the row — and the gate that catches that could not
-                    # import a literal, so it MIRRORED it. A gate that goes
-                    # quiet when someone edits what it guards is worse than
-                    # no gate, because it reports green.
-                    from .consumer_report_data import build_consumer_report_data
-
-                    report_data_for_pdf = build_consumer_report_data(
-                        property_data=property_data,
-                        prop_address=prop_address,
-                        prop_city=prop_city,
-                        prop_state=prop_state,
-                        prop_zip=prop_zip,
-                        comparables=comparables,
-                        theme_id=default_theme_id,
-                        primary_color=primary_color,
-                        secondary_color=secondary_color,
-                        brand_logo=brand_logo,
-                        account_name=account_name,
-                        agent_name=agent_name,
-                        agent_phone=agent_phone,
-                        agent_email=agent_email_addr,
-                        job_title=job_title,
-                        license_number=license_number,
-                        agent_photo=agent_photo,
-                        company_name=company_name,
+                    brand = _consumer_branding(cur, account_id, agent_id)
+                    # LR-022: the same render the recovery task uses
+                    # (`generate_consumer_report_pdf`), one object per
+                    # generation (LR-020 §3.2).
+                    pdf_url, pdf_key = _render_consumer_pdf(
+                        report_id=report_id, account_id=account_id, generation_id=generation_id,
+                        property_data=property_data, comparables=comparables,
+                        prop_address=prop_address, prop_city=prop_city, prop_state=prop_state,
+                        prop_zip=prop_zip, agent_name=agent_name, agent_phone=agent_phone, brand=brand,
                     )
-
-                    from .property_builder import PropertyReportBuilder
-                    builder = PropertyReportBuilder(report_data_for_pdf)
-                    html_content = builder.render_html()
-                    logger.info("CMA PDF HTML rendered: %d chars", len(html_content))
-
-                    logger.info("Embedding images as base64 for CMA PDF...")
-                    html_content = embed_images_as_base64(html_content)
-
-                    # LR-020 §3.2 (Codex review of c57e505b): both renderers
-                    # write PDF_DIR/<run_id>.pdf, so `run_id=report_id` let
-                    # two generations of one report share a local file, and A
-                    # could upload B's bytes to A's key. With html_content
-                    # given, run_id only names that file (the print URL is
-                    # not used), so it carries the generation.
-                    pdf_path, _ = render_pdf(
-                        run_id=consumer_delivery.pdf_render_id(report_id, generation_id),
-                        account_id=str(account_id),
-                        html_content=html_content,
-                        print_base=DEV_BASE,
-                    )
-
-                    # LR-020 §3.2: one object per generation. The fixed key
-                    # let a later run replace the PDF a person had been sent.
-                    s3_key = consumer_delivery.pdf_object_key(account_id, report_id, generation_id)
-                    try:
-                        pdf_url = upload_to_r2(pdf_path, s3_key)
-                    finally:
-                        # The local file is this generation's alone and is
-                        # done with once uploaded (or not): remove it, so
-                        # per-generation names do not pile up in PDF_DIR.
-                        try:
-                            os.remove(pdf_path)
-                        except OSError:
-                            pass
-                    logger.info("CMA PDF uploaded: %s", pdf_url[:100] if pdf_url else "None")
-
                 except Exception as pdf_exc:
                     logger.warning("CMA PDF generation failed (non-fatal): %s", pdf_exc)
-                    pdf_url = None
+                    pdf_url = pdf_key = None
+                primary_color = brand["primary_color"]
+                brand_logo, email_logo = brand["brand_logo"], brand["email_logo"]
+                job_title, agent_photo = brand["job_title"], brand["agent_photo"]
+                company_name, account_name = brand["company_name"], brand["account_name"]
+                agent_email_addr = brand["agent_email"]
 
                 # =============================================
                 # UPDATE DATABASE WITH ALL DATA
@@ -3132,6 +3177,7 @@ def process_consumer_report(self, report_id: str):
                     value_estimate_json=json.dumps(value_estimate),
                     market_stats_json=json.dumps(market_stats),
                     pdf_url=pdf_url,
+                    pdf_key=pdf_key,
                 )
                 if not published:
                     logger.warning("CONSUMER REPORT %s: generation %s not published; "

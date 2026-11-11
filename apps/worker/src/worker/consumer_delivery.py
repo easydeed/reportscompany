@@ -124,7 +124,7 @@ def pdf_object_key(account_id, report_id, generation_id) -> str:
 
 
 def publish_generation(cur, report_id, generation_id, *, property_data_json, comparables_json,
-                       value_estimate_json, market_stats_json, pdf_url) -> bool:
+                       value_estimate_json, market_stats_json, pdf_url, pdf_key=None) -> bool:
     """Make this run's generation the one the report shows, if nothing is claimed or sent."""
     cur.execute(f"""
         UPDATE consumer_reports
@@ -134,6 +134,9 @@ def publish_generation(cur, report_id, generation_id, *, property_data_json, com
             market_stats = %s::jsonb,
             pdf_url = %s,
             pdf_generated_at = CASE WHEN %s::text IS NULL THEN NULL ELSE NOW() END,
+            pdf_object_key = %s,
+            pdf_status = CASE WHEN %s::text IS NULL THEN NULL ELSE 'ready' END,
+            pdf_error = NULL,
             generation_id = %s::uuid
         WHERE id = %s::uuid
           AND status = 'processing'
@@ -141,7 +144,7 @@ def publish_generation(cur, report_id, generation_id, *, property_data_json, com
           AND {_NO_EVIDENCE}
         RETURNING id
     """, (property_data_json, comparables_json, value_estimate_json, market_stats_json,
-          pdf_url, pdf_url, str(generation_id), str(report_id)))
+          pdf_url, pdf_url, pdf_key if pdf_url else None, pdf_url, str(generation_id), str(report_id)))
     return cur.fetchone() is not None
 
 
@@ -601,6 +604,59 @@ def _resolve_journal(cur, channel, attempt_id, account_id, resolution, provider_
             WHERE id = %s::uuid
         """, ("sent" if resolution == "sent" else "failed", provider_id,
               resolution, operator, evidence, str(attempt_id)))
+
+
+# ── A delivered report's missing PDF (LR-022) ────────────────────────────────
+#
+# The API queues (pdf_status 'queued'); this claims ('generating'), and only
+# the claim's owner records 'ready' or 'failed'. A PDF that exists is never
+# replaced: every statement requires pdf_url and pdf_object_key to be NULL.
+
+PDF_CLAIM_WINDOW_MINUTES = CLAIM_WINDOW_MINUTES
+
+def claim_pdf_generation(cur, report_id):
+    """Claim the generation of a delivered report's missing PDF. Returns the row, or None."""
+    claim_id = uuid.uuid4()
+    cur.execute("""
+        UPDATE consumer_reports cr
+        SET pdf_status = 'generating', pdf_claimed_at = NOW(), pdf_claim_id = %(claim)s::uuid,
+            pdf_error = NULL
+        FROM users u
+        WHERE cr.id = %(rid)s::uuid AND u.id = cr.agent_id
+          AND cr.pdf_url IS NULL AND cr.pdf_object_key IS NULL
+          AND (cr.consumer_sms_sent_at IS NOT NULL OR cr.consumer_email_sent_at IS NOT NULL
+               OR cr.status = 'sent')
+          AND (cr.pdf_status IS NULL OR cr.pdf_status IN ('queued', 'failed')
+               OR (cr.pdf_status = 'generating'
+                   AND cr.pdf_claimed_at < NOW() - make_interval(mins => %(window)s)))
+        RETURNING cr.id, u.account_id, cr.agent_id, cr.property_data, cr.comparables,
+                  cr.property_address, cr.property_city, cr.property_state, cr.property_zip,
+                  u.first_name, u.last_name, u.phone, cr.pdf_claim_id
+    """, {"claim": str(claim_id), "rid": str(report_id), "window": PDF_CLAIM_WINDOW_MINUTES})
+    return cur.fetchone()
+
+
+def finish_pdf_generation(cur, report_id, claim_id, *, pdf_url, pdf_key) -> bool:
+    """Record the generated PDF, only for the claim's owner and only if none exists."""
+    cur.execute("""
+        UPDATE consumer_reports
+        SET pdf_url = %s, pdf_object_key = %s, pdf_generated_at = NOW(),
+            pdf_status = 'ready', pdf_error = NULL
+        WHERE id = %s::uuid AND pdf_claim_id = %s::uuid AND pdf_status = 'generating'
+          AND pdf_url IS NULL AND pdf_object_key IS NULL
+        RETURNING id
+    """, (pdf_url, pdf_key, str(report_id), str(claim_id)))
+    return cur.fetchone() is not None
+
+
+def fail_pdf_generation(cur, report_id, claim_id, text) -> bool:
+    """Record why the generation failed, only for the claim's owner."""
+    cur.execute("""
+        UPDATE consumer_reports SET pdf_status = 'failed', pdf_error = %s
+        WHERE id = %s::uuid AND pdf_claim_id = %s::uuid AND pdf_status = 'generating'
+        RETURNING id
+    """, (text, str(report_id), str(claim_id)))
+    return cur.fetchone() is not None
 
 
 # ── The agent's new-lead text (LR-021, §3.6) ─────────────────────────────────
