@@ -31,7 +31,7 @@ from .limit_checker import check_usage_limit, log_limit_decision_worker
 from .utils.photo_proxy import proxy_report_photos_inplace
 from .property_tasks.property_report import embed_images_as_base64
 from .filter_resolver import compute_market_stats, resolve_filters, build_filters_label, elastic_widen_filters
-from .sms import send_report_sms, send_agent_notification_sms, report_sms_body
+from .sms import send_report_sms, report_sms_body, agent_notification_body
 from . import consumer_delivery
 from celery.exceptions import Retry
 import boto3
@@ -2574,6 +2574,106 @@ def consumer_comps_range(comparables):
     return {"low": int(prices[0]), "high": int(prices[-1]), "count": len(prices)}
 
 
+def _notify_agent(report_id) -> dict:
+    """Tell the agent about a delivered lead, once (LR-021, design §3.6).
+
+    Its own claim, journal row and outcome, on its own connection: it runs
+    inline after the consumer's `sent` write, on any later run of a delivered
+    report (a redelivery after the worker died between the stages, or a
+    re-enqueue), and from `notify_consumer_report_agent` for a retry. It never
+    resends the homeowner's report, never changes the consumer's status and
+    never spends a credit.
+
+    Returns {"agent": <what happened>, "retryable": bool}.
+    """
+    from .sms import send as sms_send
+    with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+        cur = conn.cursor()
+        row = consumer_delivery.agent_stage(cur, report_id)
+        if row is None:
+            return {"agent": "no such report", "retryable": False}
+        status, stale, eligible = row
+        if status == consumer_delivery.SENDING:
+            if not stale:
+                return {"agent": "another run is notifying the agent", "retryable": False}
+            consumer_delivery.hold_stale_agent_claim(
+                cur, report_id,
+                consumer_failure_text("a previous attempt started the agent text and stopped before "
+                                      "its outcome was recorded; the text may have been delivered, so "
+                                      "it was not sent again. Needs operator review."))
+            return {"agent": "needs_review", "retryable": False}
+        if not eligible:
+            # sent, skipped, held, not yet delivered to the consumer, or a lead
+            # too old for automatic recovery.
+            return {"agent": status or "not eligible", "retryable": False}
+        if sms_send.get_twilio_client() is None or not sms_send.TWILIO_PHONE_NUMBER:
+            consumer_delivery.settle_agent_without_claim(
+                cur, report_id, status="failed",
+                text="Twilio not configured, so no agent text was attempted")
+            return {"agent": "failed", "retryable": False}
+
+        def build_body(claimed):
+            _phone, _acct, property_data, addr, city, state, zip_code, lead_phone, lead_email = claimed
+            # D-156: the requester's name or the generic text. Never the
+            # assessor roll's owner name.
+            return agent_notification_body(
+                property_address=f"{addr}, {city}, {state} {zip_code}",
+                lead_name=requester_name(property_data) or None,
+                consumer_phone=lead_phone,
+                consumer_email=lead_email,
+            )
+
+        claimed = consumer_delivery.claim_agent_notification(
+            conn, report_id, from_phone=sms_send.TWILIO_PHONE_NUMBER, build_body=build_body)
+        if claimed is None:
+            if consumer_delivery.settle_agent_without_claim(
+                    cur, report_id, status="skipped", require_no_phone=True,
+                    text="the agent has no phone number on file, so no text was sent"):
+                return {"agent": "skipped", "retryable": False}
+            return {"agent": "not claimed", "retryable": False}
+        attempt_id, to_phone, body, _account_id = claimed
+
+        result = sms_send.send_sms(to_phone, body)
+        state = sms_outcome(result)
+        if state == SEND_SENT:
+            consumer_delivery.record_agent_sent(conn, report_id, attempt_id, sid=result.get("message_sid"))
+            logger.info("Agent notification sent for report %s", report_id)
+            return {"agent": "sent", "retryable": False}
+        if state == SEND_UNKNOWN:
+            consumer_delivery.hold_agent_attempt(
+                conn, report_id, attempt_id,
+                text=consumer_failure_text(
+                    f"no answer from the SMS provider ({result.get('error') or 'no reason given'}); "
+                    "the agent text may have been delivered, so it was not sent again. "
+                    "Needs operator review."))
+            return {"agent": "needs_review", "retryable": False}
+        consumer_delivery.release_agent_refused(
+            conn, report_id, attempt_id,
+            text=consumer_failure_text(
+                f"the SMS provider did not accept the agent text: {result.get('error') or 'no reason given'}"))
+        return {"agent": "failed", "retryable": state == SEND_RETRY}
+
+
+def _schedule_agent_retry(report_id, attempt: int = 0):
+    """Queue the agent text's own retry; the consumer task is never re-run for it."""
+    try:
+        notify_consumer_report_agent.apply_async(args=[str(report_id)], countdown=60 * (attempt + 1))
+    except Exception:
+        logger.exception("could not queue the agent notification retry for report %s", report_id)
+
+
+@celery.task(name="notify_consumer_report_agent", bind=True, max_retries=3)
+def notify_consumer_report_agent(self, report_id: str):
+    """Retry the agent's new-lead text after a refusal that created nothing (LR-021).
+
+    Its own retry budget, independent of the consumer task's.
+    """
+    result = _notify_agent(report_id)
+    if result.get("retryable") and self.request.retries < self.max_retries:
+        raise self.retry(countdown=60 * (self.request.retries + 1))
+    return result
+
+
 @celery.task(name="process_consumer_report", bind=True, max_retries=3)
 def process_consumer_report(self, report_id: str):
     """
@@ -2638,12 +2738,18 @@ def process_consumer_report(self, report_id: str):
 
                 # LR-020 §3.1 (R1): a delivered report is finished. No status
                 # write, no new comps or PDF behind a link the person already
-                # holds, no send. (LR-021 resumes the agent text from here.)
+                # holds, no send to the homeowner. LR-021: the agent text is
+                # its own stage and resumes here if it never went out (the
+                # worker died between the stages, or it was refused).
                 if sms_sent_at or email_sent_at or current_status == "sent":
                     logger.info("CONSUMER REPORT %s: already delivered; nothing regenerated or sent",
                                 report_id)
+                    agent = _notify_agent(report_id)
+                    if agent.get("retryable"):
+                        _schedule_agent_retry(report_id)
                     return {"ok": True, "report_id": report_id,
-                            "note": "already delivered; nothing regenerated or sent"}
+                            "note": "already delivered; nothing regenerated or sent",
+                            "agent": agent["agent"]}
 
                 # LR-019: a report whose last send has an unknown outcome is held
                 # for an operator. A redelivery (`acks_late`) or a re-enqueue
@@ -3261,41 +3367,18 @@ def process_consumer_report(self, report_id: str):
                     )
 
                 if delivered:
-                    # Notify agent via SMS (free — no credit decrement)
-                    if agent_phone:
-                        # D-156: the LEAD is the person who filled the form,
-                        # not the name on the deed. This sent the agent the
-                        # record owner, so the agent chased the wrong person
-                        # by name — and on a report a neighbour requested,
-                        # handed them a third party's name unprompted.
-                        lead_name = requester_name(property_data) or None
-                        logger.info(f"Sending agent notification to {agent_phone} for lead on {full_address}")
-                        agent_sms = send_agent_notification_sms(
-                            to_phone=agent_phone,
-                            property_address=full_address,
-                            report_url=report_url,
-                            lead_name=lead_name,
-                            consumer_phone=consumer_phone,
-                            consumer_email=consumer_email,
-                        )
-                        
-                        if agent_sms.get('success'):
-                            logger.info(f"Agent notification sent: {agent_sms.get('message_sid')}")
-                            cur.execute("""
-                                UPDATE consumer_reports 
-                                SET agent_sms_sent_at = NOW(),
-                                    agent_sms_sid = %s
-                                WHERE id = %s::uuid
-                            """, (agent_sms.get('message_sid'), report_id))
-                        else:
-                            logger.error(f"Agent notification failed: {agent_sms.get('error')}")
-                    
+                    # LR-021: the agent's new-lead text is its own stage, with
+                    # its own claim, outcome and retry (free; no credit).
+                    agent = _notify_agent(report_id)
+                    if agent.get("retryable"):
+                        _schedule_agent_retry(report_id)
                     logger.info(f"Consumer report processed successfully: {report_id}")
-                    return {"ok": True, "report_id": report_id}
+                    return {"ok": True, "report_id": report_id, "agent": agent["agent"]}
                 elif held_for_review:
                     # Not retried, and the agent is not told a lead was
-                    # delivered: whether it was is the open question. The
-                    # agent-notification outcome is LR-021.
+                    # delivered: whether it was is the open question. An
+                    # operator's `resolve --sent` records the delivery; the
+                    # agent text follows on the next run of the report.
                     return {"ok": False, "report_id": report_id,
                             "needs_review": True}
                 else:

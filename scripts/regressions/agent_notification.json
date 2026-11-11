@@ -1,0 +1,93 @@
+[
+  {
+    "name": "eligibility: no recovery window, an old lead is texted on a re-run",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "        > NOW() - make_interval(hours => %(recovery_hours)s)\n",
+    "new": "        > NOW() - make_interval(hours => %(recovery_hours)s) - interval '100 years'\n",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "eligibility: a held (unknown) agent text is claimed again",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "  AND (cr.agent_notify_status IS NULL OR cr.agent_notify_status = 'failed')\n",
+    "new": "  AND (cr.agent_notify_status IS NULL OR cr.agent_notify_status IN ('failed', 'needs_review'))\n",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "eligibility: an agent already texted (evidence) is texted again",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "  AND cr.agent_sms_sent_at IS NULL\n  AND (cr.agent_notify_status IS NULL",
+    "new": "  AND TRUE\n  AND (cr.agent_notify_status IS NULL",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "a live agent claim is held as if stale",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        if status == consumer_delivery.SENDING:\n            if not stale:",
+    "new": "        if status == consumer_delivery.SENDING:\n            if False:",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "an unknown agent outcome is treated as a refusal",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        if state == SEND_UNKNOWN:\n            consumer_delivery.hold_agent_attempt(",
+    "new": "        if False:\n            consumer_delivery.hold_agent_attempt(",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "a 429 on the agent text queues no retry (inline)",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                    if agent.get(\"retryable\"):\n                        _schedule_agent_retry(report_id)\n                    logger.info(f\"Consumer report processed successfully",
+    "new": "                    logger.info(f\"Consumer report processed successfully",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "the agent retry task has no budget",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "    if result.get(\"retryable\") and self.request.retries < self.max_retries:",
+    "new": "    if False:",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "a delivered report never resumes the agent stage",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                    agent = _notify_agent(report_id)\n                    if agent.get(\"retryable\"):\n                        _schedule_agent_retry(report_id)\n                    return {\"ok\": True, \"report_id\": report_id,\n                            \"note\": \"already delivered; nothing regenerated or sent\",\n                            \"agent\": agent[\"agent\"]}",
+    "new": "                    return {\"ok\": True, \"report_id\": report_id,\n                            \"note\": \"already delivered; nothing regenerated or sent\",\n                            \"agent\": \"not attempted\"}",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "D-156: the agent text falls back to the owner's name",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                lead_name=requester_name(property_data) or None,",
+    "new": "                lead_name=requester_name(property_data) or (property_data or {}).get(\"owner_name\"),",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "the agent journal holds a different body",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "            VALUES (%s::uuid, %s::uuid, %s::uuid, %s, %s, %s, %s, 'agent', 'pending', 'outbound')\n        \"\"\", (str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, body))",
+    "new": "            VALUES (%s::uuid, %s::uuid, %s::uuid, %s, %s, %s, %s, 'agent', 'pending', 'outbound')\n        \"\"\", (str(attempt_id), str(account_id), str(report_id), to_phone, from_phone, body, \"\"))",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "the agent is sent a different body from the one journalled",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        result = sms_send.send_sms(to_phone, body)",
+    "new": "        result = sms_send.send_sms(to_phone, body + \" \")",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "a new attempt goes to the old phone",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "        to_phone, account_id = row[0].strip(), row[1]",
+    "new": "        to_phone, account_id = \"2135550100\", row[1]",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  },
+  {
+    "name": "no agent phone is recorded as failed, not skipped",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "                    cur, report_id, status=\"skipped\", require_no_phone=True,",
+    "new": "                    cur, report_id, status=\"failed\", require_no_phone=True,",
+    "test": "apps/worker/tests/test_agent_notification_recovery.py"
+  }
+]
