@@ -409,11 +409,12 @@ async def generate_pdf_on_demand(report_id: UUID, request: Request):
             return _pdf_answer(state, row)
 
         # missing, failed, or a stale claim: a request to generate it.
-        ip = get_client_ip(request)
-        if consumer_pdf.generate_requests_last_hour(cur, ip) >= consumer_pdf.GENERATE_REQUESTS_PER_HOUR:
+        # The visitor's limit is checked and counted under its own lock, held
+        # until the commit below, so concurrent requests cannot overshoot it.
+        if not consumer_pdf.admit_generate_request(cur, rid, get_client_ip(request),
+                                                   request.headers.get("user-agent")):
             logger.warning("PDF generation rate limit reached for a visitor on report %s", rid)
             return _pdf_answer("rate_limited", row)
-        consumer_pdf.record_generate_request(cur, rid, ip, request.headers.get("user-agent"))
         queued = consumer_pdf.queue_missing_pdf(cur, rid)
         conn.commit()
         if not queued:

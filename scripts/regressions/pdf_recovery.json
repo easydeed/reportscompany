@@ -64,9 +64,9 @@
   },
   {
     "name": "no visitor limit",
-    "file": "apps/api/src/api/routes/mobile_reports.py",
-    "old": "        if consumer_pdf.generate_requests_last_hour(cur, ip) >= consumer_pdf.GENERATE_REQUESTS_PER_HOUR:",
-    "new": "        if False:",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "    if generate_requests_last_hour(cur, ip) >= GENERATE_REQUESTS_PER_HOUR:\n        return False\n",
+    "new": "",
     "test": "apps/api/tests/test_pdf_download_recovery.py"
   },
   {
@@ -75,5 +75,84 @@
     "old": "            consumer_pdf.mark_queue_failed(cur, rid, \"the generation job could not be queued\")\n            conn.commit()\n            return _pdf_answer(\"failed\", row)",
     "new": "            return _pdf_answer(\"generating\", row)",
     "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "the visitor limit is counted without a lock (21+ admitted concurrently)",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "        cur.execute(\"SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))\", (f\"{GENERATE_EVENT}:{ip}\",))\n",
+    "new": "        pass\n",
+    "test": "apps/api/tests/test_pdf_download_recovery.py -k overshoot"
+  },
+  {
+    "name": "the ready link holds the first signed URL again",
+    "file": "apps/web/components/mobile-report/PdfDownloadButton.tsx",
+    "old": "          href={pdfOpenHref(reportId)}",
+    "new": "          href={state.url}",
+    "test": "__tests__/PdfDownloadButton.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "the open route asks POST /pdf (which can queue) instead of the status",
+    "file": "apps/web/app/api/proxy/v1/r/[id]/pdf/open/route.ts",
+    "old": "/pdf/status`, { cache: \"no-store\" })",
+    "new": "/pdf`, { method: \"POST\", cache: \"no-store\" })",
+    "test": "__tests__/PdfOpen.route.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "the open route redirects to whatever the API says, ready or not",
+    "file": "apps/web/app/api/proxy/v1/r/[id]/pdf/open/route.ts",
+    "old": "  return back\n}",
+    "new": "  return NextResponse.redirect(new URL(\"/\", request.url), 302)\n}",
+    "test": "__tests__/PdfOpen.route.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "a response body that never arrives is not raced against the deadline",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "settled(await within(readStatus(",
+    "new": "settled(await (readStatus(",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "a request that never answers is not raced against the deadline",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "readStatus(await within(fetchFn(",
+    "new": "readStatus(await (fetchFn(",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "the request itself is not cancelled (no abort signal to fetch)",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "{ ...init, signal: run.signal }",
+    "new": "{ ...init }",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "leaving the page does not stop the request",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "  else opts.signal?.addEventListener(\"abort\", onCancel)\n",
+    "new": "",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "there is no deadline",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "setTimeout(() => stop(\"deadline\"), ",
+    "new": "setTimeout(() => undefined, ",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "unmounting the button does not cancel its request",
+    "file": "apps/web/components/mobile-report/PdfDownloadButton.tsx",
+    "old": "      mounted.current = false;\n      run.current?.abort();\n",
+    "new": "      mounted.current = false;\n",
+    "test": "__tests__/PdfDownloadButton.test.tsx",
+    "runner": "jest"
   }
 ]

@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, TrendingUp, BarChart3, User,
-  Phone, MessageSquare, Mail, Download, Share2,
+  Phone, MessageSquare, Mail, Share2,
   ChevronLeft, ChevronRight, MapPin, Calendar,
-  Bed, Bath, Square, Loader2
+  Bed, Bath, Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from 'next/font/google';
 import { themeName } from '@/lib/themes.generated';
-import { PDF_COPY, requestPdf, type PdfState } from '@/lib/pdf-download';
+import { PdfDownloadButton } from './PdfDownloadButton';
 
 // Theme faces, as the PDF entry files set them
 // (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).
@@ -103,10 +103,6 @@ const tabs: { id: TabId; label: string; icon: any }[] = [
 export function MobileReportViewer({ report, reportId }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [compIndex, setCompIndex] = useState(0);
-  const [pdfState, setPdfState] = useState<PdfState>({ status: 'idle' });
-  // LR-022: the poll stops when the page goes away.
-  const unmounted = useRef(false);
-  useEffect(() => () => { unmounted.current = true; }, []);
   const [sessionId] = useState(() => Math.random().toString(36).slice(2));
 
   // Track tab views
@@ -132,22 +128,6 @@ export function MobileReportViewer({ report, reportId }: Props) {
         session_id: sessionId,
       }),
     }).catch(() => {});
-  };
-
-  const handleDownloadPdf = async () => {
-    if (pdfState.status === 'loading') return;
-    setPdfState({ status: 'loading' });
-    // LR-022 (D-380): one request, a bounded wait, and an outcome the page
-    // can show. It used to poll every second, forever, after a failed render.
-    const result = await requestPdf(reportId, {
-      fetchFn: (input, init) => fetch(input, init),
-      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-      now: () => Date.now(),
-      cancelled: () => unmounted.current,
-    });
-    if (!result) return;
-    setPdfState(result);
-    if (result.status === 'ready' && result.url) window.open(result.url, '_blank');
   };
 
   const handleShare = async () => {
@@ -226,8 +206,7 @@ export function MobileReportViewer({ report, reportId }: Props) {
               <AgentTab 
                 report={report}
                 onContactClick={trackAgentClick}
-                onDownloadPdf={handleDownloadPdf}
-                pdfState={pdfState}
+                reportId={reportId}
               />
             )}
           </motion.div>
@@ -530,13 +509,11 @@ function MarketTab({ report, formatPrice }: { report: ReportData; formatPrice: (
 function AgentTab({ 
   report, 
   onContactClick,
-  onDownloadPdf,
-  pdfState
+  reportId
 }: { 
   report: ReportData;
   onContactClick: (type: string) => void;
-  onDownloadPdf: () => void;
-  pdfState: PdfState;
+  reportId: string;
 }) {
   return (
     <div className="p-4 space-y-4">
@@ -601,41 +578,8 @@ function AgentTab({
         )}
       </div>
 
-      {/* Download PDF (LR-022: every outcome is shown, with something to do) */}
-      <div className="pt-4 border-t" aria-live="polite">
-        {pdfState.status === 'ready' && pdfState.url ? (
-          <a
-            href={pdfState.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 font-semibold transition"
-            style={{ color: 'var(--primary-ink)' }}
-          >
-            <Download className="w-5 h-5" />
-            Open your PDF report
-          </a>
-        ) : (
-          <button
-            onClick={onDownloadPdf}
-            disabled={pdfState.status === 'loading'}
-            className="flex items-center justify-center gap-2 w-full py-3 text-gray-600 hover:text-gray-900 transition"
-          >
-            {pdfState.status === 'loading' ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Download className="w-5 h-5" />
-            )}
-            {pdfState.status === 'loading'
-              ? PDF_COPY.loading
-              : pdfState.status === 'failed' || pdfState.status === 'expired'
-                ? 'Try again'
-                : 'Download Full PDF Report'}
-          </button>
-        )}
-        {(pdfState.status === 'failed' || pdfState.status === 'expired') && pdfState.message && (
-          <p className="text-center text-sm text-gray-600 mt-1" role="status">{pdfState.message}</p>
-        )}
-      </div>
+      {/* Download PDF (LR-022): bounded, and every open is signed anew */}
+      <PdfDownloadButton reportId={reportId} />
     </div>
   );
 }

@@ -234,3 +234,56 @@ def test_the_queue_statement_itself_refuses_an_undelivered_report_or_an_existing
         cur = conn.cursor()
         assert consumer_pdf.queue_missing_pdf(cur, undelivered) is False
         assert consumer_pdf.queue_missing_pdf(cur, has_pdf) is False
+
+
+def test_one_visitor_cannot_overshoot_the_limit_with_concurrent_requests(api, report, monkeypatch):
+    """Codex, #283: from 19, four concurrent requests for four different missing
+    reports all read 19 and were all admitted. The count and the insert now run
+    under a lock on the visitor, so exactly one more gets in."""
+    client, queued, consumer_pdf = api
+    rids = [report() for _ in range(4)]
+    ip = f"198.51.100.{uuid.uuid4().int % 200 + 20}"
+    with psycopg.connect(DB, autocommit=True) as conn:
+        for _ in range(consumer_pdf.GENERATE_REQUESTS_PER_HOUR - 1):
+            conn.execute("INSERT INTO report_analytics (report_id, event_type, ip_address) "
+                         "VALUES (%s, %s, %s)", (rids[0], consumer_pdf.GENERATE_EVENT, ip))
+    real_count = consumer_pdf.generate_requests_last_hour
+    together = threading.Barrier(4, timeout=3)
+
+    def count_then_wait(cur, visitor):
+        n = real_count(cur, visitor)
+        try:
+            together.wait()  # all four have counted before any inserts, unless a lock serializes them
+        except threading.BrokenBarrierError:
+            pass
+        return n
+    monkeypatch.setattr(consumer_pdf, "generate_requests_last_hour", count_then_wait)
+    answers = []
+    threads = [threading.Thread(target=lambda r=r: answers.append(_post(client, r, ip=ip).status_code))
+               for r in rids]
+    [t.start() for t in threads]
+    [t.join(60) for t in threads]
+    assert sorted(answers) == [200, 429, 429, 429], answers
+    assert len(queued) == 1
+    with psycopg.connect(DB) as conn:
+        n = conn.execute("SELECT COUNT(*) FROM report_analytics WHERE event_type = %s AND ip_address = %s",
+                         (consumer_pdf.GENERATE_EVENT, ip)).fetchone()[0]
+    assert n == consumer_pdf.GENERATE_REQUESTS_PER_HOUR
+
+
+def test_every_open_signs_a_new_link_and_renders_nothing(api, report, monkeypatch):
+    """Codex, #283: a ready link held on the page outlived its signature. Each
+    open asks again (the status route) and gets a link signed for that open."""
+    client, queued, consumer_pdf = api
+    signed = []
+
+    class Counting:
+        def generate_presigned_url(self, op, Params, ExpiresIn):
+            signed.append(Params["Key"])
+            return f"https://signed.test/{Params['Key']}?n={len(signed)}"
+    monkeypatch.setattr(consumer_pdf, "_client", lambda: Counting())
+    rid = report(pdf_url=LEGACY, pdf_object_key="consumer-reports/acc/r/gen.pdf", pdf_status="ready")
+    first = client.get(f"/v1/r/{rid}/pdf/status").json()["pdf_url"]
+    later = client.get(f"/v1/r/{rid}/pdf/status").json()["pdf_url"]
+    assert first != later and signed == ["consumer-reports/acc/r/gen.pdf"] * 2
+    assert queued == [] and _row(rid)[0] == "ready"

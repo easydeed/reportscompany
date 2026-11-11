@@ -120,6 +120,24 @@ def record_generate_request(cur, report_id, ip: Optional[str], user_agent: Optio
     """, (str(report_id), GENERATE_EVENT, visitor_ip(ip), (user_agent or "")[:500]))
 
 
+def admit_generate_request(cur, report_id, ip: Optional[str], user_agent: Optional[str]) -> bool:
+    """Count this visitor's generation request against the hourly limit, atomically. False: over it.
+
+    The count and the insert happen under a transaction-scoped lock on the
+    normalized visitor, held until the caller commits, so two concurrent
+    requests from one visitor (for the same report or different ones) cannot
+    both read 19 and both be admitted. A request that is admitted is counted
+    whether or not it ends up queueing a job.
+    """
+    ip = visitor_ip(ip)
+    if ip:
+        cur.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"{GENERATE_EVENT}:{ip}",))
+    if generate_requests_last_hour(cur, ip) >= GENERATE_REQUESTS_PER_HOUR:
+        return False
+    record_generate_request(cur, report_id, ip, user_agent)
+    return True
+
+
 def queue_missing_pdf(cur, report_id) -> bool:
     """Mark a delivered report's missing PDF as queued, if nobody has. True means: queue one job.
 
