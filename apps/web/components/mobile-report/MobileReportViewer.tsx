@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, TrendingUp, BarChart3, User,
@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from 'next/font/google';
 import { themeName } from '@/lib/themes.generated';
+import { PDF_COPY, requestPdf, type PdfState } from '@/lib/pdf-download';
 
 // Theme faces, as the PDF entry files set them
 // (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).
@@ -102,8 +103,10 @@ const tabs: { id: TabId; label: string; icon: any }[] = [
 export function MobileReportViewer({ report, reportId }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [compIndex, setCompIndex] = useState(0);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfState, setPdfState] = useState<PdfState>({ status: 'idle' });
+  // LR-022: the poll stops when the page goes away.
+  const unmounted = useRef(false);
+  useEffect(() => () => { unmounted.current = true; }, []);
   const [sessionId] = useState(() => Math.random().toString(36).slice(2));
 
   // Track tab views
@@ -132,35 +135,19 @@ export function MobileReportViewer({ report, reportId }: Props) {
   };
 
   const handleDownloadPdf = async () => {
-    setPdfLoading(true);
-    try {
-      const res = await fetch(`/api/proxy/v1/r/${reportId}/pdf`, { method: 'POST' });
-      const data = await res.json();
-      
-      if (data.status === 'ready') {
-        setPdfUrl(data.pdf_url);
-        window.open(data.pdf_url, '_blank');
-        setPdfLoading(false);
-      } else {
-        // Poll for completion
-        const checkPdf = async () => {
-          // GET on the pdf proxy is the status check (D-314: /pdf/status had no route).
-          const check = await fetch(`/api/proxy/v1/r/${reportId}/pdf`);
-          const status = await check.json();
-          if (status.status === 'ready') {
-            setPdfUrl(status.pdf_url);
-            setPdfLoading(false);
-            window.open(status.pdf_url, '_blank');
-          } else {
-            setTimeout(checkPdf, 1000);
-          }
-        };
-        checkPdf();
-      }
-    } catch (err) {
-      console.error('PDF generation failed', err);
-      setPdfLoading(false);
-    }
+    if (pdfState.status === 'loading') return;
+    setPdfState({ status: 'loading' });
+    // LR-022 (D-380): one request, a bounded wait, and an outcome the page
+    // can show. It used to poll every second, forever, after a failed render.
+    const result = await requestPdf(reportId, {
+      fetchFn: (input, init) => fetch(input, init),
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      now: () => Date.now(),
+      cancelled: () => unmounted.current,
+    });
+    if (!result) return;
+    setPdfState(result);
+    if (result.status === 'ready' && result.url) window.open(result.url, '_blank');
   };
 
   const handleShare = async () => {
@@ -240,7 +227,7 @@ export function MobileReportViewer({ report, reportId }: Props) {
                 report={report}
                 onContactClick={trackAgentClick}
                 onDownloadPdf={handleDownloadPdf}
-                pdfLoading={pdfLoading}
+                pdfState={pdfState}
               />
             )}
           </motion.div>
@@ -544,12 +531,12 @@ function AgentTab({
   report, 
   onContactClick,
   onDownloadPdf,
-  pdfLoading
+  pdfState
 }: { 
   report: ReportData;
   onContactClick: (type: string) => void;
   onDownloadPdf: () => void;
-  pdfLoading: boolean;
+  pdfState: PdfState;
 }) {
   return (
     <div className="p-4 space-y-4">
@@ -614,20 +601,40 @@ function AgentTab({
         )}
       </div>
 
-      {/* Download PDF */}
-      <div className="pt-4 border-t">
-        <button
-          onClick={onDownloadPdf}
-          disabled={pdfLoading}
-          className="flex items-center justify-center gap-2 w-full py-3 text-gray-600 hover:text-gray-900 transition"
-        >
-          {pdfLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
+      {/* Download PDF (LR-022: every outcome is shown, with something to do) */}
+      <div className="pt-4 border-t" aria-live="polite">
+        {pdfState.status === 'ready' && pdfState.url ? (
+          <a
+            href={pdfState.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-3 font-semibold transition"
+            style={{ color: 'var(--primary-ink)' }}
+          >
             <Download className="w-5 h-5" />
-          )}
-          {pdfLoading ? 'Generating PDF...' : 'Download Full PDF Report'}
-        </button>
+            Open your PDF report
+          </a>
+        ) : (
+          <button
+            onClick={onDownloadPdf}
+            disabled={pdfState.status === 'loading'}
+            className="flex items-center justify-center gap-2 w-full py-3 text-gray-600 hover:text-gray-900 transition"
+          >
+            {pdfState.status === 'loading' ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Download className="w-5 h-5" />
+            )}
+            {pdfState.status === 'loading'
+              ? PDF_COPY.loading
+              : pdfState.status === 'failed' || pdfState.status === 'expired'
+                ? 'Try again'
+                : 'Download Full PDF Report'}
+          </button>
+        )}
+        {(pdfState.status === 'failed' || pdfState.status === 'expired') && pdfState.message && (
+          <p className="text-center text-sm text-gray-600 mt-1" role="status">{pdfState.message}</p>
+        )}
       </div>
     </div>
   );

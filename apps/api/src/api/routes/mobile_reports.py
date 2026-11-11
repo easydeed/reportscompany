@@ -18,6 +18,8 @@ from ..db import db_conn, fetchone_dict, fetchall_dicts
 from ..services.comp_summary import summarize as summarize_comps
 from ..services import comp_summary
 from ..services.report_theme import consumer_report_color, resolve_theme_id, tokens_for
+from ..services import consumer_pdf
+from .leads import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -348,73 +350,98 @@ async def get_report_data(
     )
 
 
+# LR-022. What the download button is told, in words a homeowner can act on.
+# The stored `pdf_error` is for operators and is never returned here.
+PDF_MESSAGES = {
+    "generating": "Your PDF is being prepared. This usually takes under a minute.",
+    "failed": "We couldn't prepare your PDF. Please try again in a minute.",
+    "unavailable": "The PDF will be available once your report has been delivered.",
+    "rate_limited": "Too many PDF requests from this device. Please try again later.",
+}
+
+_PDF_ROW = """
+    SELECT id, status, pdf_url, pdf_object_key, pdf_status, consumer_sms_sent_at,
+           consumer_email_sent_at,
+           (pdf_claimed_at IS NULL
+            OR pdf_claimed_at < NOW() - make_interval(mins => %s)) AS pdf_claim_stale
+    FROM consumer_reports WHERE id = %s
+"""
+
+
+def _queue_pdf_generation(report_id: str) -> None:
+    """Queue the worker's render of a missing PDF. Raises if the queue is unreachable."""
+    from celery import current_app
+    current_app.send_task("generate_consumer_report_pdf", args=[report_id])
+
+
+def _pdf_answer(state: str, row: dict) -> JSONResponse:
+    if state == "ready":
+        return JSONResponse({"status": "ready",
+                             "pdf_url": consumer_pdf.download_link(row.get("pdf_object_key"),
+                                                                   row.get("pdf_url"))})
+    code = {"unavailable": 409, "rate_limited": 429}.get(state, 200)
+    return JSONResponse({"status": state, "message": PDF_MESSAGES[state]}, status_code=code)
+
+
 @router.post("/{report_id}/pdf")
-async def generate_pdf_on_demand(
-    report_id: UUID,
-    request: Request,
-    background_tasks: BackgroundTasks
-):
+async def generate_pdf_on_demand(report_id: UUID, request: Request):
     """
-    Generate PDF on demand when user clicks download.
-    Returns existing PDF URL if already generated.
+    The download button (LR-022, D-380).
+
+    An existing PDF: a freshly signed link to it, every time (stored presigned
+    URLs expire after 7 days). A delivered report with no PDF: one generation
+    job, however many clicks, at most 20 requests an hour per visitor.
+    Anything else: an honest status the page can show.
     """
+    rid = str(report_id)
     with db_conn() as (conn, cur):
-        cur.execute(
-            "SELECT id, pdf_url, property_data, comparables, agent_id FROM consumer_reports WHERE id = %s",
-            (str(report_id),)
-        )
-        report = fetchone_dict(cur)
-    
-    if not report:
-        raise HTTPException(404, "Report not found")
-    
-    # Return existing PDF if available
-    if report.get("pdf_url"):
-        with db_conn() as (conn, cur):
-            cur.execute(
-                "UPDATE consumer_reports SET pdf_requested_count = pdf_requested_count + 1 WHERE id = %s",
-                (str(report_id),)
-            )
+        cur.execute(_PDF_ROW, (consumer_pdf.PDF_CLAIM_WINDOW_MINUTES, rid))
+        row = fetchone_dict(cur)
+        if not row:
+            raise HTTPException(404, "Report not found")
+        state = consumer_pdf.pdf_state(row)
+        if state == "ready":
+            cur.execute("UPDATE consumer_reports SET pdf_requested_count = pdf_requested_count + 1 "
+                        "WHERE id = %s", (rid,))
             conn.commit()
-        return {"pdf_url": report["pdf_url"], "status": "ready"}
-    
-    # Queue PDF generation (Celery task)
-    # For now, we'll return a "generating" status
-    # The actual PDF generation will be handled by the worker
-    background_tasks.add_task(
-        track_event,
-        str(report_id),
-        "pdf_request",
-        {},
-        request.client.host if request.client else None,
-        request.headers.get("user-agent")
-    )
-    
-    return {
-        "status": "generating",
-        "message": "PDF is being generated. This may take a few seconds."
-    }
+            return _pdf_answer("ready", row)
+        if state in ("unavailable", "generating"):
+            return _pdf_answer(state, row)
+
+        # missing, failed, or a stale claim: a request to generate it.
+        ip = get_client_ip(request)
+        if consumer_pdf.generate_requests_last_hour(cur, ip) >= consumer_pdf.GENERATE_REQUESTS_PER_HOUR:
+            logger.warning("PDF generation rate limit reached for a visitor on report %s", rid)
+            return _pdf_answer("rate_limited", row)
+        consumer_pdf.record_generate_request(cur, rid, ip, request.headers.get("user-agent"))
+        queued = consumer_pdf.queue_missing_pdf(cur, rid)
+        conn.commit()
+        if not queued:
+            # Another click queued it a moment ago.
+            return _pdf_answer("generating", row)
+        try:
+            _queue_pdf_generation(rid)
+        except Exception:
+            logger.exception("could not queue the PDF generation for report %s", rid)
+            consumer_pdf.mark_queue_failed(cur, rid, "the generation job could not be queued")
+            conn.commit()
+            return _pdf_answer("failed", row)
+    return _pdf_answer("generating", row)
 
 
 @router.get("/{report_id}/pdf/status")
 async def check_pdf_status(report_id: UUID):
-    """
-    Check if PDF has been generated (for polling).
-    """
+    """Where the PDF stands, for polling. Never queues anything (LR-022)."""
     with db_conn() as (conn, cur):
-        cur.execute(
-            "SELECT pdf_url FROM consumer_reports WHERE id = %s",
-            (str(report_id),)
-        )
-        report = fetchone_dict(cur)
-    
-    if not report:
+        cur.execute(_PDF_ROW, (consumer_pdf.PDF_CLAIM_WINDOW_MINUTES, str(report_id)))
+        row = fetchone_dict(cur)
+    if not row:
         raise HTTPException(404, "Report not found")
-    
-    if report.get("pdf_url"):
-        return {"status": "ready", "pdf_url": report["pdf_url"]}
-    else:
-        return {"status": "generating"}
+    state = consumer_pdf.pdf_state(row)
+    if state == "missing":
+        # A delivered report with no PDF and no job: the page asks with POST.
+        return JSONResponse({"status": "missing", "message": PDF_MESSAGES["failed"]})
+    return _pdf_answer(state, row)
 
 
 @router.post("/{report_id}/analytics")

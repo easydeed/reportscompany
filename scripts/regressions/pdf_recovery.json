@@ -1,0 +1,79 @@
+[
+  {
+    "name": "the recovery claim takes a report that already has a PDF",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "          AND cr.pdf_url IS NULL AND cr.pdf_object_key IS NULL\n          AND (cr.consumer_sms_sent_at",
+    "new": "          AND TRUE\n          AND (cr.consumer_sms_sent_at",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "the recovery claim takes an undelivered report",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "          AND (cr.consumer_sms_sent_at IS NOT NULL OR cr.consumer_email_sent_at IS NOT NULL\n               OR cr.status = 'sent')\n          AND (cr.pdf_status IS NULL",
+    "new": "          AND TRUE\n          AND (cr.pdf_status IS NULL",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "a live render is taken over as if stale",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "                   AND cr.pdf_claimed_at < NOW() - make_interval(mins => %(window)s)))",
+    "new": "                   AND cr.pdf_claimed_at < NOW() + make_interval(mins => %(window)s)))",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "a stale render's late finish overwrites the new claim",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "        WHERE id = %s::uuid AND pdf_claim_id = %s::uuid AND pdf_status = 'generating'\n          AND pdf_url IS NULL AND pdf_object_key IS NULL",
+    "new": "        WHERE id = %s::uuid AND (pdf_claim_id = %s::uuid OR TRUE) AND pdf_status = 'generating'\n          AND pdf_url IS NULL AND pdf_object_key IS NULL",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "a failed render is not recorded",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "            consumer_delivery.fail_pdf_generation(cur, rid, claim_id, text)\n",
+    "new": "",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "delivery stores no object key",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "            pdf_object_key = %s,\n            pdf_status = CASE",
+    "new": "            pdf_object_key = NULL AND %s IS NULL,\n            pdf_status = CASE",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "the API returns the stored (expiring) URL instead of re-signing",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "    key = pdf_object_key or object_key_from_url(pdf_url)\n",
+    "new": "    key = None\n",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "a second click queues a second job",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "          AND (pdf_status IS NULL OR pdf_status = 'failed'\n               OR (pdf_status IN ('queued', 'generating')",
+    "new": "          AND (TRUE OR pdf_status = 'failed'\n               OR (pdf_status IN ('queued', 'generating')",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "an undelivered report queues a job",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "          AND {_DELIVERED}\n",
+    "new": "",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "no visitor limit",
+    "file": "apps/api/src/api/routes/mobile_reports.py",
+    "old": "        if consumer_pdf.generate_requests_last_hour(cur, ip) >= consumer_pdf.GENERATE_REQUESTS_PER_HOUR:",
+    "new": "        if False:",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "a queue outage is reported as generating",
+    "file": "apps/api/src/api/routes/mobile_reports.py",
+    "old": "            consumer_pdf.mark_queue_failed(cur, rid, \"the generation job could not be queued\")\n            conn.commit()\n            return _pdf_answer(\"failed\", row)",
+    "new": "            return _pdf_answer(\"generating\", row)",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  }
+]

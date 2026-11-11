@@ -100,13 +100,15 @@ RECORDERS = {"record_sms_sent", "record_email_sent", "resolve_sent"}
 
 
 def _delivery_fns_containing(fragment):
-    """Names of the consumer_delivery functions whose SQL contains `fragment`."""
+    """Names of the consumer_delivery functions whose consumer_reports SQL contains `fragment`."""
     found = set()
     for fn in DELIVERY_TREE.body:
         if isinstance(fn, ast.FunctionDef):
             for n in ast.walk(fn):
-                if (isinstance(n, ast.Constant) and isinstance(n.value, str)
-                        and fragment in " ".join(n.value.split())):
+                if not (isinstance(n, ast.Constant) and isinstance(n.value, str)):
+                    continue
+                sql = " ".join(n.value.split())
+                if fragment in sql and "consumer_reports" in sql:
                     found.add(fn.name)
     return found
 
@@ -145,7 +147,8 @@ def test_the_only_sent_writes_are_on_paths_that_actually_sent():
         "delivery only through consumer_delivery.record_*_sent:\n"
         + "\n".join(f"  {c[:100]}" for c in claims)
     )
-    writers = _delivery_fns_containing("status = 'sent'")
+    # The consumer's own status (the agent stage writes `agent_notify_status`).
+    writers = _delivery_fns_containing("SET status = 'sent'")
     assert writers and writers <= RECORDERS, f"'sent' is written by {sorted(writers)}"
     # Exactly one call each, on the success path of its channel.
     assert len(_calls_in_consumer("record_sms_sent")) == 1
