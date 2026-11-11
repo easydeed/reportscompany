@@ -213,27 +213,36 @@ def test_no_branch_stamps_a_sent_timestamp_without_sending():
 
 def test_redelivery_is_refused_before_any_provider_is_called():
     """
-    `acks_late` is worker-wide. Everything past this point is irreversible: a
-    text to a member of the public, a credit spent, an agent told they have a
-    lead. The guard has to precede all three or it is decoration.
+    `acks_late` is worker-wide. Sending to the homeowner is irreversible, so
+    the guard precedes it. LR-021: the agent text is no longer sent from this
+    function at all; it is `_notify_agent`, which runs on a delivered report by
+    design and is guarded by its own claim (checked below).
     """
     fn = _fn("process_consumer_report")
     lines = {}
     for node in ast.walk(fn):
         if isinstance(node, ast.Call):
             name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
-            if name in ("_consumer_already_delivered", "send_report_sms",
-                        "send_agent_notification_sms"):
+            if name in ("_consumer_already_delivered", "send_report_sms", "send_agent_notification_sms",
+                        "send_sms"):
                 lines.setdefault(name, []).append(node.lineno)
 
     assert "_consumer_already_delivered" in lines, "the redelivery guard is never consulted"
-    guard = min(lines["_consumer_already_delivered"])
-    for provider in ("send_report_sms", "send_agent_notification_sms"):
-        assert provider in lines, f"{provider} is no longer called at all"
-        assert guard < min(lines[provider]), (
-            f"the guard (line {guard}) runs after {provider} "
-            f"(line {min(lines[provider])})"
-        )
+    assert "send_report_sms" in lines, "send_report_sms is no longer called at all"
+    assert min(lines["_consumer_already_delivered"]) < min(lines["send_report_sms"])
+    assert "send_agent_notification_sms" not in lines and "send_sms" not in lines, (
+        "the agent text is sent from process_consumer_report again, outside its own claim")
+
+
+def test_the_agent_text_is_sent_only_after_its_own_claim():
+    fn = _fn("_notify_agent")
+    calls = {}
+    for node in ast.walk(fn):
+        if isinstance(node, ast.Call):
+            name = getattr(node.func, "attr", None) or getattr(node.func, "id", None)
+            calls.setdefault(name, []).append(node.lineno)
+    assert "claim_agent_notification" in calls and "send_sms" in calls
+    assert min(calls["claim_agent_notification"]) < min(calls["send_sms"])
 
 
 def test_the_guard_reads_the_timestamps_not_only_the_status():

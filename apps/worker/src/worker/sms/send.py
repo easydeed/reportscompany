@@ -126,16 +126,18 @@ def send_report_sms(
     return result
 
 
-def send_agent_notification_sms(
-    to_phone: str,
+def agent_notification_body(
     property_address: str,
-    report_url: str,
     lead_name: str | None = None,
     consumer_phone: str | None = None,
     consumer_email: str | None = None,
-) -> dict:
-    """
-    Send notification to agent about new CMA lead.
+) -> str:
+    """The agent's new-lead text, exactly as sent.
+
+    LR-021: the notification claim journals this body BEFORE the provider call
+    (`sms_logs.message` is NOT NULL), and `send_agent_notification_sms` sends
+    this same string. `lead_name` is the requester's name or None (the generic
+    "Someone"), never the assessor's owner name (D-156).
     """
     contact_lines = []
     if consumer_phone:
@@ -160,6 +162,22 @@ def send_agent_notification_sms(
 
 Respond quickly — they're actively evaluating!
 - TrendyReports"""
+    return message
 
-    return send_sms(to_phone, message)
+
+def send_agent_notification_sms(
+    to_phone: str,
+    property_address: str,
+    report_url: str,
+    lead_name: str | None = None,
+    consumer_phone: str | None = None,
+    consumer_email: str | None = None,
+) -> dict:
+    """
+    Send notification to agent about new CMA lead.
+    """
+    message = agent_notification_body(property_address, lead_name, consumer_phone, consumer_email)
+    result = send_sms(to_phone, message)
+    result['message_body'] = message
+    return result
 
