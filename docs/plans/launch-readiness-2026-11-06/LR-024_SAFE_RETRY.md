@@ -1,0 +1,233 @@
+# LR-024: wizard failure states and a retry that cannot duplicate (design, rev 3)
+
+- **Ticket:** LR-024. **Defects:** D-382, D-330, and the unified-wizard part of D-329.
+- **Gate:** PILOT. **Lane:** Claude.
+- **Status:** rev 3, answering Codex's AMEND on rev 2 (an unsupported API must be unable to act on a keyed request; see §8). Rev 2 answered rev 1's AMEND (§7). For review. The ticket's rollout rule applies: "If safe retry requires an API contract change, document and review the narrow scope rather than introducing a speculative client-only workaround." It does. This note is that scope.
+
+## 1. What is wrong today (verified at `main` 3419b0e4)
+
+**`apps/web/components/unified-wizard/index.tsx`**
+
+| Where | What happens |
+|---|---|
+| `startPolling`, `:225–251` | A `setInterval` every 3 s with no deadline. A non-OK status response `return`s, and an exception is swallowed (`/* ignore polling errors */`). An expired session, an API outage or a report stuck in `pending` spins forever (D-382). |
+| `handleSubmit`, `catch`, `:397–401` | It sets an error state only when `deliveryMode === "send_now"`. A failed **schedule** create clears the spinner and shows nothing (D-330). |
+| The 429 branches, `:318–322` and `:382–386` | They read `used`/`limit`/`product` at the top level. The API puts them inside `detail` (`reports.py`, `schedules.py`: `HTTPException(429, detail={...})`). The specific numbers never show, and the fallback prints `[object Object]` or a generic line (D-329). |
+
+**API**
+
+`POST /v1/reports` and `POST /v1/schedules` take no idempotency key. Suppose the response to a successful create is lost: a network drop, a proxy timeout, or a tab put to sleep. Then a "Try again" creates **a second report**, which counts against the plan's monthly limit twice and, with recipients, **emails them twice**. For a schedule, it creates a second schedule that sends on every run. Nothing on the client can tell whether the first request landed.
+
+## 2. The API contract change (narrow)
+
+**Keyed creates get their own routes** (rev 3): `POST /v1/idempotent/reports` and `POST /v1/idempotent/schedules`.
+- Each is the existing create handler (same body, validation, verification, limits and response), and each **requires** an `Idempotency-Key` header; without one, 422 `idempotency_key_required`.
+- **Format:** 8–100 characters of `[A-Za-z0-9_-]`. Anything else gets 422 `invalid_idempotency_key`.
+- **The existing routes are unchanged.** `POST /v1/reports` and `POST /v1/schedules` take no key and store none, so every other caller behaves exactly as today.
+
+**Why routes and not a header on the old routes:** this is what makes the contract fail-closed. An API without this release has no `/v1/idempotent/*` route, so it answers 404 **without running any handler**. A keyed request therefore either reaches code that honours its key, or creates nothing. That holds:
+- on a mixed-version rollout;
+- after a rollback;
+- for the original request whose answer was lost;
+- for every retry of it.
+
+No capability read can be stale, because there is none.
+
+**Storage.** Migration `0066_request_idempotency.sql`: a new table, additive, with `SET LOCAL lock_timeout = '5s'` and the apply-first rollout like 0064 and 0065.
+
+```sql
+CREATE TABLE request_idempotency (
+  account_id   uuid        NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  endpoint     text        NOT NULL CHECK (endpoint IN ('reports.create', 'schedules.create')),
+  idem_key     text        NOT NULL,
+  request_hash text        NOT NULL,   -- sha256 of the canonical JSON body
+  resource_id  uuid        NOT NULL,   -- report_generations.id or schedules.id
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (account_id, endpoint, idem_key)
+);
+-- RLS on account_id, matching the existing per-account tables (property_report_stats pattern).
+```
+
+Both schema guards move `REQUIRED_MIGRATION` to 0066.
+
+**Who may replay.** Authentication is unchanged and comes first: the auth middleware and `require_account_id` derive the caller's current account before any key is read. A key belongs to its `(account, endpoint)`:
+- the same key from another account is a different key;
+- the same key on the other endpoint is a different key.
+
+RLS on `account_id` backs this up.
+
+**Inside the endpoint's existing transaction, after authentication and before the verification and limit checks:**
+
+1. `pg_advisory_xact_lock(hashtextextended('<endpoint>:<account>:<key>', 0))`. Two concurrent requests with one key are serialized; the second waits for the first to commit or roll back.
+2. Look up `(account, endpoint, key)`.
+3. **The key is older than the 7-day replay window:** 410 `idempotency_key_expired`. Nothing is created. The row is kept, so an old key is never quietly treated as new (rev 2).
+4. **Hit within the window, with a different `request_hash`:** 409 `idempotency_key_reused`. Nothing is created.
+5. **Hit within the window, same hash, resource still exists:** return the resource as it is now, with the original status code (202 or 201) and `Idempotent-Replayed: true`. There is no verification check, no limit check, no usage, no enqueue and no email. The body is:
+   - a report: `{report_id, status}` from `report_generations`;
+   - a schedule: the `GET /v1/schedules/{id}` representation, including any edits made since.
+6. **Hit within the window, same hash, resource deleted** (rev 2; schedules have `DELETE`): 410 `idempotent_resource_gone`, carrying the original `resource_id`. Nothing is created or enqueued, the key is kept, and a deliberately deleted schedule is never recreated by a replay.
+7. **Miss:** the existing path runs unchanged. The key row is inserted in **the same transaction** as the `report_generations` or `schedules` INSERT. A refusal or error rolls the key back with the resource, so a key is stored only for something that exists, and a retry after a refusal runs fresh.
+
+**The fingerprint** (rev 2). `request_hash` is the SHA-256 of the canonical JSON of the **validated request model**, not of the raw bytes.
+- **Serialization:** `payload.model_dump(mode="json")` passed to `json.dumps(..., sort_keys=True, separators=(",", ":"), ensure_ascii=False)`.
+- **What it ignores:** object keys are sorted at every depth, so JSON key order doesn't matter. A field left out and the same field sent with its default value hash alike, because the model fills defaults; `null` and absent hash alike for optional fields.
+- **What it keeps:** array order, since the order of ZIPs and recipients is part of the request.
+- **Numbers:** they hash as the model types them: `lookback_days` is an int, so `30` and `30.0` both validate to `30`.
+- **Server-resolved values are not hashed.** The account's default theme or accent filled in after validation can change between the original and the replay without making the replay a mismatch.
+
+**Retention.** Rows are kept. Nothing in this ticket deletes them; there is one row per wizard create. A later purge must keep at least 30 days, which is longer than any replay the client attempts (§3). A key the server no longer has would be treated as new, and the client's 6-day limit makes that unreachable.
+
+**The two Next proxies route on the key.** `apps/web/app/api/proxy/v1/reports/route.ts` and `…/schedules/route.ts` build a fresh header set, so they must not drop the key.
+- **A request carrying `Idempotency-Key`:** sent, with the key, to `/v1/idempotent/reports` or `/schedules`. `Idempotent-Replayed` is passed back.
+- **A request without one:** sent to the existing route, as today.
+- **A 404 from the keyed route:** this API predates the contract and ran nothing. The proxy answers **503 `idempotent_create_unavailable`**, so the page knows nothing was created.
+- Proxy tests pin all three.
+
+**What it deliberately does not do:**
+- **Store response bodies.** It replays the resource's current state, which is what a client polling the report wants.
+- **Cover the report enqueue after commit.** If the enqueue failed, the replay shows `failed` and the wizard shows the terminal failure. A crash between the commit and the enqueue leaves a `pending` report. That predates this ticket and is recorded below; the bounded wait in §3 now shows it as "taking longer than usual" instead of spinning.
+
+**Alternatives rejected:**
+- *Reconcile on the client by listing recent reports or schedules and matching their parameters.* Two identical legitimate requests are indistinguishable from a retry. This is the speculative client-only workaround the ticket rules out.
+- *Key columns on `report_generations` and `schedules`.* That means two migrations' worth of columns and indexes on hot tables. One small table covers both and later endpoints.
+
+## 3. The wizard
+
+**One key per payload.**
+- The wizard keeps `{payload, key, firstSentAt}` in a ref. A submit whose canonical payload equals the last one reuses its key; any edit gets a new key (`crypto.randomUUID()`). `firstSentAt` is the wall-clock time the key was first sent.
+- After a success, the key is dropped, so building the same report again on purpose is a new request.
+- A retry after a lost response or a 5xx therefore replays instead of duplicating. A retry after a terminal generation failure creates a new report, because the payload's key is dropped once its report exists.
+
+**When the wizard may promise a safe retry** (rev 3). Both must hold:
+1. The key's `firstSentAt` is 0 to 6 days ago. A negative age (the clock moved back) or anything over 6 days fails. That is a day inside the server's 7-day window, whatever happened to the clock or the tab in between.
+2. The previous answer was unknown: offline, 5xx or 401.
+
+**No capability condition is needed** (rev 3). Every keyed request goes to a route only a supporting API has, so a request that created anything was handled by code that stored its key. The rev 2 account flag is dropped.
+
+Otherwise an unknown outcome shows **"We can't tell whether your earlier request went through"**, with **Go to Reports** (or Schedules) and **Send as a new request**. The second makes a fresh key on purpose; there is no blind "Try again". The wizard never rotates a key behind the person's back after an unknown outcome.
+
+**New answers from the server:**
+- 503 `idempotent_create_unavailable` (the proxy; this API predates the contract) shows **"We can't create this right now"** ("We're updating the service. Nothing was created. Please try again in a few minutes."), with Back to edit and **Try again**. The key is kept. Nothing was created, so the retry is safe whenever it reaches a supporting API.
+- 410 `idempotency_key_expired` shows the same "can't tell" state.
+- 410 `idempotent_resource_gone` shows **"It was created, then deleted"**, with Go to Reports or Schedules and **Create it again** (a new key).
+- 409 `idempotency_key_reused` can't happen with one key per payload; if it does, it reads as an invalid request.
+
+**Submit outcomes**, the same for "Generate" and "Create Schedule" (fixes D-330):
+
+| Outcome | Detected by | State shown | Actions |
+|---|---|---|---|
+| Server unreachable | `fetch` throws | "We couldn't reach the server. Your choices are kept." | Try again (same key), Back to edit |
+| Server error | 5xx | "Something went wrong on our side. Trying again won't create a second one." The no-duplicate sentence appears only when all three safe-retry conditions hold; otherwise it's the "can't tell" state. | Try again (same key), Back to edit |
+| Session expired | 401 | "Your session has expired. Sign in again in a new tab, then come back and try again. Your choices are kept." | Sign in (new tab), Try again |
+| Email not verified | 403 `verification_required` | the existing `VerificationRequired` component, unchanged | as today |
+| Plan limit | 429 | the existing limit card, with numbers read from `detail` (D-329) | as today |
+| Invalid request | 400/409/422 | the server's message, e.g. "'X' is not a recognized CRMLS city" | Back to edit |
+
+**Report status after "Generate":**
+- **Polling:** a `setTimeout` chain every 3 s, each request with an AbortController. Unmount and retry abort it, and no interval is left behind.
+
+| Outcome | Detected by | State shown | Actions |
+|---|---|---|---|
+| Ready | `completed` | as today | as today |
+| Generation failed | `failed` | "We couldn't generate this report." | Try again (new report), Back to edit |
+| Slow but legitimate | still pending at 2 min | "This is taking longer than usual. It will appear in Reports when it's ready." Polling stops. | Keep waiting (another 2 min), Go to Reports |
+| Can't check | 3 consecutive failed checks (network or 5xx) | "We can't check on your report right now. It's still being made and will appear in Reports." Polling stops. | Check again, Go to Reports |
+| Session expired | 401 on a check | "Your session has expired…" | Sign in (new tab), Check again |
+| Not found | 404 | "We can't find this report." | Go to Reports |
+
+**Everywhere:**
+- Form state is never reset by an error.
+- Each new state's heading takes focus (`tabIndex={-1}`) and sits in an `aria-live="polite"` region.
+- No new estimate, price or copy outside these messages.
+
+## 4. Tests and proof
+
+- **API, real routes on migrated Postgres:**
+  - the same key replays the same report or schedule, with no second row, no second usage count and no second enqueue;
+  - four concurrent requests with one key create exactly one;
+  - the same key with a different body gets 409 and creates nothing;
+  - a refused request (limit or verification) stores no key, and its retry runs fresh;
+  - no header behaves as today;
+  - a malformed key gets 422.
+- **API, rev 2:**
+  - **Window boundaries:** a key at 6 d 23 h replays; at 7 d and at 30 d it gets 410 expired, with no row created.
+  - **Deletion:** a schedule deleted between create and replay gets 410 gone, is not recreated, and the key is kept.
+  - **An edited resource:** the replay returns its current representation.
+  - **Scope:**
+    - the same key from another account creates that account's own resource and never sees the first one;
+    - the same key on the other endpoint is independent.
+  - **Fingerprint:** reordered JSON keys, an omitted default and an explicit default all replay; changed array order is a 409.
+  - **Rollback:** a failure injected **after** the key insert, inside the transaction, leaves neither the key nor the resource.
+  - **Replay skips nothing on the way in:** an unauthenticated replay gets 401 before any lookup.
+  - Each test is red on `main`, where a second report is created.
+- **Web (Jest), rev 2 and 3:**
+  - the safe-retry promise needs an age of 0 to 6 days. These are tested at 0, 5 d 23 h, 6 d, 6 d 1 s, a negative age (clock moved back) and a response lost across a long sleep;
+  - the two 410 states;
+  - the 503 unavailable state;
+  - the mixed-version cases in §5.
+- **Web (Jest):** both proxies forward the key; every row of both tables above; the key is reused after a lost response and changes after an edit; timers stop on unmount and on retry; focus moves to the new heading; a schedule failure shows its error.
+- **Mutations:** a spec covering the lock, the hash comparison, the same-transaction insert, the reused key, the deadline, the consecutive-error count and the schedule error path.
+- **Renders:** each changed state at 390px, 820px and desktop, on the real wizard with the proxy answered per state, with a keyboard pass.
+
+## 5. Rollout
+
+**Mixed versions are fail-closed** (rev 3). Rev 1's "the header is never silently ignored" was wrong, and rev 2's account flag was a read about some other request.
+- **Why the order doesn't matter:** keyed creates go only to `/v1/idempotent/*`. On an API without this release, every one gets 404, which the proxy turns into 503 "can't create this right now", with nothing created. So the web may deploy before, with or after the API.
+- **During a rollout:** a create may briefly say "try again in a few minutes". It can never duplicate.
+- **Ordering, for the shortest such window:**
+  1. Jerry applies 0066 (`--status` shows only it pending).
+  2. Merge. The API deploys on Render and the web on Vercel.
+  3. Verify `/health` reports `0066_request_idempotency.sql`, and that one wizard create succeeds, before the pilot.
+
+**Rollback rule** (rev 3):
+- To roll the API back below this release, roll the web back **with or before it**.
+- If only the API is rolled back, every wizard create gets 503 "can't create this right now" until the web follows. It is unavailable but never duplicated, and no unkeyed create path opens.
+- The old web sends no key and uses the old routes, as today.
+
+**Steps:**
+1. Codex design PASS on rev 3. API code starts after it.
+2. Code PASS and a green exact-head Release gate.
+3. Jerry applies 0066, after `--status` shows exactly it pending.
+4. Merge, then the verification above.
+
+**Mixed-version acceptance evidence:**
+- **Web tests:**
+  - the proxy sends keyed requests only to `/v1/idempotent/*` and turns a 404 there into 503 unavailable;
+  - the wizard shows "can't create this right now" with the key kept;
+  - the first send answered by an old API (404) and the retry by a new one (created): one resource;
+  - the first send created with its answer lost, and the retry hitting an old API: unavailable, nothing created; a later retry on the new API replays.
+- **API test:** the keyed route without a key gets 422; the old route given a key ignores it and stores nothing.
+
+## 6. Recorded, not fixed here
+
+- A report committed but never enqueued (the API crashed between the commit and `enqueue_generate_report`) stays `pending`. The wizard now shows "taking longer than usual" and Reports shows it pending. Recovering it belongs with the job-stall alerting in LR-027.
+- The property wizard's refusal handling is D-213 / FOLLOWUP-PROPERTY-REFUSAL-UX (LR-038). It is out of scope; the header is offered to it but not wired.
+
+## 7. Rev 2: Codex's AMEND on rev 1, and the answers
+
+1. **The 24 h expiry broke the retry promise.**
+   - **Server:** no silent expiry. A key past the 7-day replay window gets 410 `idempotency_key_expired`, and rows are kept, so an old key is never treated as new.
+   - **Client:** it promises a safe retry only within 0 to 6 days of the key's first send. A clock that moved back counts as outside. Past that, it shows "can't tell", with Go to Reports and an explicit "Send as a new request".
+   - The key is never rotated on an unknown outcome.
+2. **Replaying a deleted resource:** 410 `idempotent_resource_gone`. Nothing is recreated or enqueued, and the key is kept. An edited resource replays as it is now.
+3. **Mixed versions:** the wizard's promise is gated on `capabilities.idempotent_create` from `GET /v1/account`. Without it, the wizard shows "can't tell", never "won't create a second one". The rollout statement is corrected and the residual window stated. *(Superseded by rev 3, §8: the flag is dropped for route-gated keyed creates.)*
+4. **Fingerprint and access:** the fingerprint is defined (validated model, sorted keys at every depth, defaults filled, array order kept, server-resolved values excluded). Authentication and account derivation run before any lookup. Keys are scoped to (account, endpoint). Tests are listed in §4.
+
+## 8. Rev 3: Codex's AMEND on rev 2, and the answer
+
+**The finding:** a capability read is not a guarantee about the POST whose answer was lost. A web page with a cached `true` could retry against an API rolled back to code that ignores the key.
+
+**The answer** is to make an unsupported API **unable to act on a keyed request at all**:
+- Keyed creates use routes that exist only in this release: `/v1/idempotent/reports` and `/v1/idempotent/schedules`. The key is required on them; the old routes are unchanged and ignore keys.
+- An API without the release answers 404 without running a handler. The proxy turns that into 503 `idempotent_create_unavailable`, and the wizard says nothing was created, keeps the key, and offers a retry.
+- So whether idempotency applied is fixed by **where each request went**, not by a read made at another time. Every keyed request that created anything was handled by code that stored its key.
+- Rollback: roll the web back with or before the API. An API-only rollback is fail-closed (unavailable, never duplicated).
+- The rev 2 account capability flag is dropped as unnecessary.
+- Tests: §5's mixed-version cases, including a change of API version between the first send and the retry in both directions.
+
+## 9. Code review round 1: Codex's BLOCK on 1b4390bc, and the fixes
+
+1. **A 2xx whose body can't be read is an unknown outcome, not a create.** `classifySubmit` reads a success's body and requires the id it made (`report_id` for a report, `id` for a schedule, a UUID). A body that is cut off, empty, not an object, or has no valid id is `unreadable`. It is treated like a lost answer: the key is kept and marked uncertain, and "Try again" (only while the retry is safe) sends the same key, so the API replays the original and the wizard watches **that** id. A well-formed success still releases the key, so sending the same payload again is a new request. `sendCreate` keeps the key's books, and the wizard's submit is that call, so the tests exercise the code path the wizard runs.
+2. **Equivalent forms hash alike, by hashing what the route stores.** The fingerprint replaces fields with the value the route actually stores for them, computed by the same helper the route stores with: a schedule's omitted, null, `{}` and all-null `filters` all store `{}`; a report's null and `{}` `filters` and `additional_params` both store `{}`. A real filter, a different value, or a different array order still gets 409.
+
+Found while proving it, not fixed here: `GET /v1/reports/{id}` answers 500 for a malformed id (for example `undefined`) instead of 404.
