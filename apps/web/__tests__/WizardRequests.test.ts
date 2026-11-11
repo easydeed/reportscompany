@@ -7,7 +7,7 @@
  */
 import {
   IdempotencyKeys, MAX_STATUS_ERRORS, PROBLEMS, SLOW_AFTER_MS, STATUS_INTERVAL_MS, UNKNOWN_OUTCOME,
-  classifySubmit, limitMessage, watchReport,
+  classifySubmit, idempotencyCapable, limitMessage, watchReport,
 } from "@/lib/wizard-requests"
 
 const json = (status: number, body: unknown) =>
@@ -194,5 +194,66 @@ describe("every problem says what to do", () => {
     expect(PROBLEMS.slow.actions).toContain("keep_waiting")
     expect(PROBLEMS.unreachable.actions).toContain("check_again")
     expect(PROBLEMS.session_expired.actions).toEqual(["sign_in", "retry_submit"])
+  })
+})
+
+describe("rev 2: a safe retry is promised only when it is safe", () => {
+  const DAY = 24 * 60 * 60 * 1000
+  function keysAt(start: number) {
+    let now = start
+    const keys = new IdempotencyKeys(() => "k", () => now)
+    return { keys, set: (t: number) => { now = t } }
+  }
+
+  it.each([
+    ["just sent", 0, true],
+    ["5 days 23 hours later", 6 * DAY - 60 * 60 * 1000, true],
+    ["exactly 6 days later", 6 * DAY, true],
+    ["6 days and a second later", 6 * DAY + 1000, false],
+    ["the clock moved back", -1000, false],
+    ["a tab asleep for 25 days", 25 * DAY, false],
+  ])("%s: %s", (_, age, safe) => {
+    const { keys, set } = keysAt(1_000_000_000_000)
+    keys.keyFor("payload")
+    set(1_000_000_000_000 + (age as number))
+    expect(keys.retryIsSafe(true)).toBe(safe)
+  })
+
+  it("never without the API's capability, however fresh the key", () => {
+    const { keys } = keysAt(5)
+    keys.keyFor("payload")
+    expect(keys.retryIsSafe(false)).toBe(false)
+  })
+
+  it("the age is the key's FIRST send: retrying does not reset it", () => {
+    const { keys, set } = keysAt(0)
+    keys.keyFor("payload")
+    set(5 * DAY)
+    keys.keyFor("payload")
+    set(6 * DAY + 1000)
+    expect(keys.retryIsSafe(true)).toBe(false)
+  })
+
+  it("the capability is read from /v1/account, and only an explicit true counts", () => {
+    expect(idempotencyCapable({ capabilities: { idempotent_create: true } })).toBe(true)
+    for (const a of [{}, { capabilities: {} }, { capabilities: { idempotent_create: "true" } }, null, "x"]) {
+      expect(idempotencyCapable(a)).toBe(false)
+    }
+  })
+
+  it("the server's 410s: an expired key and a deleted resource create nothing and say so", async () => {
+    expect(await classifySubmit(json(410, { detail: { error: "idempotency_key_expired" } }), "market_reports"))
+      .toEqual({ kind: "key_expired" })
+    expect(await classifySubmit(json(410, { detail: { error: "idempotent_resource_gone", resource_id: "s1" } }), "schedules"))
+      .toEqual({ kind: "gone" })
+    expect((await classifySubmit(json(410, {}), "schedules")).kind).toBe("invalid")
+  })
+
+  it("can't-tell and gone offer the list and an explicit new request, never a blind retry", () => {
+    for (const kind of ["unknown", "gone"] as const) {
+      expect(PROBLEMS[kind].actions).toEqual(["go_list", "send_new"])
+      expect(PROBLEMS[kind].actions).not.toContain("retry_submit")
+    }
+    expect(PROBLEMS.unknown.sub).not.toMatch(/won't create a second/)
   })
 })

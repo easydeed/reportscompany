@@ -8,6 +8,10 @@
  * - One Idempotency-Key per payload: a retry after a lost response or a 5xx
  *   replays the request instead of creating a second report or schedule; an
  *   edit, or a success, starts a new one.
+ * - A safe retry is promised only when the API says it honours keys
+ *   (`capabilities.idempotent_create` on /v1/account) and the key was first
+ *   sent 0–6 days ago; the server replays for 7. Otherwise the page says it
+ *   can't tell, and a new request is an explicit choice (design rev 2).
  * - The report-status wait is bounded and every way it ends is a state the
  *   page can show (D-382): ready, failed, slow, can't check, session expired,
  *   not found. One AbortController stops it on unmount and on retry.
@@ -22,6 +26,10 @@ export type SubmitOutcome =
   | { kind: "session_expired" }
   | { kind: "server_error" }
   | { kind: "offline" }
+  // 410s from the key's replay (design rev 2): the key is past its window, or
+  // what it created has since been deleted. Neither creates anything.
+  | { kind: "key_expired" }
+  | { kind: "gone" }
 
 export type ReportOutcome =
   | { kind: "complete"; pdfUrl: string | null }
@@ -83,6 +91,11 @@ export async function classifySubmit(res: Response | null, product: Product): Pr
   const refusal = readVerificationRefusal(body)
   if (refusal) return { kind: "verification", refusal }
   if (res.status === 429) return { kind: "limit", ...limitMessage(body, product) }
+  if (res.status === 410) {
+    const code = refusalFields(body).error
+    if (code === "idempotent_resource_gone") return { kind: "gone" }
+    if (code === "idempotency_key_expired") return { kind: "key_expired" }
+  }
   if (res.status >= 500) return { kind: "server_error" }
   return { kind: "invalid", message: messageFrom(body) || "This request couldn't be accepted. Please check your choices." }
 }
@@ -95,16 +108,37 @@ export const UNKNOWN_OUTCOME: ReadonlySet<SubmitOutcome["kind"]> = new Set(["off
  * so the API replays it; a different payload, or anything after `release`,
  * gets a new one.
  */
+export const SAFE_RETRY_MAX_AGE_MS = 6 * 24 * 60 * 60 * 1000
+
+/** The API honours Idempotency-Key (rev 2). An older API omits the flag. */
+export function idempotencyCapable(account: unknown): boolean {
+  const caps = account && typeof account === "object" ? (account as Json).capabilities : null
+  return !!caps && typeof caps === "object" && (caps as Json).idempotent_create === true
+}
+
 export class IdempotencyKeys {
-  private current: { payload: string; key: string } | null = null
-  constructor(private readonly make: () => string = newKey) {}
+  private current: { payload: string; key: string; firstSentAt: number } | null = null
+  constructor(private readonly make: () => string = newKey, private readonly clock: () => number = Date.now) {}
 
   keyFor(payload: string): string {
-    if (!this.current || this.current.payload !== payload) this.current = { payload, key: this.make() }
+    if (!this.current || this.current.payload !== payload) {
+      this.current = { payload, key: this.make(), firstSentAt: this.clock() }
+    }
     return this.current.key
   }
 
-  /** After a success, or once the request's resource exists: the next submit is a new request. */
+  /**
+   * May the page promise that sending the current key again cannot create a
+   * second one? Only if the API honours keys and the key is 0–6 days old by
+   * the wall clock; a clock that went backwards counts as unknown.
+   */
+  retryIsSafe(capable: boolean): boolean {
+    if (!capable || !this.current) return false
+    const age = this.clock() - this.current.firstSentAt
+    return age >= 0 && age <= SAFE_RETRY_MAX_AGE_MS
+  }
+
+  /** After a success, once the request's resource exists, or on an explicit new request. */
   release() {
     this.current = null
   }
@@ -193,11 +227,12 @@ export async function watchReport(reportId: string, opts: WatchOptions = {}): Pr
 
 /** What each problem says and offers. Copy only; the component wires the actions. */
 export type ProblemKind =
-  | "offline" | "server_error" | "session_expired" | "invalid"
+  | "offline" | "server_error" | "session_expired" | "invalid" | "unknown" | "gone"
   | "failed" | "slow" | "unreachable" | "status_session_expired" | "not_found"
 
 export type ProblemAction =
   | "retry_submit" | "edit" | "sign_in" | "keep_waiting" | "check_again" | "go_reports" | "new_report"
+  | "go_list" | "send_new"
 
 export const PROBLEMS: Record<ProblemKind, { title: string; sub: string; actions: ProblemAction[] }> = {
   offline: {
@@ -219,6 +254,18 @@ export const PROBLEMS: Record<ProblemKind, { title: string; sub: string; actions
     title: "This couldn't be accepted",
     sub: "",
     actions: ["edit"],
+  },
+  // Rev 2: an unknown outcome when a retry can't be promised safe (no API
+  // capability, or the key is too old), or the server's 410 expired.
+  unknown: {
+    title: "We can't tell whether your earlier request went through",
+    sub: "Check your list before sending it again: if it went through, it's there. If you were signed out, sign in again in a new tab first.",
+    actions: ["go_list", "send_new"],
+  },
+  gone: {
+    title: "It was created, then deleted",
+    sub: "Your earlier request went through, and what it created has since been deleted. Nothing new was created.",
+    actions: ["go_list", "send_new"],
   },
   failed: {
     title: "We couldn't generate this report",
@@ -255,4 +302,6 @@ export const ACTION_LABELS: Record<ProblemAction, string> = {
   check_again: "Check again",
   go_reports: "Go to Reports",
   new_report: "Try again",
+  go_list: "Go to Reports",
+  send_new: "Send as a new request",
 }

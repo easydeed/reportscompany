@@ -11,7 +11,7 @@ import { ReportThumb } from "@/components/shared/report-thumb"
 import { VerificationRequired } from "@/components/shared/verification-required"
 import { type VerificationRefusal } from "@/lib/verification"
 import {
-  ACTION_LABELS, IdempotencyKeys, PROBLEMS, classifySubmit, watchReport,
+  ACTION_LABELS, IdempotencyKeys, PROBLEMS, classifySubmit, idempotencyCapable, watchReport,
   type ProblemAction, type ProblemKind,
 } from "@/lib/wizard-requests"
 import { StepStory } from "./step-story"
@@ -104,6 +104,8 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const keysRef = useRef(new IdempotencyKeys())
   const problemHeadingRef = useRef<HTMLHeadingElement | null>(null)
   const statusRef = useRef<HTMLDivElement | null>(null)
+  // Rev 2: whether this API honours Idempotency-Key (old instances, rollbacks).
+  const [canReplay, setCanReplay] = useState(false)
 
   const selectedReport = REPORT_TYPES.find(r => r.id === state.reportType)
   const needsAudience = selectedReport?.hasAudienceStep ?? false
@@ -140,6 +142,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         }
         if (aRes.ok) {
           const a = await aRes.json()
+          setCanReplay(idempotencyCapable(a))
           // Was a local THEME_ID_MAP wrong on every id (D-163): an
           // account on 4 pre-selected `elegant` and rendered in teal. A
           // retired id falls through to the default set above.
@@ -291,6 +294,19 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         queryClient.invalidateQueries({ queryKey: ["reports"] })
         router.push("/app/reports")
         return
+      case "go_list":
+        if (state.deliveryMode === "schedule") {
+          router.push("/app/schedules")
+        } else {
+          queryClient.invalidateQueries({ queryKey: ["reports"] })
+          router.push("/app/reports")
+        }
+        return
+      case "send_new":
+        // An explicit choice to make a new request: a fresh key.
+        keysRef.current.release()
+        void handleSubmit()
+        return
       case "sign_in":
         return // a link; see ProblemActions
     }
@@ -304,6 +320,11 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
+  }
+
+  function unknownMessage(isReport: boolean) {
+    const list = isReport ? "Reports" : "Schedules"
+    return `Check ${list} before sending it again: if it went through, it's there. If you were signed out, sign in again in a new tab first.`
   }
 
   async function handleSubmit() {
@@ -402,9 +423,20 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       case "invalid":
         showProblem("invalid", outcome.message)
         return
+      case "gone":
+        showProblem("gone")
+        return
+      case "key_expired":
+        showProblem("unknown", unknownMessage(isReport))
+        return
       default:
-        // offline, server_error, session_expired (UNKNOWN_OUTCOME): the request
-        // may have landed, so the key is kept and "Try again" replays it.
+        // offline, server_error, session_expired: the request may have landed.
+        // The key is kept either way (never rotated behind the person's back);
+        // "Try again" is offered only when the replay is known to be safe.
+        if (!keysRef.current.retryIsSafe(canReplay)) {
+          showProblem("unknown", unknownMessage(isReport))
+          return
+        }
         showProblem(outcome.kind)
     }
   }
@@ -782,7 +814,12 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
                     </h2>
                     <p className="m-0 text-[15px] text-[#64748B]">{problem.message || PROBLEMS[problem.kind].sub}</p>
                   </div>
-                  <ProblemActions actions={PROBLEMS[problem.kind].actions} onAct={runAction} busy={isSubmitting} />
+                  <ProblemActions
+                    actions={PROBLEMS[problem.kind].actions}
+                    onAct={runAction}
+                    busy={isSubmitting}
+                    labelFor={(a) => (a === "go_list" && state.deliveryMode === "schedule" ? "Go to Schedules" : ACTION_LABELS[a])}
+                  />
                 </div>
               )}
             </div>
@@ -844,10 +881,12 @@ function ProblemActions({
   actions,
   onAct,
   busy,
+  labelFor,
 }: {
   actions: ProblemAction[]
   onAct: (action: ProblemAction) => void
   busy: boolean
+  labelFor: (action: ProblemAction) => string
 }) {
   return (
     <div className="mt-auto flex flex-wrap gap-2.5">
@@ -860,13 +899,13 @@ function ProblemActions({
           // A new tab, so this one keeps the choices for the retry.
           return (
             <a key={action} href="/login" target="_blank" rel="noopener noreferrer" className={cls}>
-              {ACTION_LABELS[action]}
+              {labelFor(action)}
             </a>
           )
         }
         return (
           <button key={action} type="button" onClick={() => onAct(action)} disabled={busy} className={cls}>
-            {ACTION_LABELS[action]}
+            {labelFor(action)}
           </button>
         )
       })}
