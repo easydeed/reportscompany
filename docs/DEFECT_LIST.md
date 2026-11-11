@@ -62,14 +62,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 75 | Real, unfixed |
+| `open` | 76 | Real, unfixed |
 | `fixed` | 213 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **388** | D-001 … D-388, contiguous, no duplicates |
+| **Total** | **389** | D-001 … D-389, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 9 · WRONG 39 · FRAGILE 27 · ROUGH 0. (Sums to 75, the open total.)
+**Open by severity:** BROKEN 9 · WRONG 39 · FRAGILE 28 · ROUGH 0. (Sums to 76, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16486,3 +16486,13 @@ back ambiguous in a way a summary would have hidden.
 - **Scheduled delivery end-to-end** (T2.3). Needs a real send and a readable inbox.
 - **Does a deployed E2E environment exist?** (D-045). `e2e.yml` is disabled until someone can confirm a host these tests can run against *and* that all five `E2E_*` repository secrets are populated. Not a defect — a fact about the deployment that cannot be read from the repository. If the answer is no, the workflow should be deleted rather than re-enabled.
 - ~~**Is `apps/api/migrations/phase4_indexes.sql` applied in production?**~~ **ANSWERED (2026-08-18): no, and neither is `0042`.** `signup_tokens` exists but 5 of the 7 indexes do not, and the 2 that do are each declared by an *other*, applied migration. The file never ran; the table arrived by the route its own header describes — created inline by an old request handler. See **Production evidence reconciliation** for the proof, the confirming query, and the corrected bootstrap order.
+
+
+### D-389 — Malformed report lookup IDs raise a server error instead of returning not found
+
+**Severity:** FRAGILE · filed 2026-11-11 during LR-024 / PR #284 review.
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/reports.py`, `get_report`, accepts `report_id: str` and passes it directly into `WHERE id = %s AND account_id = %s`; `report_generations.id` is UUID. A malformed value such as `undefined` reaches PostgreSQL UUID parsing instead of the route's missing-row 404. Claude reported the resulting HTTP 500 during the LR-024 live reproduction; code inspection confirms the missing boundary validation. This is separate from LR-024's client fix, which must retain the retry key and never poll an invalid ID after an unreadable success. No fresh production request was made to reproduce this entry.
+
+**Acceptance:** Validate malformed report IDs before database execution and return 404 without leaking SQL details. Keep account-scoped lookup and the same 404 for a well-formed absent or foreign report ID. Add malformed, missing and foreign-ID route coverage. Recording only; no API change in this documentation branch.
