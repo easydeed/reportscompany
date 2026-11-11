@@ -2974,7 +2974,9 @@ class PropertyReportBuilder:
         _v2_market = self._build_v2_market(market_trends_data)
         if _v2_market and isinstance(context.get("market_trends"), dict):
             context["market_trends"] = {**context["market_trends"], **_v2_market}
-        context["generated_label"] = date.today().strftime("%b %-d, %Y")
+        # `%-d` is the unpadded day on Linux and a ValueError on Windows.
+        _today = date.today()
+        context["generated_label"] = f"{_today.strftime('%b')} {_today.day}, {_today.year}"
 
         logger.info("Final page_set: %s", page_set)
         logger.info("Context comparables: %d, price_low: %s, price_high: %s",
