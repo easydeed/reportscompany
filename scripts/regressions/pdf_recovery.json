@@ -1,0 +1,158 @@
+[
+  {
+    "name": "the recovery claim takes a report that already has a PDF",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "          AND cr.pdf_url IS NULL AND cr.pdf_object_key IS NULL\n          AND (cr.consumer_sms_sent_at",
+    "new": "          AND TRUE\n          AND (cr.consumer_sms_sent_at",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "the recovery claim takes an undelivered report",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "          AND (cr.consumer_sms_sent_at IS NOT NULL OR cr.consumer_email_sent_at IS NOT NULL\n               OR cr.status = 'sent')\n          AND (cr.pdf_status IS NULL",
+    "new": "          AND TRUE\n          AND (cr.pdf_status IS NULL",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "a live render is taken over as if stale",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "                   AND cr.pdf_claimed_at < NOW() - make_interval(mins => %(window)s)))",
+    "new": "                   AND cr.pdf_claimed_at < NOW() + make_interval(mins => %(window)s)))",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "a stale render's late finish overwrites the new claim",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "        WHERE id = %s::uuid AND pdf_claim_id = %s::uuid AND pdf_status = 'generating'\n          AND pdf_url IS NULL AND pdf_object_key IS NULL",
+    "new": "        WHERE id = %s::uuid AND (pdf_claim_id = %s::uuid OR TRUE) AND pdf_status = 'generating'\n          AND pdf_url IS NULL AND pdf_object_key IS NULL",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "a failed render is not recorded",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "            consumer_delivery.fail_pdf_generation(cur, rid, claim_id, text)\n",
+    "new": "",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "delivery stores no object key",
+    "file": "apps/worker/src/worker/consumer_delivery.py",
+    "old": "            pdf_object_key = %s,\n            pdf_status = CASE",
+    "new": "            pdf_object_key = NULL AND %s IS NULL,\n            pdf_status = CASE",
+    "test": "apps/worker/tests/test_consumer_pdf_recovery.py"
+  },
+  {
+    "name": "the API returns the stored (expiring) URL instead of re-signing",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "    key = pdf_object_key or object_key_from_url(pdf_url)\n",
+    "new": "    key = None\n",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "a second click queues a second job",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "          AND (pdf_status IS NULL OR pdf_status = 'failed'\n               OR (pdf_status IN ('queued', 'generating')",
+    "new": "          AND (TRUE OR pdf_status = 'failed'\n               OR (pdf_status IN ('queued', 'generating')",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "an undelivered report queues a job",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "          AND {_DELIVERED}\n",
+    "new": "",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "no visitor limit",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "    if generate_requests_last_hour(cur, ip) >= GENERATE_REQUESTS_PER_HOUR:\n        return False\n",
+    "new": "",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "a queue outage is reported as generating",
+    "file": "apps/api/src/api/routes/mobile_reports.py",
+    "old": "            consumer_pdf.mark_queue_failed(cur, rid, \"the generation job could not be queued\")\n            conn.commit()\n            return _pdf_answer(\"failed\", row)",
+    "new": "            return _pdf_answer(\"generating\", row)",
+    "test": "apps/api/tests/test_pdf_download_recovery.py"
+  },
+  {
+    "name": "the visitor limit is counted without a lock (21+ admitted concurrently)",
+    "file": "apps/api/src/api/services/consumer_pdf.py",
+    "old": "        cur.execute(\"SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))\", (f\"{GENERATE_EVENT}:{ip}\",))\n",
+    "new": "        pass\n",
+    "test": "apps/api/tests/test_pdf_download_recovery.py -k overshoot"
+  },
+  {
+    "name": "the ready link holds the first signed URL again",
+    "file": "apps/web/components/mobile-report/PdfDownloadButton.tsx",
+    "old": "          href={pdfOpenHref(reportId)}",
+    "new": "          href={state.url}",
+    "test": "__tests__/PdfDownloadButton.test.tsx",
+    "runner": "jest"
+  },
+  {
+    "name": "the open route asks POST /pdf (which can queue) instead of the status",
+    "file": "apps/web/app/api/proxy/v1/r/[id]/pdf/open/route.ts",
+    "old": "/pdf/status`, { cache: \"no-store\" })",
+    "new": "/pdf`, { method: \"POST\", cache: \"no-store\" })",
+    "test": "__tests__/PdfOpen.route.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "the open route redirects to whatever the API says, ready or not",
+    "file": "apps/web/app/api/proxy/v1/r/[id]/pdf/open/route.ts",
+    "old": "  return back\n}",
+    "new": "  return NextResponse.redirect(new URL(\"/\", request.url), 302)\n}",
+    "test": "__tests__/PdfOpen.route.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "a response body that never arrives is not raced against the deadline",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "settled(await within(readStatus(",
+    "new": "settled(await (readStatus(",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "a request that never answers is not raced against the deadline",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "readStatus(await within(fetchFn(",
+    "new": "readStatus(await (fetchFn(",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "the request itself is not cancelled (no abort signal to fetch)",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "{ ...init, signal: run.signal }",
+    "new": "{ ...init }",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "leaving the page does not stop the request",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "  else opts.signal?.addEventListener(\"abort\", onCancel)\n",
+    "new": "",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "there is no deadline",
+    "file": "apps/web/lib/pdf-download.ts",
+    "old": "setTimeout(() => stop(\"deadline\"), ",
+    "new": "setTimeout(() => undefined, ",
+    "test": "__tests__/PdfDownload.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "unmounting the button does not cancel its request",
+    "file": "apps/web/components/mobile-report/PdfDownloadButton.tsx",
+    "old": "      mounted.current = false;\n      run.current?.abort();\n",
+    "new": "      mounted.current = false;\n",
+    "test": "__tests__/PdfDownloadButton.test.tsx",
+    "runner": "jest"
+  }
+]

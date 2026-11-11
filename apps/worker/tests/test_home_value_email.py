@@ -121,8 +121,13 @@ def test_the_brand_lookup_is_the_reports_own_agent():
     own agent, or another user's photo, email and licence can ship.
     """
     src = TASKS.read_text()
-    i = src.index("COALESCE(u.photo_url, u.avatar_url)", src.index("GENERATE BRANDED PDF REPORT"))
-    query = src[i:src.index('"""', i)]
-    call = src[src.index('"""', i):src.index("brand_row = cur.fetchone()", i)]
+    # LR-022: the lookup is `_consumer_branding`, shared by delivery and the
+    # missing-PDF recovery, and both pass the report's own agent_id.
+    fn = src[src.index("def _consumer_branding(cur, account_id, agent_id)"):]
+    fn = fn[:fn.index("\ndef ")]
+    i = fn.index("COALESCE(u.photo_url, u.avatar_url)")
+    query = fn[i:fn.index('"""', i)]
     assert "u.id = %s::uuid" in query and "LIMIT 1" not in query
-    assert "agent_id" in call
+    assert "(str(account_id), str(agent_id))" in fn
+    assert src.count("_consumer_branding(cur, account_id, agent_id)") >= 3, \
+        "delivery and recovery must both look the brand up by the report's own agent"

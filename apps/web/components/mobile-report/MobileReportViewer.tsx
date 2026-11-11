@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Home, TrendingUp, BarChart3, User,
-  Phone, MessageSquare, Mail, Download, Share2,
+  Phone, MessageSquare, Mail, Share2,
   ChevronLeft, ChevronRight, MapPin, Calendar,
-  Bed, Bath, Square, Loader2
+  Bed, Bath, Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from 'next/font/google';
 import { themeName } from '@/lib/themes.generated';
+import { PdfDownloadButton } from './PdfDownloadButton';
 
 // Theme faces, as the PDF entry files set them
 // (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).
@@ -102,8 +103,6 @@ const tabs: { id: TabId; label: string; icon: any }[] = [
 export function MobileReportViewer({ report, reportId }: Props) {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [compIndex, setCompIndex] = useState(0);
-  const [pdfLoading, setPdfLoading] = useState(false);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [sessionId] = useState(() => Math.random().toString(36).slice(2));
 
   // Track tab views
@@ -129,38 +128,6 @@ export function MobileReportViewer({ report, reportId }: Props) {
         session_id: sessionId,
       }),
     }).catch(() => {});
-  };
-
-  const handleDownloadPdf = async () => {
-    setPdfLoading(true);
-    try {
-      const res = await fetch(`/api/proxy/v1/r/${reportId}/pdf`, { method: 'POST' });
-      const data = await res.json();
-      
-      if (data.status === 'ready') {
-        setPdfUrl(data.pdf_url);
-        window.open(data.pdf_url, '_blank');
-        setPdfLoading(false);
-      } else {
-        // Poll for completion
-        const checkPdf = async () => {
-          // GET on the pdf proxy is the status check (D-314: /pdf/status had no route).
-          const check = await fetch(`/api/proxy/v1/r/${reportId}/pdf`);
-          const status = await check.json();
-          if (status.status === 'ready') {
-            setPdfUrl(status.pdf_url);
-            setPdfLoading(false);
-            window.open(status.pdf_url, '_blank');
-          } else {
-            setTimeout(checkPdf, 1000);
-          }
-        };
-        checkPdf();
-      }
-    } catch (err) {
-      console.error('PDF generation failed', err);
-      setPdfLoading(false);
-    }
   };
 
   const handleShare = async () => {
@@ -239,8 +206,7 @@ export function MobileReportViewer({ report, reportId }: Props) {
               <AgentTab 
                 report={report}
                 onContactClick={trackAgentClick}
-                onDownloadPdf={handleDownloadPdf}
-                pdfLoading={pdfLoading}
+                reportId={reportId}
               />
             )}
           </motion.div>
@@ -543,13 +509,11 @@ function MarketTab({ report, formatPrice }: { report: ReportData; formatPrice: (
 function AgentTab({ 
   report, 
   onContactClick,
-  onDownloadPdf,
-  pdfLoading
+  reportId
 }: { 
   report: ReportData;
   onContactClick: (type: string) => void;
-  onDownloadPdf: () => void;
-  pdfLoading: boolean;
+  reportId: string;
 }) {
   return (
     <div className="p-4 space-y-4">
@@ -614,21 +578,8 @@ function AgentTab({
         )}
       </div>
 
-      {/* Download PDF */}
-      <div className="pt-4 border-t">
-        <button
-          onClick={onDownloadPdf}
-          disabled={pdfLoading}
-          className="flex items-center justify-center gap-2 w-full py-3 text-gray-600 hover:text-gray-900 transition"
-        >
-          {pdfLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Download className="w-5 h-5" />
-          )}
-          {pdfLoading ? 'Generating PDF...' : 'Download Full PDF Report'}
-        </button>
-      </div>
+      {/* Download PDF (LR-022): bounded, and every open is signed anew */}
+      <PdfDownloadButton reportId={reportId} />
     </div>
   );
 }
