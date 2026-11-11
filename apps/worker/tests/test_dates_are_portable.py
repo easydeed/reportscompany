@@ -1,9 +1,11 @@
 """Dates print the same on Windows as on Linux.
 
 A dash or hash flag in a strftime pattern raises ValueError on Windows.
-On main that pattern was in three product files and nowhere else under apps/
-outside tests: the property report label, the market email, and the
-home-value email. This file fails if one comes back.
+On main that pattern was in the property report label, the market email,
+and the home-value email. This file fails if one comes back.
+
+The scan reads .py, .jinja2 and .html under apps/api and apps/worker.
+A web build is not source: scanning it reports false hits and is slow.
 """
 import os
 import re
@@ -23,30 +25,29 @@ from test_property_production_render import report_data  # noqa: E402
 from worker.email.home_value import home_value_email_html  # noqa: E402
 from worker.property_builder import PropertyReportBuilder  # noqa: E402
 
-APPS = REPO / "apps"
 # A strftime flag, not a Jinja trim marker: the flag sits against the directive.
 _FLAG = re.compile("%" + r"[-#][A-Za-z]")
-_SKIP_SUFFIXES = {
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf", ".zip", ".woff", ".woff2",
-}
+_SOURCE_ROOTS = (REPO / "apps" / "api", REPO / "apps" / "worker")
+_SOURCE_SUFFIXES = {".py", ".jinja2", ".html"}
 
 
 def _date_format_flags():
     hits = []
-    for path in APPS.rglob("*"):
-        if not path.is_file() or "tests" in path.parts or path.suffix.lower() in _SKIP_SUFFIXES:
-            continue
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except (UnicodeDecodeError, OSError):
-            continue
-        for number, line in enumerate(lines, 1):
-            if _FLAG.search(line):
-                hits.append(f"{path.relative_to(REPO).as_posix()}:{number}")
+    for root in _SOURCE_ROOTS:
+        for path in root.rglob("*"):
+            if not path.is_file() or path.suffix.lower() not in _SOURCE_SUFFIXES:
+                continue
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (UnicodeDecodeError, OSError):
+                continue
+            for number, line in enumerate(lines, 1):
+                if _FLAG.search(line):
+                    hits.append(f"{path.relative_to(REPO).as_posix()}:{number}")
     return hits
 
 
-def test_no_strftime_flag_anywhere_in_apps():
+def test_no_strftime_flag_in_api_or_worker_source():
     assert _date_format_flags() == []
 
 
