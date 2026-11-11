@@ -103,6 +103,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   // One Idempotency-Key per payload: a retry replays instead of duplicating.
   const keysRef = useRef(new IdempotencyKeys())
   const problemHeadingRef = useRef<HTMLHeadingElement | null>(null)
+  const statusRef = useRef<HTMLDivElement | null>(null)
 
   const selectedReport = REPORT_TYPES.find(r => r.id === state.reportType)
   const needsAudience = selectedReport?.hasAudienceStep ?? false
@@ -230,9 +231,15 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
 
   useEffect(() => () => { watchRef.current?.abort() }, [])
 
-  // A new problem's heading takes focus, so keyboard and screen-reader users land on it.
+  // Every end state's heading takes focus (LR-024), so keyboard and
+  // screen-reader users land on what happened: a problem, the limit card, the
+  // verification card, or the finished report.
   useEffect(() => {
-    if (generationState === "problem") problemHeadingRef.current?.focus()
+    if (generationState === "idle" || generationState === "creating" || generationState === "polling") return
+    const heading = problemHeadingRef.current ?? statusRef.current?.querySelector<HTMLElement>("h2, h3")
+    if (!heading) return
+    if (!heading.hasAttribute("tabindex")) heading.setAttribute("tabindex", "-1")
+    heading.focus()
   }, [generationState, problem])
 
   function showProblem(kind: ProblemKind, message?: string) {
@@ -615,7 +622,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               </div>
             </>
           ) : (
-            <div className="flex flex-1 flex-col gap-7">
+            <div ref={statusRef} className="flex flex-1 flex-col gap-7">
               {(generationState === "creating" || generationState === "polling") && (
                 <>
                   <StepHeader
