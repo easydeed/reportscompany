@@ -11,7 +11,7 @@ import { ReportThumb } from "@/components/shared/report-thumb"
 import { VerificationRequired } from "@/components/shared/verification-required"
 import { type VerificationRefusal } from "@/lib/verification"
 import {
-  ACTION_LABELS, IdempotencyKeys, PROBLEMS, classifySubmit, idempotencyCapable, watchReport,
+  ACTION_LABELS, IdempotencyKeys, PROBLEMS, classifySubmit, watchReport,
   type ProblemAction, type ProblemKind,
 } from "@/lib/wizard-requests"
 import { StepStory } from "./step-story"
@@ -104,8 +104,6 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   const keysRef = useRef(new IdempotencyKeys())
   const problemHeadingRef = useRef<HTMLHeadingElement | null>(null)
   const statusRef = useRef<HTMLDivElement | null>(null)
-  // Rev 2: whether this API honours Idempotency-Key (old instances, rollbacks).
-  const [canReplay, setCanReplay] = useState(false)
 
   const selectedReport = REPORT_TYPES.find(r => r.id === state.reportType)
   const needsAudience = selectedReport?.hasAudienceStep ?? false
@@ -142,7 +140,6 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         }
         if (aRes.ok) {
           const a = await aRes.json()
-          setCanReplay(idempotencyCapable(a))
           // Was a local THEME_ID_MAP wrong on every id (D-163): an
           // account on 4 pre-selected `elegant` and rendered in teal. A
           // retired id falls through to the default set above.
@@ -426,6 +423,10 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
       case "gone":
         showProblem("gone")
         return
+      case "unavailable":
+        // An API without the key contract ran nothing; the key is kept.
+        showProblem("unavailable")
+        return
       case "key_expired":
         showProblem("unknown", unknownMessage(isReport))
         return
@@ -433,7 +434,7 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
         // offline, server_error, session_expired: the request may have landed.
         // The key is kept either way (never rotated behind the person's back);
         // "Try again" is offered only when the replay is known to be safe.
-        if (!keysRef.current.retryIsSafe(canReplay)) {
+        if (!keysRef.current.retryIsSafe()) {
           showProblem("unknown", unknownMessage(isReport))
           return
         }

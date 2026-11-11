@@ -1,8 +1,8 @@
-# LR-024: wizard failure states and a retry that cannot duplicate (design, rev 2)
+# LR-024: wizard failure states and a retry that cannot duplicate (design, rev 3)
 
 - **Ticket:** LR-024. **Defects:** D-382, D-330, and the unified-wizard part of D-329.
 - **Gate:** PILOT. **Lane:** Claude.
-- **Status:** rev 2, answering Codex's AMEND on rev 1 (four contract edges; see §7). For review. The ticket's rollout rule applies: "If safe retry requires an API contract change, document and review the narrow scope rather than introducing a speculative client-only workaround." It does. This note is that scope.
+- **Status:** rev 3, answering Codex's AMEND on rev 2 (an unsupported API must be unable to act on a keyed request; see §8). Rev 2 answered rev 1's AMEND (§7). For review. The ticket's rollout rule applies: "If safe retry requires an API contract change, document and review the narrow scope rather than introducing a speculative client-only workaround." It does. This note is that scope.
 
 ## 1. What is wrong today (verified at `main` 3419b0e4)
 
@@ -20,10 +20,18 @@
 
 ## 2. The API contract change (narrow)
 
-Both endpoints accept an optional **`Idempotency-Key`** request header.
-
-- **No header:** behaviour is unchanged for every other caller.
+**Keyed creates get their own routes** (rev 3): `POST /v1/idempotent/reports` and `POST /v1/idempotent/schedules`.
+- Each is the existing create handler (same body, validation, verification, limits and response), and each **requires** an `Idempotency-Key` header; without one, 422 `idempotency_key_required`.
 - **Format:** 8–100 characters of `[A-Za-z0-9_-]`. Anything else gets 422 `invalid_idempotency_key`.
+- **The existing routes are unchanged.** `POST /v1/reports` and `POST /v1/schedules` take no key and store none, so every other caller behaves exactly as today.
+
+**Why routes and not a header on the old routes:** this is what makes the contract fail-closed. An API without this release has no `/v1/idempotent/*` route, so it answers 404 **without running any handler**. A keyed request therefore either reaches code that honours its key, or creates nothing. That holds:
+- on a mixed-version rollout;
+- after a rollback;
+- for the original request whose answer was lost;
+- for every retry of it.
+
+No capability read can be stale, because there is none.
 
 **Storage.** Migration `0066_request_idempotency.sql`: a new table, additive, with `SET LOCAL lock_timeout = '5s'` and the apply-first rollout like 0064 and 0065.
 
@@ -69,7 +77,11 @@ RLS on `account_id` backs this up.
 
 **Retention.** Rows are kept. Nothing in this ticket deletes them; there is one row per wizard create. A later purge must keep at least 30 days, which is longer than any replay the client attempts (§3). A key the server no longer has would be treated as new, and the client's 6-day limit makes that unreachable.
 
-**The two Next proxies must forward it.** `apps/web/app/api/proxy/v1/reports/route.ts` and `…/schedules/route.ts` each build a fresh header set: the cookie or Bearer token plus `Content-Type`. As they stand, they would drop the key silently. Both forward `Idempotency-Key` and pass `Idempotent-Replayed` back. A proxy test pins each one.
+**The two Next proxies route on the key.** `apps/web/app/api/proxy/v1/reports/route.ts` and `…/schedules/route.ts` build a fresh header set, so they must not drop the key.
+- **A request carrying `Idempotency-Key`:** sent, with the key, to `/v1/idempotent/reports` or `/schedules`. `Idempotent-Replayed` is passed back.
+- **A request without one:** sent to the existing route, as today.
+- **A 404 from the keyed route:** this API predates the contract and ran nothing. The proxy answers **503 `idempotent_create_unavailable`**, so the page knows nothing was created.
+- Proxy tests pin all three.
 
 **What it deliberately does not do:**
 - **Store response bodies.** It replays the resource's current state, which is what a client polling the report wants.
@@ -86,14 +98,16 @@ RLS on `account_id` backs this up.
 - After a success, the key is dropped, so building the same report again on purpose is a new request.
 - A retry after a lost response or a 5xx therefore replays instead of duplicating. A retry after a terminal generation failure creates a new report, because the payload's key is dropped once its report exists.
 
-**When the wizard may promise a safe retry** (rev 2). All three must hold:
-1. The API has said it honours keys. `GET /v1/account`, which the wizard already loads, gains `capabilities.idempotent_create: true`; an older API omits it (§5).
-2. The key's `firstSentAt` is 0 to 6 days ago. A negative age (the clock moved back) or anything over 6 days fails. That is a day inside the server's 7-day window, whatever happened to the clock or the tab in between.
-3. The previous answer was unknown: offline, 5xx or 401.
+**When the wizard may promise a safe retry** (rev 3). Both must hold:
+1. The key's `firstSentAt` is 0 to 6 days ago. A negative age (the clock moved back) or anything over 6 days fails. That is a day inside the server's 7-day window, whatever happened to the clock or the tab in between.
+2. The previous answer was unknown: offline, 5xx or 401.
+
+**No capability condition is needed** (rev 3). Every keyed request goes to a route only a supporting API has, so a request that created anything was handled by code that stored its key. The rev 2 account flag is dropped.
 
 Otherwise an unknown outcome shows **"We can't tell whether your earlier request went through"**, with **Go to Reports** (or Schedules) and **Send as a new request**. The second makes a fresh key on purpose; there is no blind "Try again". The wizard never rotates a key behind the person's back after an unknown outcome.
 
 **New answers from the server:**
+- 503 `idempotent_create_unavailable` (the proxy; this API predates the contract) shows **"We can't create this right now"** ("We're updating the service. Nothing was created. Please try again in a few minutes."), with Back to edit and **Try again**. The key is kept. Nothing was created, so the retry is safe whenever it reaches a supporting API.
 - 410 `idempotency_key_expired` shows the same "can't tell" state.
 - 410 `idempotent_resource_gone` shows **"It was created, then deleted"**, with Go to Reports or Schedules and **Create it again** (a new key).
 - 409 `idempotency_key_reused` can't happen with one key per payload; if it does, it reads as an invalid request.
@@ -146,39 +160,43 @@ Otherwise an unknown outcome shows **"We can't tell whether your earlier request
   - **Rollback:** a failure injected **after** the key insert, inside the transaction, leaves neither the key nor the resource.
   - **Replay skips nothing on the way in:** an unauthenticated replay gets 401 before any lookup.
   - Each test is red on `main`, where a second report is created.
-- **Web (Jest), rev 2:**
-  - the safe-retry promise needs the capability flag and an age of 0 to 6 days. These are tested at 0, 5 d 23 h, 6 d, 6 d 1 s, a negative age (clock moved back) and a response lost across a long sleep;
+- **Web (Jest), rev 2 and 3:**
+  - the safe-retry promise needs an age of 0 to 6 days. These are tested at 0, 5 d 23 h, 6 d, 6 d 1 s, a negative age (clock moved back) and a response lost across a long sleep;
   - the two 410 states;
-  - the mixed-version pair in §5.
+  - the 503 unavailable state;
+  - the mixed-version cases in §5.
 - **Web (Jest):** both proxies forward the key; every row of both tables above; the key is reused after a lost response and changes after an edit; timers stop on unmount and on retry; focus moves to the new heading; a schedule failure shows its error.
 - **Mutations:** a spec covering the lock, the hash comparison, the same-transaction insert, the reused key, the deadline, the consecutive-error count and the schedule error path.
 - **Renders:** each changed state at 390px, 820px and desktop, on the real wizard with the proxy answered per state, with a keyboard pass.
 
 ## 5. Rollout
 
-**Mixed versions** (rev 2; rev 1's "the header is never silently ignored" was wrong). Already-deployed API code requires only 0065 and keeps serving during a zero-downtime rollout. It would ignore the key, and a lost-response retry against it would still duplicate. Two guards:
+**Mixed versions are fail-closed** (rev 3). Rev 1's "the header is never silently ignored" was wrong, and rev 2's account flag was a read about some other request.
+- **Why the order doesn't matter:** keyed creates go only to `/v1/idempotent/*`. On an API without this release, every one gets 404, which the proxy turns into 503 "can't create this right now", with nothing created. So the web may deploy before, with or after the API.
+- **During a rollout:** a create may briefly say "try again in a few minutes". It can never duplicate.
+- **Ordering, for the shortest such window:**
+  1. Jerry applies 0066 (`--status` shows only it pending).
+  2. Merge. The API deploys on Render and the web on Vercel.
+  3. Verify `/health` reports `0066_request_idempotency.sql`, and that one wizard create succeeds, before the pilot.
 
-1. **Capability, not assumption.**
-   - The wizard promises a safe retry only when `GET /v1/account` says `capabilities.idempotent_create: true` (§3).
-   - The old API omits the field. So on an old instance, or after a rollback, the wizard shows "can't tell" with Go to Reports instead of claiming a retry is safe.
-   - The key is still sent (an old API ignores it), so nothing regresses.
-2. **Order:** API first, then web.
-   1. Jerry applies 0066 (`--status` shows only it pending).
-   2. Merge. The API deploys on Render; Vercel deploys the web at the same time.
-   3. The capability flag makes the order safe either way. Rollout evidence is `/health` reporting `0066_request_idempotency.sql` and `/v1/account` returning the flag, both checked before the pilot.
-
-**Residual window, stated:**
-- Render switches traffic to a new instance once it is healthy, and old instances only drain requests already in flight.
-- A capability read from a new instance followed by a POST to an old one needs a request that started before the switch. That's seconds, not a steady state.
-- Even then, the outcome is today's behaviour, not a new failure.
+**Rollback rule** (rev 3):
+- To roll the API back below this release, roll the web back **with or before it**.
+- If only the API is rolled back, every wizard create gets 503 "can't create this right now" until the web follows. It is unavailable but never duplicated, and no unkeyed create path opens.
+- The old web sends no key and uses the old routes, as today.
 
 **Steps:**
-1. Codex design PASS on rev 2. API code starts after it.
+1. Codex design PASS on rev 3. API code starts after it.
 2. Code PASS and a green exact-head Release gate.
-3. Jerry runs `--status`, sees exactly `0066_request_idempotency.sql` pending, and applies it.
-4. Merge, then verify `/health` and `/v1/account` as above.
+3. Jerry applies 0066, after `--status` shows exactly it pending.
+4. Merge, then the verification above.
 
-**Mixed-version acceptance evidence** (web tests): the same lost-response scenario against an account answer **with** the flag (a safe retry is offered) and **without** it (the "can't tell" state, with no "won't create a second one" sentence).
+**Mixed-version acceptance evidence:**
+- **Web tests:**
+  - the proxy sends keyed requests only to `/v1/idempotent/*` and turns a 404 there into 503 unavailable;
+  - the wizard shows "can't create this right now" with the key kept;
+  - the first send answered by an old API (404) and the retry by a new one (created): one resource;
+  - the first send created with its answer lost, and the retry hitting an old API: unavailable, nothing created; a later retry on the new API replays.
+- **API test:** the keyed route without a key gets 422; the old route given a key ignores it and stores nothing.
 
 ## 6. Recorded, not fixed here
 
@@ -192,5 +210,17 @@ Otherwise an unknown outcome shows **"We can't tell whether your earlier request
    - **Client:** it promises a safe retry only within 0 to 6 days of the key's first send. A clock that moved back counts as outside. Past that, it shows "can't tell", with Go to Reports and an explicit "Send as a new request".
    - The key is never rotated on an unknown outcome.
 2. **Replaying a deleted resource:** 410 `idempotent_resource_gone`. Nothing is recreated or enqueued, and the key is kept. An edited resource replays as it is now.
-3. **Mixed versions:** the wizard's promise is gated on `capabilities.idempotent_create` from `GET /v1/account`. Without it, the wizard shows "can't tell", never "won't create a second one". The rollout statement is corrected and the residual window stated.
+3. **Mixed versions:** the wizard's promise is gated on `capabilities.idempotent_create` from `GET /v1/account`. Without it, the wizard shows "can't tell", never "won't create a second one". The rollout statement is corrected and the residual window stated. *(Superseded by rev 3, §8: the flag is dropped for route-gated keyed creates.)*
 4. **Fingerprint and access:** the fingerprint is defined (validated model, sorted keys at every depth, defaults filled, array order kept, server-resolved values excluded). Authentication and account derivation run before any lookup. Keys are scoped to (account, endpoint). Tests are listed in §4.
+
+## 8. Rev 3: Codex's AMEND on rev 2, and the answer
+
+**The finding:** a capability read is not a guarantee about the POST whose answer was lost. A web page with a cached `true` could retry against an API rolled back to code that ignores the key.
+
+**The answer** is to make an unsupported API **unable to act on a keyed request at all**:
+- Keyed creates use routes that exist only in this release: `/v1/idempotent/reports` and `/v1/idempotent/schedules`. The key is required on them; the old routes are unchanged and ignore keys.
+- An API without the release answers 404 without running a handler. The proxy turns that into 503 `idempotent_create_unavailable`, and the wizard says nothing was created, keeps the key, and offers a retry.
+- So whether idempotency applied is fixed by **where each request went**, not by a read made at another time. Every keyed request that created anything was handled by code that stored its key.
+- Rollback: roll the web back with or before the API. An API-only rollback is fail-closed (unavailable, never duplicated).
+- The rev 2 account capability flag is dropped as unnecessary.
+- Tests: §5's mixed-version cases, including a change of API version between the first send and the retry in both directions.

@@ -7,7 +7,7 @@
  */
 import {
   IdempotencyKeys, MAX_STATUS_ERRORS, PROBLEMS, SLOW_AFTER_MS, STATUS_INTERVAL_MS, UNKNOWN_OUTCOME,
-  classifySubmit, idempotencyCapable, limitMessage, watchReport,
+  classifySubmit, limitMessage, watchReport,
 } from "@/lib/wizard-requests"
 
 const json = (status: number, body: unknown) =>
@@ -197,7 +197,7 @@ describe("every problem says what to do", () => {
   })
 })
 
-describe("rev 2: a safe retry is promised only when it is safe", () => {
+describe("rev 2/3: a safe retry is promised only when it is safe", () => {
   const DAY = 24 * 60 * 60 * 1000
   function keysAt(start: number) {
     let now = start
@@ -216,13 +216,11 @@ describe("rev 2: a safe retry is promised only when it is safe", () => {
     const { keys, set } = keysAt(1_000_000_000_000)
     keys.keyFor("payload")
     set(1_000_000_000_000 + (age as number))
-    expect(keys.retryIsSafe(true)).toBe(safe)
+    expect(keys.retryIsSafe()).toBe(safe)
   })
 
-  it("never without the API's capability, however fresh the key", () => {
-    const { keys } = keysAt(5)
-    keys.keyFor("payload")
-    expect(keys.retryIsSafe(false)).toBe(false)
+  it("never before any key was sent", () => {
+    expect(new IdempotencyKeys().retryIsSafe()).toBe(false)
   })
 
   it("the age is the key's FIRST send: retrying does not reset it", () => {
@@ -231,14 +229,15 @@ describe("rev 2: a safe retry is promised only when it is safe", () => {
     set(5 * DAY)
     keys.keyFor("payload")
     set(6 * DAY + 1000)
-    expect(keys.retryIsSafe(true)).toBe(false)
+    expect(keys.retryIsSafe()).toBe(false)
   })
 
-  it("the capability is read from /v1/account, and only an explicit true counts", () => {
-    expect(idempotencyCapable({ capabilities: { idempotent_create: true } })).toBe(true)
-    for (const a of [{}, { capabilities: {} }, { capabilities: { idempotent_create: "true" } }, null, "x"]) {
-      expect(idempotencyCapable(a)).toBe(false)
-    }
+  it("rev 3: an API without the key contract (the proxy's 503) created nothing, and says so", async () => {
+    expect(await classifySubmit(json(503, { error: "idempotent_create_unavailable" }), "market_reports"))
+      .toEqual({ kind: "unavailable" })
+    expect((await classifySubmit(json(503, { detail: "upstream" }), "market_reports")).kind).toBe("server_error")
+    expect(PROBLEMS.unavailable.actions).toEqual(["edit", "retry_submit"])
+    expect(PROBLEMS.unavailable.sub).toMatch(/Nothing was created/)
   })
 
   it("the server's 410s: an expired key and a deleted resource create nothing and say so", async () => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { idempotentCreateUnavailable } from '../_idempotent';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
@@ -39,11 +40,11 @@ export async function POST(request: NextRequest) {
   
   try {
     const body = await request.json();
-    // LR-024: the wizard's Idempotency-Key must reach the API, or a retry
-    // after a lost answer creates a second schedule.
+    // LR-024 (design rev 3): a keyed create goes only to the route that
+    // honours the key. An API without it answers 404 there and runs nothing.
     const key = request.headers.get('idempotency-key');
 
-    const response = await fetch(`${API_BASE}/v1/schedules`, {
+    const response = await fetch(`${API_BASE}${key ? '/v1/idempotent/schedules' : '/v1/schedules'}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -52,6 +53,8 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify(body),
     });
+
+    if (key && response.status === 404) return idempotentCreateUnavailable();
 
     const data = await response.json();
     const replayed = response.headers.get('idempotent-replayed');
