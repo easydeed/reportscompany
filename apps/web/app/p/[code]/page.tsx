@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Barlow, Barlow_Condensed, Cormorant_Garamond, Geist, Manrope } from "next/font/google";
+import { barlow, barlowCondensed, cormorant, geist, manrope } from "@/lib/fonts";
 import { themeName } from "@/lib/themes.generated";
 import LeadCaptureForm from "./lead-capture-form";
 
@@ -10,12 +10,7 @@ type Props = {
 
 // Theme faces, as the PDF entry files set them
 // (apps/worker/src/worker/templates/property/<theme>/<theme>_report.jinja2).
-// Self-hosted through next/font; only the theme in use is painted.
-const barlowCondensed = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700"], display: "swap" });
-const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap" });
-const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"], display: "swap" });
-const geist = Geist({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap" });
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], display: "swap" });
+// Self-hosted from the repository (lib/fonts.ts); only the theme in use is painted.
 
 type ThemeFaces = { display: string; body: string; weight: number; tracking: string; kase: string; radius: string };
 const THEME_FACES: Record<string, ThemeFaces> = {
