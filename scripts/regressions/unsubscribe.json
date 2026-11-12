@@ -44,8 +44,8 @@
   {
     "name": "G3 messages go out without the one-click header",
     "file": "apps/worker/src/worker/email/send.py",
-    "old": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n",
-    "new": "            headers={},\n",
+    "old": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n        )\n        if status_code != 202:\n",
+    "new": "            headers={},\n        )\n        if status_code != 202:\n",
     "test": "apps/api/tests/test_unsubscribe_end_to_end.py"
   },
   {

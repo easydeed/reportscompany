@@ -50,6 +50,7 @@ class FakeSendGrid(ThreadingHTTPServer):
     def __init__(self):
         super().__init__(("127.0.0.1", 0), _Handler)
         self.posts = []            # one recipient per POST, in arrival order
+        self.message_headers = []  # the personalization's message headers, per POST
         self.behaviour = {}        # recipient -> "202" | "400" | "503" | "drop" | "hang"
         self.hang_seconds = 2.0
 
@@ -65,6 +66,7 @@ class _Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         email = body["personalizations"][0]["to"][0]["email"]
         self.server.posts.append(email)
+        self.server.message_headers.append(body["personalizations"][0].get("headers") or {})
         how = self.server.behaviour.get(email, "202")
         if len(self.server.posts) == 1 and "__first__" in self.server.behaviour:
             how = self.server.behaviour["__first__"]
@@ -301,6 +303,9 @@ def test_a_failed_publish_is_republished_by_the_sweep_and_then_sent_once(world, 
     assert world.run(run_id)["status"] == "completed"
     assert (sendgrid.count(R1), sendgrid.count(R2)) == (1, 1)
     assert world.email_log(run_id) == [("sent",)]
+    for headers in sendgrid.message_headers:      # the one-click unsubscribe, per recipient
+        assert headers.get("List-Unsubscribe-Post") == "List-Unsubscribe=One-Click", headers
+        assert "one-click" in headers.get("List-Unsubscribe", ""), headers
 
 
 def test_a_publish_whose_acknowledgement_was_lost_makes_two_messages_and_one_send(world, sendgrid):

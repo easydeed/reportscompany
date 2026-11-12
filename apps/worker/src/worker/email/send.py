@@ -4,10 +4,13 @@ import logging
 import hashlib
 import hmac
 from dataclasses import dataclass, field
-from typing import Callable, List, Tuple, Dict, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Tuple, Dict, Optional, Union
 from urllib.parse import quote
 
-from .providers.sendgrid import Attempt, send_email
+from .providers.sendgrid import send_email
+
+if TYPE_CHECKING:   # annotations only: tests stub the provider module
+    from .providers.sendgrid import Attempt
 from .template import schedule_email_html, schedule_email_subject
 
 logger = logging.getLogger(__name__)
@@ -118,7 +121,7 @@ class ScheduleSend:
     """
     refused: Optional[str] = None
     recipients: List[str] = field(default_factory=list)
-    attempts: List[Tuple[str, Attempt]] = field(default_factory=list)
+    attempts: List[Tuple[str, "Attempt"]] = field(default_factory=list)
 
 
 def send_schedule_email(
@@ -131,7 +134,7 @@ def send_schedule_email(
     account_type: str = "REGULAR",
     single_attempt: bool = False,
     claim: Optional[Callable[[List[str]], bool]] = None,
-    on_attempt: Optional[Callable[[str, Attempt], None]] = None,
+    on_attempt: Optional[Callable[[str, "Attempt"], None]] = None,
 ) -> Union[Tuple[int, str], ScheduleSend]:
     """
     Send a scheduled report notification email to recipients.

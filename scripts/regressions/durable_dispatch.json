@@ -195,5 +195,12 @@
     "new": "\"Every run uses one report from your allowance and pulls fresh data when it runs.\"",
     "test": "__tests__/ScheduleStepCopy.test.ts",
     "runner": "jest"
+  },
+  {
+    "name": "G3b tracked sends go out without the one-click header",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n            single_attempt=True,\n",
+    "new": "            headers={},\n            single_attempt=True,\n",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_failed_publish_is_republished_by_the_sweep_and_then_sent_once"
   }
 ]
