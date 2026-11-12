@@ -237,7 +237,12 @@ def world(db, monkeypatch, tmp_path, sendgrid):
             return None, "OperationalError: Error 111 connecting to redis:6379. Connection refused."
         return f"task-{len(published)}", None
     monkeypatch.setattr(schedules_tick, "dispatch_report", dispatch)
-    return w
+    yield w
+    # Settle this world's runs that a test left open, so a later sweep (in
+    # this session, or a live run against the same database) never takes
+    # them up and runs them again.
+    _q(db, "UPDATE schedule_runs SET status = 'failed', error = 'test teardown', finished_at = now() "
+           "WHERE schedule_id = %s AND status IN ('queued', 'processing')", w.schedule)
 
 
 # ── §2 the legacy boundary ──────────────────────────────────────────────────
