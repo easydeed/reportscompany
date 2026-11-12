@@ -244,23 +244,39 @@ class TestEvaluateReportLimit:
         assert 'Overage' in info['message']
         # Should mention billing amount (50 reports * $2 = $100)
     
-    def test_evaluate_limit_unlimited_plan(self):
-        """Plans with limit <= 0 should always ALLOW"""
+    @pytest.mark.parametrize("plan_limit,allow_overage", [(0, False), (0, True), (-1, False)])
+    @pytest.mark.parametrize("used", [0, 1, 500])
+    def test_evaluate_limit_zero_is_a_freeze_not_unlimited(self, used, plan_limit, allow_overage):
+        """LR-015 (D-375): a limit of 0 (or below) BLOCKs at any usage. It used
+        to read "Unlimited plan - no restrictions". Overage billing does not
+        unlock a freeze."""
         cursor = Mock()
-        # Setup: Unlimited plan (limit = 0)
         cursor.fetchone.side_effect = [
-            (500,),  # High usage
+            (used,),
             (0,),
-            plan_row(plan_slug='enterprise', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Enterprise', plan_limit=0, allow_overage=False, overage_price_cents=0)
+            plan_row(plan_slug='enterprise', monthly_report_limit_override=None, account_type='REGULAR', plan_name='Enterprise', plan_limit=plan_limit, allow_overage=allow_overage, overage_price_cents=200)
         ]
-        
+
         decision, info = evaluate_report_limit(cursor, 'test-account-id')
-        
-        assert decision == LimitDecision.ALLOW
-        assert info['can_proceed'] is True
-        assert info['ratio'] == 0.0
-        assert 'Unlimited' in info['message']
-    
+
+        assert decision == LimitDecision.BLOCK
+        assert info['can_proceed'] is False
+        assert 'Unlimited' not in info['message']
+        assert 'No report allowance' in info['message']
+
+    def test_evaluate_limit_override_of_zero_freezes_an_unlimited_plan(self):
+        """The account override wins over the plan, including 0 over 50000."""
+        cursor = Mock()
+        cursor.fetchone.side_effect = [
+            (0,),
+            (0,),
+            plan_row(plan_slug='enterprise', monthly_report_limit_override=0, account_type='REGULAR', plan_name='Enterprise', plan_limit=50000, allow_overage=False, overage_price_cents=0)
+        ]
+
+        decision, info = evaluate_report_limit(cursor, 'test-account-id')
+
+        assert decision == LimitDecision.BLOCK and info['can_proceed'] is False
+
     def test_evaluate_limit_very_high_limit_treated_as_unlimited(self):
         """Plans with limit >= 10000 should be treated as unlimited"""
         cursor = Mock()
@@ -314,3 +330,27 @@ class TestPlanLimitIntegration:
         assert info['plan']['monthly_report_limit'] == 200
         assert info['ratio'] == 0.75
 
+
+
+# ── LR-015 (D-375): the per-product gate ────────────────────────────────────
+
+from api.services.usage import evaluate_product_limit  # noqa: E402
+
+
+@pytest.mark.parametrize("strict", [False, True])
+@pytest.mark.parametrize("limit", [0, -1])
+@pytest.mark.parametrize("used", [0, 1, 2, 50])
+def test_a_zero_allowance_admits_nothing(used, limit, strict):
+    out = evaluate_product_limit(used, limit, strict=strict)
+    assert out == {"used": used, "limit": limit, "status": "exceeded", "can_proceed": False}
+
+
+@pytest.mark.parametrize("used,limit,strict,can", [
+    (0, 1, False, True), (1, 1, False, True), (2, 1, False, False),   # grace on a limit of one
+    (0, 1, True, True), (1, 1, True, False),                          # strict has none
+    (2, 3, False, True), (3, 3, False, True), (4, 3, False, False),
+    (10, 10, False, True), (11, 10, False, False),
+    (0, 99999, False, True), (10**6, 99999, True, True),              # the unlimited sentinel
+])
+def test_positive_limits_keep_their_rules(used, limit, strict, can):
+    assert evaluate_product_limit(used, limit, strict=strict)["can_proceed"] is can

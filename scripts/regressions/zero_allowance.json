@@ -1,0 +1,79 @@
+[
+ {
+  "name": "Z1 the gate measures a zero allowance against one again",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "    if limit <= 0:\n        return {\"used\": used, \"limit\": limit, \"status\": \"exceeded\", \"can_proceed\": False}\n",
+  "new": "",
+  "test": "apps/api/tests/test_zero_allowance.py::test_a_zero_market_allowance_refuses_and_creates_nothing apps/api/tests/test_zero_allowance.py::test_a_zero_property_allowance_refuses_before_sitex apps/api/tests/test_plans_limits.py::test_a_zero_allowance_admits_nothing"
+ },
+ {
+  "name": "Z2 zero refuses only at usage one and above (usage 0 admitted)",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "    if limit <= 0:\n        return {\"used\": used, \"limit\": limit, \"status\": \"exceeded\", \"can_proceed\": False}\n",
+  "new": "    if limit <= 0 and used > 0:\n        return {\"used\": used, \"limit\": limit, \"status\": \"exceeded\", \"can_proceed\": False}\n",
+  "test": "apps/api/tests/test_zero_allowance.py::test_a_zero_market_allowance_refuses_and_creates_nothing"
+ },
+ {
+  "name": "Z3 only exactly zero freezes (a negative allowance admits)",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "    if limit <= 0:\n        return {\"used\": used, \"limit\": limit, \"status\": \"exceeded\", \"can_proceed\": False}\n",
+  "new": "    if limit == 0:\n        return {\"used\": used, \"limit\": limit, \"status\": \"exceeded\", \"can_proceed\": False}\n",
+  "test": "apps/api/tests/test_plans_limits.py::test_a_zero_allowance_admits_nothing"
+ },
+ {
+  "name": "Z4 the unlimited sentinel stops being unlimited",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "    if limit >= 99999:\n        return {\"used\": used, \"limit\": limit, \"status\": \"ok\", \"can_proceed\": True}\n",
+  "new": "    if limit > 99999:\n        return {\"used\": used, \"limit\": limit, \"status\": \"ok\", \"can_proceed\": True}\n",
+  "test": "apps/api/tests/test_plans_limits.py::test_positive_limits_keep_their_rules"
+ },
+ {
+  "name": "Z5 the grace band is dropped for positive limits",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "        can_proceed = ratio < 1.1\n",
+  "new": "        can_proceed = ratio < 1.0\n",
+  "test": "apps/api/tests/test_zero_allowance.py::test_the_default_plan_keeps_its_ten_percent_grace apps/api/tests/test_plans_limits.py::test_positive_limits_keep_their_rules"
+ },
+ {
+  "name": "Z6 the legacy evaluator calls zero unlimited again",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "    if limit >= 10000:\n        return LimitDecision.ALLOW, {",
+  "new": "    if limit <= 0 or limit >= 10000:\n        return LimitDecision.ALLOW, {",
+  "test": "apps/api/tests/test_plans_limits.py::test_evaluate_limit_zero_is_a_freeze_not_unlimited apps/api/tests/test_plans_limits.py::test_evaluate_limit_override_of_zero_freezes_an_unlimited_plan"
+ },
+ {
+  "name": "Z7 overage billing unlocks a legacy freeze",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "    if limit <= 0:\n        return LimitDecision.BLOCK, {",
+  "new": "    if limit <= 0 and not plan[\"allow_overage\"]:\n        return LimitDecision.BLOCK, {",
+  "test": "apps/api/tests/test_plans_limits.py::test_evaluate_limit_zero_is_a_freeze_not_unlimited"
+ },
+ {
+  "name": "Z8 the worker checker measures zero against one again",
+  "file": "apps/worker/src/worker/limit_checker.py",
+  "old": "    if effective_limit <= 0:\n        can_proceed = False\n    else:\n        can_proceed = used / effective_limit < 1.1",
+  "new": "    if False:\n        can_proceed = False\n    else:\n        can_proceed = used / max(effective_limit, 1) < 1.1",
+  "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_the_worker_checker_refuses_a_zero_allowance_at_usage_zero apps/worker/tests/test_durable_schedule_dispatch.py::test_a_zero_manual_allowance_is_a_freeze_but_a_scheduled_send_still_goes"
+ },
+ {
+  "name": "Z9 the resolver drops a zero override (falsy or-chain): the plan's allowance admits",
+  "file": "apps/api/src/api/services/usage.py",
+  "old": "    market_limit    = _first_not_none(mkt_override, limit_override, mkt_plan_limit, default=3)",
+  "new": "    market_limit    = mkt_override or limit_override or mkt_plan_limit or 3",
+  "test": "apps/api/tests/test_zero_allowance.py::test_a_zero_market_allowance_refuses_and_creates_nothing apps/api/tests/test_zero_allowance.py::test_the_legacy_single_override_of_zero_freezes_market_reports_too"
+ },
+ {
+  "name": "Z10 the market route stops consulting the gate (refused work is written and queued)",
+  "file": "apps/api/src/api/routes/reports.py",
+  "old": "        if not market_status[\"can_proceed\"]:\n            raise HTTPException(\n                status_code=429,",
+  "new": "        if False:\n            raise HTTPException(\n                status_code=429,",
+  "test": "apps/api/tests/test_zero_allowance.py::test_a_zero_market_allowance_refuses_and_creates_nothing apps/api/tests/test_zero_allowance.py::test_retrying_a_refusal_stays_refused"
+ },
+ {
+  "name": "Z11 a zero manual allowance blocks creating a schedule",
+  "file": "apps/api/src/api/routes/schedules.py",
+  "old": "            schedule_status = plan_usage[\"limits\"][\"schedules\"]",
+  "new": "            schedule_status = plan_usage[\"limits\"][\"market_reports\"]",
+  "test": "apps/api/tests/test_zero_allowance.py::test_a_zero_manual_allowance_does_not_stop_a_schedule"
+ }
+]

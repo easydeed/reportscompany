@@ -105,8 +105,13 @@ def check_usage_limit(account_id: str, product: str = "market_reports") -> Dict[
             "reason": "ok",
         }
 
-    ratio = used / max(effective_limit, 1)
-    can_proceed = ratio < 1.1  # allow up to 110% (matches API evaluate_product_limit)
+    # LR-015 (D-375): a zero (or negative) allowance is a freeze. Measuring
+    # against max(limit, 1) admitted usage 0 and 1. Same rule as the API's
+    # evaluate_product_limit.
+    if effective_limit <= 0:
+        can_proceed = False
+    else:
+        can_proceed = used / effective_limit < 1.1  # 10% grace (matches the API)
 
     return {
         "can_proceed": can_proceed,
