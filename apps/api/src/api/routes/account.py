@@ -15,6 +15,7 @@ from ..services.usage import (
     get_full_plan_usage,
 )
 from ..services.plans import get_plan_catalog
+from ..config.billing import checkout_available
 from ..services.brand_resolver import resolve_brand
 from ..theme_registry import SELECTABLE_THEME_IDS
 
@@ -434,6 +435,9 @@ def get_current_account_plan_usage(request: Request, account_id: str = Depends(r
             "monthly_report_limit_override": acc_row[4],
             "sponsor_account_id":           acc_row[5],
             "billing_status":               acc_row[6],
+            # The checkout route's own rule (config/billing.py), so the app
+            # hides Upgrade exactly where the API would refuse it.
+            "checkout_available":           checkout_available(acc_row[2], acc_row[5]),
         }
 
         # Three-product usage (single call)

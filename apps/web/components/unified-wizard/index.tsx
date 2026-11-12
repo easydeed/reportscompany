@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, ArrowUpCircle, ArrowLeft, ArrowRight } from "lucide-react"
+import { Loader2, Check, FileDown, Globe, CheckCircle2, AlertCircle, Plus, ArrowLeft, ArrowRight } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
+import { usePlanUsage } from "@/hooks/use-api"
+import { checkoutOffered } from "@/lib/checkout"
 import { SharedEmailPreview, PREVIEW_DEFAULT_PRIMARY, PREVIEW_DEFAULT_ACCENT } from "@/components/shared/email-preview"
 import { ReportThumb } from "@/components/shared/report-thumb"
 import { VerificationRequired } from "@/components/shared/verification-required"
@@ -19,6 +21,7 @@ import { StepAudience } from "./step-audience"
 import { StepWhereWhen } from "./step-where-when"
 import { StepDeliver } from "./step-deliver"
 import { StepHeader } from "./wizard-ui"
+import { LimitReached } from "./limit-reached"
 import {
   type WizardState,
   type DeliveryMode,
@@ -91,6 +94,9 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
   // string. The literal here was "teal", which the theme cut retired.
   const [themeId, setThemeId] = useState(themeName(DEFAULT_THEME_ID))
   const [generationState, setGenerationState] = useState<GenerationState>("idle")
+  // Sponsored pilot: no Upgrade where the API would refuse checkout.
+  const { data: planUsage } = usePlanUsage()
+  const offerUpgrade = checkoutOffered(planUsage as { account?: { checkout_available?: boolean } } | undefined)
   const [generatedReportId, setGeneratedReportId] = useState<string | null>(null)
   const [pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [generationError, setGenerationError] = useState<string | null>(null)
@@ -738,38 +744,16 @@ export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: Un
               )}
 
               {generationState === "limit_reached" && (
-                <>
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FEF3C7]">
-                    <ArrowUpCircle className="h-[22px] w-[22px] text-[#B45309]" />
-                  </span>
-                  <StepHeader
-                    title={generationError?.split(" — ")[0] || "Limit Reached"}
-                    sub={generationError?.split(" — ")[1] || generationError || "You've used all your reports for this billing period."}
-                  />
-                  <p className="m-0 text-[15px] text-[#475569]">
-                    Upgrade your plan to continue, or wait until your limit resets next month.
-                  </p>
-                  <div className="mt-auto flex gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setGenerationState("idle")
-                        setGenerationError(null)
-                        setIsSubmitting(false)
-                      }}
-                      className="h-[46px] rounded-[9px] border border-[#D6D3CB] px-[18px] text-sm font-semibold"
-                    >
-                      Go Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => router.push("/app/settings/billing")}
-                      className="inline-flex h-[46px] items-center gap-2 rounded-[9px] bg-[#0F172A] px-5 text-sm font-semibold text-white"
-                    >
-                      <ArrowUpCircle className="h-4 w-4" /> Upgrade Plan
-                    </button>
-                  </div>
-                </>
+                <LimitReached
+                  error={generationError}
+                  offerUpgrade={offerUpgrade}
+                  onBack={() => {
+                    setGenerationState("idle")
+                    setGenerationError(null)
+                    setIsSubmitting(false)
+                  }}
+                  onUpgrade={() => router.push("/app/settings/billing")}
+                />
               )}
 
               {generationState === "verification_required" && verificationRefusal && (
