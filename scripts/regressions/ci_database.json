@@ -51,34 +51,34 @@
   {
     "name": "C8 root stops loading the database guard",
     "file": "conftest.py",
-    "old": "pytest_plugins = [\"tests.database_ci\"]",
+    "old": "pytest_plugins = [\"scripts.database_ci\"]",
     "new": "pytest_plugins = []",
     "test": "tests/test_ci_runs_the_database_suites.py"
   },
   {
     "name": "C9 collection skips become green again",
-    "file": "tests/database_ci.py",
+    "file": "scripts/database_ci.py",
     "old": "    if _required_ci and report.skipped and database_file(report.nodeid.split(\"::\")[0]):",
     "new": "    if False:",
     "test": "tests/test_database_ci_policy.py::test_required_database_skips_fail_in_every_phase"
   },
   {
     "name": "C10 runtime DB skips become green again",
-    "file": "tests/database_ci.py",
+    "file": "scripts/database_ci.py",
     "old": "    if (_required_ci and report.skipped and not hasattr(report, \"wasxfail\")",
     "new": "    if (False and report.skipped and not hasattr(report, \"wasxfail\")",
     "test": "tests/test_database_ci_policy.py::test_required_database_skips_fail_in_every_phase"
   },
   {
     "name": "C11 schema preflight ignores missing migrations",
-    "file": "tests/database_ci.py",
+    "file": "scripts/database_ci.py",
     "old": "                    if missing:",
     "new": "                    if False:",
     "test": "tests/test_database_ci_policy.py::test_preflight_rejects_invalid_ci_database_state"
   },
   {
     "name": "C12 shared DB fixture consumers are not guarded",
-    "file": "tests/database_ci.py",
+    "file": "scripts/database_ci.py",
     "old": "            if database_file(str(path.parent / (node.module + \".py\")), seen):",
     "new": "            if False:",
     "test": "tests/test_database_ci_policy.py::test_imported_database_fixture_is_also_required"

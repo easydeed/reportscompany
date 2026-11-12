@@ -22,7 +22,7 @@ def pytest_addoption(parser):
 
 import pytest  # noqa: E402
 
-pytest_plugins = ["tests.database_ci"]
+pytest_plugins = ["scripts.database_ci"]
 
 
 @pytest.fixture(autouse=True)

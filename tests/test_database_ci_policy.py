@@ -4,13 +4,41 @@ The child preflight is stubbed only for skip-policy probes; separate tests
 exercise preflight failure modes. No service or production credentials used.
 """
 import os
+import ast
 from pathlib import Path
 import subprocess
 import sys
 
 import pytest
 
-from tests import database_ci as policy
+from scripts import database_ci as policy
+
+
+def test_plugin_registration_allows_both_tests_packages_to_collect(tmp_path):
+    # Both directories really are named tests; importing root tests too early
+    # made API conftest resolve as the nonexistent root tests.conftest in CI.
+    for directory in ("scripts", "tests", "apps/api/tests"):
+        path = tmp_path / directory
+        path.mkdir(parents=True)
+        if directory != "tests":  # root tests is a namespace; API tests is a package
+            (path / "__init__.py").write_text("")
+    plugin = Path(policy.__file__).read_text(encoding="utf-8")
+    for directory in ("scripts", "tests"):
+        (tmp_path / directory / "database_ci.py").write_text(plugin, encoding="utf-8")
+    root = Path(__file__).resolve().parents[1]
+    registration = next(n for n in ast.parse((root / "conftest.py").read_text()).body
+                        if isinstance(n, ast.Assign) and any(
+                            isinstance(t, ast.Name) and t.id == "pytest_plugins" for t in n.targets))
+    (tmp_path / "conftest.py").write_text(ast.unparse(registration))
+    (tmp_path / "apps/api/tests/conftest.py").write_text("")
+    (tmp_path / "apps/api/tests/test_api.py").write_text("def test_api(): pass\n")
+    (tmp_path / "tests/test_root.py").write_text("def test_root(): pass\n")
+    env = dict(os.environ, REQUIRE_DATABASE_TESTS="0", PYTEST_DISABLE_PLUGIN_AUTOLOAD="1")
+    env.pop("PYTEST_ADDOPTS", None)
+    result = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q"],
+                            cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "2 tests collected" in result.stdout
 
 
 def probe(tmp_path, source, required=True, bypass_preflight=True, extra=""):

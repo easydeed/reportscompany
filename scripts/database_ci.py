@@ -1,6 +1,7 @@
 """LR-031: required database proof cannot silently become a skipped suite.
 
-Loaded by the initial conftest; optional on developer machines. CI opts in
+Lives outside the competing root/API `tests` packages, and is loaded by the
+initial conftest; optional on developer machines. CI opts in
 with REQUIRE_DATABASE_TESTS=1. Existing per-suite guards stay in place.
 """
 import ast

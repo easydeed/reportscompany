@@ -67,4 +67,4 @@ def test_the_isolation_suites_read_the_database_the_app_reads():
 
 
 def test_the_required_database_policy_is_loaded_by_the_initial_conftest():
-    assert 'pytest_plugins = ["tests.database_ci"]' in (REPO / "conftest.py").read_text()
+    assert 'pytest_plugins = ["scripts.database_ci"]' in (REPO / "conftest.py").read_text()
