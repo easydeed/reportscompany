@@ -112,12 +112,13 @@ jobs:
       #
       # ~90 documents in 38 seconds locally. The install is the slow part, not
       # the measurement.
-      # 20.x, because that is what package.json's `engines` declares. 22 works
-      # and warns EBADENGINE on every install; CI should run the version the
-      # repository says it supports.
+      # 22.x, because that is what package.json's `engines` declares; CI should
+      # run the version the repository says it supports. Pinned, not a range:
+      # ">=20.0.0" let Vercel float production to Node 26, where Next 16.0.7
+      # cannot resolve next/font/google, and every build failed.
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
 
       # `npm ci`, not `npm install`: it fails on a lock file that disagrees

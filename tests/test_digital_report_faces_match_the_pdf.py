@@ -33,10 +33,28 @@ def _norm_stack(stack):
     return [f.strip().strip("'\"") for f in stack.split(",")]
 
 
+def _loaders():
+    """
+    Font variable -> family, from the self-hosted loaders in apps/web/lib/fonts.ts.
+
+    The family is read from the files each loader serves (fonts/<family-slug>/),
+    so a variable that loads the wrong family's files fails here.
+    """
+    src = (REPO / "apps/web/lib/fonts.ts").read_text()
+    out = {}
+    for var, body in re.findall(r"export const (\w+) = localFont\(\{(.*?)\n\}\)", src, re.S):
+        slugs = set(re.findall(r'path: "\.\./fonts/([a-z-]+)/', body))
+        assert len(slugs) == 1, (var, slugs)
+        out[var] = " ".join(w.capitalize() for w in slugs.pop().split("-"))
+    return out
+
+
 def _page(path, theme):
     src = (REPO / path).read_text()
-    loaders = {var: fam.replace("_", " ") for var, fam in
-               re.findall(r"const (\w+) = (\w+)\(\{ subsets", src)}
+    imported = re.search(r"import \{([^}]*)\} from ['\"]@/lib/fonts['\"]", src)
+    assert imported, f"{path} no longer takes its faces from lib/fonts.ts"
+    names = {n.strip() for n in imported.group(1).split(",")}
+    loaders = {var: fam for var, fam in _loaders().items() if var in names}
     m = re.search(theme + r": \{ display: `\$\{(\w+)\.style\.fontFamily\}, ([^`]*)`, body: `\$\{(\w+)\.style\.fontFamily\}, ([^`]*)`, "
                   r"weight: (\d+), tracking: ['\"]([^'\"]*)['\"], kase: ['\"]([^'\"]*)['\"], radius: ['\"]([^'\"]*)['\"] \}", src)
     assert m, f"{path}: no THEME_FACES entry for {theme}"
