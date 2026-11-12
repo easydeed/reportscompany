@@ -1,0 +1,10 @@
+[
+  {"name": "F1 the layout fetches Plus Jakarta Sans from Google again", "file": "apps/web/app/layout.tsx",
+   "old": "import { plusJakarta } from '@/lib/fonts';\n",
+   "new": "import { Plus_Jakarta_Sans } from 'next/font/google';\nconst plusJakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' });\n",
+   "test": "__tests__/FontsAreSelfHosted.test.ts", "runner": "jest"},
+  {"name": "F2 a font file the build needs is not in the repository", "file": "apps/web/lib/fonts.ts",
+   "old": "../fonts/manrope/manrope-latin-800-normal.woff2",
+   "new": "../fonts/manrope/manrope-latin-900-normal.woff2",
+   "test": "__tests__/FontsAreSelfHosted.test.ts", "runner": "jest"}
+]
