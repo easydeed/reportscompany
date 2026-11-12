@@ -154,14 +154,20 @@ def ticker(monkeypatch):
         monkeypatch.setattr(
             schedules_tick.psycopg, "connect", lambda *a, **kw: FakeConn(world)
         )
-        monkeypatch.setattr(
-            schedules_tick, "check_usage_limit",
-            lambda account_id, product=None: {"can_proceed": limit_ok},
-        )
+        # D-332 (LR-023): the ticker no longer consults the manual allowance.
+        # Any call to it is a failure, whatever `limit_ok` says.
+        from worker import limit_checker
+
+        def no_allowance_check(*a, **k):
+            world["allowance_checked"] = True
+            return {"can_proceed": limit_ok}
+        monkeypatch.setattr(limit_checker, "check_usage_limit", no_allowance_check)
         monkeypatch.setattr(
             schedules_tick, "dispatch_report",
-            lambda *a, **kw: world["dispatched"].append(a) or "task-1",
+            lambda *a, **kw: (world["dispatched"].append(a) or "task-1", None),
         )
+        monkeypatch.setattr(schedules_tick.scheduled_runs, "record_dispatch",
+                            lambda *a, **k: world.setdefault("acks", []).append(a))
         return world
     return install
 
@@ -235,13 +241,11 @@ def stateful_ticker(monkeypatch):
             schedules_tick.psycopg, "connect", lambda *a, **kw: _Conn(world)
         )
         monkeypatch.setattr(
-            schedules_tick, "check_usage_limit",
-            lambda account_id, product=None: {"can_proceed": True},
-        )
-        monkeypatch.setattr(
             schedules_tick, "dispatch_report",
-            lambda *a, **kw: world["dispatched"].append(a) or "task-1",
+            lambda *a, **kw: (world["dispatched"].append(a) or "task-1", None),
         )
+        monkeypatch.setattr(schedules_tick.scheduled_runs, "record_dispatch",
+                            lambda *a, **k: world.setdefault("acks", []).append(a))
         return world
     return install
 
@@ -400,18 +404,23 @@ def test_the_skip_is_recorded_in_email_log(ticker):
     assert "blocked_unverified" in str(world["email_log"][0])
 
 
-def test_the_verification_check_runs_before_the_usage_check(ticker):
+def test_an_account_over_its_manual_allowance_still_sends_its_schedule(ticker):
     """
-    Order, asserted rather than assumed. An unverified account at its plan limit
-    should be told the fundamental thing, and the cheaper query should be the
-    one that runs first — but the real reason to pin it is that a later edit
-    moving the usage check above could leave the verification check unreachable
-    on the skip path without any test noticing.
+    D-332 (Jerry, November 9; LR-023). Scheduled sends use schedule capacity,
+    never the manual report allowance, and an exhausted allowance never stops an
+    existing schedule. The ticker used to skip the occurrence here, recording
+    nothing. It must now dispatch it without asking.
     """
-    world = ticker(any_verified=False, limit_ok=False)
+    world = ticker(any_verified=True, limit_ok=False)
     schedules_tick.process_due_schedules()
-    assert world["dispatched"] == []
-    assert world["email_log"], (
-        "an account that is both unverified and over its limit was skipped as "
-        "over-limit, leaving no record that it is also unverified"
-    )
+    assert len(world["dispatched"]) == 1, "an over-allowance account's schedule was not sent"
+    assert not world.get("allowance_checked"), "the ticker consulted the manual allowance"
+
+
+def test_the_ticker_marks_its_runs_recovery_tracked(ticker):
+    """LR-023 §2: only the new ticker sets the marker, with the first publish counted."""
+    world = ticker(any_verified=True)
+    schedules_tick.process_due_schedules()
+    inserts = [t for t in world["statements"] if "INSERT INTO schedule_runs" in t]
+    assert inserts and "recovery_tracked" in inserts[0] and "TRUE, 1, NOW()" in inserts[0], inserts
+    assert world.get("acks"), "the publish's acknowledgement was not recorded"

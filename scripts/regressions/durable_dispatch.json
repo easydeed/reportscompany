@@ -1,0 +1,206 @@
+[
+  {
+    "name": "D1 the ticker does not mark its runs recovery_tracked",
+    "file": "apps/worker/src/worker/schedules_tick.py",
+    "old": "VALUES (%s::uuid, %s::uuid, 'queued', NOW(), TRUE, 1, NOW())",
+    "new": "VALUES (%s::uuid, %s::uuid, 'queued', NOW(), FALSE, 1, NOW())",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_the_ticker_writes_a_tracked_occurrence_and_records_the_acknowledgement"
+  },
+  {
+    "name": "D2 the tracked sweep ignores the marker and takes legacy rows",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                WHERE sr.recovery_tracked AND sr.status IN ('queued', 'processing')\n                ORDER BY sr.created_at",
+    "new": "                WHERE sr.status IN ('queued', 'processing')\n                ORDER BY sr.created_at",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_legacy_queued_row_is_never_republished_or_leased apps/worker/tests/test_durable_schedule_dispatch.py::test_a_legacy_row_inside_its_window_is_left_alone"
+  },
+  {
+    "name": "D3 the legacy sweep fails tracked rows at 6 minutes",
+    "file": "apps/worker/src/worker/schedules_tick.py",
+    "old": "                      AND NOT recovery_tracked\n",
+    "new": "",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_the_sweep_at_six_minutes_republishes_a_dead_owner_and_does_not_fail_it"
+  },
+  {
+    "name": "D4 SKIP LOCKED removed: a sweep waits on another ticker's row",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                FOR UPDATE OF sr SKIP LOCKED",
+    "new": "                FOR UPDATE OF sr",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_concurrent_sweeps_never_take_the_same_row"
+  },
+  {
+    "name": "D5 the lease condition removed: any message takes the lease",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                  AND (sr.status = 'queued'\n                       OR (sr.status = 'processing' AND (sr.lease_at IS NULL\n                                                         OR sr.lease_at < now() - %s::interval)))",
+    "new": "                  AND (sr.status IN ('queued', 'processing') OR %s::interval IS NULL)",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_duplicate_message_writes_nothing_at_all apps/worker/tests/test_durable_schedule_dispatch.py::test_two_simultaneous_stale_takeovers_have_exactly_one_winner"
+  },
+  {
+    "name": "D6 a tracked run is run without a lease",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "            if scheduled_runs.is_tracked(DATABASE_URL, run_id):",
+    "new": "            if False and scheduled_runs.is_tracked(DATABASE_URL, run_id):",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_publish_whose_acknowledgement_was_lost_makes_two_messages_and_one_send"
+  },
+  {
+    "name": "D7 the token dropped from the owner's terminal write",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "            WHERE report_run_id = %s::uuid AND owner_token = %s::uuid AND status = 'processing'\n            RETURNING 1\n        \"\"\", (status, error, run_id, token)).fetchone()",
+    "new": "            WHERE report_run_id = %s::uuid AND %s::uuid IS NOT NULL AND status = 'processing'\n            RETURNING 1\n        \"\"\", (status, error, run_id, token)).fetchone()",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_every_owner_write_is_conditioned_on_its_token"
+  },
+  {
+    "name": "D8 report_generations writes not conditioned on the lease",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "OWNED = (\" AND (%s::uuid IS NULL OR EXISTS (SELECT 1 FROM schedule_runs o \"",
+    "new": "OWNED = (\" AND (%s::uuid IS NULL OR TRUE OR EXISTS (SELECT 1 FROM schedule_runs o \"",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_every_owner_write_is_conditioned_on_its_token"
+  },
+  {
+    "name": "D9 the POST does not wait for the send claim",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "    if claim is None or not claim(list(recipients)):",
+    "new": "    if claim is None or (claim(list(recipients)) and False):",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_the_horizon_crossed_between_the_lease_and_the_send_claim_is_expired_with_no_post"
+  },
+  {
+    "name": "D10 the claim fails open",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                     \"nothing is cleared\", run_id, e)\n        return CLAIM_ERROR",
+    "new": "                     \"nothing is cleared\", run_id, e)\n        return CLAIMED",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_claim_that_cannot_be_written_sends_nothing_and_is_recovered apps/worker/tests/test_durable_schedule_dispatch.py::test_a_claim_whose_commit_answer_was_lost_is_needs_review_and_never_sent"
+  },
+  {
+    "name": "D11 the horizon dropped from the send claim (rev 2 AMEND 1)",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                      AND sr.send_claimed_at IS NULL\n                      AND sr.created_at > now() - %s::interval",
+    "new": "                      AND sr.send_claimed_at IS NULL\n                      AND %s::interval IS NOT NULL",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_the_horizon_crossed_between_the_lease_and_the_send_claim_is_expired_with_no_post"
+  },
+  {
+    "name": "D12 status = 'processing' dropped from the send claim",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                      AND sr.owner_token = %s::uuid AND sr.status = 'processing'",
+    "new": "                      AND sr.owner_token = %s::uuid",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_row_made_terminal_after_the_lease_is_never_claimed"
+  },
+  {
+    "name": "D13 single_attempt not passed to the provider (it retries again)",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n            single_attempt=True,\n        )",
+    "new": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n            single_attempt=False,\n        )",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_503_is_one_post_on_the_tracked_path_and_four_on_the_legacy_one"
+  },
+  {
+    "name": "D14 single_attempt ignored inside sendgrid.send_email",
+    "file": "apps/worker/src/worker/email/providers/sendgrid.py",
+    "old": "    if single_attempt:\n        result = _one_attempt(payload, http_headers)",
+    "new": "    if False:\n        result = _one_attempt(payload, http_headers)",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_503_is_one_post_on_the_tracked_path_and_four_on_the_legacy_one"
+  },
+  {
+    "name": "D15 a read timeout classified as not_sent",
+    "file": "apps/worker/src/worker/email/providers/sendgrid.py",
+    "old": "    except (httpx.ConnectError, httpx.ConnectTimeout) as e:",
+    "new": "    except (httpx.ConnectError, httpx.TimeoutException) as e:",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_read_timeout_is_needs_review_with_one_post"
+  },
+  {
+    "name": "D16 a rejection hides an unknown outcome",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "    if unknown:\n        e, a = unknown[0]",
+    "new": "    if unknown and not [x for _, x in attempts if x.outcome == \"rejected\"]:\n        e, a = unknown[0]",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_an_unknown_outcome_wins_over_a_rejection"
+  },
+  {
+    "name": "D17 the loop stops after the first unknown",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "        result.attempts.append((recipient, attempt))\n",
+    "new": "        result.attempts.append((recipient, attempt))\n        if attempt.outcome == \"unknown\":\n            break\n",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_accepted_then_the_answer_lost_is_needs_review_and_never_resent"
+  },
+  {
+    "name": "D18 a tracked send fails open on a suppression error",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "            if single_attempt:\n                # LR-023: a tracked send stops",
+    "new": "            if False:\n                # LR-023: a tracked send stops",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_suppression_lookup_error_sends_nothing_and_a_republish_sends_to_the_filtered_list"
+  },
+  {
+    "name": "D19 a claimed run can be leased again (an unknown outcome resent)",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                WHERE sr.report_run_id = %s::uuid AND sr.recovery_tracked\n                  AND sr.send_claimed_at IS NULL\n                  AND (sr.status",
+    "new": "                WHERE sr.report_run_id = %s::uuid AND sr.recovery_tracked\n                  AND (sr.status",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_worker_that_dies_mid_loop_is_needs_review_and_the_rest_are_never_sent"
+  },
+  {
+    "name": "D20 the horizon removed from the worker's lease",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "                  AND sr.created_at > now() - %s::interval\n                  AND s.id = sr.schedule_id",
+    "new": "                  AND %s::interval IS NOT NULL\n                  AND s.id = sr.schedule_id",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_message_delivered_after_the_horizon_is_expired"
+  },
+  {
+    "name": "D21 the attempt cap off by one (a 7th publish)",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "    if st.dispatch_attempts >= MAX_PUBLISHES:",
+    "new": "    if st.dispatch_attempts > MAX_PUBLISHES:",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_the_sixth_publish_is_allowed_and_the_seventh_refused"
+  },
+  {
+    "name": "D22 backoff ignored",
+    "file": "apps/worker/src/worker/scheduled_runs.py",
+    "old": "    if case is None or not backoff_elapsed(st):",
+    "new": "    if case is None:",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_backoff_is_2_4_8_16_minutes_capped"
+  },
+  {
+    "name": "D23 an unconfirmed claim settled as failed",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "    if sent.refused == \"not_claimed\":\n        return TrackedResult(None, state[\"claim\"])",
+    "new": "    if sent.refused == \"not_claimed\":\n        return TrackedResult(scheduled_runs.FAILED, state[\"claim\"])",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_claim_whose_commit_answer_was_lost_is_needs_review_and_never_sent"
+  },
+  {
+    "name": "D24 a claimed run gets a 'didn't go out' email and a failed report",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "            if recorded in (\"superseded\", scheduled_runs.NEEDS_REVIEW):",
+    "new": "            if recorded == \"superseded\":",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_failed_outcome_write_after_202s_is_needs_review_and_not_resent"
+  },
+  {
+    "name": "D25 the ticker's allowance veto restored (D-332)",
+    "file": "apps/worker/src/worker/schedules_tick.py",
+    "old": "                        # D-332 (Jerry, November 9): no manual-allowance check\n",
+    "new": "                        from .limit_checker import check_usage_limit as _veto\n                        if not _veto(account_id, product=\"market_reports\")[\"can_proceed\"]:\n                            raise RuntimeError(\"limit reached\")\n                        # D-332 (Jerry, November 9): no manual-allowance check\n",
+    "test": "apps/worker/tests/test_ticker_unverified.py::test_an_account_over_its_manual_allowance_still_sends_its_schedule"
+  },
+  {
+    "name": "D26 the worker's allowance veto restored (D-332)",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        # D-332 (Jerry, November 9): scheduled sends use schedule capacity and\n",
+    "new": "        if schedule_id:\n            from .limit_checker import check_usage_limit as _veto\n            if not _veto(account_id, product=\"market_reports\")[\"can_proceed\"]:\n                return {\"ok\": False, \"reason\": \"limit_reached\", \"run_id\": run_id}\n        # D-332 (Jerry, November 9): scheduled sends use schedule capacity and\n",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_an_exhausted_manual_allowance_never_stops_or_counts_a_scheduled_send"
+  },
+  {
+    "name": "D27 a cache hit raises NameError again (closed_history unbound)",
+    "file": "apps/worker/src/worker/tasks.py",
+    "old": "        closed_history: list = []\n        closed_history_truncated = False\n        cache_payload = {",
+    "new": "        cache_payload = {",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_report_cache_hit_renders_with_empty_history"
+  },
+  {
+    "name": "D28 the old wizard allowance line restored",
+    "file": "apps/web/components/unified-wizard/step-deliver.tsx",
+    "old": "\"Scheduled runs don't use your monthly report allowance. Each one pulls fresh data when it runs.\"",
+    "new": "\"Every run uses one report from your allowance and pulls fresh data when it runs.\"",
+    "test": "__tests__/ScheduleStepCopy.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "G3b tracked sends go out without the one-click header",
+    "file": "apps/worker/src/worker/email/send.py",
+    "old": "            headers=build_one_click_unsubscribe_headers(account_id, recipient),\n            single_attempt=True,\n",
+    "new": "            headers={},\n            single_attempt=True,\n",
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_failed_publish_is_republished_by_the_sweep_and_then_sent_once"
+  }
+]

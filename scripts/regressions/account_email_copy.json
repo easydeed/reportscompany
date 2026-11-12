@@ -32,7 +32,7 @@
   {"name": "C10 a paused schedule is called still on", "file": "apps/worker/src/worker/tasks.py",
    "old": "    if active:\n        left = max(AUTO_PAUSE_AFTER", "new": "    if True:\n        left = max(AUTO_PAUSE_AFTER",
    "test": "apps/api/tests/test_account_email_copy.py"},
-  {"name": "C11 the limit email promises the skipped sends", "file": "apps/api/src/api/services/email.py",
-   "old": "\"Sends skipped before then aren&rsquo;t re-sent.\")", "new": "\"The paused sends go out within the hour.\")",
+  {"name": "C11 the limit email says schedules stop (D-332)", "file": "apps/api/src/api/services/email.py",
+   "old": "new reports pause until {_month_day(reset)}.\"", "new": "new reports pause until {_month_day(reset)}, and any scheduled send that comes due before then is skipped, not sent later.\"",
    "test": "apps/api/tests/test_account_email_copy.py"}
 ]

@@ -1,0 +1,34 @@
+[20:42:34] account a9322e0e-e813-497b-ae7e-f28a90cd218c, schedule a4cd0ac8-d536-41c7-b720-31bef6696079
+[20:42:34] ── 1. Redis is down; the ticker commits the occurrence and the publish fails
+[20:42:35] ok  run 47030559 is queued, 1 publish attempted, none acknowledged
+[20:42:35] ok  the publish failure is recorded: OperationalError: Error 111 connecting to 127.0.0.1:6391. Connection refused.
+[20:42:35] ── 2. Redis comes back; the sweep republishes; one worker runs it once
+[20:42:36] ok  a sweep inside 2 minutes does not republish (backoff)
+[20:42:36] ok  after 2 minutes the sweep republishes, and the broker acknowledges it
+[20:42:36] ok  the worker completed run 47030559
+[20:42:36] ok  one POST per recipient: ['live-second@example.com', 'live-first@example.com']
+[20:42:36] ── 3. The worker is killed mid-run; the sweep takes over; the redelivery does nothing
+[20:42:37] ok  worker A holds the lease on run c4829732
+[20:42:39] worker A killed with SIGKILL while rendering
+[20:42:39] worker B started; waiting for Redis to hand back A's unacknowledged message (visibility 20 s)
+[20:42:39] redis: unacked=1 unacked_index=1 queue=0
+[20:42:54] redis: unacked=1 unacked_index=1 queue=0
+[20:43:09] redis: unacked=1 unacked_index=1 queue=0
+[20:43:25] redis: unacked=1 unacked_index=1 queue=0
+[20:43:40] redis: unacked=1 unacked_index=1 queue=0
+[20:43:55] redis: unacked=1 unacked_index=1 queue=0
+[20:44:10] redis: unacked=1 unacked_index=1 queue=0
+[20:44:20] ok  the redelivered message found a live lease and did nothing
+[20:44:20] ok  the run is still processing under worker A's (now dead) lease
+[20:44:20] ok  at 6 minutes the sweep republishes the dead owner's run, not fails it
+[20:44:20] ok  worker B took the lease and completed it
+[20:44:20] ok  still one POST per recipient for this run: ['live3-first@example.com', 'live3-second@example.com']
+[20:44:20] ── 4. SendGrid accepts the first POST and the answer is lost
+[20:44:21] ok  run 42aac65c is needs_review: outcome unknown for 1 of 2 recipient(s): the provider may have accepted these; not resent (first: live4-first@
+[20:44:21] ok  per-recipient outcomes: {'live4-first@example.com': 'unknown', 'live4-second@example.com': 'accepted'}
+[20:44:21] ok  email_log records needs_review
+[20:44:21] ok  one POST per recipient: ['live4-first@example.com', 'live4-second@example.com']
+[20:44:46] ok  nothing was sent again: no further POST after a sweep and 25 s
+[20:44:46] ok  no POST to anyone outside these runs: ['live-second@example.com', 'live-first@example.com', 'live3-first@example.com', 'live3-second@example.com', 'live4-first@example.com', 'live4-second@example.com']
+[20:44:46] ok  the run stays needs_review
+[20:44:46] ALL STEPS PASSED

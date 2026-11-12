@@ -27,7 +27,8 @@ from . import theme_registry as _theme_registry
 from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
 from .report_builders import build_result_json
-from .limit_checker import check_usage_limit, log_limit_decision_worker
+from . import scheduled_runs
+from .scheduled_runs import OWNED, owned
 from .utils.photo_proxy import proxy_report_photos_inplace
 from .property_tasks.property_report import embed_images_as_base64
 from .filter_resolver import compute_market_stats, resolve_filters, build_filters_label, elastic_widen_filters
@@ -37,6 +38,7 @@ from celery.exceptions import Retry
 import boto3
 from botocore.client import Config
 from typing import Optional
+from dataclasses import dataclass
 
 # =============================================================================
 # PROPERTY TYPE MAPPING — copied from property.py (API endpoint)
@@ -1070,21 +1072,45 @@ def _hold_empty_report(account_id, run_id, schedule_id, recipients, report_type,
         logger.warning(f"Could not record or notify the empty report (non-critical): {e}")
 
 
+@dataclass(frozen=True)
+class TrackedSend:
+    """LR-023: a recovery-tracked scheduled send, owned by `token`."""
+    run_id: str
+    token: str
+
+
+@dataclass(frozen=True)
+class TrackedResult:
+    """
+    What a tracked send asks the caller to write to schedule_runs.
+
+    status None means WRITE NOTHING: the claim settled the run itself (an
+    ineligible run) or this owner was superseded (error "refused"); or the claim
+    could not be confirmed (error "error"), or suppression could not be checked
+    ("suppression_unavailable"). In those last two the lease goes stale and the
+    sweep decides: needs_review if a claim persisted, otherwise a republish.
+    """
+    status: Optional[str]
+    error: Optional[str]
+
+
 def _send_and_log_report_email(
     conn, cur, account_id, run_id, recipients,
     report_type, city, zips, lookback, result, pdf_url,
-    schedule_id=None,
+    schedule_id=None, tracked: Optional[TrackedSend] = None,
 ):
     """
     Shared email delivery: resolve brand, build payload, send, and log.
     Used by both the scheduled and ad-hoc email paths.
-    Returns (status_code, response_text).
+    Returns (status_code, response_text); with `tracked` (LR-023), a TrackedResult.
     """
     # D-110 (Jerry, 2026-10-30): a report that matched nothing is not sent.
     # The agent is told instead. Checked before the duplicate guard: nothing
     # was ever delivered for an empty run, and the notice dedups itself.
     if _matched_nothing(result):
         _hold_empty_report(account_id, run_id, schedule_id, recipients, report_type, city)
+        if tracked:
+            return TrackedResult("skipped_empty", "not sent: the search matched no listings")
         return (NOT_SENT_MATCHED_NOTHING, "not sent: the search matched no listings")
 
     cur.execute("SELECT name FROM accounts WHERE id = %s", (account_id,))
@@ -1108,7 +1134,13 @@ def _send_and_log_report_email(
         # has been delivered, and returning a failure would make the run record
         # itself as failed_email for a report that is sitting in the recipient's
         # inbox.
+        if tracked:
+            return TrackedResult(scheduled_runs.COMPLETED, f"duplicate send refused: {refusal}")
         return (200, f"duplicate send refused: {refusal}")
+
+    if tracked:
+        return _send_tracked(conn, account_id, run_id, schedule_id, recipients, subject,
+                             email_payload, account_name, brand, acc_type, tracked)
 
     # Committed BEFORE the provider is called — see the block above this
     # function for why this ordering and not the other one.
@@ -1144,6 +1176,122 @@ def _send_and_log_report_email(
 
     print(f"✅ Email sent to {len(recipients)} recipient(s), status: {status_code}")
     return status_code, response_text
+
+
+def _send_tracked(conn, account_id, run_id, schedule_id, recipients, subject,
+                  email_payload, account_name, brand, acc_type, tracked: TrackedSend) -> TrackedResult:
+    """
+    LR-023 §5: the claim, then one HTTP attempt per recipient, never resent.
+
+    The claim is taken inside send_schedule_email, after suppression and the
+    render and immediately before the first POST. The email_log attempt row is
+    written only once the claim is held; neither it nor `_already_delivered`
+    is the barrier, the claim is.
+    """
+    state = {"claim": None, "log_id": None}
+
+    def claim(final_recipients):
+        state["claim"] = scheduled_runs.claim_send(
+            DATABASE_URL, tracked.run_id, tracked.token, final_recipients)
+        if state["claim"] != scheduled_runs.CLAIMED:
+            return False
+        state["log_id"] = _log_email_attempt(account_id, run_id, schedule_id, final_recipients, subject)
+        return True
+
+    def on_attempt(email, attempt):
+        scheduled_runs.append_outcome(DATABASE_URL, tracked.run_id, tracked.token, email, attempt)
+
+    try:
+        sent = send_schedule_email(
+            account_id=account_id,
+            recipients=recipients,
+            payload=email_payload,
+            account_name=account_name,
+            db_conn=conn,
+            brand=brand,
+            account_type=acc_type,
+            single_attempt=True,
+            claim=claim,
+            on_attempt=on_attempt,
+        )
+    except Exception as send_error:
+        if state["claim"] == scheduled_runs.CLAIMED:
+            # Claimed, so an email may have left. Never failed, never resent.
+            _finalise_email_log(state["log_id"], account_id, "needs_review", None, str(send_error)[:2000])
+            return TrackedResult(scheduled_runs.NEEDS_REVIEW,
+                                 f"{scheduled_runs.MSG_CLAIMED_NO_OUTCOME} ({send_error})"[:2000])
+        raise
+
+    if sent.refused is None:
+        status, error, email_status = scheduled_runs.aggregate(sent.attempts)
+        _finalise_email_log(state["log_id"], account_id, email_status,
+                            202 if email_status == "sent" else None, error)
+        return TrackedResult(status, error)
+    if sent.refused == "not_claimed":
+        return TrackedResult(None, state["claim"])
+    if sent.refused == "suppression_unavailable":
+        return TrackedResult(None, "suppression_unavailable")
+    if sent.refused == "all_suppressed":
+        log_id = _log_email_attempt(account_id, run_id, schedule_id, recipients, subject)
+        _finalise_email_log(log_id, account_id, "suppressed", 200, None)
+        return TrackedResult(scheduled_runs.COMPLETED, "every recipient has unsubscribed; nothing sent")
+    # no_recipients, no_pdf, no_unsubscribe_link: definite, before any POST.
+    return TrackedResult(scheduled_runs.FAILED, f"failed_email: nothing sent ({sent.refused})")
+
+
+def _deliver_tracked(account_id, run_id, schedule_id, token, report_type, lookback,
+                     result, pdf_url) -> Optional[str]:
+    """
+    LR-023: the scheduled email for a recovery-tracked run, and its terminal
+    write under the owner's token. Returns the status written, or None.
+    """
+    try:
+        with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT set_config('app.current_account_id', %s, true)", (str(account_id),))
+                cur.execute("SELECT recipients, city, zip_codes FROM schedules WHERE id = %s",
+                            (schedule_id,))
+                row = cur.fetchone()
+                if not row:
+                    return None   # deleted: its schedule_runs row went with it
+                recipients_raw, sched_city, sched_zips = row
+                recipients = resolve_recipients_to_emails(cur, account_id, recipients_raw)
+                outcome = _send_and_log_report_email(
+                    conn, cur, account_id, run_id, recipients,
+                    report_type, sched_city, sched_zips, lookback,
+                    result, pdf_url, schedule_id=schedule_id,
+                    tracked=TrackedSend(run_id, token),
+                )
+                conn.commit()
+    except Exception as email_error:
+        logger.error("REPORT RUN %s: tracked scheduled email raised: %s", run_id, email_error,
+                     exc_info=True)
+        with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                written = scheduled_runs.finish_after_error(
+                    cur, run_id, token, scheduled_runs.FAILED,
+                    f"failed_email: {email_error}")
+        return written
+
+    if outcome.status is None:
+        logger.warning("REPORT RUN %s: tracked send wrote nothing (%s)", run_id, outcome.error)
+        return None
+    if not scheduled_runs.finish(DATABASE_URL, run_id, token, outcome.status, outcome.error):
+        logger.warning("REPORT RUN %s: superseded before recording %s", run_id, outcome.status)
+        return None
+    return outcome.status
+
+
+def _keep_lease(run_id, token):
+    """Between render stages: a live run is never taken for a dead one."""
+    if token:
+        scheduled_runs.refresh_lease(DATABASE_URL, run_id, token)
+
+
+def _owned_write(cur, run_id, token):
+    """A report_generations write that matched nothing means this owner was superseded."""
+    if token and cur.rowcount == 0:
+        raise scheduled_runs.Superseded(run_id)
 
 
 # ==================== Failure Notification ====================
@@ -1410,7 +1558,26 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
     
     # PHASE 1: STRUCTURED LOGGING FOR DEBUGGING
     print(f"🔍 REPORT RUN {run_id}: start (account={account_id}, type={report_type})")
-    
+
+    # LR-023 §4: for a recovery-tracked scheduled run, the lease is the FIRST
+    # thing, before any report_generations write. A duplicate or delayed message
+    # that does not win it writes nothing (or settles an ineligible run) and
+    # stops. Outside the try: a failure here must not reach the failure handler,
+    # which would write to a run another worker may own. The run stays open and
+    # the sweep recovers it.
+    lease_token = None
+    if schedule_id:
+        try:
+            if scheduled_runs.is_tracked(DATABASE_URL, run_id):
+                lease_token, lease_outcome = scheduled_runs.take_lease(DATABASE_URL, run_id)
+                if lease_token is None:
+                    print(f"⏭️  REPORT RUN {run_id}: not run ({lease_outcome})")
+                    return {"ok": False, "reason": lease_outcome, "run_id": run_id}
+        except Exception as lease_error:
+            logger.error("REPORT RUN %s: could not take the lease (%s); nothing written, "
+                         "the sweep will recover it", run_id, lease_error, exc_info=True)
+            return {"ok": False, "reason": "lease_unavailable", "run_id": run_id}
+
     try:
         # 1) Persist 'processing' + input
         print(f"🔍 REPORT RUN {run_id}: step=persist_status")
@@ -1421,7 +1588,8 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     UPDATE report_generations
                     SET status='processing', input_params=%s, source_vendor='simplyrets'
                     WHERE id=%s
-                """, (safe_json_dumps(params or {}), run_id))
+                """ + OWNED, (safe_json_dumps(params or {}), run_id, *owned(run_id, lease_token)))
+                _owned_write(cur, run_id, lease_token)
 
                 # Mark the schedule run as actually started.
                 #
@@ -1441,46 +1609,11 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             conn.commit()
         print(f"✅ REPORT RUN {run_id}: persist_status complete")
         
-        # ===== PRICING-003: CHECK MARKET REPORT LIMIT FOR SCHEDULED REPORTS =====
-        if schedule_id:
-            limit_result = check_usage_limit(account_id, product="market_reports")
-            log_limit_decision_worker(account_id, limit_result)
-
-            if not limit_result["can_proceed"]:
-                msg = (
-                    f"Market report limit reached "
-                    f"({limit_result['used']}/{limit_result['limit']})"
-                )
-                print(f"🚫 Skipping scheduled report: {msg}")
-
-                with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
-                    with conn.cursor() as cur:
-                        cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-                        cur.execute("""
-                            UPDATE report_generations
-                            SET status='skipped_limit',
-                                error_message=%s,
-                                processing_time_ms=%s
-                            WHERE id=%s
-                        """, (
-                            msg,
-                            int((time.perf_counter() - started) * 1000),
-                            run_id
-                        ))
-
-                        try:
-                            cur.execute("""
-                                UPDATE schedule_runs
-                                SET status='skipped_limit', finished_at=NOW()
-                                WHERE report_run_id=%s
-                            """, (run_id,))
-                        except Exception:
-                            pass  # schedule_runs may not exist yet
-
-                    conn.commit()
-
-                return {"ok": False, "reason": "limit_reached", "run_id": run_id}
-        # ===== END PRICING-003 =====
+        # D-332 (Jerry, November 9): scheduled sends use schedule capacity and
+        # never the manual report allowance, and an exhausted manual allowance
+        # never stops an existing schedule. The check that stopped them here
+        # (and marked the run skipped_limit) is removed; the counters already
+        # exclude scheduled runs (limit_checker.py, usage.py).
 
         # 2) Compute results (cache by report_type + params hash)
         print(f"🔍 REPORT RUN {run_id}: step=data_fetch")
@@ -1537,6 +1670,14 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             # Update params with resolved filters for query builders
             _params = {**_params, "filters": resolved_filters}
         
+        # Bound before the cache lookup. They were assigned only on the fetch
+        # path below, yet the PDF step reads them on every run, so a run that
+        # hit the 15-minute cache raised NameError and failed. LR-023 makes
+        # that common: a run republished after its worker died finds the result
+        # the dead run cached. A cache hit renders without the trend history,
+        # which is not cached.
+        closed_history: list = []
+        closed_history_truncated = False
         cache_payload = {"type": report_type, "params": params}
         result = cache_get("report", cache_payload)
         if not result:
@@ -1712,8 +1853,6 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             # it, price_bands sizes its boundaries from it (D-111). The other
             # five pay nothing: this is a second query, and a report that
             # will not use the answer should not buy it.
-            closed_history: list = []
-            closed_history_truncated = False
             if report_type in HISTORY_REPORT_TYPES:
                 try:
                     hq = build_closed_history(_params)
@@ -1857,10 +1996,13 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
 
         # 4) Save result_json
         print(f"🔍 REPORT RUN {run_id}: step=save_result_json")
+        _keep_lease(run_id, lease_token)
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
-                cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s", (safe_json_dumps(result), run_id))
+                cur.execute("UPDATE report_generations SET result_json=%s WHERE id=%s" + OWNED,
+                            (safe_json_dumps(result), run_id, *owned(run_id, lease_token)))
+                _owned_write(cur, run_id, lease_token)
         print(f"✅ REPORT RUN {run_id}: save_result_json complete")
 
         # 5) Generate PDF — server-side (themed) or legacy (frontend navigation)
@@ -1889,6 +2031,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     theme_accent = accent_row[0]
             conn.commit()
 
+        _keep_lease(run_id, lease_token)
         print(
             f"🔍 REPORT RUN {run_id}: step=generate_pdf "
             f"(server-side, accent={theme_accent or 'brand'})"
@@ -1992,6 +2135,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         print(f"✅ REPORT RUN {run_id}: generate_pdf complete (path={pdf_path})")
         
         # 6) Upload PDF to Cloudflare R2
+        _keep_lease(run_id, lease_token)
         print(f"🔍 REPORT RUN {run_id}: step=upload_pdf")
         # Create descriptive filename: City_ReportType_RunId.pdf
         # Sanitize city name (remove spaces, special chars)
@@ -2024,6 +2168,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         json_url = f"{DEV_BASE}/api/reports/{run_id}/data"
 
         print(f"🔍 REPORT RUN {run_id}: step=mark_completed")
+        _keep_lease(run_id, lease_token)
         with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
             with conn.cursor() as cur:
                 cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
@@ -2031,7 +2176,9 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                     UPDATE report_generations
                     SET status='completed', html_url=%s, json_url=%s, pdf_url=%s, processing_time_ms=%s
                     WHERE id = %s
-                """, (html_url, json_url, pdf_url, int((time.perf_counter()-started)*1000), run_id))
+                """ + OWNED, (html_url, json_url, pdf_url, int((time.perf_counter()-started)*1000), run_id,
+                              *owned(run_id, lease_token)))
+                _owned_write(cur, run_id, lease_token)
         print(f"✅ REPORT RUN {run_id}: mark_completed SUCCESS")
 
         # 6) Send email if this was triggered by a schedule
@@ -2055,7 +2202,15 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # so one bad upload doesn't kill the run" is a change someone makes on
         # purpose, and it would turn this into silent non-delivery the same
         # day, with nothing in any table to show for it.
-        if schedule_id and not pdf_url:
+        tracked_status = None
+        if lease_token and not pdf_url:
+            logger.error("REPORT RUN %s: report completed but no PDF URL; nothing sent", run_id)
+            scheduled_runs.finish(DATABASE_URL, run_id, lease_token, scheduled_runs.FAILED,
+                                  "report completed without a PDF URL; nothing was sent")
+        elif lease_token:
+            tracked_status = _deliver_tracked(account_id, run_id, schedule_id, lease_token,
+                                              report_type, lookback, result, pdf_url)
+        elif schedule_id and not pdf_url:
             logger.error(
                 "REPORT RUN %s: report completed but no PDF URL — schedule %s "
                 "will not be emailed. Recording as failed rather than skipping "
@@ -2208,7 +2363,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 logger.warning(f"Ad-hoc email failed for run {run_id}: {email_error}")
 
         # 7) PASS S3: Reset consecutive failures on success
-        if schedule_id:
+        if schedule_id and (lease_token is None or tracked_status == scheduled_runs.COMPLETED):
             try:
                 with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
                     with conn.cursor() as cur:
@@ -2230,6 +2385,20 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         return {"ok": True, "run_id": run_id}
 
     except Exception as e:
+        # Another worker owns this run now (LR-023 §4): this one writes nothing
+        # more, sends nothing and notifies nobody. Guarded like everything else
+        # in this handler (D-071).
+        try:
+            superseded = isinstance(e, scheduled_runs.Superseded)
+            if superseded:
+                logger.warning("REPORT RUN %s: superseded by another owner; stopping", run_id)
+        except Exception as check_error:
+            logger.error("REPORT RUN %s: could not check for a superseded owner: %s",
+                         run_id, check_error)
+            superseded = False
+        if superseded:
+            return {"ok": False, "reason": "superseded", "run_id": run_id}
+
         # PASS S3: Track failures and auto-pause after threshold
         error_msg = str(e)[:2000]  # Truncate to 2KB
 
@@ -2244,7 +2413,12 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # logged with the original error beside it — a bare `except: pass` here
         # would mean a run that failed twice over, visibly neither time.
         try:
-            _record_generation_failure(run_id, account_id, schedule_id, error_msg)
+            recorded = _record_generation_failure(run_id, account_id, schedule_id, error_msg,
+                                                  token=lease_token)
+            if recorded in ("superseded", scheduled_runs.NEEDS_REVIEW):
+                # LR-023: superseded, the run is not ours to fail or report; a
+                # claimed send may have gone out, so no "didn't go out" email.
+                return {"ok": False, "reason": recorded, "run_id": run_id}
         except Exception as bookkeeping_error:
             logger.error(
                 "REPORT RUN %s: failed to RECORD the failure — the run may be "
@@ -2280,7 +2454,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         return {"ok": False, "error": error_msg}
 
 
-def _record_generation_failure(run_id, account_id, schedule_id, error_msg):
+def _record_generation_failure(run_id, account_id, schedule_id, error_msg, token=None):
     """
     Write the terminal failure state for a run, and count it against the
     schedule's auto-pause threshold.
@@ -2294,6 +2468,11 @@ def _record_generation_failure(run_id, account_id, schedule_id, error_msg):
     attempt — auto-pausing a schedule after a single transient failure — and
     would mark `schedule_runs` failed for a run that later succeeded. It needs
     to become last-attempt-only before `autoretry_for` goes back on.
+
+    With `token` (LR-023, a recovery-tracked run) the schedule_runs write is
+    conditioned on the lease and made first. Returns "superseded" (nothing
+    written) or "needs_review" (a claimed send: nothing else written, no count
+    toward auto-pause, no failure email); True otherwise.
     """
     with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
         with conn.cursor() as cur:
@@ -2309,11 +2488,23 @@ def _record_generation_failure(run_id, account_id, schedule_id, error_msg):
                 (str(account_id),),
             )
 
+            if token:
+                # LR-023: the owner's terminal write first, under its token.
+                # Superseded: nothing more. A claimed send: needs_review, and
+                # the report itself stays as it is, uncounted and unannounced,
+                # because the email may well have gone out.
+                written = scheduled_runs.finish_after_error(cur, run_id, token, "failed", error_msg)
+                if written is None:
+                    return "superseded"
+                if written == scheduled_runs.NEEDS_REVIEW:
+                    return scheduled_runs.NEEDS_REVIEW
+
             # Update report_generations
-            cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s", (error_msg, run_id))
-            
+            cur.execute("UPDATE report_generations SET status='failed', error=%s WHERE id=%s",
+                        (error_msg, run_id))
+
             # Update schedule_runs if this was a scheduled report
-            if schedule_id:
+            if schedule_id and not token:
                 try:
                     cur.execute("""
                         UPDATE schedule_runs
@@ -2349,6 +2540,7 @@ def _record_generation_failure(run_id, account_id, schedule_id, error_msg):
                             WHERE id = %s::uuid
                         """, (schedule_id,))
                         print(f"🛑 Auto-paused schedule {schedule_id} after {consecutive_failures} consecutive failures")
+    return True
 
 
 def _consumer_already_delivered(cur, report_id: str):

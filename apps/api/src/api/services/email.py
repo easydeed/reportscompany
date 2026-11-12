@@ -652,9 +652,11 @@ def send_password_reset_email(email: str, user_name: str, reset_token: str, *,
 #
 # Only reports you make count toward the monthly market-report limit; reports
 # your schedules make do not (services/usage.get_usage_counts). Past the limit
-# there is a 10% grace (usage.grace_ceiling); beyond it new reports are refused
-# AND any scheduled send that comes due is skipped by the ticker, not sent
-# later. The count resets on the 1st.
+# there is a 10% grace (usage.grace_ceiling); beyond it new reports are refused.
+# Scheduled sends keep going: they use schedule capacity, never this allowance,
+# and an exhausted allowance never stops a schedule (D-332, Jerry, November 9;
+# LR-023 removed the ticker and worker checks that used to skip them). The
+# count resets on the 1st.
 
 def _plan_line(plan_name: Optional[str], limit: int, reset: date) -> str:
     return _note(f"{_e(plan_name) + ' · ' if plan_name else ''}{limit} market reports a month · "
@@ -688,15 +690,14 @@ def send_limit_reached_email(email: str, first_name: str, limit: int, *,
     used = limit if count is None else count
     extra = max(grace_ceiling(limit) - used, 0)
     headline = f"You&rsquo;ve used all {limit} reports this month."
-    after = (f"After {'that' if extra else 'this'}, new reports pause until {_month_day(reset)}, "
-             "and any scheduled send that comes due before then is skipped, not sent later. "
-             "Nothing is deleted; schedules pick up again on the 1st.")
+    after = f"After {'that' if extra else 'this'}, new reports pause until {_month_day(reset)}."
     lead = ((f"You can make {extra} more while you decide. " if extra else "") + after)
     content = (
-        _h1(headline) + _p(lead) + _plan_line(plan_name, limit, reset)
+        _h1(headline) + _p(lead)
+        + _p("Your scheduled reports keep sending: they don&rsquo;t count toward this limit.")
+        + _plan_line(plan_name, limit, reset)
         + _cta_button(f"{email_service.app_base}/app/settings/billing", "See plans")
-        + _note("Upgrading lifts the limit as soon as the new plan is active. "
-                "Sends skipped before then aren&rsquo;t re-sent.")
+        + _note("Upgrading lifts the limit as soon as the new plan is active.")
     )
     return _send(email, f"You've used all {limit} reports this month", content, preheader=lead,
                  reason="Sent once a month, when you reach your monthly limit.",

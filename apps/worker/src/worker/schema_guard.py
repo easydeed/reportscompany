@@ -32,7 +32,7 @@ import logging
 import os
 import sys
 
-REQUIRED_MIGRATION = "0067_lead_page_description_default.sql"
+REQUIRED_MIGRATION = "0068_durable_schedule_dispatch.sql"
 
 logger = logging.getLogger("schema_guard")
 
