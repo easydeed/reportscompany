@@ -2,7 +2,7 @@
   {
     "name": "C1 the Postgres service is removed",
     "file": ".github/workflows/backend-tests.yml",
-    "old": "    services:\n      postgres:\n        image: postgres:16\n        env:\n          POSTGRES_PASSWORD: postgres\n          POSTGRES_DB: market_reports\n        ports:\n          - 5432:5432\n        options: >-\n          --health-cmd \"pg_isready -U postgres\"\n          --health-interval 5s\n          --health-timeout 5s\n          --health-retries 10\n\n",
+    "old": "    services:\n      postgres:\n        image: postgres:17\n        env:\n          POSTGRES_PASSWORD: postgres\n          POSTGRES_DB: market_reports\n        ports:\n          - 5432:5432\n        options: >-\n          --health-cmd \"pg_isready -U postgres\"\n          --health-interval 5s\n          --health-timeout 5s\n          --health-retries 10\n\n",
     "new": "",
     "test": "tests/test_ci_runs_the_database_suites.py"
   },
@@ -16,8 +16,8 @@
   {
     "name": "C3 the test step loses DATABASE_URL",
     "file": ".github/workflows/backend-tests.yml",
-    "old": "          PDF_CONTRAST_REQUIRE_BROWSER: \"1\"\n          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/market_reports\n",
-    "new": "          PDF_CONTRAST_REQUIRE_BROWSER: \"1\"\n",
+    "old": "          PDF_CONTRAST_REQUIRE_BROWSER: \"1\"\n          REQUIRE_DATABASE_TESTS: \"1\"\n          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/market_reports\n",
+    "new": "          PDF_CONTRAST_REQUIRE_BROWSER: \"1\"\n          REQUIRE_DATABASE_TESTS: \"1\"\n",
     "test": "tests/test_ci_runs_the_database_suites.py"
   },
   {
@@ -33,5 +33,54 @@
     "old": "DB_URL = os.getenv(\"DATABASE_URL\")\n",
     "new": "DB_URL = os.getenv(\"TEST_DATABASE_URL\") or os.getenv(\"DATABASE_URL\")\n",
     "test": "tests/test_ci_runs_the_database_suites.py"
+  },
+  {
+    "name": "C6 database CI regresses to PostgreSQL 16",
+    "file": ".github/workflows/backend-tests.yml",
+    "old": "image: postgres:17",
+    "new": "image: postgres:16",
+    "test": "tests/test_ci_runs_the_database_suites.py"
+  },
+  {
+    "name": "C7 required database mode is disabled",
+    "file": ".github/workflows/backend-tests.yml",
+    "old": "          REQUIRE_DATABASE_TESTS: \"1\"\n",
+    "new": "",
+    "test": "tests/test_ci_runs_the_database_suites.py"
+  },
+  {
+    "name": "C8 root stops loading the database guard",
+    "file": "conftest.py",
+    "old": "pytest_plugins = [\"tests.database_ci\"]",
+    "new": "pytest_plugins = []",
+    "test": "tests/test_ci_runs_the_database_suites.py"
+  },
+  {
+    "name": "C9 collection skips become green again",
+    "file": "tests/database_ci.py",
+    "old": "    if _required_ci and report.skipped and database_file(report.nodeid.split(\"::\")[0]):",
+    "new": "    if False:",
+    "test": "tests/test_database_ci_policy.py::test_required_database_skips_fail_in_every_phase"
+  },
+  {
+    "name": "C10 runtime DB skips become green again",
+    "file": "tests/database_ci.py",
+    "old": "    if (_required_ci and report.skipped and not hasattr(report, \"wasxfail\")",
+    "new": "    if (False and report.skipped and not hasattr(report, \"wasxfail\")",
+    "test": "tests/test_database_ci_policy.py::test_required_database_skips_fail_in_every_phase"
+  },
+  {
+    "name": "C11 schema preflight ignores missing migrations",
+    "file": "tests/database_ci.py",
+    "old": "                    if missing:",
+    "new": "                    if False:",
+    "test": "tests/test_database_ci_policy.py::test_preflight_rejects_invalid_ci_database_state"
+  },
+  {
+    "name": "C12 shared DB fixture consumers are not guarded",
+    "file": "tests/database_ci.py",
+    "old": "            if database_file(str(path.parent / (node.module + \".py\")), seen):",
+    "new": "            if False:",
+    "test": "tests/test_database_ci_policy.py::test_imported_database_fixture_is_also_required"
   }
 ]

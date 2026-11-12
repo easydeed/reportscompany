@@ -31,7 +31,7 @@ def _step(job, name):
 
 def test_the_job_runs_a_postgres_service():
     image = (_job().get("services") or {}).get("postgres", {}).get("image", "")
-    assert image.startswith("postgres:"), "backend-tests.yml provisions no Postgres service"
+    assert image == "postgres:17", "database CI must match production's PostgreSQL major"
 
 
 def test_migrations_run_before_the_tests():
@@ -45,6 +45,7 @@ def test_migrations_run_before_the_tests():
 
 def test_the_test_step_points_at_both_databases():
     env = _step(_job(), "Run tests").get("env") or {}
+    assert env.get("REQUIRE_DATABASE_TESTS") == "1", "database proofs must fail closed in CI"
     assert env.get("DATABASE_URL", "").endswith("/market_reports"), (
         "Run tests has no DATABASE_URL: every db_session and tenant-isolation test skips"
     )
@@ -63,3 +64,7 @@ def test_the_isolation_suites_read_the_database_the_app_reads():
         src = (REPO / "apps/api/tests" / name).read_text(encoding="utf-8")
         assert 'DB_URL = os.getenv("DATABASE_URL")\n' in src, name
         assert 'getenv("TEST_DATABASE_URL")' not in src, name
+
+
+def test_the_required_database_policy_is_loaded_by_the_initial_conftest():
+    assert 'pytest_plugins = ["tests.database_ci"]' in (REPO / "conftest.py").read_text()

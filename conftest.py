@@ -22,6 +22,8 @@ def pytest_addoption(parser):
 
 import pytest  # noqa: E402
 
+pytest_plugins = ["tests.database_ci"]
+
 
 @pytest.fixture(autouse=True)
 def _no_live_market_fetch_in_property_renders(monkeypatch):
