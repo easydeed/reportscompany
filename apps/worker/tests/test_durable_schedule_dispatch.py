@@ -208,6 +208,7 @@ def world(db, monkeypatch, tmp_path, sendgrid):
     class Builder:
         def __init__(self, data):
             self.data = data
+            hooks["builder_data"] = data
 
         def render_html(self):
             return "<html><body>report</body></html>"
@@ -281,6 +282,20 @@ def test_the_ticker_writes_a_tracked_occurrence_and_records_the_acknowledgement(
     assert row["recovery_tracked"] and row["status"] == "queued"
     assert row["dispatch_attempts"] == 1 and row["dispatched_at"] is not None
     assert world.publishes(run_id) == 1
+
+
+def test_a_report_cache_hit_renders_with_empty_history(world, sendgrid):
+    """
+    D-391. The fixture serves every run from the report cache, so this is the
+    real cache-hit path: before the fix `closed_history` was unbound here and
+    the run raised UnboundLocalError instead of rendering.
+    """
+    run_id = world.tick()
+    world.deliver(run_id)
+    data = world.hooks["builder_data"]
+    assert data["closed_history"] == [] and data["closed_history_truncated"] is False
+    assert world.generation(run_id)[0] == "completed"
+    assert world.run(run_id)["status"] == "completed"
 
 
 def test_a_failed_publish_is_republished_by_the_sweep_and_then_sent_once(world, sendgrid):

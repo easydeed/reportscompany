@@ -186,7 +186,7 @@
     "file": "apps/worker/src/worker/tasks.py",
     "old": "        closed_history: list = []\n        closed_history_truncated = False\n        cache_payload = {",
     "new": "        cache_payload = {",
-    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_the_ticker_writes_a_tracked_occurrence_and_records_the_acknowledgement apps/worker/tests/test_durable_schedule_dispatch.py::test_a_failed_publish_is_republished_by_the_sweep_and_then_sent_once"
+    "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_report_cache_hit_renders_with_empty_history"
   },
   {
     "name": "D28 the old wizard allowance line restored",
