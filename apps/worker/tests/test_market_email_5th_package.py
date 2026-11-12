@@ -93,7 +93,7 @@ def test_no_claim_the_email_cannot_know(kind):
 
 def test_the_date_is_the_render_date():
     html = render("market_snapshot", "#0D9488")
-    assert html.count(FIXED_DATE.strftime("%B %-d, %Y")) == 2   # masthead + data line
+    assert html.count(f"{FIXED_DATE.strftime('%B')} {FIXED_DATE.day}, {FIXED_DATE.year}") == 2   # masthead + data line
 
 
 def test_the_unsubscribe_link_reaches_the_dark_palette():
