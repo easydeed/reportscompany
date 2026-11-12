@@ -3,15 +3,15 @@
 /**
  * "Property reports & CMAs" — Design's `Landing v4`, the seller-report card.
  *
- * The house, its estimate and its comparables are `DEMO_LISTING`,
- * `DEMO_ESTIMATE` and `DEMO_COMPS`. The deck priced its own house at $1.41M;
- * the fixture's listing is $1.19M, and the comps were re-centred on it so the
- * card does not contradict the rest of the page about one house.
+ * The house and its comparables are `DEMO_LISTING` and `DEMO_COMPS`; the
+ * range and median are `DEMO_COMPS_RANGE`, computed from those comps. The
+ * report estimates nothing (LR-025, D-383): it shows the range of the
+ * comparable sales it lists, over the last 6 months, and so does this card.
  */
 import {
   DEMO_AGENT,
   DEMO_COMPS,
-  DEMO_ESTIMATE,
+  DEMO_COMPS_RANGE,
   DEMO_LISTING,
   reportDate,
 } from "@/lib/demo-data";
@@ -41,21 +41,19 @@ export function PropertyReports() {
             <div className="text-xl font-semibold leading-[1.15]">
               {DEMO_LISTING.address}, {area}
             </div>
-            <div className="flex items-end gap-3">
-              <span className="text-[56px] font-semibold leading-[0.9] tracking-[-0.045em]">
-                {DEMO_ESTIMATE.value}
+            <div className="flex flex-col gap-1.5">
+              <span className="whitespace-nowrap text-[34px] font-semibold leading-[0.95] tracking-[-0.04em] sm:text-[44px]">
+                {DEMO_COMPS_RANGE.low} – {DEMO_COMPS_RANGE.high}
               </span>
-              <span className="pb-1 text-[13px] leading-[1.35] text-white/85">
-                estimated value
-                <br />
-                {DEMO_ESTIMATE.low} – {DEMO_ESTIMATE.high}
+              <span className="text-[13px] leading-[1.35] text-white/85">
+                range of comparable sales · median {DEMO_COMPS_RANGE.median}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-3 border-t border-white/25 pt-3.5">
               {[
                 [`${DEMO_LISTING.beds} / ${DEMO_LISTING.baths}`, "Bd / Ba"],
                 [DEMO_LISTING.sqft, "Sq ft"],
-                [DEMO_ESTIMATE.pricePerSqft, "Per sq ft"],
+                [DEMO_LISTING.pricePerSqft, "Per sq ft"],
               ].map(([v, l]) => (
                 <div key={l}>
                   <div className="text-lg font-semibold">{v}</div>
@@ -67,7 +65,7 @@ export function PropertyReports() {
 
           <div className="flex flex-1 flex-col gap-3 px-[30px] pb-[26px] pt-[22px]">
             <div className="border-b-[1.5px] border-[#14161A] pb-2 text-[11px] uppercase tracking-[0.06em] text-[#5E636B]">
-              Comparable sales · last 90 days
+              Comparable sales · last 6 months
             </div>
             {DEMO_COMPS.map((c) => (
               <div
@@ -95,9 +93,9 @@ export function PropertyReports() {
                 </span>
               </div>
               <div className="flex justify-between text-[11px] text-[#5E636B]">
-                <span>{DEMO_ESTIMATE.compsLow}</span>
+                <span>{DEMO_COMPS_RANGE.low}</span>
                 <span>Range of comparable sales</span>
-                <span>{DEMO_ESTIMATE.compsHigh}</span>
+                <span>{DEMO_COMPS_RANGE.high}</span>
               </div>
             </div>
           </div>
@@ -107,7 +105,7 @@ export function PropertyReports() {
       <SectionCopy
         eyebrow="Property reports & CMAs"
         title="Type an address. Walk in with a seller report."
-        lede="Estimated value, comparable sales, your branding. Ready before the listing appointment."
+        lede="The range of comparable sales, every sale behind it, your branding. Ready before the listing appointment."
       />
     </SplitSection>
   );

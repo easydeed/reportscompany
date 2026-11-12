@@ -209,8 +209,8 @@ export default function CmaFunnel({ agent, api, cover, initialAddress = "" }: {
           {step === "address" && (
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-[10px]">
-                <h1 className="text-balance text-[clamp(30px,5vw,40px)] font-extrabold leading-[1.05] tracking-[-0.035em]">{agent.city ? `What's your ${agent.city} home worth today?` : "What's your home worth today?"}</h1>
-                <p className="text-pretty text-[17px] text-[#475569]">Based on this month's closed sales near you. Free, from {first} — no sign-up.</p>
+                <h1 className="text-balance text-[clamp(30px,5vw,40px)] font-extrabold leading-[1.05] tracking-[-0.035em]">See what homes like yours sold for</h1>
+                <p className="text-pretty text-[17px] text-[#475569]">Based on the last 6 months of sales near you. Free, from {first} — no sign-up.</p>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="relative">
