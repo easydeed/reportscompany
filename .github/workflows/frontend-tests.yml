@@ -27,8 +27,10 @@ jobs:
       # Must come AFTER pnpm/action-setup — `cache: pnpm` shells out to pnpm to
       # locate the store, so setup-node fails if pnpm is not on PATH yet.
       #
-      # node-version-file rather than a literal "20": .nvmrc pins 20.18.1 and is
-      # what local development and Vercel both read. The previous "20" floated
+      # node-version-file rather than a literal "22": .nvmrc pins 22.22.0 and is
+      # what local development reads. Vercel reads `engines` in
+      # apps/web/package.json, pinned to "22.x" to match: a range there
+      # (">=20.0.0") let Vercel float to Node 26 and fail every build. The previous "20" floated
       # to whatever 20.x the runner shipped, so CI and production could differ
       # by a patch release with nothing recording it.
       - uses: actions/setup-node@v4
