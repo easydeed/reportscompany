@@ -1,6 +1,6 @@
 # LR-023: a committed scheduled send survives a broker failure (D-381), and schedules never use the manual allowance (D-332)
 
-Design rev 2: answers Codex's AMEND on rev 1 (§9). Written for design re-review before code. Builder: Claude.
+Design rev 3: answers Codex's AMEND on rev 2 (§10), keeping rev 2's answers to rev 1 (§9) unchanged. Written for design re-review before code. Builder: Claude.
 The facts below were verified at `main` `dbdb0f70`.
 
 ## 1. What is wrong today
@@ -42,9 +42,12 @@ An occurrence is one `schedule_runs` row: one durable identity, created once by 
 | `last_dispatch_error text` | The last publish failure, for operators. |
 | `owner_token uuid`, `lease_at timestamptz` | The execution lease: who holds the occurrence, and since when (AMEND 2). |
 | `send_claimed_at timestamptz`, `send_token uuid` | The durable pre-send claim (AMEND 3). Once set, it is never cleared. |
+| `send_recipients text[]` | The exact recipients the claim committed to: current recipients after send-time suppression (§5). |
+| `send_outcomes jsonb NOT NULL DEFAULT '[]'` | One entry per recipient POSTed: `{email, outcome, status_code, at}` (§5). |
 
 - **Index:** a partial index on `(created_at) WHERE recovery_tracked AND status IN ('queued', 'processing')`.
 - **New statuses:** `cancelled`, `expired`, `blocked_unverified`, `needs_review`. `status` is free text since 0006, so no constraint changes.
+- **`email_log.status`:** 0068 also updates the column's COMMENT (last set by 0062) to add `needs_review`. The column is plain text, so no data or constraint changes.
 - **Rollout:** the migration takes `SET LOCAL lock_timeout = '5s'`, and both schema guards advance to 0068.
 
 **Legacy rows keep today's behaviour exactly.** The worker uses the current start update for them. The sweep's existing pass (fail "never picked up" after 30 minutes, "died while running" after 6) applies to `NOT recovery_tracked` rows only. A legacy row is never republished, leased or send-claimed. The D-332 veto removal applies to them too, because it is a policy change, not a recovery mechanism.
@@ -93,38 +96,70 @@ RETURNING sr.owner_token
 - **Every later write by an owner is conditioned on its token.** That covers `schedule_runs` terminal status, the send claim, and `report_generations` status and URLs; the last are written as `... WHERE id = $run AND EXISTS (SELECT 1 FROM schedule_runs WHERE report_run_id = $run AND owner_token = $tok)`. When a write matches nothing, this owner was superseded: it stops, sends nothing and settles nothing.
 - **The lease is refreshed** (`lease_at = now()`, token-conditioned) between the render stages. A long but live run is therefore never mistaken for a dead one. Today p99 is 41 s, the maximum 80 s, and `task_time_limit` 300 s, against a 6-minute stale window.
 
-## 5. Delivery: at most one provider call per occurrence, failing closed
+## 5. Delivery: one HTTP attempt per recipient, inside one claimed occurrence, failing closed
 
 `send_schedule_email` (SendGrid) takes no idempotency key, so an unknown outcome cannot be safely repeated. Jerry's standing rule, the LR-020 policy, applies here too: **an unknown send outcome becomes `needs_review` and is never re-sent automatically.**
 
-1. **Pre-send claim.** It is committed **before** the provider call, in one transaction that also re-checks eligibility:
+**What today's path does, and why rev 2's "unchanged" was wrong (rev 2 AMEND 2).** Verified at `main` `dbdb0f70`:
+- `send_schedule_email` sends **one message per recipient** (`send.py:253–267`), so that each recipient carries their own unsubscribe token.
+- Each of those calls goes to `sendgrid.send_email`, which **re-POSTs** up to `MAX_RETRIES = 3` more times (`sendgrid.py:93–136`; Codex's review cites 104–145, the same loop): after a `TimeoutException`, after a `RequestError`, and after a 429 or 5xx. A POST that SendGrid accepted, but whose response was lost, is POSTed again by the provider itself. The outer claim cannot stop that.
+- The provider reports a timeout as a made-up `504`, a request error as `500`, and a missing API key as `500`. `send_schedule_email` returns only the **first** failing recipient's code (`:277–283`). Status codes therefore cannot separate "definitely not sent" from "unknown", and a definite rejection for one recipient hides an unknown outcome for another.
+
+**The change: an explicit single-attempt mode, threaded through the existing helpers. The provider is reused, not replaced.**
+- `sendgrid.send_email(..., single_attempt=False)`. With `True`, it makes exactly one `client.post` and no `time.sleep`/retry, and returns a typed `Attempt(outcome, status_code, detail)` instead of the tuple:
+
+  | What happened on the one POST | `outcome` |
+  |---|---|
+  | 202 | `accepted` |
+  | A response arrived with a 4xx, 429 included | `rejected` (SendGrid answered, and did not accept) |
+  | A response arrived with a 5xx | `unknown` |
+  | `httpx.ConnectError` or `httpx.ConnectTimeout`: no connection was made, so no request was sent | `not_sent` |
+  | Any other timeout (read, write, pool), any other `RequestError` (a dropped connection, a protocol error), or any other exception | `unknown` |
+  | Refused before any POST (no API key, no recipients) | `not_sent` |
+
+- `send_schedule_email(..., single_attempt=False, claim=None)` passes the mode down. With `single_attempt=True` it returns a typed `ScheduleSend(attempts=[(email, Attempt), ...], refused=None)` and never collapses the attempts into one code. Its own pre-send refusals (no PDF URL, the unsubscribe sentinel missing) are `not_sent` before any POST.
+- `_send_and_log_report_email(..., tracked=None)`. With a `TrackedSend(run_id, token)`, it calls the above in single-attempt mode, passes it the claim (below), and returns the aggregate outcome for §5 step 4.
+- **Legacy calls pass nothing, and behave exactly as today:** retries, tuple returns, and the first-failure code. The manual and ad-hoc paths and legacy schedule rows are not touched. A test pins that the legacy path still retries a 503 (four POSTs).
+
+**The order inside a tracked send:**
+
+1. **Resolve and render, with no claim yet.** The D-110 empty-result hold, the brand, the payload, the current recipients, send-time suppression and the body all run first, as they do today. One change for tracked sends only: today a suppression-lookup error **proceeds with every recipient** (`send.py:171–174`). For a tracked send it stops instead, sends nothing and takes no claim. The row stays `processing` under its lease, which goes stale, and §6 case (c) republishes it, within the attempt cap and the horizon. Legacy keeps today's behaviour.
+2. **The pre-send claim, as late as possible: after the render, immediately before the first POST.** `send_schedule_email` calls `claim(filtered_recipients)` once, after filtering and rendering, and POSTs nothing unless it returns true. The claim is one committed transaction:
    ```sql
-   UPDATE schedule_runs sr SET send_claimed_at = now(), send_token = $tok
+   UPDATE schedule_runs sr
+   SET send_claimed_at = now(), send_token = $tok, lease_at = now(),
+       send_recipients = $filtered_recipients
    FROM schedules s JOIN accounts a ON a.id = s.account_id
-   WHERE sr.report_run_id = $run AND sr.owner_token = $tok AND sr.send_claimed_at IS NULL
-     AND s.id = sr.schedule_id AND s.active AND COALESCE(a.is_active, true) AND <account_can_send>
+   WHERE sr.report_run_id = $run AND sr.recovery_tracked
+     AND sr.owner_token = $tok AND sr.status = 'processing'
+     AND sr.send_claimed_at IS NULL
+     AND sr.created_at > now() - HORIZON
+     AND s.id = sr.schedule_id AND s.active AND COALESCE(a.is_active, true)
+     AND <account_can_send>
    RETURNING 1
    ```
-   - **Zero rows:** no send. An ineligible row gets its truthful terminal state (§4 table); a superseded owner stops.
-   - **Any error** (the database is unreachable, a timeout, the commit fails): **no send**. The run then becomes `needs_review` through the lease path. Today's lookup returns None and goes on to send, and the email_log insert lets the provider call go ahead when it fails. Neither is the barrier for tracked runs any more.
-2. **Send** through the existing `_send_and_log_report_email`, unchanged:
-   - current recipients, resolved at send time;
-   - send-time suppression;
-   - the D-110 empty-result hold;
-   - the `email_log` journal.
+   - **The horizon is in the claim itself (rev 2 AMEND 1).** It is the same `created_at > now() - HORIZON` predicate as the lease, from the original `created_at`, using the database's clock. A worker that took its lease at 5 h 59 m and renders past 6 h gets zero rows here, and POSTs nothing.
+   - **Terminal states stay excluded:** `status = 'processing'` and the token are both required, so a row that a sweep or another owner has already made terminal, or taken over, cannot be claimed.
+   - **Zero rows:** no POST. Under the row lock, the worker writes the one truthful outcome from the §4 table: past the horizon → `expired`; paused → `cancelled`; deactivated → `cancelled`; no confirmed sender → `blocked_unverified`. Superseded owner → it stops and writes nothing.
+   - **Any error** (the database is unreachable, a timeout, the commit fails): **no POST.** The claim was not taken, so the lease goes stale and §6 case (c) republishes it.
+   - **Once claimed, the occurrence is committed to sending.** The horizon governs the claim. Recipients POSTed after the 6-hour mark in the same loop belong to an occurrence claimed before it.
+3. **The loop: exactly one POST per recipient in `send_recipients`, in order, never repeated.**
+   - After each recipient's POST, its outcome is appended to `schedule_runs.send_outcomes` and `lease_at` is refreshed, in one token-conditioned statement. This is best effort: if it fails, the loop still goes on to the next recipient, because no recipient is ever attempted twice.
+   - The loop does not stop after an `unknown` or a `rejected` outcome. Each recipient is independent and gets its one attempt.
+   - After a crash mid-loop, `send_recipients` minus the recipients with an outcome are "in flight or never attempted". The operator sees exactly which.
+   - The existing `email_log` row (`_log_email_attempt` before, `_finalise_email_log` after) is kept, one per occurrence as today, so the admin counters do not change their cardinality. `_already_delivered` stays a second layer, checked before the claim. **Neither is the barrier:** if the lookup or the journal insert fails, the claim still decides, and each recipient still gets exactly one POST.
+4. **Aggregate and record**, token-conditioned, then commit. An unknown outcome for any recipient wins over a definite rejection for another:
 
-   `_already_delivered` stays as a second layer. Nothing relies on it.
-3. **Record the outcome** under the token, then commit:
+| Recipients' outcomes | `schedule_runs` | `email_log.status` | Re-sent automatically? |
+|---|---|---|---|
+| All `accepted` (suppressed recipients were never in the list) | `completed` | `sent` | — |
+| **Any** `unknown` | `needs_review`: "outcome unknown for N of M recipients: the provider may have accepted these" | `needs_review` | **No** |
+| No `unknown`, and any `rejected` or `not_sent` | `failed`: "failed_email: N of M not accepted" (the codes are in `send_outcomes`) | `failed` | No: one attempt per recipient per occurrence |
+| The process dies after the claim and before this write | Still `processing`, `send_claimed_at` set. When the lease goes stale, the next lease attempt or the sweep writes `needs_review` | `sending` (left as is: "died in flight") | **No** |
+| The outcome write fails | The same as the row above. `send_outcomes` and `email_log` hold whatever was recorded | — | **No** |
 
-| Provider result | `schedule_runs` | Retried automatically? |
-|---|---|---|
-| 2xx | `completed` | — |
-| A definite rejection (4xx response) | `failed` (`failed_email: <code>`) | No: one provider call per occurrence |
-| An exception, a timeout, a connection drop, or a 5xx with no definite answer | `needs_review`: "outcome unknown: the provider may have accepted this email" | **No** |
-| The process dies after the claim and before this write | Still `processing`, `send_claimed_at` set. The next lease attempt or sweep finds it stale and writes `needs_review` | **No** |
-| The outcome write fails after a 2xx | The same as the row above. The `email_log` journal still holds the 2xx for the operator to check | **No** |
-
-`needs_review` runs are listed for operators in the sweep's error log, with run, schedule and account. LR-027 alerts on them, and the LR-020 held-send tooling is the model for resolving them by hand. Nothing in this PR resends them.
+- **`email_log.status = 'needs_review'`** is a new value. Migration 0068 updates the column's COMMENT, and `admin.py:129` and `:216` count it alongside `sent`, `sending` and `failed`, because it is a delivery attempt.
+- `needs_review` runs are listed for operators in the sweep's error log, with run, schedule, account and the per-recipient outcomes. LR-027 alerts on them, and the LR-020 held-send tooling is the model for resolving them by hand. Nothing in this PR resends them.
 
 ## 6. The sweep, for tracked rows: recover, then give up visibly
 
@@ -182,14 +217,17 @@ If the sweep is not running, the redelivery at t + 15 takes the stale lease itse
   - the redelivery at t + 15 is a no-op after the takeover;
   - the redelivery at t + 15 with no sweep takes the lease;
   - a live owner refreshing its lease is never taken over.
-- **Delivery (AMEND 3):**
-  - the pre-send claim is committed before the provider call;
-  - the provider accepts and the answer is lost (exception after acceptance) → `needs_review`, and a later redelivery or republish does not send;
-  - the process dies after the claim → `needs_review` through the lease and through the sweep;
-  - a definite 4xx → `failed`, not resent;
-  - the claim's database write fails → no provider call;
-  - the duplicate lookup or journal insert fails → still exactly one provider call, because the claim is the barrier;
-  - the outcome write fails after a 2xx → `needs_review`, not resent.
+- **Delivery at the HTTP transport boundary (AMEND 3; rev 2 AMEND 2).** `SENDGRID_API_URL` points at a local socket server that counts the POSTs it receives, per recipient. The real `httpx` client makes the calls, and nothing is mocked above the socket.
+  - **Accepted, then the answer lost:** the server reads the whole POST and closes the connection without replying. Exactly one POST per recipient, run `needs_review`, `email_log` `needs_review`. Then the same Celery message is redelivered, and a sweep runs: **zero** further POSTs.
+  - **The same, with a read timeout:** the server reads the POST and never answers. One POST, `needs_review`, then zero after redelivery.
+  - **A 503 from the server:** one POST, `needs_review`. The legacy path against the same server makes **four** POSTs, which pins the legacy retries as unchanged.
+  - **Mixed recipients:** the 1st gets a 400 and the 2nd has its connection dropped after the POST. The run is `needs_review`, not `failed`, and `send_outcomes` holds `rejected` and `unknown`. Every recipient got exactly one POST.
+  - **A definite 4xx for every recipient:** one POST each, `failed`, and nothing resent.
+  - **Connection refused** (nothing listening): `not_sent` for every recipient, `failed`, and zero POSTs received.
+  - **Order:** the claim commits after the render and before the first POST. A planted render failure leaves no claim.
+  - **The process dies mid-loop** (after the 1st recipient's POST): the lease goes stale, the run becomes `needs_review` through the sweep and through a redelivery, and the 2nd recipient is never POSTed.
+  - **Failed bookkeeping:** the claim's write fails → zero POSTs; the duplicate lookup or the journal insert fails → still exactly one POST per recipient; the per-recipient append fails → the loop still POSTs each remaining recipient once; the outcome write fails after all 202s → `needs_review` through the sweep, with no further POSTs.
+  - **Suppression lookup error on a tracked send:** zero POSTs, no claim, and a later republish sends to the current, filtered list.
 - **Eligibility over time (AMEND 4).** Each case below has no intervening sweep:
   - delivery after the horizon → the worker writes `expired`;
   - the schedule is paused after the tick → `cancelled` at the lease;
@@ -198,7 +236,10 @@ If the sweep is not running, the redelivery at t + 15 takes the stale lease itse
   - the sender loses verification → `blocked_unverified` plus the `email_log` refusal;
   - recipients change before a republish → the current recipients get it;
   - a recipient unsubscribes before a republish → suppressed;
-  - the horizon boundaries: `created_at + 6 h − 1 s` claims, and `+ 6 h + 1 s` expires.
+  - the horizon boundaries: `created_at + 6 h − 1 s` claims, and `+ 6 h + 1 s` expires;
+  - **the horizon crossed between the lease and the send claim (rev 2 AMEND 1):** a valid lease is taken at `created_at + 6 h − 10 s`, and the render is held until the database's clock passes `created_at + 6 h`. The send claim matches nothing, the run is `expired`, and the socket server receives **zero** POSTs. There is no sweep in between. This is a separate test from the message that first starts after 6 h;
+  - the send claim's boundaries: `created_at + 6 h − 1 s` at the claim POSTs, and `+ 6 h + 1 s` does not;
+  - a row made terminal by a sweep between the lease and the send claim cannot be claimed.
 - **Allowance:** an account at, over, or with zero manual allowance still gets an occurrence, a dispatch and a send, and its manual counter does not move.
 - **Copy:** the email's HTML from the fake sender carries the new sentence and none of the old ones; the wizard line is asserted, and the schedule step rendered before and after.
 
@@ -217,6 +258,14 @@ If the sweep is not running, the redelivery at t + 15 takes the stale lease itse
 - the lease taken after the `report_generations` write;
 - the send claim made after the provider call;
 - the claim made fail-open;
+- the horizon predicate dropped from the send claim;
+- `status = 'processing'` dropped from the send claim;
+- `single_attempt` not passed down from `_send_and_log_report_email` (the provider retries again);
+- `single_attempt` ignored inside `sendgrid.send_email`;
+- a read timeout classified as `not_sent`;
+- the first failing recipient's code used for the aggregate (a rejection hides an unknown);
+- the loop stopping after the first `unknown`;
+- the suppression lookup failing open on a tracked send;
 - an unknown outcome resent;
 - the horizon removed from the worker;
 - the attempt cap off by one;
@@ -250,7 +299,7 @@ If the sweep is not running, the redelivery at t + 15 takes the stale lease itse
    The timeline at 6 and 15 minutes, and two simultaneous takeovers, are tested (§4, §6).
 3. **The delivery guard is not proof:**
    - a durable pre-send claim is committed before the provider call, and it fails closed;
-   - one provider call per occurrence;
+   - one provider call per occurrence (corrected in rev 3, §10: one HTTP attempt per recipient, inside one claimed occurrence);
    - an unknown or unrecorded outcome becomes `needs_review` and is never resent automatically;
    - the existing helpers are reused, with no second provider path.
 
@@ -268,3 +317,15 @@ If the sweep is not running, the redelivery at t + 15 takes the stale lease itse
 - per-recipient suppression visibility: D-333;
 - real task retries for transient render failures: the `tasks.py:1394` note;
 - a tool for resolving scheduled `needs_review` runs: it follows LR-020's held-send pattern, as a follow-up.
+
+## 10. Codex's AMEND on rev 2, and the answers
+
+Codex confirmed that `recovery_tracked`, the atomic lease, the worker's eligibility checks, the retry bounds and the legacy tests resolve rev 1's points. Those are unchanged in rev 3.
+
+1. **The send claim did not check the horizon.** Fixed. The claim (§5 step 2) now has the same `created_at > now() - HORIZON` predicate as the lease, from the original `created_at`, and keeps `status = 'processing'` and the token, so terminal rows stay excluded. The claim also moved to the latest safe point, after the render and immediately before the first POST, so render time cannot carry a run across the horizon. The new test takes a valid lease just before 6 h, crosses the horizon before the claim, and expects `expired` with zero POSTs and no sweep (§8). It is separate from the message that first starts after 6 h.
+2. **The provider resends inside one call.** Correct: `sendgrid.send_email` re-POSTs after a timeout, a request error, a 429 or a 5xx (`sendgrid.py:93–136`). Fixed with an explicit `single_attempt` mode on the existing provider, threaded through `send_schedule_email` and `_send_and_log_report_email`. Legacy callers pass nothing and keep their retries.
+   - **One attempt per recipient**, since `send_schedule_email` sends to each recipient separately (`send.py:253–267`). Rev 2's "one provider call per occurrence" was wrong and is corrected.
+   - **The outcome is typed, not a status code**, because the provider makes up 500 and 504 for local errors. Only a refused connection or a refusal before any POST counts as `not_sent`; any outcome after the request may have left counts as `unknown`.
+   - **An unknown for any recipient wins over a definite rejection for another**, so the run is `needs_review`. Each recipient's outcome is kept in `send_outcomes`.
+   - **Tested at the HTTP transport boundary** against a local socket server: accept and drop, accept and time out, a 503, mixed recipients, a refused connection. Each asserts the POSTs per recipient, and that a redelivery makes no further POST (§8).
+   - **Two things found while checking this, both fixed in the same rev:** a suppression-lookup error proceeds with every recipient today (`send.py:171–174`). A tracked send now stops and is recovered by the sweep, and legacy is unchanged. And `email_log` gains a `needs_review` value, counted by the admin metrics as an attempt (§5).
