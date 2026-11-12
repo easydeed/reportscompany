@@ -36,6 +36,15 @@ describe("web fonts are self-hosted", () => {
     expect(missing).toEqual([])
   })
 
+  it("no stylesheet names a self-hosted family literally", () => {
+    // next/font/local generates the family name; a literal one resolves to
+    // nothing and the text falls back (the landing headline did, here).
+    const css = readFileSync(join(WEB, "app/globals.css"), "utf8")
+    expect(css).not.toMatch(/font-[a-z-]+:\s*["']Plus Jakarta Sans["']/)
+    expect(css).toMatch(/--font-display:\s*var\(--font-jakarta\)/)
+    expect(css).toMatch(/--font-sans:\s*var\(--font-jakarta\)/)
+  })
+
   it("the root layout still sets the Plus Jakarta Sans variable", () => {
     const fonts = readFileSync(join(WEB, "lib/fonts.ts"), "utf8")
     expect(fonts).toMatch(/variable:\s*"--font-jakarta"/)

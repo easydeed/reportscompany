@@ -6,5 +6,9 @@
   {"name": "F2 a font file the build needs is not in the repository", "file": "apps/web/lib/fonts.ts",
    "old": "../fonts/manrope/manrope-latin-800-normal.woff2",
    "new": "../fonts/manrope/manrope-latin-900-normal.woff2",
+   "test": "__tests__/FontsAreSelfHosted.test.ts", "runner": "jest"},
+  {"name": "F3 the stylesheet names Plus Jakarta Sans literally again (the headline falls back)", "file": "apps/web/app/globals.css",
+   "old": "  --font-display: var(--font-jakarta), system-ui, sans-serif;",
+   "new": "  --font-display: \"Plus Jakarta Sans\", \"Plus Jakarta Sans Fallback\", system-ui, sans-serif;",
    "test": "__tests__/FontsAreSelfHosted.test.ts", "runner": "jest"}
 ]
