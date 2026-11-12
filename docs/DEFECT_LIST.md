@@ -62,14 +62,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 75 | Real, unfixed |
-| `fixed` | 213 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 77 | Real, unfixed |
+| `fixed` | 214 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **388** | D-001 … D-388, contiguous, no duplicates |
+| **Total** | **391** | D-001 … D-391, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 9 · WRONG 39 · FRAGILE 27 · ROUGH 0. (Sums to 75, the open total.)
+**Open by severity:** BROKEN 10 · WRONG 39 · FRAGILE 28 · ROUGH 0. (Sums to 77, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16371,6 +16371,44 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 **Evidence:** `.github/workflows/backend-tests.yml` uses postgres:16; production metadata reports PostgreSQL 17.9. Nine API suites already require a CI DB and test_ci_runs_the_database_suites.py guards that work, but db_session/tenant-isolation and other skip-only fixtures need extension. This does not reopen D-285's repaired missing-database provisioning.
 
 **Acceptance:** Run migrated-schema checks on the supported production major and fail required CI when the remaining critical DB proofs cannot run; preserve existing guards and scratch schemas.
+
+### D-389 — Malformed report and schedule IDs raise server errors instead of returning not found
+
+**Severity:** FRAGILE · filed 2026-11-11 during LR-024 / PR #284 review.
+**Status:** `open`
+
+**Evidence:** `apps/api/src/api/routes/reports.py`, `get_report`, accepts `report_id: str` and passes it directly into `WHERE id = %s AND account_id = %s`; `report_generations.id` is UUID. A malformed value such as `undefined` reaches PostgreSQL UUID parsing instead of the route's missing-row 404. Claude reported the resulting HTTP 500 during the LR-024 live reproduction; code inspection confirms the missing boundary validation. This is separate from LR-024's client fix, which must retain the retry key and never poll an invalid ID after an unreadable success. No fresh production request was made to reproduce this entry.
+
+**Schedule scope:** The same unchecked string-to-UUID boundary occurs in `apps/api/src/api/routes/schedules.py:554` (GET), `:576` (PATCH), `:744` (DELETE) and `:773` (GET runs). Each accepts `schedule_id: str` and reaches UUID SQL before a missing-row response. Include all four routes in the fix and malformed/missing/foreign-ID coverage. Code inspection only; no production mutation was executed.
+
+**Acceptance:** Validate malformed report and schedule IDs before database execution and return 404 without leaking SQL details. Keep account-scoped lookup and the same 404 for a well-formed absent or foreign report ID. Add malformed, missing and foreign-ID route coverage. Recording only; no API change in this documentation branch.
+
+
+### D-390 — Unbounded Node engine selection breaks Vercel builds on Node 26
+
+**Severity:** BROKEN
+**Status:** `fixed` — #288 pins Node 22; #289 self-hosts fonts, merged as 820e7679. reportscompany-web production deployment dpl_6CCV55FbK5DG8vTg8SrqM5Tgnam7 is Ready, with GitHub Vercel status success on that merge commit (2026-11-12 20:29 UTC).
+
+**Evidence (2026-11-12):** Claude traced the earlier supposedly "flaky" Vercel preview failures and #287's production build failure to the same Node 26 selection. `apps/web/package.json` allowed `>=20.0.0`, overriding the project's Node 22 setting with Node 26. Next 16.0.7/Turbopack then failed to resolve `@vercel/turbopack-next/internal/font/google/font`. Claude reproduced a failed build on Node 26.13.1 and a successful build on Node 22.22.0. The old successful production deployment kept serving; this blocked new web changes, rather than taking that deployment offline.
+
+**Fix:** #288 pins root/web engines to `22.x`, .nvmrc to `22.22.0`, matching lock metadata and backend CI to Node 22. Exact-head Release gate and Node-22 Vercel preview passed. Earlier failures with this diagnosed signature are explained by this cause, not random infrastructure flakiness; unrelated CI network failures remain separate.
+
+
+**D-390 rollout correction (2026-11-12):** Production deployment `dpl_AHgGYBgRrVZ1QM7J4kyHLcmrF9EU` at 5692f87b explicitly logs that Node changed from 26.x to 22.x and the build cache was skipped. It nevertheless fails with 20 Turbopack Google-font resolver errors: `next/font/google queries have exactly one entry`, through Plus Jakarta Sans and `apps/web/app/layout.tsx`. Therefore Node 26 explains Claude's earlier reproduction, but cannot alone explain every hosted failure. The successful preview is not proof of a successful production build. At that stage the blocker remained open; the pin alone did not restore deploys. Resolution is the successful #289 production rollout recorded in the status above.
+
+
+**Project attribution:** Jerry confirmed that `trendyreports.io` is served by `reportscompany-web` and reported a duplicate `reportscompany` project building the same repository, accounting for some failed "production" deployments. Duplicate-project domain checks/disconnection are with Jerry; attribution of individual failures to that project is not independently verified here. The #288 failure inspected above explicitly belonged to reportscompany-web, so it remains valid evidence of the customer-facing project failing. #289 removes the remaining Google build-time font fetches; its merge commit was verified Ready on reportscompany-web, with trendyreports.io resolving to that deployment and returning HTTP 200.
+
+### D-391 — Cached market-report generation reads uninitialised closed history
+
+**Severity:** BROKEN
+**Status:** `open` — fix present on Claude's #286 branch, not yet code-reviewed, merged or deployed.
+
+**Evidence (2026-11-12):** On main at 0f3ebfd4, `apps/worker/src/worker/tasks.py` initialises `closed_history` and `closed_history_truncated` only inside `if not result` following `cache_get("report", cache_payload)`. Later unconditional builder-data assignments read both. A valid 15-minute report-cache hit skips initialisation and raises `UnboundLocalError` (a `NameError` subclass), so the cached run crashes rather than rendering. This is independent of whether the report kind uses a trend chart.
+
+**Branch correction:** #286 at dd05e84e moves the empty-history defaults before the cache branch. Claude owns this fix with LR-023; recording it here does not approve its implementation or claim deployment. Cache hits have no cached trend-history dataset and therefore omit that optional chart.
+
+**Acceptance:** Exercise the actual generate_report cache-hit path, with upstream fetch skipped, and assert successful rendering with defined empty history and truncation=false. Preserve fresh-fetch history behavior. Review with #286 before closing this entry. No production generation or provider send was executed for this inventory.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
