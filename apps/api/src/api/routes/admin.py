@@ -122,11 +122,11 @@ def get_admin_metrics(_admin: dict = Depends(get_admin_user)):
         # that is not an email would silently inflate a denylist; with an
         # allowlist it undercounts instead, and an undercount shows up as a dip
         # someone notices. 'sending' is in flight and is UPDATEd in place to
-        # 'sent' or 'failed', so it never double-counts.
+        # 'sent', 'failed' or (LR-023) 'needs_review', so it never double-counts.
         cur.execute("""
             SELECT COUNT(*) FROM email_log
             WHERE created_at >= NOW() - INTERVAL '24 hours'
-              AND status IN ('sent', 'sending', 'failed')
+              AND status IN ('sent', 'sending', 'failed', 'needs_review')
         """)
         emails_24h = cur.fetchone()[0] or 0
 
@@ -213,7 +213,7 @@ def get_admin_timeseries(
                 COUNT(*) as count
             FROM email_log
             WHERE created_at >= NOW() - INTERVAL '%s days'
-              AND status IN ('sent', 'sending', 'failed')
+              AND status IN ('sent', 'sending', 'failed', 'needs_review')
             GROUP BY DATE(created_at)
             ORDER BY day DESC
         """, (days,))

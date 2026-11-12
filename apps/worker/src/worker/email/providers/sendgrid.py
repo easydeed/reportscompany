@@ -3,7 +3,8 @@ import os
 import time
 import logging
 import httpx
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Union
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +13,59 @@ SENDGRID_API_URL = "https://api.sendgrid.com/v3/mail/send"
 DEFAULT_FROM_NAME = os.getenv("DEFAULT_FROM_NAME", "Market Reports")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "reports@example.com")
 
+# Per-request timeout, seconds. A module constant so the transport-boundary
+# tests can shorten it; production keeps 30.
+SENDGRID_TIMEOUT = float(os.getenv("SENDGRID_TIMEOUT", "30"))
+
 # Retry configuration
 MAX_RETRIES = 3
 RETRY_DELAY_BASE = 2.0  # Base delay in seconds (exponential backoff)
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
+
+# ── LR-023: one HTTP attempt, and an outcome that says what is known ─────────
+#
+# The retry loop below re-POSTs after a timeout, a request error, a 429 or a 5xx.
+# A POST that SendGrid accepted, but whose response was lost, is then POSTed
+# again by this function itself, and SendGrid takes no idempotency key, so the
+# recipient gets the email twice. A durable claim outside this function cannot
+# stop that. Scheduled sends that are recovery-tracked therefore call it with
+# `single_attempt=True`: exactly one POST, and a typed outcome.
+#
+# The outcome is typed because the status codes here are not all SendGrid's: a
+# timeout is reported as a made-up 504, a request error and a missing key as
+# 500. A code cannot separate "definitely not sent" from "may have been sent".
+ACCEPTED = "accepted"   # 202
+REJECTED = "rejected"   # SendGrid answered 4xx (429 included): it did not accept
+NOT_SENT = "not_sent"   # no request left this process: no connection, or refused before the POST
+UNKNOWN = "unknown"     # the request may have reached SendGrid; the answer is missing or ambiguous
+
+
+@dataclass(frozen=True)
+class Attempt:
+    outcome: str
+    status_code: Optional[int]
+    detail: str
+
+
+def _one_attempt(payload: dict, http_headers: dict) -> Attempt:
+    """Exactly one POST. Never sleeps, never retries."""
+    try:
+        with httpx.Client(timeout=SENDGRID_TIMEOUT) as client:
+            response = client.post(SENDGRID_API_URL, json=payload, headers=http_headers)
+    except (httpx.ConnectError, httpx.ConnectTimeout) as e:
+        # The connection was never made, so the request was never sent.
+        return Attempt(NOT_SENT, None, f"no connection: {type(e).__name__}: {e}"[:500])
+    except Exception as e:   # noqa: BLE001 - every other failure may follow the send
+        # A read or write timeout, a dropped connection, a protocol error, or
+        # anything unexpected: the request may have been delivered.
+        return Attempt(UNKNOWN, None, f"{type(e).__name__}: {e}"[:500])
+    code = response.status_code
+    if code == 202:
+        return Attempt(ACCEPTED, code, "accepted")
+    if 400 <= code < 500:
+        return Attempt(REJECTED, code, (response.text or "")[:500])
+    return Attempt(UNKNOWN, code, (response.text or "")[:500])
 
 
 def send_email(
@@ -25,7 +75,8 @@ def send_email(
     from_name: str = None,
     from_email: str = None,
     headers: Optional[Dict[str, str]] = None,
-) -> Tuple[int, str]:
+    single_attempt: bool = False,
+) -> Union[Tuple[int, str], Attempt]:
     """
     Send an email using SendGrid v3 API.
     
@@ -42,15 +93,23 @@ def send_email(
             rather than at the top level so each recipient can carry their own
             token; callers that send one message per recipient depend on that.
 
+        single_attempt: LR-023. Exactly one POST, no retries, and an `Attempt`
+            is returned instead of the tuple. Legacy callers leave it False and
+            keep the retries and the tuple.
+
     Returns:
-        Tuple of (status_code, response_text)
+        Tuple of (status_code, response_text), or an `Attempt` when single_attempt.
     """
     if not SENDGRID_API_KEY:
         logger.error("SENDGRID_API_KEY not set, cannot send email")
+        if single_attempt:
+            return Attempt(NOT_SENT, None, "SENDGRID_API_KEY not configured")
         return (500, "SENDGRID_API_KEY not configured")
     
     if not to_emails:
         logger.error("No recipients provided")
+        if single_attempt:
+            return Attempt(NOT_SENT, None, "No recipients provided")
         return (400, "No recipients provided")
     
     # Use defaults if not provided
@@ -87,6 +146,13 @@ def send_email(
         "Content-Type": "application/json",
     }
     
+    if single_attempt:
+        result = _one_attempt(payload, http_headers)
+        log = logger.info if result.outcome == ACCEPTED else logger.error
+        log("SendGrid single attempt to %d recipient(s): %s %s",
+            len(to_emails), result.outcome, result.status_code)
+        return result
+
     last_error = None
     last_status_code = 500
     
@@ -99,7 +165,7 @@ def send_email(
                 logger.warning(f"Retry attempt {attempt}/{MAX_RETRIES} after {delay:.1f}s delay")
                 time.sleep(delay)
             
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=SENDGRID_TIMEOUT) as client:
                 response = client.post(SENDGRID_API_URL, json=payload, headers=http_headers)
                 
                 if response.status_code == 202:
