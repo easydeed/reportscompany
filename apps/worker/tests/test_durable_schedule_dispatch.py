@@ -870,3 +870,27 @@ def test_an_exhausted_manual_allowance_never_stops_or_counts_a_scheduled_send(wo
     monkeypatch.undo()
     after = limit_checker.check_usage_limit(world.account, product="market_reports")
     assert after.get("used") == before.get("used"), (before, after)
+
+
+# ── LR-015 (D-375): zero is a freeze for manual work, never for a schedule ──
+
+def test_a_zero_manual_allowance_is_a_freeze_but_a_scheduled_send_still_goes(world, sendgrid):
+    from worker import limit_checker
+    _q(world.db, "UPDATE accounts SET market_reports_limit_override = 0, monthly_report_limit_override = 0 "
+                 "WHERE id = %s", world.account)
+    frozen = limit_checker.check_usage_limit(world.account, product="market_reports")
+    assert frozen["can_proceed"] is False and frozen["limit"] == 0, frozen
+    run_id = world.tick()
+    world.deliver(run_id)
+    assert world.run(run_id)["status"] == "completed" and sendgrid.count() == 2
+    after = limit_checker.check_usage_limit(world.account, product="market_reports")
+    assert after["used"] == frozen["used"], "the scheduled send was counted against the manual allowance"
+
+
+@pytest.mark.parametrize("product,column", [("market_reports", "market_reports_limit_override"),
+                                            ("property_reports", "property_reports_limit_override")])
+def test_the_worker_checker_refuses_a_zero_allowance_at_usage_zero(world, product, column):
+    from worker import limit_checker
+    _q(world.db, f"UPDATE accounts SET {column} = 0 WHERE id = %s", world.account)
+    out = limit_checker.check_usage_limit(world.account, product=product)
+    assert out["can_proceed"] is False and out["used"] == 0 and out["reason"] == "limit_reached", out
