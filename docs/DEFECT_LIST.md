@@ -62,14 +62,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 77 | Real, unfixed |
-| `fixed` | 214 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 78 | Real, unfixed |
+| `fixed` | 213 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **391** | D-001 … D-391, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 10 · WRONG 39 · FRAGILE 28 · ROUGH 0. (Sums to 77, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 39 · FRAGILE 28 · ROUGH 0. (Sums to 78, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16501,11 +16501,15 @@ back ambiguous in a way a summary would have hidden.
 ### D-390 — Unbounded Node engine selection breaks Vercel builds on Node 26
 
 **Severity:** BROKEN
-**Status:** `fixed` — #288, reviewed d33f33ce, merged as 5692f87b; production deployment verification recorded on the PR.
+**Status:** `open` — Node pin merged in #288 as 5692f87b, but the production build still fails on Node 22; full deployment recovery is not proven.
 
 **Evidence (2026-11-12):** Claude traced the earlier supposedly "flaky" Vercel preview failures and #287's production build failure to the same Node 26 selection. `apps/web/package.json` allowed `>=20.0.0`, overriding the project's Node 22 setting with Node 26. Next 16.0.7/Turbopack then failed to resolve `@vercel/turbopack-next/internal/font/google/font`. Claude reproduced a failed build on Node 26.13.1 and a successful build on Node 22.22.0. The old successful production deployment kept serving; this blocked new web changes, rather than taking that deployment offline.
 
 **Fix:** #288 pins root/web engines to `22.x`, .nvmrc to `22.22.0`, matching lock metadata and backend CI to Node 22. Exact-head Release gate and Node-22 Vercel preview passed. Earlier failures with this diagnosed signature are explained by this cause, not random infrastructure flakiness; unrelated CI network failures remain separate.
+
+
+**D-390 rollout correction (2026-11-12):** Production deployment `dpl_AHgGYBgRrVZ1QM7J4kyHLcmrF9EU` at 5692f87b explicitly logs that Node changed from 26.x to 22.x and the build cache was skipped. It nevertheless fails with 20 Turbopack Google-font resolver errors: `next/font/google queries have exactly one entry`, through Plus Jakarta Sans and `apps/web/app/layout.tsx`. Therefore Node 26 explains Claude's earlier reproduction, but cannot alone explain every hosted failure. The successful preview is not proof of a successful production build. Keep this blocker open pending diagnosis of the remaining production failure; do not label it flaky or claim that the pin restored deploys.
+
 
 ### D-391 — Cached market-report generation reads uninitialised closed history
 
