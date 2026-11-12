@@ -231,7 +231,7 @@ export function LeadPageClient() {
               <Input
                 value={headline}
                 onChange={(e) => setHeadline(e.target.value)}
-                placeholder="What's Your Home Worth?"
+                placeholder="See what homes like yours sold for"
               />
             </div>
             <div>

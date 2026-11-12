@@ -71,22 +71,8 @@ export const DEMO_LISTING = {
   price: "$1,185,000",
   priceShort: "$1.19M",
   sqft: "2,340",
-} as const;
-
-/**
- * The property-report preview on the landing page: an estimate for
- * DEMO_LISTING and four comparables that bracket it. Consistent with
- * DEMO_LISTING.price — Design's mock priced the same card at $1.41M against
- * this fixture's $1.19M, and two numbers for one house on one page is the
- * Irvine contradiction M1 was written to remove.
- */
-export const DEMO_ESTIMATE = {
-  value: DEMO_LISTING.priceShort,
-  low: "$1.10M",
-  high: "$1.28M",
+  /** The listing price over its square footage: $1,185,000 / 2,340. */
   pricePerSqft: "$506",
-  compsLow: "$1.05M",
-  compsHigh: "$1.32M",
 } as const;
 
 export const DEMO_COMPS = [
@@ -95,6 +81,25 @@ export const DEMO_COMPS = [
   { address: "7 Mustang", specs: "4 bd · 3 ba · 2,460 sf", dist: "0.6 mi", price: "$1,268,000" },
   { address: "63 Hedgerow", specs: "3 bd · 2 ba · 1,980 sf", dist: "0.7 mi", price: "$1,095,000" },
 ] as const;
+
+/**
+ * The property-report card's range and median, computed from DEMO_COMPS.
+ *
+ * LR-025 (D-383): the card used to print an "estimated value" ($1.19M, the
+ * listing price) and a bar range ($1.05M–$1.32M) that matched none of the four
+ * sales it listed. The report estimates nothing: its range is the lowest and
+ * highest comparable sale it shows (D-134), with their median. So the card's
+ * figures are derived from its own list and cannot disagree with it.
+ */
+export const DEMO_COMPS_RANGE = (() => {
+  const prices = DEMO_COMPS.map((c) => Number(c.price.replace(/[$,]/g, ""))).sort((a, b) => a - b);
+  const n = prices.length;
+  const median = n % 2 ? prices[(n - 1) / 2] : (prices[n / 2 - 1] + prices[n / 2]) / 2;
+  // Rounded in whole ten-thousands first: 1,095,000 / 1e6 is 1.0949999… in
+  // binary, which toFixed(2) would print as $1.09M.
+  const millions = (v: number) => `$${(Math.round(v / 10_000) / 100).toFixed(2)}M`;
+  return { low: millions(prices[0]), high: millions(prices[n - 1]), median: millions(median) };
+})();
 
 /** The agent's contact list as the landing page's contacts preview counts it. */
 export const DEMO_SPHERE = {

@@ -1,0 +1,88 @@
+[
+  {
+    "name": "C1 the Home Value Page asks what the home is worth again",
+    "file": "apps/web/app/cma/[code]/cma-funnel.tsx",
+    "old": "tracking-[-0.035em]\">See what homes like yours sold for</h1>",
+    "new": "tracking-[-0.035em]\">What's your home worth today?</h1>",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C2 the mock offers an estimate again",
+    "file": "apps/web/components/marketing/lead-capture.tsx",
+    "old": "              Get my report\n",
+    "new": "              Get my estimate\n",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C3 the page-title fallback asks what the home is worth",
+    "file": "apps/api/src/api/services/agent_code.py",
+    "old": "row[11] or \"See what homes like yours sold for\"",
+    "new": "row[11] or \"What's Your Home Worth?\"",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C4 the route's title fallback asks what the home is worth",
+    "file": "apps/api/src/api/routes/lead_pages.py",
+    "old": "agent.get(\"landing_page_headline\", \"See what homes like yours sold for\")",
+    "new": "agent.get(\"landing_page_headline\", \"What's Your Home Worth?\")",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C5 the window line claims this month's sales",
+    "file": "apps/web/app/cma/[code]/cma-funnel.tsx",
+    "old": "Based on the last 6 months of sales near you.",
+    "new": "Based on this month's closed sales near you.",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C6 the card names an estimated value",
+    "file": "apps/web/components/marketing/property-reports.tsx",
+    "old": "range of comparable sales · median",
+    "new": "estimated value · median",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C7 the card claims 90 days",
+    "file": "apps/web/components/marketing/property-reports.tsx",
+    "old": "Comparable sales · last 6 months",
+    "new": "Comparable sales · last 90 days",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C8 the email calls the report an estimate",
+    "file": "apps/worker/src/worker/templates/email/home_value.jinja2",
+    "old": "A report of recent sales from public records and the MLS, not an appraisal.",
+    "new": "An estimate from public records and recent MLS sales, not an appraisal.",
+    "test": "tests/test_acquisition_copy_promises_no_estimate.py"
+  },
+  {
+    "name": "C9 0067 overwrites descriptions agents edited",
+    "file": "db/migrations/0067_lead_page_description_default.sql",
+    "old": "have sold for.'\nWHERE landing_page_subheadline = 'Find out what your home is worth in today''s market.';",
+    "new": "have sold for.'\nWHERE landing_page_subheadline IS NOT NULL;",
+    "test": "apps/api/tests/test_lead_page_description_migration.py"
+  },
+  {
+    "name": "C10 0067 leaves the column default on the old sentence",
+    "file": "db/migrations/0067_lead_page_description_default.sql",
+    "old": "  SET DEFAULT 'See what homes like yours have sold for.';",
+    "new": "  SET DEFAULT 'Find out what your home is worth in today''s market.';",
+    "test": "apps/api/tests/test_lead_page_description_migration.py"
+  },
+  {
+    "name": "C11 the card's range is rounded with toFixed alone ($1.09M)",
+    "file": "apps/web/lib/demo-data.ts",
+    "old": "(Math.round(v / 10_000) / 100).toFixed(2)",
+    "new": "(v / 1_000_000).toFixed(2)",
+    "test": "__tests__/DemoCompsRange.test.ts",
+    "runner": "jest"
+  },
+  {
+    "name": "C12 the card's range is a fixed pair, not its comps",
+    "file": "apps/web/lib/demo-data.ts",
+    "old": "return { low: millions(prices[0]), high: millions(prices[n - 1]), median: millions(median) };",
+    "new": "return { low: \"$1.05M\", high: \"$1.32M\", median: millions(median) };",
+    "test": "__tests__/DemoCompsRange.test.ts",
+    "runner": "jest"
+  }
+]

@@ -10,6 +10,7 @@ from ..cache import get_redis
 from ..crmls_cities import VALID_CITY_NAMES
 from ..verification import block_unverified_send, manual_emails
 from ..theme_registry import DEFAULT_THEME_ID
+from ..services import idempotency
 
 _logger = logging.getLogger(__name__)
 
@@ -147,7 +148,38 @@ def create_report(
     
     Enforces monthly report limits based on account's plan.
     Returns 429 if limit exceeded (for non-overage plans).
+    Takes no Idempotency-Key; the keyed route below does (LR-024).
     """
+    return _create_report(payload, response, bg, account_id, claim=None)
+
+
+@router.post("/idempotent/reports", status_code=status.HTTP_202_ACCEPTED)
+def create_report_idempotent(
+    payload: ReportCreate,
+    response: Response,
+    request: Request,
+    bg: BackgroundTasks,
+    account_id: str = Depends(require_account_id),
+):
+    """The same create, keyed (LR-024, design rev 3).
+
+    Requires `Idempotency-Key`. A retry with the same key and body returns the
+    report the first request made, without counting, enqueueing or emailing
+    again. This route exists only in this release, so an older API answers
+    404 here and never treats a keyed request as an unkeyed one.
+    """
+    claim = idempotency.claim_for(request, idempotency.REPORTS, payload, stored_as=_stored_objects(payload))
+    return _create_report(payload, response, bg, account_id, claim=claim)
+
+
+def _stored_objects(payload: ReportCreate) -> dict:
+    """What a report stores for its object fields: null, omitted and {} are all `{}`.
+    The idempotency fingerprint hashes these same values (LR-024)."""
+    return {"filters": payload.filters or {}, "additional_params": payload.additional_params or {}}
+
+
+def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTasks,
+                   account_id: str, claim: Optional[idempotency.Claim]):
     if payload.city and payload.city not in VALID_CITY_NAMES:
         raise HTTPException(
             status_code=422,
@@ -160,8 +192,7 @@ def create_report(
         "zips": payload.zips,
         "polygon": payload.polygon,
         "lookback_days": payload.lookback_days,
-        "filters": payload.filters or {},
-        "additional_params": payload.additional_params or {},
+        **_stored_objects(payload),
         "send_email": payload.send_email,
         "recipients": payload.recipients,
     }
@@ -169,6 +200,21 @@ def create_report(
     limit_info = None
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
+
+        # LR-024: a keyed retry replays what the first request made, before
+        # any verification or limit check, and with no usage, enqueue or email.
+        if claim is not None:
+            existing = idempotency.lookup(cur, account_id, claim)
+            if existing is not None:
+                cur.execute(
+                    "SELECT id::text, status FROM report_generations WHERE id = %s::uuid AND account_id = %s::uuid",
+                    (existing, account_id),
+                )
+                replay = fetchone_dict(cur)
+                if not replay:
+                    idempotency.gone(existing)
+                response.headers[idempotency.REPLAYED_HEADER] = "true"
+                return {"report_id": replay["id"], "status": replay["status"]}
 
         # D-019, AND THE REASON THIS GATE IS NOT A `Depends`.
         #
@@ -259,6 +305,9 @@ def create_report(
             (account_id, payload.report_type, json.dumps(params), theme_id, accent_color),
         )
         row = fetchone_dict(cur)
+        if claim is not None:
+            # Same transaction as the report: a failure from here on leaves neither.
+            idempotency.record(cur, account_id, claim, row["id"])
 
     # enqueue job
     try:
