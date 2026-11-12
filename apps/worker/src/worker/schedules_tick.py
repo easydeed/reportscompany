@@ -22,8 +22,8 @@ from zoneinfo import ZoneInfo
 import psycopg
 import ssl
 from celery import Celery
-from .limit_checker import check_usage_limit
 from . import theme_registry
+from . import scheduled_runs
 
 # Create a separate Celery instance for ticker (no result backend needed)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -347,7 +347,7 @@ def dispatch_report(
     report_type: str,
     params: Dict[str, Any],
     schedule_id: str,
-) -> Optional[str]:
+) -> tuple:
     """
     Hand the task to Celery. **Call this only after the caller has committed.**
 
@@ -355,11 +355,15 @@ def dispatch_report(
     contents, so keep it that way: the moment it writes, the ordering this
     split exists to create is gone.
 
-    Returns the Celery task id, or None if the dispatch failed. A failure is
-    not raised, because by the time it can happen the run is already committed
-    and the exception would only obscure that: the row sits at 'queued' with no
-    task, which `sweep_stale_runs` marks failed with "never picked up" — the
-    outcome that class of failure should have.
+    Returns (task_id, None), or (None, error) if the dispatch failed. A failure
+    is not raised, because by the time it can happen the run is already
+    committed and the exception would only obscure that. A recovery-tracked run
+    (LR-023) is republished by `sweep_stale_runs` within its bounds; a legacy
+    run is marked failed with "never picked up".
+
+    LR-023 §3: this is the one publish step the ticker and the sweep share. The
+    attempt was counted and committed before it is called, and the broker's
+    acknowledgement is recorded after it, by `scheduled_runs.record_dispatch`.
     """
     try:
         task = celery.send_task(
@@ -370,14 +374,15 @@ def dispatch_report(
     except Exception as e:
         logger.error(
             "DISPATCH FAILED after commit for schedule %s, run_id=%s: %s — "
-            "the run is recorded as 'queued' and the stale sweep will mark it "
-            "failed; no report was generated and nothing was sent",
+            "the run is recorded as 'queued'; the stale sweep republishes a "
+            "tracked run within its bounds, and fails a legacy one; no report "
+            "was generated and nothing was sent",
             schedule_id, run_id, e, exc_info=True,
         )
-        return None
+        return None, f"{type(e).__name__}: {e}"[:2000]
 
     logger.info(f"Enqueued report for schedule {schedule_id}, run_id={run_id}, task_id={task.id}")
-    return task.id
+    return task.id, None
 
 
 # ── D-019, at the point where the send actually happens ─────────────────────
@@ -389,9 +394,8 @@ def dispatch_report(
 # later and mail to whoever it names. Enforcement that lives only in the API is
 # enforcement of the request, not of the rule.
 #
-# So the check is repeated here, against the same column, in the same shape as
-# the usage-limit pre-check immediately below it — skip, record, advance
-# `next_run_at`, move on. Not DRY, and it cannot be: the API and the worker are
+# So the check is repeated here, against the same column — skip, record,
+# advance `next_run_at`, move on. Not DRY, and it cannot be: the API and the worker are
 # separately deployed services that do not import each other, which is why
 # `check_usage_limit` already exists in this package alongside
 # `get_full_plan_usage` in the other one. The duplication is the deployment
@@ -574,26 +578,12 @@ def process_due_schedules():
                             conn.commit()
                             continue
 
-                        # Pre-check: skip if account is at market report limit (DB-backed, per-plan)
-                        limit_result = check_usage_limit(account_id, product="market_reports")
-                        if not limit_result["can_proceed"]:
-                            logger.info(
-                                f"Skipping schedule {schedule_id} — account {account_id} "
-                                f"at market report limit "
-                                f"({limit_result.get('used', '?')}/{limit_result.get('limit', '?')})"
-                            )
-                            # Advance next_run_at so we don't re-check every tick
-                            next_run_at = compute_next_run(
-                                cadence, weekly_dow, monthly_dom,
-                                send_hour, send_minute, timezone
-                            )
-                            cur.execute("""
-                                UPDATE schedules
-                                SET next_run_at = %s, processing_locked_at = NULL
-                                WHERE id = %s::uuid
-                            """, (next_run_at, schedule_id))
-                            conn.commit()
-                            continue
+                        # D-332 (Jerry, November 9): no manual-allowance check
+                        # here. Scheduled sends use schedule capacity, never the
+                        # manual report allowance, and an exhausted allowance
+                        # never stops an existing schedule. The check that
+                        # skipped the occurrence here, recording nothing, is
+                        # removed.
 
                         # Compute next run time (PASS S2: timezone-aware)
                         next_run_at = compute_next_run(
@@ -617,10 +607,16 @@ def process_due_schedules():
                             filters=filters
                         )
 
-                        # 2. schedule_runs audit record linked to the generation
+                        # 2. schedule_runs audit record linked to the generation.
+                        #    LR-023: recovery_tracked, and the first publish is
+                        #    counted here, in the claiming transaction (§3), so a
+                        #    publish that fails or is lost is republished by the
+                        #    sweep within its bounds.
                         cur.execute("""
-                            INSERT INTO schedule_runs (schedule_id, report_run_id, status, created_at)
-                            VALUES (%s::uuid, %s::uuid, 'queued', NOW())
+                            INSERT INTO schedule_runs
+                                (schedule_id, report_run_id, status, created_at,
+                                 recovery_tracked, dispatch_attempts, last_dispatch_at)
+                            VALUES (%s::uuid, %s::uuid, 'queued', NOW(), TRUE, 1, NOW())
                             RETURNING id::text
                         """, (schedule_id, report_gen_id))
                         
@@ -639,10 +635,14 @@ def process_due_schedules():
                         #    failure up to this point has left no task behind
                         conn.commit()
 
-                        # 5. and only now, the dispatch
-                        task_id = dispatch_report(
+                        # 5. and only now, the dispatch; then its
+                        #    acknowledgement, best effort (LR-023 §3)
+                        task_id, publish_error = dispatch_report(
                             report_gen_id, account_id, report_type,
                             task_params, schedule_id,
+                        )
+                        scheduled_runs.record_dispatch(
+                            DATABASE_URL, report_gen_id, task_id is not None, publish_error,
                         )
                         
                         logger.info(
@@ -740,6 +740,10 @@ def sweep_stale_runs():
                         END,
                         finished_at = NOW()
                     WHERE status IN ('queued', 'processing')
+                      -- LR-023: legacy rows only. A recovery-tracked row is
+                      -- recovered by scheduled_runs.sweep_tracked, and its dead
+                      -- owner is republished, not failed, at this window.
+                      AND NOT recovery_tracked
                       AND (
                             -- never started: measured from enqueue, and wide
                             -- enough to let a burst drain.
@@ -768,6 +772,16 @@ def sweep_stale_runs():
             )
     except Exception as e:
         logger.error(f"Stale run sweep failed: {e}", exc_info=True)
+
+    # LR-023 §6: recovery-tracked rows. Terminal checks first (horizon, paused,
+    # deactivated, unverified, a claimed send with no outcome), then republish
+    # within 6 publishes and 2/4/8/16-minute backoff.
+    try:
+        summary = scheduled_runs.sweep_tracked(DATABASE_URL, dispatch_report)
+        if summary["terminal"] or summary["republished"]:
+            logger.warning("Tracked run sweep: %s", summary)
+    except Exception as e:
+        logger.error(f"Tracked run sweep failed: {e}", exc_info=True)
 
 
 def run_forever():

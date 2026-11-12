@@ -146,8 +146,10 @@ def test_the_limit_email_says_how_many_more_the_gate_allows(limit, count, more):
         assert f"You can make {more} more while you decide." in text
     else:
         assert "more while you decide" not in text
-    assert "skipped, not sent later" in text
-    assert "aren&rsquo;t re-sent" in text or "aren’t re-sent" in text
+    # D-332 (LR-023): schedules keep sending past the manual limit.
+    assert "Your scheduled reports keep sending: they don&rsquo;t count toward this limit." in text
+    for old in ("skipped, not sent later", "re-sent", "pick up again on the 1st"):
+        assert old not in text, old
 
 
 def test_the_reset_date_is_the_first_of_next_month():

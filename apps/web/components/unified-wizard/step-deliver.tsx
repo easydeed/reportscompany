@@ -41,7 +41,7 @@ export function StepDeliver({ state, onChange, defaultMode }: StepDeliverProps) 
         title={isSchedule ? "When should it go out?" : "What happens with it?"}
         sub={
           isSchedule
-            ? "Every run uses one report from your allowance and pulls fresh data when it runs."
+            ? "Scheduled runs don't use your monthly report allowance. Each one pulls fresh data when it runs."
             : "Download it now, or send it from you with the PDF attached."
         }
       />

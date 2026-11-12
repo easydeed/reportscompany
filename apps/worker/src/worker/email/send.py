@@ -3,10 +3,14 @@ import os
 import logging
 import hashlib
 import hmac
-from typing import List, Tuple, Dict, Optional
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Callable, List, Tuple, Dict, Optional, Union
 from urllib.parse import quote
 
 from .providers.sendgrid import send_email
+
+if TYPE_CHECKING:   # annotations only: tests stub the provider module
+    from .providers.sendgrid import Attempt
 from .template import schedule_email_html, schedule_email_subject
 
 logger = logging.getLogger(__name__)
@@ -103,6 +107,23 @@ def build_one_click_unsubscribe_headers(account_id: str, email: str) -> dict:
     }
 
 
+@dataclass
+class ScheduleSend:
+    """
+    LR-023: what a single-attempt send did, recipient by recipient.
+
+    `refused` names why nothing was POSTed (None when the loop ran):
+      no_recipients, suppression_unavailable, all_suppressed, no_pdf,
+      no_unsubscribe_link, not_claimed.
+    `attempts` holds one (email, Attempt) per recipient POSTed, in order, and is
+    never collapsed into one code: a rejection for one recipient must not hide
+    an unknown outcome for another.
+    """
+    refused: Optional[str] = None
+    recipients: List[str] = field(default_factory=list)
+    attempts: List[Tuple[str, "Attempt"]] = field(default_factory=list)
+
+
 def send_schedule_email(
     account_id: str,
     recipients: List[str],
@@ -111,7 +132,10 @@ def send_schedule_email(
     db_conn=None,
     brand: Optional[Dict] = None,
     account_type: str = "REGULAR",
-) -> Tuple[int, str]:
+    single_attempt: bool = False,
+    claim: Optional[Callable[[List[str]], bool]] = None,
+    on_attempt: Optional[Callable[[str, "Attempt"], None]] = None,
+) -> Union[Tuple[int, str], ScheduleSend]:
     """
     Send a scheduled report notification email to recipients.
     
@@ -137,11 +161,24 @@ def send_schedule_email(
         brand: Optional brand configuration for white-label output (Phase 30)
         account_type: "REGULAR" (agent) or "INDUSTRY_AFFILIATE" (title company) (V14)
     
+        single_attempt: LR-023, recovery-tracked scheduled sends only. One HTTP
+            attempt per recipient (the provider does not retry), and a
+            `ScheduleSend` is returned instead of the tuple. Legacy callers
+            leave it False and get today's behaviour exactly.
+        claim: with single_attempt, called ONCE with the final recipient list,
+            after suppression and the render and immediately before the first
+            POST. Nothing is POSTed unless it returns True. It is the durable
+            pre-send claim; see worker/scheduled_runs.py.
+        on_attempt: with single_attempt, called after each recipient's POST.
+            Its failure does not stop the loop: no recipient is ever POSTed twice.
+
     Returns:
-        Tuple of (status_code, response_text)
+        Tuple of (status_code, response_text), or a `ScheduleSend` when single_attempt.
     """
     if not recipients:
         logger.warning("No recipients provided for schedule email")
+        if single_attempt:
+            return ScheduleSend(refused="no_recipients")
         return (400, "No recipients")
     
     # Check suppression list if db_conn provided
@@ -166,9 +203,17 @@ def send_schedule_email(
                 
                 if not filtered_recipients:
                     logger.info(f"All {len(recipients)} recipient(s) suppressed, skipping email send")
+                    if single_attempt:
+                        return ScheduleSend(refused="all_suppressed")
                     return (200, "All recipients suppressed")
                     
         except Exception as e:
+            if single_attempt:
+                # LR-023: a tracked send stops rather than mail someone who
+                # unsubscribed. Nothing is claimed, so the run is recovered
+                # (republished) by the sweep once its lease goes stale.
+                logger.error(f"Error checking suppressions: {e}; tracked send stopped, nothing sent")
+                return ScheduleSend(refused="suppression_unavailable")
             logger.warning(f"Error checking suppressions: {e}, proceeding with all recipients")
             # On error, don't block email - proceed with original list
             filtered_recipients = recipients
@@ -198,6 +243,8 @@ def send_schedule_email(
     
     if not pdf_url:
         logger.error("No PDF URL provided in payload")
+        if single_attempt:
+            return ScheduleSend(refused="no_pdf", recipients=filtered_recipients)
         return (400, "No PDF URL")
     
     # Generate email subject
@@ -236,7 +283,14 @@ def send_schedule_email(
             "send. schedule_email_html() no longer emits the unsubscribe_url it "
             "was given (expected at template.py:2338)."
         )
+        if single_attempt:
+            return ScheduleSend(refused="no_unsubscribe_link", recipients=filtered_recipients)
         return (500, "Unsubscribe URL missing from rendered email body")
+
+    if single_attempt:
+        return _send_each_once(
+            account_id, filtered_recipients, subject, html_content, claim, on_attempt,
+        )
 
     # Send ONE email per recipient, each carrying a token bound to that
     # recipient's own address. Previously a single message went to the whole
@@ -282,3 +336,34 @@ def send_schedule_email(
     logger.error(f"Schedule email partially or fully failed: {summary}")
     return (first_status, summary)
 
+
+def _send_each_once(account_id, recipients, subject, html_content, claim, on_attempt) -> ScheduleSend:
+    """
+    LR-023: the claim, then exactly one POST per recipient, never repeated.
+
+    The claim is taken here, after suppression and the render, so the six-hour
+    horizon and the schedule's eligibility are judged at the last moment before
+    anything leaves. The loop does not stop after an unknown or a rejected
+    outcome: each recipient is independent and gets its one attempt.
+    """
+    if claim is None or not claim(list(recipients)):
+        return ScheduleSend(refused="not_claimed", recipients=list(recipients))
+    result = ScheduleSend(recipients=list(recipients))
+    for recipient in recipients:
+        personalised_html = html_content.replace(
+            _UNSUB_URL_SENTINEL, build_unsubscribe_url(account_id, recipient)
+        )
+        attempt = send_email(
+            to_emails=[recipient],
+            subject=subject,
+            html_content=personalised_html,
+            headers=build_one_click_unsubscribe_headers(account_id, recipient),
+            single_attempt=True,
+        )
+        result.attempts.append((recipient, attempt))
+        if on_attempt is not None:
+            try:
+                on_attempt(recipient, attempt)
+            except Exception as e:   # noqa: BLE001 - bookkeeping never re-sends
+                logger.warning(f"Could not record the outcome for {recipient}: {e}")
+    return result
