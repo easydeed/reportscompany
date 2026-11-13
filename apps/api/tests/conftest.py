@@ -80,8 +80,9 @@ def db_session():
     faking one would turn an integration test into a worse unit test. So this
     follows the pattern `apps/worker/tests/test_deactivate_schedules.py`
     already uses for the same situation — run when a database is reachable, skip
-    cleanly when it is not — which keeps CI green without pretending the
-    coverage is there.
+    cleanly when it is not on a developer machine. LR-031's root pytest policy
+    makes any such skip fail required database CI; it does not replace these
+    local prerequisite checks.
 
     It yields nothing: the tests open their own connections through `db_conn()`.
     Depending on this fixture is how they declare the requirement, and that is
