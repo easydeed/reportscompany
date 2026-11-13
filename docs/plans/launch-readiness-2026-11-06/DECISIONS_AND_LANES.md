@@ -45,13 +45,31 @@ The review verdict is **AMEND, then start**. All findings hold. The amendments i
 
 **November 12 rebalancing (Jerry):** This supersedes the historical lane sequence
 below for the sponsored pilot. Codex implements LR-031 -> LR-003 -> LR-004 ->
-LR-005 -> LR-009. LR-003 upgrades vulnerable Next.js 16.0.7 to a patched release
-and verifies Node 22 builds. Claude implements LR-006, LR-007, LR-015 and LR-017.
+LR-005 -> LR-009 -> LR-011 -> LR-012 -> LR-013 -> LR-014. LR-003 upgrades vulnerable Next.js 16.0.7 to a patched release
+and verifies Node 22 builds. Claude implements LR-006, LR-007, LR-015 and LR-017,
+then LR-027 and LR-026 subject to their dependencies. Claude also owns the
+temporary sponsored-account Upgrade/checkout gate (#294).
 Implementation takes priority in both lanes; cross-agent review remains required.
-LR-011–LR-014 are deferred until paid launch (pilot agents are sponsored and pay
-nothing). Public-launch gates LR-008, LR-010 and LR-016 remain deferred. This
+**Billing deadline (Jerry, November 12–13):** LR-011–LR-014 follow LR-009
+immediately and must be reviewed, merged and verified before outbound marketing
+starts, about five weeks from the November 12 decision (planning target around
+December 17, 2026; confirm the campaign date before setting the final release
+cutoff). They are not an indefinite post-pilot deferral. Pilot agents remain
+sponsored and pay nothing. Public-launch gates LR-008, LR-010 and LR-016 remain deferred. This
 reassignment moves LR-015's manual-allowance ownership to Claude; LR-023's
 scheduled-send and copy work has already merged. No broader backlog is reopened.
+
+**Stripe launch prerequisites (Jerry, November 13):** Production currently uses
+an `sk_test_` key, confirmed by Jerry; checkout has not run in live mode, so the
+pilot had no live-payment exposure. Do not treat that as proof that the billing
+defects are fixed. Keep the sponsored gate until the billing release is approved.
+LR-011–LR-014's go-live acceptance includes a live server key, live recurring
+monthly prices for `starter` (Growth, USD 19) and `pro` (Growth Plus, USD 29),
+and the live `/v1/webhooks/stripe` endpoint with its own signing secret.
+Jerry alone creates live products/prices in the Dashboard. Codex owns reviewed
+application configuration, plan-to-price mapping and end-to-end verification;
+no agent creates products/prices or switches production to live billing here.
+See [Jerry's Dashboard checklist](../../runbooks/stripe-live-launch-checklist.md).
 
 **Historical estimate and sequence from the original review:**
 
