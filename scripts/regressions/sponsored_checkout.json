@@ -65,5 +65,36 @@
   "new": "  const offerCheckout = false\n",
   "test": "__tests__/SponsoredCheckoutPaused.test.tsx",
   "runner": "jest"
+ },
+ {
+  "name": "S10 the seats read promises self-upgrade while the gate is on",
+  "file": "apps/api/src/api/routes/company.py",
+  "old": "\"agents_self_upgrade\": billing_config.SPONSORED_SELF_CHECKOUT,",
+  "new": "\"agents_self_upgrade\": True,",
+  "test": "apps/api/tests/test_company_plan_api.py::test_the_agents_upgrade_promise_follows_the_sponsored_pilot_gate apps/api/tests/test_company_plan_api.py::test_the_pilot_gate_is_on_today"
+ },
+ {
+  "name": "S11 the Company Plan sentence is said regardless of the API",
+  "file": "apps/web/lib/company-plan.ts",
+  "old": "  return selfUpgrade === true ? \"Agents who want more upgrade and pay for it themselves.\" : null",
+  "new": "  return \"Agents who want more upgrade and pay for it themselves.\"",
+  "test": "__tests__/CompanyPlan.test.ts __tests__/CompanyPlanUpgradeSentence.test.tsx",
+  "runner": "jest"
+ },
+ {
+  "name": "S12 the page types the sentence back in",
+  "file": "apps/web/app/app/company/plan/page.tsx",
+  "old": "          {upgradeSentence ? <> {upgradeSentence}</> : null}\n",
+  "new": "          {\" \"}Agents who want more upgrade and pay for it themselves.\n",
+  "test": "__tests__/CompanyPlanUpgradeSentence.test.tsx",
+  "runner": "jest"
+ },
+ {
+  "name": "S13 the sentence never comes back when the gate lifts",
+  "file": "apps/web/app/app/company/plan/page.tsx",
+  "old": "  const upgradeSentence = agentsUpgradeSentence(seatsData?.agents_self_upgrade)\n",
+  "new": "  const upgradeSentence = agentsUpgradeSentence(false)\n",
+  "test": "__tests__/CompanyPlanUpgradeSentence.test.tsx",
+  "runner": "jest"
  }
 ]
