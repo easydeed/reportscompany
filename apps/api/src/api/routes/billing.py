@@ -12,6 +12,7 @@ from ..db import db_conn, set_rls
 from .reports import require_account_id
 from ..config.billing import (
     STRIPE_SECRET_KEY,
+    checkout_available,
     validate_stripe_config
 )
 from ..services.plan_lookup import get_plan_by_slug
@@ -141,9 +142,19 @@ def create_checkout_session(
                 }
             )
 
-        # NOTE: Sponsored agents (REGULAR with sponsor_account_id) CAN self-upgrade.
-        # Title companies are compliance-prohibited from paying for agent subscriptions,
-        # so agents pay their own way.
+        # Sponsored agents (REGULAR with sponsor_account_id) pay their own way
+        # when they upgrade: title companies are compliance-prohibited from
+        # paying for agent subscriptions. During the pilot that path is paused
+        # (config/billing.py, SPONSORED_SELF_CHECKOUT): refused here, before
+        # any Stripe customer or session is created.
+        if not checkout_available(acc_type, sponsor_id):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "error": "sponsored_checkout_paused",
+                    "message": "Upgrades aren't available on sponsored accounts right now.",
+                }
+            )
 
         
         # Get user email for Stripe customer
