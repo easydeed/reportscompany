@@ -24,12 +24,14 @@ jobs:
     # billing URLs from two page moves ago, and a sponsored-checkout test
     # asserting a policy the code reversed.
     #
-    # 16, because that is what production runs. Trust auth on a throwaway
+    # PostgreSQL 17 matches production's supported major (17.9 at LR-001).
+    # The major tag receives security/bugfix patches; no second major is claimed.
+    # Trust auth on a throwaway
     # service container is fine; the password is only there because the image
     # refuses to start without one.
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: market_reports
@@ -173,6 +175,7 @@ jobs:
           .venv/bin/pytest -rf 2>&1 | tee pytest-output.txt
         env:
           PDF_CONTRAST_REQUIRE_BROWSER: "1"
+          REQUIRE_DATABASE_TESTS: "1"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/market_reports
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scratch
 
