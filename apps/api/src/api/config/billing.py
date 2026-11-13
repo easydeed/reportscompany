@@ -58,6 +58,26 @@ def get_plan_for_stripe_price(price_id: str) -> Optional[str]:
     return STRIPE_PRICE_REVERSE_MAP.get(price_id)
 
 
+# SPONSORED PILOT GATE (November 12, Jerry). A sponsored agent pays nothing,
+# and checkout is not yet safe to offer: it can create a second subscription
+# or a second Stripe customer (LR-011), and LR-012 to LR-014 are open. Until
+# those land, a sponsored account is refused before any Stripe call and the app
+# offers it no Upgrade. LR-011 to LR-014 turn this back on, in one place.
+SPONSORED_SELF_CHECKOUT = False
+
+
+def checkout_available(account_type, sponsor_account_id) -> bool:
+    """Whether this account may start a self-serve Stripe checkout.
+
+    The one rule the checkout route enforces and the plan-usage response
+    reports, so the app never offers what the API will refuse."""
+    if account_type != "REGULAR":
+        return False
+    if sponsor_account_id and not SPONSORED_SELF_CHECKOUT:
+        return False
+    return True
+
+
 def validate_stripe_config() -> tuple[bool, list[str]]:
     """
     Validate that required Stripe configuration is present.
