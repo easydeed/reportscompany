@@ -60,3 +60,18 @@ def test_other_devices_expire_and_replacement_survives(client, world, flow):
     assert login.status_code == 200
     fresh = login.json()["access_token"]
     assert client.get("/v1/users/me", headers={"Authorization": f"Bearer {fresh}"}).status_code == 200
+
+def test_expired_reset_keeps_the_current_session(client, world):
+    email = world.email("ag-a1a")
+    current = _auth(client, email)
+    reset = str(uuid.uuid4())
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        conn.execute("""
+            INSERT INTO password_reset_tokens (user_id, token, expires_at)
+            SELECT id, %s, NOW() - INTERVAL '1 minute' FROM users WHERE email = %s
+        """, (reset, email))
+    result = client.post("/v1/auth/reset-password", json={
+        "token": reset, "new_password": "NewPilotTest123!",
+    })
+    assert result.status_code == 400 and "expired" in result.json()["detail"]
+    assert client.get("/v1/users/me", headers=current).status_code == 200
