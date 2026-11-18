@@ -23,7 +23,7 @@ import { useCompanyAgents, useCompanyBranding, useCompanyReps, useCompanySeats }
 import { Avatar, H2, Sentence } from "@/components/sponsor/shared"
 import type { Agent, Rep, SeatSummary } from "@/lib/company-people"
 import {
-  agentPlanCounts, agentPlanLimits, historyDate, planHeadline, seatPeriodLine, seatRows,
+  agentPlanCounts, agentPlanLimits, agentsUpgradeSentence, historyDate, planHeadline, seatPeriodLine, seatRows,
   type AgentPlan, type SeatPeriod,
 } from "@/lib/company-plan"
 
@@ -45,6 +45,7 @@ export default function PlanAndSeatsPage() {
   const history: SeatPeriod[] = seatsData?.history ?? []
   const plan: AgentPlan | null = seatsData?.agent_plan ?? null
   const canManage: boolean = seatsData?.can_manage === true
+  const upgradeSentence = agentsUpgradeSentence(seatsData?.agents_self_upgrade)
   const reps: Rep[] = repsData?.reps ?? []
   const agents: Agent[] = agentsData?.agents ?? []
   const rows = seatRows(seats, reps)
@@ -88,7 +89,7 @@ export default function PlanAndSeatsPage() {
         <p className="max-w-[640px] text-[16px] leading-[1.55] text-[var(--body)]">
           Agents don&apos;t take a seat. Each agent your reps invite gets their own account
           {plan ? <> on the {plan.plan_name} plan{limits ? <>: {limits}</> : null}</> : null}.
-          {" "}Agents who want more upgrade and pay for it themselves.
+          {upgradeSentence ? <> {upgradeSentence}</> : null}
           {agentsData ? <> {agentPlanCounts(agents, plan)}</> : null}
         </p>
       </div>
