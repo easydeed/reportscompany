@@ -380,7 +380,7 @@ export function buildMarketSnapshotHtml(
     "{{lookback_days}}": String(lookback),
     
     // Hero ribbon KPIs
-    "{{median_price}}": formatCurrency(metrics.median_close_price || metrics.median_list_price),
+    "{{median_price}}": formatCurrency(metrics.median_close_price > 0 ? metrics.median_close_price : null),
     "{{closed_sales}}": formatNumber(closedCount),
     "{{avg_dom}}": formatDecimal(metrics.avg_dom),
     "{{moi}}": formatDecimal(moi),
@@ -797,7 +797,7 @@ export function buildClosedHtml(
     <tr>
       <td>${escapeHtml(listing.city || r.city) || "—"}</td>
       <td>${escapeHtml(listing.street_address) || "—"}</td>
-      <td class="t-right">${formatCurrency(listing.close_price || listing.list_price)}</td>
+      <td class="t-right">${formatCurrency(listing.close_price > 0 ? listing.close_price : null)}</td>
       <td class="t-right">${formatNumber(listing.bedrooms)}</td>
       <td class="t-right">${formatDecimal(listing.bathrooms, 1)}</td>
       <td class="t-right">${formatNumber(listing.sqft)}</td>

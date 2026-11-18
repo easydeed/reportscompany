@@ -249,16 +249,24 @@ def test_portal_url_uses_correct_path(mock_stripe, mock_auth):
 
 
 @pytest.mark.usefixtures("db_session")
-def test_checkout_lets_a_sponsored_agent_pay_for_itself(mock_stripe, mock_auth, mock_stripe_config):
+def test_checkout_lets_a_sponsored_agent_pay_for_itself(mock_stripe, mock_auth, mock_stripe_config, monkeypatch):
     """
-    A sponsored agent (REGULAR with a sponsor) CAN start checkout.
+    A sponsored agent (REGULAR with a sponsor) pays for itself once checkout
+    is open to sponsored accounts.
 
     This test used to assert the opposite — 400 `sponsored_account` — which was
     the original rule. The rule changed: title companies are compliance-
     prohibited from paying for agent subscriptions, so agents pay their own way
-    (routes/billing.py, the NOTE after the account-type check). The test was
-    never updated because nothing ran it with a database (D-285).
+    (routes/billing.py, after the account-type check). The test was never
+    updated because nothing ran it with a database (D-285).
+
+    November 12: during the sponsored pilot that path is paused
+    (config/billing.py, SPONSORED_SELF_CHECKOUT = False; the refusal is held in
+    test_sponsored_checkout_paused.py). This test keeps the policy for when
+    LR-011 to LR-014 turn it back on, so lifting the pause cannot regress it.
     """
+    from api.config import billing as billing_config
+    monkeypatch.setattr(billing_config, "SPONSORED_SELF_CHECKOUT", True)
     with patch('api.routes.billing.db_conn') as mock_db, \
          patch('api.routes.billing.set_rls'):
         

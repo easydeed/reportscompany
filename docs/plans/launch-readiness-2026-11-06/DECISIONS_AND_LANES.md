@@ -43,6 +43,18 @@ The review verdict is **AMEND, then start**. All findings hold. The amendments i
 
 ## Two implementation lanes
 
+**November 12 rebalancing (Jerry):** This supersedes the historical lane sequence
+below for the sponsored pilot. Codex implements LR-031 -> LR-003 -> LR-004 ->
+LR-005 -> LR-009. LR-003 upgrades vulnerable Next.js 16.0.7 to a patched release
+and verifies Node 22 builds. Claude implements LR-006, LR-007, LR-015 and LR-017.
+Implementation takes priority in both lanes; cross-agent review remains required.
+LR-011–LR-014 are deferred until paid launch (pilot agents are sponsored and pay
+nothing). Public-launch gates LR-008, LR-010 and LR-016 remain deferred. This
+reassignment moves LR-015's manual-allowance ownership to Claude; LR-023's
+scheduled-send and copy work has already merged. No broader backlog is reopened.
+
+**Historical estimate and sequence from the original review:**
+
 | Lane | Sequence | Focused hours |
 |---|---|---:|
 | Codex | LR-001 -> LR-002 -> LR-031 -> LR-003 through LR-010 -> LR-011 through LR-017 -> LR-028, LR-029 | 92–160 |

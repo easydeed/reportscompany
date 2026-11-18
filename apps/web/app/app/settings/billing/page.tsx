@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import { useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { checkoutOffered } from "@/lib/checkout"
 
 type BillingData = PlanUsage & {
   account: {
@@ -25,6 +26,7 @@ type BillingData = PlanUsage & {
     account_type: string
     plan_slug: string
     billing_status?: string | null
+    checkout_available?: boolean
   }
   stripe_billing?: {
     stripe_price_id: string
@@ -214,6 +216,7 @@ export default function BillingPage() {
   const currentPlanSlug = billingData?.account?.plan_slug || "free"
   const accountType = billingData?.account?.account_type || "REGULAR"
   const showStripeActions = accountType === "REGULAR" && currentPlanSlug !== "free"
+  const offerCheckout = checkoutOffered(billingData)
 
   return (
     <div className="max-w-3xl">
@@ -312,8 +315,20 @@ export default function BillingPage() {
           </div>
         </div>
 
-        {/* Available Plans Card — only for regular accounts */}
-        {accountType === "REGULAR" && (
+        {/* Sponsored pilot: the API refuses checkout, so nothing here offers it. */}
+        {accountType === "REGULAR" && !offerCheckout && (
+          <div className="bg-muted/30 border border-border rounded-xl p-6 text-center" data-testid="sponsored-no-checkout">
+            <p className="text-sm text-muted-foreground">
+              Your account is sponsored, so there&rsquo;s nothing to pay. Upgrades aren&rsquo;t available on sponsored accounts right now.
+            </p>
+            <a href="mailto:support@trendyreports.io" className="text-sm text-primary hover:underline mt-2 inline-block">
+              support@trendyreports.io
+            </a>
+          </div>
+        )}
+
+        {/* Available Plans Card — only for regular accounts that may check out */}
+        {accountType === "REGULAR" && offerCheckout && (
           <div className="bg-card border border-border rounded-xl shadow-[var(--shadow-card)] overflow-hidden">
             <div className="px-5 py-3 border-b border-border bg-muted/30">
               <h3 className="text-[13px] font-semibold text-foreground uppercase tracking-wide">Available Plans</h3>

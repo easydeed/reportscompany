@@ -1,0 +1,51 @@
+[
+ {
+  "name": "T1 the middleware refuses the render token again (Share shows Report Not Found)",
+  "file": "apps/api/src/api/middleware/authn.py",
+  "old": "            if _render_token_request(request):\n                return await call_next(request)\n",
+  "new": "",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_the_render_token_reads_the_report apps/api/tests/test_render_token_reaches_report_data.py::test_the_route_is_reached_so_a_malformed_id_is_a_400_not_a_401"
+ },
+ {
+  "name": "T2 any anonymous request passes the middleware",
+  "file": "apps/api/src/api/middleware/authn.py",
+  "old": "    return bool(_RENDER_TOKEN_PATH.match(request.url.path)) and bool(\n        request.headers.get(\"X-Internal-Render-Token\")\n    )",
+  "new": "    return True",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_only_the_data_path_with_a_token_header_is_passed_through"
+ },
+ {
+  "name": "T3 the pass-through matches every report path, not just /data",
+  "file": "apps/api/src/api/middleware/authn.py",
+  "old": "_RENDER_TOKEN_PATH = re.compile(r\"^/v1/reports/[^/]+/data$\")",
+  "new": "_RENDER_TOKEN_PATH = re.compile(r\"^/v1/reports/\")",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_only_the_data_path_with_a_token_header_is_passed_through"
+ },
+ {
+  "name": "T4 the pass-through ignores whether the header is there",
+  "file": "apps/api/src/api/middleware/authn.py",
+  "old": "    return bool(_RENDER_TOKEN_PATH.match(request.url.path)) and bool(\n        request.headers.get(\"X-Internal-Render-Token\")\n    )",
+  "new": "    return bool(_RENDER_TOKEN_PATH.match(request.url.path))",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_only_the_data_path_with_a_token_header_is_passed_through apps/api/tests/test_render_token_reaches_report_data.py::test_without_the_header_the_middleware_still_refuses_first"
+ },
+ {
+  "name": "T5 the route trusts any token value",
+  "file": "apps/api/src/api/routes/report_data.py",
+  "old": "        return hmac.compare_digest(provided.encode(\"utf-8\"), expected.encode(\"utf-8\"))",
+  "new": "        return bool(provided)",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_a_wrong_token_is_refused_by_the_route"
+ },
+ {
+  "name": "T6 the token path stays open when no token is configured",
+  "file": "apps/api/src/api/routes/report_data.py",
+  "old": "    if not expected:\n        return False\n",
+  "new": "    if not expected:\n        return bool(request.headers.get(\"X-Internal-Render-Token\"))\n",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_no_token_configured_means_the_token_path_is_closed"
+ },
+ {
+  "name": "T7 the route compares strs again (a non-ASCII token is a 500)",
+  "file": "apps/api/src/api/routes/report_data.py",
+  "old": "        return hmac.compare_digest(provided.encode(\"utf-8\"), expected.encode(\"utf-8\"))",
+  "new": "        return hmac.compare_digest(provided, expected)",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_a_non_ascii_token_is_refused_with_401_not_500"
+ }
+]
