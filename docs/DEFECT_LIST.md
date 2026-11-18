@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 80 | Real, unfixed |
+| `open` | 81 | Real, unfixed |
 | `fixed` | 224 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **404** | D-001 … D-404, contiguous, no duplicates |
+| **Total** | **405** | D-001 … D-405, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 15 · WRONG 39 · FRAGILE 26 · ROUGH 0. (Sums to 80, the open total.)
+**Open by severity:** BROKEN 15 · WRONG 40 · FRAGILE 26 · ROUGH 0. (Sums to 81, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16512,6 +16512,15 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 **Review blocker (2026-11-18):** A valid UUID request with `X-Internal-Render-Token` containing byte `0xFF` passes the new middleware and reaches `report_data.py:37`. Python's `hmac.compare_digest(provided, expected)` raises `TypeError: comparing strings with non-ASCII characters is not supported`, producing HTTP 500. Reproduced with the real TestClient, real middleware and route, a synthetic ASCII configured token and a dedicated loopback database. Before #305 the middleware refused this anonymous request with 401. Reject malformed/non-ASCII token values safely (or compare bytes), add a real-route regression proving 401 with no report data, and rerun the valid-token and tenant-isolation checks. Do not merge #305 until re-review passes.
 
 **Acceptance:** Real middleware plus real route: valid token returns the synthetic report; missing, wrong and unconfigured tokens fail closed; unrelated paths remain protected; owner access and cross-account refusal remain unchanged. After merge, the deployed malformed-ID probe must return 400 with a token header and 401 without one; a real Share/print link must render with matching Vercel/API token configuration. The malformed-ID probe alone is not proof that a real report renders.
+
+### D-405 — Share and Print can label an asking price as a sale price
+
+**Severity:** WRONG · November 18 pilot review
+**Status:** `open` — [#314](https://github.com/easydeed/reportscompany/pull/314) corrects both Market Snapshot templates. Forty template checks passed locally. Awaiting release.
+
+With one active listing at $755,000 and no priced closing, Share called $755K the median sale price and Print displayed $755,000 under Median Sale Price. A withheld closing price produced the same result. This error is separate from D-404, which concerns opening the link.
+
+**Acceptance:** Share uses a city headline and Print shows its missing-value mark for absent, withheld or historical zero sale prices. A $640,000 closing alongside the $755,000 listing must appear as $640K in Share and $640,000 in Print.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
