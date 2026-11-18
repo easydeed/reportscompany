@@ -7,7 +7,7 @@
 
 ## Status
 
-**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding.
+**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. #300 deployed at `6d68e97c` on Vercel and all four Render services. The homepage, sign-in page and API health check passed. #298 then restored web CSV import at `ba551508` on Vercel and the API. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding. The next two register filings are [D-404 for report links](https://github.com/easydeed/reportscompany/pull/309) and [D-405 for Share and Print sale prices](https://github.com/easydeed/reportscompany/pull/316).
 
 **November 6 baseline:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
 
@@ -63,15 +63,15 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 85 | Observed, not yet triaged |
-| `open` | 80 | Real, unfixed |
-| `fixed` | 225 | Corrected in code, with the branch or PR named on the entry |
+| `recorded` | 84 | Observed, not yet triaged |
+| `open` | 75 | Real, unfixed |
+| `fixed` | 231 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **405** | D-001 … D-405, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 15 · WRONG 39 · FRAGILE 26 · ROUGH 0. (Sums to 80, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 37 · FRAGILE 27 · ROUGH 0. (Sums to 75, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16159,7 +16159,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-365 — Anonymous property lookup has no shared vendor-backed search budget
 
 **Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-006
-**Status:** `open`
+**Status:** `open` — [#315](https://github.com/easydeed/reportscompany/pull/315) implements the observation stage. Local tests covered 19 API and five web cases. Trusted attribution, shared counters and one day of observation remain rollout requirements before enabling refusals.
 
 **Evidence:** `apps/api/src/api/routes/lead_pages.py:230–259` calls SiteX for public search. Auth skips /v1/cma and the global limiter skips no-account requests. The separate request limit is later and does not bound searches. Search and request web proxies do not correctly preserve visitor attribution (D-339); deployed forwarding trust needs inspection.
 
@@ -16168,11 +16168,11 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-366 — Uploaded image bytes and declared format can disagree
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-007
-**Status:** `open`
+**Status:** `open` — [#312](https://github.com/easydeed/reportscompany/pull/312) validates new raster uploads. The read-only production inventory found two existing SVGs in 36 branding fields, 18 header and 18 footer. Jerry chose on November 18 to retain both current production logos. The PNG comparison and rollback plan are local review artifacts. All 36 fields still point to the original SVGs.
 
 **Evidence:** `apps/api/src/api/services/upload.py:53–69` trusts MIME and skips SVG parsing; :107–147 derives storage type from the filename and uploads unchanged bytes. Claude stored non-image bytes declared SVG and named .gif as image/gif using fake storage. SVG active-content impact depends on serving/embedding; no production script execution is claimed.
 
-**Acceptance:** Validate actual bytes for every accepted format. Block new SVG uploads and safely convert existing uploaded SVG logos to PNG with preserved historical asset references, as Jerry approved.
+**Acceptance:** Validate actual bytes for every accepted format and block new SVG uploads. Retain both existing PCT logos and their historical references per Jerry’s November 18 decision.
 
 ### D-367 — Both lead CSV exports preserve untrusted spreadsheet formulas
 
@@ -16186,7 +16186,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-368 — Changing or resetting a password leaves previously issued sessions usable
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-009
-**Status:** `open` — [#308](https://github.com/easydeed/reportscompany/pull/308) passes 30 authentication checks. Coverage includes active and replaced browser sessions, legacy tokens, a same-second change and a full password reset. Awaiting release.
+**Status:** `open` — [#308](https://github.com/easydeed/reportscompany/pull/308) passed 31 authentication tests and the browser cookie proxy test. The approved read-only check on mr-staging-db confirmed UTC. Awaiting release.
 
 **Evidence:** `routes/users.py:272` and `routes/auth.py:771` write password_changed_at, but auth middleware never compares it to issued tokens. Claude reproduced 200 for a pre-change token. Six issuers include seven-day register/invite tokens; iat seconds versus DB microseconds matters. The users.py docstring overstates revocation.
 
@@ -16249,7 +16249,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-375 — Zero allowances admit report generation and legacy evaluators treat zero as unlimited
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-015
-**Status:** `open`
+**Status:** `open` — [#293](https://github.com/easydeed/reportscompany/pull/293) addresses a zero manual allowance. [#313](https://github.com/easydeed/reportscompany/pull/313) handles the separate case where concurrent manual requests compete for the final available slot. Awaiting release.
 
 **Evidence:** `services/usage.py:180,294` preserves zero but divides by max(limit,1); worker `limit_checker.py:108` repeats the boundary. Review reproduced admission at usage zero and one for allowance zero. Legacy evaluate_report_limit at usage.py:409 (admin/property callers) treats limit<=0 as unlimited; worker counts omit scheduled rows.
 
@@ -16258,7 +16258,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-376 — Invitation acceptance and seat cancellation race the token used flag
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-017
-**Status:** `open` — [#292](https://github.com/easydeed/reportscompany/pull/292) handles competing acceptance attempts. [#307](https://github.com/easydeed/reportscompany/pull/307) locks the pending owner before checking whether the seat can be withdrawn. A migrated database test waits for an in-flight acceptance and verifies the joined rep remains active.
+**Status:** `open` — [#292](https://github.com/easydeed/reportscompany/pull/292) handles concurrent invitation acceptances. [#307](https://github.com/easydeed/reportscompany/pull/307) also protects the seat if acceptance wins a race with cancellation. The latter passed five local database checks. Awaiting release.
 
 **Evidence:** `apps/api/src/api/routes/auth.py:401–520` reads boolean used without locking, then changes password and marks used unconditionally. Claude's concurrent test succeeded twice in four of four runs; the last password won. Seat cancellation during acceptance has the same race.
 
@@ -16341,7 +16341,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-385 — Dependency readiness and outcome alerting still require operational proof
 
 **Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-027
-**Status:** `recorded`
+**Status:** `open` — [#317](https://github.com/easydeed/reportscompany/pull/317) specifies operator monitoring. [#319](https://github.com/easydeed/reportscompany/pull/319) corrects two admin screens that inferred delivery from a provider response code. A suppressed message recorded with HTTP 200 appeared delivered, and an uncertain send appeared failed. Verification still requires a named operator to receive an alert and its recovery.
 
 **Evidence:** `apps/api/src/api/routes/health.py:health` reports process/schema only; startup schema_guard deliberately starts if DB is unreachable. Repo inspection does not establish an operator receives stalled-job/webhook/provider alerts. This records missing proof, not a claim that no external monitor exists.
 
@@ -16415,35 +16415,35 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-392 — Closed Sales email can show asking price beside Sold
 
 **Severity:** WRONG
-**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Checks the sale card and table against different asking and closing prices, a withheld sale and active inventory. Awaiting release.
+**Status:** `fixed` — [#300](https://github.com/easydeed/reportscompany/pull/300) uses the recorded sale price on both the email card and the table. A withheld price stays unavailable. Production release `6d68e97c` was live on Vercel and all four Render services on November 18. Delivery to a PCT inbox still needs confirmation.
 
 A $950,000 listing sold for $900,000 displayed $950K on its card and $900K in the table. Check both displays and a sale with its price withheld.
 
 ### D-393 — Market Snapshot can fail on unpriced activity
 
 **Severity:** BROKEN
-**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Keeps unpriced activity in the total and out of monetary tiers. A missing sale median stays unavailable. Awaiting release.
+**Status:** `fixed` — [#300](https://github.com/easydeed/reportscompany/pull/300) counts unpriced activity and excludes it from monetary tiers. The median stays unavailable when every price is missing. Production release `6d68e97c` passed the API health check on November 18.
 
 Mixed priced and unpriced closings raise TypeError. Count all qualifying activity and use only priced rows in monetary tiers.
 
 ### D-394 — A multi-ZIP search can suppress a valid market alert
 
 **Severity:** BROKEN
-**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Sends one vendor parameter per ZIP and applies selected ZIPs separately from the area label. Awaiting release.
+**Status:** `fixed` — [#300](https://github.com/easydeed/reportscompany/pull/300) repeats the provider parameter for each selected ZIP and checks returned rows independently of the display label. All eight report builders have regression coverage. The production worker was live on `6d68e97c` on November 18.
 
 The request packs multiple postal codes into one parameter and the builder compares the printable area to a city. Verify the encoded request, selected rows and delivery match count.
 
 ### D-395 — A rep cannot reliably import a contacts CSV through the web
 
 **Severity:** BROKEN
-**Status:** `open` — [#298](https://github.com/easydeed/reportscompany/pull/298) passes the multipart route test and both FastAPI decoder cases. Awaiting merge.
+**Status:** `fixed` — [#298](https://github.com/easydeed/reportscompany/pull/298) deployed to Vercel and the Render API at `ba551508` on November 18. Web and API tests verified the multipart upload and plain or BOM-prefixed UTF-8. Sign-in and API health passed after deployment. No production contacts were imported.
 
 The contacts proxy loses multipart framing and a UTF-8 BOM hides the name column. Verify upload through the web route with plain and BOM-prefixed CSV.
 
 ### D-396 — Admin Retry for a failed market report cannot reach the queue
 
 **Severity:** BROKEN
-**Status:** `open` — The first patch passed database tests. Independent review found a delayed original job and an interrupted retry could still give an incorrect result. Hold release until these cases pass.
+**Status:** `open` — [#311](https://github.com/easydeed/reportscompany/pull/311) retries generation-only manual reports and uses the existing dispatch record for scheduled reports. When earlier email delivery is uncertain, the operator receives a conflict response to prevent a duplicate send. Awaiting release review.
 
 The handler updates a nonexistent column and reports success on publication failure. Exercise a retry against the migrated schema, concurrent clicks and broker failure.
 
@@ -16457,28 +16457,28 @@ The consented request commits before publishing the initial job. A publication e
 ### D-398 — Get Started can repeat a first send while retrying monthly setup
 
 **Severity:** WRONG
-**Status:** `open` — [#301](https://github.com/easydeed/reportscompany/pull/301) preserves each completed onboarding step and uses a separate account-scoped request key for the report and schedule. Awaiting release.
+**Status:** `open` — [#301](https://github.com/easydeed/reportscompany/pull/301) recovers the first report and monthly schedule by account even after the seven-day replay window. The setup checks the saved schedule and flags a paused or conflicting schedule. Local verification covered 83 web tests and 25 database tests. Awaiting release.
 
 Creating the report succeeds and creating the schedule fails. The next click requests both again. Verify one initial generation and one recurring schedule across retries.
 
 ### D-399 — Platform-admin deactivation can leave an account operational
 
 **Severity:** WRONG
-**Status:** `open`
+**Status:** `open` — [#310](https://github.com/easydeed/reportscompany/pull/310) checks the account during login, authenticated access and scheduled sends. The release review includes reactivation of accounts containing independently disabled users.
 
 Platform admin changes accounts.is_active while login, sessions and scheduled delivery check users.is_active. Verify deactivation through the admin route across all three paths.
 
 ### D-400 — Monthly alert setup can fail near the end of the month
 
 **Severity:** BROKEN
-**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) covers five calendar boundaries, including leap year and December rollover. Awaiting merge.
+**Status:** `fixed` — [#299](https://github.com/easydeed/reportscompany/pull/299) deployed on the API at `ea30d1a7` and passed the production health check. Five calendar cases include leap year and December rollover.
 
 Creating a day-5 schedule on January 31 tries to construct February 31. Verify shorter months, leap years and year rollover.
 
 ### D-401 — Editing a schedule can skip a due occurrence
 
 **Severity:** WRONG
-**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) preserves a due occurrence across name and inactive-cadence changes. PostgreSQL tests exercised both weekly and monthly rows. The web editing fault has its own entry at D-402.
+**Status:** `fixed` — [#299](https://github.com/easydeed/reportscompany/pull/299) preserves a due occurrence across name and inactive-cadence changes. PostgreSQL tests exercised weekly and monthly rows. Production API revision `ea30d1a7` passed its health check. The separate Edit screen defect remains at D-402.
 
 A name-only edit recalculates next_run_at before the ticker claims the due send. Preserve the due time across metadata edits, including unchanged timing values.
 
@@ -16496,27 +16496,21 @@ At the November 13 baseline the Edit route passed a schedule ID to the creation 
 
 The reset route compared a time-zone-aware database timestamp to a naive UTC datetime. A valid test link raised TypeError. Verify both recovery using an unexpired link and rejection after its deadline.
 
-### D-404 — Report Share and print links show "Report Not Found" because middleware refuses the render token
+### D-404 — Report Share and Print can show “Report Not Found”
 
 **Severity:** BROKEN
-**Status:** `open` — customer-facing defect; Claude's [#305](https://github.com/easydeed/reportscompany/pull/305) is BLOCKED by independent review (malformed-token 500 below). Not merged or verified fixed on Production.
+**Status:** `open` — [#305](https://github.com/easydeed/reportscompany/pull/305) deployed to Vercel and the Render API at `e2d0d509` on November 18. The production health and sign-in checks passed. A real shared and printed report from the designated pilot account still needs verification.
 
-**Customer-visible behaviour:** Share on the report list/dashboard opens a page saying "Report Not Found"; the legacy print page cannot load the report either. The public production sample in #305 uses a synthetic UUID, not a real customer report. The root-cause probe below occurs before report lookup and establishes the authentication failure independently of that sample ID.
+**Customer-visible behaviour:** The dashboard’s Share and Print links could lead to a missing-report screen. The server-side renderer’s request was refused before the report data route could authenticate it. The initial production example used a synthetic report identifier.
 
-**Cause:** AuthContextMiddleware refuses requests with no account before `/v1/reports/{id}/data` can validate `X-Internal-Render-Token`. Share, print and worker social renderers use that server-side token rather than a user session. Production's malformed-ID probe with a nonempty bogus header returns 401, while the route itself returns 400 before checking credentials. No customer data or paid vendor call is needed for that probe.
+**Correction:** The middleware lets the report data route verify its server-side caller. The account-authenticated path still scopes its query to the signed-in account. Independent review required two revisions before release. See the [final review](https://github.com/easydeed/reportscompany/pull/305#issuecomment-6990874455) and the earlier [board history](https://github.com/easydeed/reportscompany/commit/f4737541f8a17de2633947cb65571385b818680b).
 
-**Related:** [D-029](#d-029--print_base-on-the-worker-is-persisted-as-the-user-visible-view-in-browser-link-and-defaults-to-localhost) (customer-facing browser link and previously unverified Vercel render token); [D-101](#d-101--the-view-in-browser-link-on-a-market-report-opened-a-different-build-than-the-pdf) (legacy print build). These are related delivery surfaces, not the same mechanism.
-
-**Proposed correction:** #305 passes only the report-data path with a nonempty token header through to the route. The route must still reject wrong/unconfigured tokens and preserve signed-in account scoping. Independent review is pinned to f50d2512208b13fdcd453bb5fa024ffc5fb4c37d. Its 29 integration checks passed on a dedicated, migrated loopback PostgreSQL database; all six supplied mutations were independently caught and restored. **Independent review is BLOCK:** the newly reachable route returns 500 for a non-ASCII wrong token, as detailed below. No production writes were used for this review.
-
-**Review blocker (2026-11-18):** A valid UUID request with `X-Internal-Render-Token` containing byte `0xFF` passes the new middleware and reaches `report_data.py:37`. Python's `hmac.compare_digest(provided, expected)` raises `TypeError: comparing strings with non-ASCII characters is not supported`, producing HTTP 500. Reproduced with the real TestClient, real middleware and route, a synthetic ASCII configured token and a dedicated loopback database. Before #305 the middleware refused this anonymous request with 401. Reject malformed/non-ASCII token values safely (or compare bytes), add a real-route regression proving 401 with no report data, and rerun the valid-token and tenant-isolation checks. Do not merge #305 until re-review passes.
-
-**Acceptance:** Real middleware plus real route: valid token returns the synthetic report; missing, wrong and unconfigured tokens fail closed; unrelated paths remain protected; owner access and cross-account refusal remain unchanged. After merge, the deployed malformed-ID probe must return 400 with a token header and 401 without one; a real Share/print link must render with matching Vercel/API token configuration. The malformed-ID probe alone is not proof that a real report renders.
+**Acceptance:** Open a known report from the approved pilot account through Share and Print. Check the report identity, PCT branding and the displayed data. The separate [Market Snapshot price filing](https://github.com/easydeed/reportscompany/pull/316) follows this entry. D-029 and D-101 contain related link history.
 
 ### D-405 — Share and Print can label an asking price as a sale price
 
 **Severity:** WRONG · November 18 pilot review
-**Status:** `fixed` — [#314](https://github.com/easydeed/reportscompany/pull/314) deployed to Vercel at `51250c0f` on November 18. Forty checks passed against the real templates. The deployed sign-in and API health checks passed. A real PCT Share link still needs its own verification under D-404.
+**Status:** `fixed` — [#314](https://github.com/easydeed/reportscompany/pull/314) deployed to Vercel at `51250c0f` on November 18. The Closed Sales print table repeated the same fallback for individual properties. [#318](https://github.com/easydeed/reportscompany/pull/318) deployed at `4875a170`. All 43 related template checks passed, including two missing-value cases and a recorded closing price in the actual Closed Sales table. The deployed sign-in and API health checks passed. A real PCT Share link still needs its own verification under D-404.
 
 With one active listing at $755,000 and no priced closing, Share called $755K the median sale price and Print displayed $755,000 under Median Sale Price. A withheld closing price produced the same result. This error is separate from D-404, which concerns opening the link.
 

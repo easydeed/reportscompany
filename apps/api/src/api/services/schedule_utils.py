@@ -71,9 +71,9 @@ def compute_next_run(
             )
         if candidate <= now_local:
             if now_local.month == 12:
-                next_month = now_local.replace(year=now_local.year + 1, month=1)
+                next_month = now_local.replace(year=now_local.year + 1, month=1, day=1)
             else:
-                next_month = now_local.replace(month=now_local.month + 1)
+                next_month = now_local.replace(month=now_local.month + 1, day=1)
             try:
                 candidate = next_month.replace(
                     day=dom, hour=send_hour, minute=send_minute, second=0, microsecond=0

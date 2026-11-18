@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, date
 # Gallery/featured listing photos are proxied to R2 at runtime in `tasks.generate_report`
 # so cloud renderers (PDFShift) load images from our domain rather than MLS/CDN URLs.
 
+from worker.query_builders import normalized_zips, postal_area
 from worker.compute.price_bands import build_bands, hottest_and_slowest
 from worker.compute.moi import (
     months_of_supply,
@@ -218,7 +219,9 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
     # - Closed count: from Closed sales in period
     # - MOI per tier: Active count in tier / Closed count in tier
     if closed:
-        prices = sorted([l["close_price"] for l in closed if l.get("close_price")])
+        priced_closed = [row for row in closed if (row.get("close_price") or 0) > 0]
+        priced_active = [row for row in active if (row.get("list_price") or 0) > 0]
+        prices = sorted(row["close_price"] for row in priced_closed)
         if prices:
             # Dynamic tier boundaries based on actual market data
             p25 = prices[len(prices) // 4] if len(prices) >= 4 else prices[0]
@@ -234,9 +237,9 @@ def build_market_snapshot_result(listings: List[Dict], context: Dict) -> Dict:
             price_tiers = []
             for label, min_price, max_price in tiers:
                 # Closed sales in this tier (already date-filtered)
-                tier_closed = [l for l in closed if min_price <= l.get("close_price", 0) < max_price]
+                tier_closed = [l for l in priced_closed if min_price <= l["close_price"] < max_price]
                 # Active inventory in this tier
-                tier_active = [l for l in active if min_price <= l.get("list_price", 0) < max_price]
+                tier_active = [l for l in priced_active if min_price <= l["list_price"] < max_price]
                 
                 if tier_closed or tier_active:
                     # The FOURTH copy of this formula, found by re-running the
@@ -1143,7 +1146,13 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
     if not builder:
         raise ValueError(f"Unsupported report_type: {report_type}. Supported: {list(builders.keys())}")
     
+    if context.get("zips"):
+        postal_codes = set(normalized_zips(context["zips"]))
+        listings = [row for row in listings if postal_area(row.get("zip_code")) in postal_codes]
+
     result = builder(listings, context)
+    if context.get("area_label"):
+        result["city"] = context["area_label"]
 
     # D-110: how many listings the report is about — after the same city
     # filter every builder applies, so a search that only returned other
