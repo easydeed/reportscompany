@@ -11,6 +11,7 @@
  */
 import * as fs from "fs";
 import * as path from "path";
+import { buildMarketSnapshotHtml } from "@/lib/templates";
 import { SOCIAL_TEMPLATE_MAP } from "@/lib/social-templates";
 import results from "./fixtures/social-results.json";
 
@@ -45,6 +46,29 @@ describe.each([...STAT_KINDS, ...PHOTO_KINDS])("%s story", (kind) => {
     expect(html).toMatch(/--pct-ink: #[0-9a-f]{6};/);
     expect(html).toMatch(/--pct-on: #[0-9a-f]{6};/);
   });
+});
+
+it.each([
+  { closed: 0, price: null, headline: "Market snapshot for Irvine.", printed: "—" },
+  { closed: 0, price: 0, headline: "Market snapshot for Irvine.", printed: "—" },
+  { closed: 1, price: null, headline: "Market snapshot for Irvine.", printed: "—" },
+  { closed: 1, price: 640000, headline: "Irvine median sale price is $640K.", printed: "$640,000" },
+])("uses only a recorded sale price for Share and Print ($closed closed, $price)", ({ closed, price, headline, printed }) => {
+  const data = {
+    result_json: {
+      city: "Irvine",
+      counts: { Active: 1, Closed: closed },
+      metrics: { median_list_price: 755000, median_close_price: price },
+    },
+    brand: { display_name: "Example Realty" },
+  };
+  const { filename, builder } = SOCIAL_TEMPLATE_MAP.market_snapshot;
+  const story = builder(fs.readFileSync(path.join(TEMPLATES, filename), "utf8"), data);
+  expect(story.match(/<h1[^>]*>([^<]*)<\/h1>/)?.[1]).toBe(headline);
+  expect(story).not.toContain("$755K");
+  const template = fs.readFileSync(path.join(TEMPLATES, "..", "trendy-market-snapshot.html"), "utf8");
+  const print = buildMarketSnapshotHtml(template, data);
+  expect(print.match(/>Median Sale Price<\/div>\s*<div class="val">([^<]*)/)?.[1]).toBe(printed);
 });
 
 it("the cells are the ones each report computes", () => {
