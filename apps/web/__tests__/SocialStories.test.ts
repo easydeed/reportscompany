@@ -50,6 +50,7 @@ describe.each([...STAT_KINDS, ...PHOTO_KINDS])("%s story", (kind) => {
 
 it.each([
   { closed: 0, price: null, headline: "Market snapshot for Irvine.", printed: "—" },
+  { closed: 0, price: 0, headline: "Market snapshot for Irvine.", printed: "—" },
   { closed: 1, price: null, headline: "Market snapshot for Irvine.", printed: "—" },
   { closed: 1, price: 640000, headline: "Irvine median sale price is $640K.", printed: "$640,000" },
 ])("uses only a recorded sale price for Share and Print ($closed closed, $price)", ({ closed, price, headline, printed }) => {
