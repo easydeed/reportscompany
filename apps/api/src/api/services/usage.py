@@ -230,6 +230,8 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
 def manual_market_admission(cur, account_id: str):
     """Hold this account's admission lock through the caller's pending insert."""
     cur.execute("SELECT id FROM accounts WHERE id = %s::uuid FOR NO KEY UPDATE", (account_id,))
+    if cur.fetchone() is None:
+        return None
     plan = resolve_plan_for_account(cur, account_id)
     # A separate READ COMMITTED statement sees the previous holder's insert.
     # generated_at defaults to the transaction time on creation and survives

@@ -228,7 +228,10 @@ def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTask
             )
 
         # ===== PRICING-002: CHECK MARKET REPORT LIMIT =====
-        plan, market_status = manual_market_admission(cur, account_id)
+        admission = manual_market_admission(cur, account_id)
+        if admission is None:
+            raise HTTPException(status_code=404, detail="Account not found")
+        plan, market_status = admission
 
         if not market_status["can_proceed"]:
             raise HTTPException(

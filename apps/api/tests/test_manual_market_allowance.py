@@ -1,6 +1,7 @@
 """Manual admissions at the last positive-grace slot, on migrated PostgreSQL."""
 import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 from queue import Queue
 
@@ -150,3 +151,10 @@ def test_only_this_months_billable_manual_generations_reserve(client, last_slot,
     # Exhausting manual capacity still allows an active schedule.
     another = client.post("/v1/schedules", headers=auth, json={**SCHEDULE, "name": "Second weekly"})
     assert another.status_code == 201 and another.json()["active"], another.text
+
+
+def test_missing_account_cannot_reserve_capacity():
+    from api.services.usage import manual_market_admission
+
+    with psycopg.connect(DB) as conn, conn.cursor() as cur:
+        assert manual_market_admission(cur, str(uuid.uuid4())) is None
