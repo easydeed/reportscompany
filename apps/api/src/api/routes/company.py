@@ -18,6 +18,7 @@ from ..services.email import send_rep_change_notice_email, send_role_invite_emai
 from ..services import seats
 from ..services.timefmt import utc_iso
 from ..services.usage import get_full_plan_usage
+from ..config import billing as billing_config
 from ..services.invite_service import (
     copy_branding_to_child,
     create_invited_user,
@@ -905,6 +906,10 @@ def get_seats(company: dict = Depends(get_company_member)):
             "history": seats.seat_history(cur, company_id),
             # What an agent gets, for Plan & Seats: agents take no seat.
             "agent_plan": seats.agent_plan(cur),
+            # Whether the agents can upgrade and pay for themselves today.
+            # False while the sponsored pilot gate is on (config/billing.py,
+            # SPONSORED_SELF_CHECKOUT), so Plan & Seats does not promise it.
+            "agents_self_upgrade": billing_config.SPONSORED_SELF_CHECKOUT,
             "can_manage": company["is_company_admin"],
         }
 

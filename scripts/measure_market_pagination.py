@@ -99,7 +99,11 @@ const [dir, exe, marginTop, marginBottom] = process.argv.slice(2);
 def find_chromium():
     """Playwright's bundled browser, when the pinned build is not the installed one."""
     root = Path(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/pw-browsers"))
-    for candidate in sorted(root.glob("chromium-*/chrome-linux/chrome"), reverse=True):
+    for candidate in sorted(
+        [*root.glob("chromium-*/chrome-linux64/chrome"),
+         *root.glob("chromium-*/chrome-linux/chrome")],
+        reverse=True,
+    ):
         return str(candidate)
     return ""
 
