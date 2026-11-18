@@ -277,7 +277,11 @@ def find_chromium():
         "PLAYWRIGHT_BROWSERS_PATH") else [Path("/opt/pw-browsers")]
     roots.append(Path.home() / ".cache/ms-playwright")
     for root in roots:
-        for candidate in sorted(root.glob("chromium-*/chrome-linux/chrome"), reverse=True):
+        for candidate in sorted(
+            [*root.glob("chromium-*/chrome-linux64/chrome"),
+             *root.glob("chromium-*/chrome-linux/chrome")],
+            reverse=True,
+        ):
             return str(candidate)
     return ""
 
