@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
+import { createOnboardingAlert } from "@/lib/onboarding-alerts"
+import { watchReport } from "@/lib/wizard-requests"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -34,15 +36,6 @@ type ContactGroup = {
   member_count?: number
 }
 
-type ApiErrorBody = {
-  detail?: unknown
-  error?: unknown
-  message?: unknown
-  product?: unknown
-  used?: unknown
-  limit?: unknown
-}
-
 const STEPS = [
   "Welcome",
   "Your people",
@@ -64,40 +57,13 @@ function mapRecipientsForApi(recipients: Recipient[]) {
   })
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
-}
-
-function asReadableString(value: unknown) {
-  return typeof value === "string" && value.trim() ? value : null
-}
-
-function getApiErrorMessage(body: ApiErrorBody, status: number, fallback: string) {
-  const detail = isRecord(body.detail) ? body.detail : null
-  const source = (detail || body) as ApiErrorBody
-  const product = asReadableString(source.product)
-  const used = typeof source.used === "number" ? source.used : null
-  const limit = typeof source.limit === "number" ? source.limit : null
-
-  if (status === 429 && product === "schedules") {
-    const usage = used !== null && limit !== null
-      ? ` You've used ${used} of ${limit} schedules.`
-      : ""
-    return `Schedule limit reached — You've reached your plan's schedule limit.${usage} Upgrade to set up more recurring reports.`
-  }
-
-  return (
-    asReadableString(source.message) ||
-    asReadableString(body.message) ||
-    asReadableString(body.detail) ||
-    fallback
-  )
-}
-
 export function GuidedGetStarted() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollingRef = useRef<AbortController | null>(null)
+  const [accountId, setAccountId] = useState<string | null>(null)
+  const [firstReportId, setFirstReportId] = useState<string | null>(null)
+  const [monthlySaved, setMonthlySaved] = useState(false)
   const [step, setStep] = useState(0)
   const [city, setCity] = useState<string | null>(null)
   const [recipients, setRecipients] = useState<Recipient[]>([])
@@ -134,7 +100,7 @@ export function GuidedGetStarted() {
   useEffect(() => {
     loadContext()
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
+      pollingRef.current?.abort()
     }
   }, [])
 
@@ -170,6 +136,9 @@ export function GuidedGetStarted() {
 
       if (accountRes.ok) {
         const data = await accountRes.json()
+        setAccountId(data.id)
+        setFirstReportId(sessionStorage.getItem(`onboarding-${data.id}-market_reports`))
+        setMonthlySaved(Boolean(sessionStorage.getItem(`onboarding-${data.id}-schedules`)))
         // Second of the two copies that were wrong on every id (D-163).
         if (data.default_theme_id && THEME_ID_TO_NAME[data.default_theme_id]) {
           setThemeId(THEME_ID_TO_NAME[data.default_theme_id])
@@ -224,98 +193,70 @@ export function GuidedGetStarted() {
     }
   }
 
-  function startPolling(reportId: string) {
+  async function startPolling(reportId: string) {
+    pollingRef.current?.abort()
+    const controller = new AbortController()
+    pollingRef.current = controller
     setSubmitState("polling")
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/proxy/v1/reports/${reportId}`)
-        if (!res.ok) return
-        const data = await res.json()
-
-        if (data.status === "completed" || data.status === "complete") {
-          if (pollingRef.current) clearInterval(pollingRef.current)
-          pollingRef.current = null
-          queryClient.invalidateQueries({ queryKey: queryKeys.reports.all })
-          queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
-          queryClient.invalidateQueries({ queryKey: queryKeys.onboarding })
-          setSubmitState("complete")
-        } else if (data.status === "failed") {
-          if (pollingRef.current) clearInterval(pollingRef.current)
-          pollingRef.current = null
-          setError("The report could not be generated. Your monthly autopilot may still be saved.")
-          setSubmitState("error")
-        }
-      } catch {
-        // Keep polling through transient network errors.
-      }
-    }, 3000)
+    const outcome = await watchReport(reportId, { signal: controller.signal })
+    if (!outcome) return
+    queryClient.invalidateQueries({ queryKey: queryKeys.reports.all })
+    queryClient.invalidateQueries({ queryKey: queryKeys.onboarding })
+    if (outcome.kind === "complete") {
+      setSubmitState("complete")
+    } else {
+      setError(outcome.kind === "failed"
+        ? "Monthly alerts are saved. Your first report failed. Open it for details."
+        : "Monthly alerts are saved. Check your first report for its current status.")
+      setSubmitState("error")
+    }
   }
 
   async function turnOnAutopilot() {
-    if (!city || !hasDeliverablePeople) return
+    if (!city || !hasDeliverablePeople || isSubmitting) return
+    if (!accountId) {
+      setError("Your account details are unavailable. Refresh this page to continue.")
+      return
+    }
 
     setSubmitState("creating")
     setError(null)
     const apiRecipients = mapRecipientsForApi(recipients)
 
     try {
-      const reportRes = await fetch("/api/proxy/v1/reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          report_type: REPORT_TYPE,
-          city,
-          zips: null,
-          lookback_days: LOOKBACK_DAYS,
-          filters: null,
-          theme_id: themeId,
-          accent_color: branding.accentColor,
-          send_email: true,
-          recipients: apiRecipients,
-        }),
-      })
+      const reportId = await createOnboardingAlert(accountId, "market_reports", JSON.stringify({
+        report_type: REPORT_TYPE,
+        city,
+        zips: null,
+        lookback_days: LOOKBACK_DAYS,
+        filters: null,
+        theme_id: themeId,
+        accent_color: branding.accentColor,
+        send_email: true,
+        recipients: apiRecipients,
+      }), sessionStorage)
+      setFirstReportId(reportId)
 
-      if (!reportRes.ok) {
-        const details = await reportRes.json().catch(() => ({}))
-        throw new Error(getApiErrorMessage(details, reportRes.status, "We could not send your first report."))
-      }
-
-      const reportData = await reportRes.json()
-      const reportId = reportData.report_id || reportData.id
-
-      const scheduleRes = await fetch("/api/proxy/v1/schedules", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "Monthly Market Snapshot for My Sphere",
-          report_type: REPORT_TYPE,
-          city,
-          zip_codes: null,
-          lookback_days: LOOKBACK_DAYS,
-          cadence: "monthly",
-          weekly_dow: null,
-          monthly_dom: 1,
-          send_hour: 9,
-          send_minute: 0,
-          timezone,
-          recipients: apiRecipients,
-          include_attachment: true,
-          active: true,
-          filters: null,
-        }),
-      })
-
-      if (!scheduleRes.ok) {
-        const details = await scheduleRes.json().catch(() => ({}))
-        throw new Error(getApiErrorMessage(details, scheduleRes.status, "We could not turn on monthly autopilot."))
-      }
-
+      await createOnboardingAlert(accountId, "schedules", JSON.stringify({
+        name: "Monthly Market Snapshot for My Sphere",
+        report_type: REPORT_TYPE,
+        city,
+        zip_codes: null,
+        lookback_days: LOOKBACK_DAYS,
+        cadence: "monthly",
+        weekly_dow: null,
+        monthly_dom: 1,
+        send_hour: 9,
+        send_minute: 0,
+        timezone,
+        recipients: apiRecipients,
+        include_attachment: true,
+        active: true,
+        filters: null,
+      }), sessionStorage)
+      setMonthlySaved(true)
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules.all })
-      if (reportId) {
-        startPolling(reportId)
-      } else {
-        setSubmitState("complete")
-      }
+      await startPolling(reportId)
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Something went wrong.")
       setSubmitState("error")
@@ -332,7 +273,7 @@ export function GuidedGetStarted() {
             </div>
             <h1 className="text-2xl font-semibold text-gray-950">Your sphere is on autopilot.</h1>
             <p className="mt-3 text-sm text-gray-600">
-              Your people are getting a branded Market Snapshot now, and they&apos;ll get a fresh one every month.
+              Your first Market Snapshot is ready. Your monthly alert is scheduled.
             </p>
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
               <Button onClick={() => router.push("/app")}>Go to dashboard</Button>
@@ -485,6 +426,12 @@ export function GuidedGetStarted() {
                     Area: {city}. People: {recipients.length} selected. Cadence: monthly on the 1st at 9:00 AM.
                   </p>
                 </div>
+                {firstReportId && (
+                  <p className="text-sm">
+                    Your first report has been requested. <Link className="underline" href={`/app/reports/${firstReportId}`}>View report</Link>
+                    {monthlySaved && <> · <Link className="underline" href="/app/schedules">View monthly alerts</Link></>}
+                  </p>
+                )}
                 {error && (
                   <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
                 )}
@@ -506,7 +453,7 @@ export function GuidedGetStarted() {
             ) : (
               <Button onClick={turnOnAutopilot} disabled={isSubmitting || !city || !hasDeliverablePeople} className="gap-1.5">
                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {submitState === "polling" ? "Sending your first report..." : "Send first report + turn on monthly"}
+                {submitState === "polling" ? "Checking your first report..." : monthlySaved ? "Check report status" : firstReportId ? "Finish monthly setup" : "Send first report + turn on monthly"}
               </Button>
             )}
           </div>
