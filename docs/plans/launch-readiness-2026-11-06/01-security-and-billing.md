@@ -47,11 +47,11 @@ Scope incorporates Claude review at `821f71ad`; evidence references are from aud
 
 **Branch:** `fix/lr-007-safe-branding-images` · **Gate:** PILOT · **Hours:** 4–6 · **Depends:** LR-004.
 
-**Problem and scope:** `services/upload.py:53` skips SVG image parsing and later derives response MIME type from the filename. Validate actual bytes for every accepted format, not just SVG: the review stored non-image bytes declared as SVG and named .gif as image/gif. Jerry approved blocking new SVG uploads and converting existing uploaded SVG logos to PNG. Preserve Design's trusted bundled SVGs; this ticket concerns untrusted uploads.
+**Problem and scope:** `services/upload.py:53` skips SVG image parsing and later derives response MIME type from the filename. Validate actual bytes for every accepted format, not just SVG: the review stored non-image bytes declared as SVG and named .gif as image/gif. Jerry approved blocking new SVG uploads. On November 18 he chose to retain both existing PCT logos. Preserve Design's trusted bundled SVGs; this ticket concerns untrusted uploads.
 
 **Acceptance:** MIME/extension disagreements, oversized input, scripts, event attributes, external references, XML entities, and malformed SVG cannot become active trusted content. Ordinary approved images remain usable in the web UI and report renderers. Verify response content type and storage handling, and render an uploaded logo in the actual consumer.
 
-**Rollout:** Inventory existing SVG uploads and active references first, then use safe rasterization and update active references to PNG with a reviewed rollback. Preserve previously emailed/referenced asset URLs and original evidence; do not delete historical assets or create a path for unsafe SVG execution during conversion.
+**Rollout:** Retain the original PCT header and footer and their existing URLs. The November 18 inventory counted 18 header and 18 footer references. The PNG previews are local review copies. Apply the new format checks to future uploads.
 
 ## LR-008 Neutralize formulas in CSV exports
 
