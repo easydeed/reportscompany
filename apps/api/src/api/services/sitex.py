@@ -26,6 +26,8 @@ from datetime import datetime, timedelta
 import os
 from datetime import date as _date
 
+from .public_lookup_budget import check_provider_attempt
+
 logger = logging.getLogger(__name__)
 
 
@@ -453,18 +455,19 @@ class SiteXClient:
         if not self._initialized:
             await self.initialize()
     
+    async def _get_search(self, params: Dict[str, str]) -> httpx.Response:
+        # A lookup can contact the vendor while obtaining its token. Reserve
+        # once per attempt before either that call or the property GET.
+        await check_provider_attempt()
+        token = await self._token_manager.get_token()
+        return await self._client.get(
+            self.config.search_url, params=params, headers={"Authorization": f"Bearer {token}"}
+        )
+
     async def _make_request(self, params: Dict[str, str]) -> Dict[str, Any]:
         """Make authenticated request to SiteX API"""
-        token = await self._token_manager.get_token()
-        
         try:
-            response = await self._client.get(
-                self.config.search_url,
-                params=params,
-                headers={
-                    "Authorization": f"Bearer {token}"
-                }
-            )
+            response = await self._get_search(params)
             # SiteX hands back the unit list on 300, and sometimes on 500 with
             # the same Locations body. raise_for_status throws that list away.
             choice = self._choice_list(response)
@@ -481,13 +484,7 @@ class SiteXClient:
                 # Token might have expired, try once more with fresh token
                 logger.warning("SiteX 401, refreshing token and retrying...")
                 self._token_manager._token = None
-                token = await self._token_manager.get_token()
-                
-                response = await self._client.get(
-                    self.config.search_url,
-                    params=params,
-                    headers={"Authorization": f"Bearer {token}"}
-                )
+                response = await self._get_search(params)
                 choice = self._choice_list(response)
                 if choice is not None:
                     return choice

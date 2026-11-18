@@ -5,7 +5,7 @@ Consumer-facing endpoints for the lead capture flow.
 NO AUTHENTICATION REQUIRED for these endpoints.
 """
 
-from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Request, Response, BackgroundTasks
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 import json
@@ -15,6 +15,7 @@ import logging
 from ..db import db_conn, set_rls
 from .leads import CONSENT_REQUIRED, CONSENT_TEXT_MAX
 from ..services.agent_code import get_agent_by_code, increment_landing_page_visits
+from ..services.public_lookup_budget import LookupRefusal, check_request, public_search
 from ..services.sitex import lookup_property
 
 logger = logging.getLogger(__name__)
@@ -231,11 +232,18 @@ async def get_landing_page_info(
 async def search_property(
     agent_code: str,
     payload: PropertySearchRequest,
+    request: Request,
+    response: Response,
 ):
     """
     Search for properties by address.
     Consumer enters their address, we find matching properties.
     """
+    try:
+        response.headers.update(await check_request(request))
+    except LookupRefusal as refusal:
+        return refusal.response()
+
     with db_conn() as (conn, cur):
         # Validate agent exists
         agent = get_agent_by_code(cur, agent_code)
@@ -252,10 +260,11 @@ async def search_property(
     
     # Search via SiteX
     try:
-        property_data = await lookup_property(
-            address=payload.address,
-            city_state_zip=city_state_zip
-        )
+        with public_search(agent["id"]):
+            property_data = await lookup_property(
+                address=payload.address,
+                city_state_zip=city_state_zip
+            )
         
         if not property_data:
             return []
@@ -280,6 +289,8 @@ async def search_property(
             legal_description=property_data.legal_description or None,
         )]
         
+    except LookupRefusal as refusal:
+        return refusal.response()
     except Exception as e:
         logger.error(f"Property search error: {e}")
         raise HTTPException(status_code=500, detail="Property search failed")

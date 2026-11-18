@@ -111,6 +111,29 @@ Unset in production means property reports are built from test data, with no
 error. All four must be production values together — a production host with UAT
 credentials fails at the token call.
 
+### Public CMA lookup budget (LR-006)
+
+The initial API setting is `LOOKUP_BUDGET_ENFORCE=0` (the default). Public
+searches proceed and emit count-only `LOOKUP_BUDGET` decisions. A shared-store
+failure emits `LOOKUP_LIMITER_DEGRADED` and uses per-process counters. Provider
+decisions count outbound property-search attempts, including retries. Each
+attempt reserves one slot before token acquisition, so a failed token refresh
+consumes that slot and a refused attempt never contacts the token endpoint.
+
+Leave `LOOKUP_TRUST_VERIFIED_PROXY` unset on both services until the operator
+confirms ownership of the web edge's client-address header and reviews the API
+ingress and deployed uvicorn proxy configuration. The default uses a single
+shared direct bucket. With that evidence, an operator can opt into signed
+visitor observation using `LOOKUP_TRUST_VERIFIED_PROXY=1` on both services,
+`PROXY_SHARED_SECRET` on both, `VISITOR_COOKIE_SECRET` on web and
+`VISITOR_KEY_SECRET` on the API. Unsigned traffic always shares the direct bucket.
+
+The November 12 rollout calls for a day of observation and shared-store
+verification before the operator enables refusals. The API switch
+`LOOKUP_BUDGET_ENFORCE=1` requires the attribution opt-in and both API keys.
+Setting it back to `0` restores observation. This search budget uses expiring
+Redis keys and process memory. Consent and lead record attribution are separate.
+
 ### SimplyRETS MLS API
 
 ```bash

@@ -14,6 +14,7 @@ that has every field filled.
 """
 import asyncio
 from contextlib import contextmanager
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -55,6 +56,7 @@ def public_search(monkeypatch):
     monkeypatch.setattr(lead_pages, "get_agent_by_code",
                         lambda cur, code: {"id": "a1", "landing_page_enabled": True})
     monkeypatch.setattr(lead_pages, "lookup_property", lookup)
+    monkeypatch.setattr(lead_pages, "check_request", AsyncMock(return_value={}))
 
     from fastapi.testclient import TestClient
     from api.main import app
