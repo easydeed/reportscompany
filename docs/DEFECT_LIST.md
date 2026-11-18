@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 84 | Observed, not yet triaged |
-| `open` | 75 | Real, unfixed |
-| `fixed` | 231 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 73 | Real, unfixed |
+| `fixed` | 233 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **405** | D-001 … D-405, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 11 · WRONG 37 · FRAGILE 27 · ROUGH 0. (Sums to 75, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 35 · FRAGILE 27 · ROUGH 0. (Sums to 73, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16457,7 +16457,7 @@ The consented request commits before publishing the initial job. A publication e
 ### D-398 — Get Started can repeat a first send while retrying monthly setup
 
 **Severity:** WRONG
-**Status:** `open` — [#301](https://github.com/easydeed/reportscompany/pull/301) recovers the first report and monthly schedule by account even after the seven-day replay window. The setup checks the saved schedule and flags a paused or conflicting schedule. Local verification covered 83 web tests and 25 database tests. Awaiting release.
+**Status:** `fixed` — Account-scoped recovery reuses the original report and monthly schedule when a setup request is retried, including after the seven-day window. A paused or conflicting schedule requires attention. The local checks covered 83 web tests and 25 database tests. API release [#301](https://github.com/easydeed/reportscompany/pull/301) at `6e15d967`.
 
 Creating the report succeeds and creating the schedule fails. The next click requests both again. Verify one initial generation and one recurring schedule across retries.
 
@@ -16485,7 +16485,7 @@ A name-only edit recalculates next_run_at before the ticker claims the due send.
 ### D-402 — Saving from Edit can create another schedule
 
 **Severity:** WRONG · November 18 pilot review
-**Status:** `open` — [#306](https://github.com/easydeed/reportscompany/pull/306) loads the selected schedule and updates only the fields edited. Awaiting release.
+**Status:** `fixed` — The production schedule editor loads the selected record and saves only the fields that changed. Eleven edit-flow checks covered retries, legacy recipients and paused schedules. Website release [#306](https://github.com/easydeed/reportscompany/pull/306) at `1e457335`.
 
 At the November 13 baseline the Edit route passed a schedule ID to the creation wizard, which ignored it. Verify a rename and a retry through the edit screen leave exactly one schedule with its original recipients and active state.
 
