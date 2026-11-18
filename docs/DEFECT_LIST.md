@@ -7,7 +7,7 @@
 
 ## Status
 
-**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding.
+**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. #300 deployed at `6d68e97c` on Vercel and all four Render services. The homepage, sign-in page and API health check passed. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding.
 
 **November 6 baseline:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
 
@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 79 | Real, unfixed |
-| `fixed` | 224 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 76 | Real, unfixed |
+| `fixed` | 227 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **403** | D-001 … D-403, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 14 · WRONG 39 · FRAGILE 26 · ROUGH 0. (Sums to 79, the open total.)
+**Open by severity:** BROKEN 12 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 76, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16168,7 +16168,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-366 — Uploaded image bytes and declared format can disagree
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-007
-**Status:** `open`
+**Status:** `open` — [#312](https://github.com/easydeed/reportscompany/pull/312) validates new raster uploads. The read-only production inventory found two existing SVGs in 36 branding fields, 18 header and 18 footer. Transparent PNGs were compared with both originals locally. Public CDN certificate validation from the review machine and the production conversion remain outstanding.
 
 **Evidence:** `apps/api/src/api/services/upload.py:53–69` trusts MIME and skips SVG parsing; :107–147 derives storage type from the filename and uploads unchanged bytes. Claude stored non-image bytes declared SVG and named .gif as image/gif using fake storage. SVG active-content impact depends on serving/embedding; no production script execution is claimed.
 
@@ -16186,7 +16186,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-368 — Changing or resetting a password leaves previously issued sessions usable
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-009
-**Status:** `open` — [#308](https://github.com/easydeed/reportscompany/pull/308) passes 30 authentication checks. Coverage includes active and replaced browser sessions, legacy tokens, a same-second change and a full password reset. Awaiting release.
+**Status:** `open` — [#308](https://github.com/easydeed/reportscompany/pull/308) passed 31 authentication tests and the browser cookie proxy test. The approved read-only check on mr-staging-db confirmed UTC. Awaiting release.
 
 **Evidence:** `routes/users.py:272` and `routes/auth.py:771` write password_changed_at, but auth middleware never compares it to issued tokens. Claude reproduced 200 for a pre-change token. Six issuers include seven-day register/invite tokens; iat seconds versus DB microseconds matters. The users.py docstring overstates revocation.
 
@@ -16249,7 +16249,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-375 — Zero allowances admit report generation and legacy evaluators treat zero as unlimited
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-015
-**Status:** `open`
+**Status:** `open` — [#293](https://github.com/easydeed/reportscompany/pull/293) addresses a zero manual allowance. [#313](https://github.com/easydeed/reportscompany/pull/313) handles the separate case where concurrent manual requests compete for the final available slot. Awaiting release.
 
 **Evidence:** `services/usage.py:180,294` preserves zero but divides by max(limit,1); worker `limit_checker.py:108` repeats the boundary. Review reproduced admission at usage zero and one for allowance zero. Legacy evaluate_report_limit at usage.py:409 (admin/property callers) treats limit<=0 as unlimited; worker counts omit scheduled rows.
 
@@ -16258,7 +16258,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-376 — Invitation acceptance and seat cancellation race the token used flag
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-017
-**Status:** `open` — [#292](https://github.com/easydeed/reportscompany/pull/292) handles competing acceptance attempts. [#307](https://github.com/easydeed/reportscompany/pull/307) locks the pending owner before checking whether the seat can be withdrawn. A migrated database test waits for an in-flight acceptance and verifies the joined rep remains active.
+**Status:** `open` — [#292](https://github.com/easydeed/reportscompany/pull/292) handles concurrent invitation acceptances. [#307](https://github.com/easydeed/reportscompany/pull/307) also protects the seat if acceptance wins a race with cancellation. The latter passed five local database checks. Awaiting release.
 
 **Evidence:** `apps/api/src/api/routes/auth.py:401–520` reads boolean used without locking, then changes password and marks used unconditionally. Claude's concurrent test succeeded twice in four of four runs; the last password won. Seat cancellation during acceptance has the same race.
 
@@ -16415,21 +16415,21 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-392 — Closed Sales email can show asking price beside Sold
 
 **Severity:** WRONG
-**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Checks the sale card and table against different asking and closing prices, a withheld sale and active inventory. Awaiting release.
+**Status:** `fixed` — [#300](https://github.com/easydeed/reportscompany/pull/300) uses the recorded sale price on both the email card and the table. A withheld price stays unavailable. Production release `6d68e97c` was live on Vercel and all four Render services on November 18. Delivery to a PCT inbox still needs confirmation.
 
 A $950,000 listing sold for $900,000 displayed $950K on its card and $900K in the table. Check both displays and a sale with its price withheld.
 
 ### D-393 — Market Snapshot can fail on unpriced activity
 
 **Severity:** BROKEN
-**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Keeps unpriced activity in the total and out of monetary tiers. A missing sale median stays unavailable. Awaiting release.
+**Status:** `fixed` — [#300](https://github.com/easydeed/reportscompany/pull/300) counts unpriced activity and excludes it from monetary tiers. The median stays unavailable when every price is missing. Production release `6d68e97c` passed the API health check on November 18.
 
 Mixed priced and unpriced closings raise TypeError. Count all qualifying activity and use only priced rows in monetary tiers.
 
 ### D-394 — A multi-ZIP search can suppress a valid market alert
 
 **Severity:** BROKEN
-**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Sends one vendor parameter per ZIP and applies selected ZIPs separately from the area label. Awaiting release.
+**Status:** `fixed` — [#300](https://github.com/easydeed/reportscompany/pull/300) repeats the provider parameter for each selected ZIP and checks returned rows independently of the display label. All eight report builders have regression coverage. The production worker was live on `6d68e97c` on November 18.
 
 The request packs multiple postal codes into one parameter and the builder compares the printable area to a city. Verify the encoded request, selected rows and delivery match count.
 
@@ -16443,7 +16443,7 @@ The contacts proxy loses multipart framing and a UTF-8 BOM hides the name column
 ### D-396 — Admin Retry for a failed market report cannot reach the queue
 
 **Severity:** BROKEN
-**Status:** `open` — The first patch passed database tests. Independent review found a delayed original job and an interrupted retry could still give an incorrect result. Hold release until these cases pass.
+**Status:** `open` — [#311](https://github.com/easydeed/reportscompany/pull/311) retries generation-only manual reports and uses the existing dispatch record for scheduled reports. When earlier email delivery is uncertain, the operator receives a conflict response to prevent a duplicate send. Awaiting release review.
 
 The handler updates a nonexistent column and reports success on publication failure. Exercise a retry against the migrated schema, concurrent clicks and broker failure.
 
@@ -16457,14 +16457,14 @@ The consented request commits before publishing the initial job. A publication e
 ### D-398 — Get Started can repeat a first send while retrying monthly setup
 
 **Severity:** WRONG
-**Status:** `open` — [#301](https://github.com/easydeed/reportscompany/pull/301) preserves each completed onboarding step and uses a separate account-scoped request key for the report and schedule. Awaiting release.
+**Status:** `open` — [#301](https://github.com/easydeed/reportscompany/pull/301) recovers the first report and monthly schedule by account even after the seven-day replay window. The setup checks the saved schedule and flags a paused or conflicting schedule. Local verification covered 83 web tests and 25 database tests. Awaiting release.
 
 Creating the report succeeds and creating the schedule fails. The next click requests both again. Verify one initial generation and one recurring schedule across retries.
 
 ### D-399 — Platform-admin deactivation can leave an account operational
 
 **Severity:** WRONG
-**Status:** `open`
+**Status:** `open` — [#310](https://github.com/easydeed/reportscompany/pull/310) checks the account during login, authenticated access and scheduled sends. The release review includes reactivation of accounts containing independently disabled users.
 
 Platform admin changes accounts.is_active while login, sessions and scheduled delivery check users.is_active. Verify deactivation through the admin route across all three paths.
 
