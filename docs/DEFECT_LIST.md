@@ -62,14 +62,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 77 | Real, unfixed |
+| `open` | 78 | Real, unfixed |
 | `fixed` | 214 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **391** | D-001 … D-391, contiguous, no duplicates |
+| **Total** | **392** | D-001 … D-392, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 10 · WRONG 39 · FRAGILE 28 · ROUGH 0. (Sums to 77, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 39 · FRAGILE 28 · ROUGH 0. (Sums to 78, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16409,6 +16409,23 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 **Branch correction:** #286 at dd05e84e moves the empty-history defaults before the cache branch. Claude owns this fix with LR-023; recording it here does not approve its implementation or claim deployment. Cache hits have no cached trend-history dataset and therefore omit that optional chart.
 
 **Acceptance:** Exercise the actual generate_report cache-hit path, with upstream fetch skipped, and assert successful rendering with defined empty history and truncation=false. Preserve fresh-fetch history behavior. Review with #286 before closing this entry. No production generation or provider send was executed for this inventory.
+
+### D-392 — Report Share and print links show "Report Not Found" because middleware refuses the render token
+
+**Severity:** BROKEN
+**Status:** `open` — customer-facing defect; Claude's [#305](https://github.com/easydeed/reportscompany/pull/305) is BLOCKED by independent review (malformed-token 500 below). Not merged or verified fixed on Production.
+
+**Customer-visible behaviour:** Share on the report list/dashboard opens a page saying "Report Not Found"; the legacy print page cannot load the report either. The public production sample in #305 uses a synthetic UUID, not a real customer report. The root-cause probe below occurs before report lookup and establishes the authentication failure independently of that sample ID.
+
+**Cause:** AuthContextMiddleware refuses requests with no account before `/v1/reports/{id}/data` can validate `X-Internal-Render-Token`. Share, print and worker social renderers use that server-side token rather than a user session. Production's malformed-ID probe with a nonempty bogus header returns 401, while the route itself returns 400 before checking credentials. No customer data or paid vendor call is needed for that probe.
+
+**Related:** [D-029](#d-029--print_base-on-the-worker-is-persisted-as-the-user-visible-view-in-browser-link-and-defaults-to-localhost) (customer-facing browser link and previously unverified Vercel render token); [D-101](#d-101--the-view-in-browser-link-on-a-market-report-opened-a-different-build-than-the-pdf) (legacy print build). These are related delivery surfaces, not the same mechanism.
+
+**Proposed correction:** #305 passes only the report-data path with a nonempty token header through to the route. The route must still reject wrong/unconfigured tokens and preserve signed-in account scoping. Independent review is pinned to f50d2512208b13fdcd453bb5fa024ffc5fb4c37d. Its 29 integration checks passed on a dedicated, migrated loopback PostgreSQL database; all six supplied mutations were independently caught and restored. **Independent review is BLOCK:** the newly reachable route returns 500 for a non-ASCII wrong token, as detailed below. No production writes were used for this review.
+
+**Review blocker (2026-11-18):** A valid UUID request with `X-Internal-Render-Token` containing byte `0xFF` passes the new middleware and reaches `report_data.py:37`. Python's `hmac.compare_digest(provided, expected)` raises `TypeError: comparing strings with non-ASCII characters is not supported`, producing HTTP 500. Reproduced with the real TestClient, real middleware and route, a synthetic ASCII configured token and a dedicated loopback database. Before #305 the middleware refused this anonymous request with 401. Reject malformed/non-ASCII token values safely (or compare bytes), add a real-route regression proving 401 with no report data, and rerun the valid-token and tenant-isolation checks. Do not merge #305 until re-review passes.
+
+**Acceptance:** Real middleware plus real route: valid token returns the synthetic report; missing, wrong and unconfigured tokens fail closed; unrelated paths remain protected; owner access and cross-account refusal remain unchanged. After merge, the deployed malformed-ID probe must return 400 with a token header and 401 without one; a real Share/print link must render with matching Vercel/API token configuration. The malformed-ID probe alone is not proof that a real report renders.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
