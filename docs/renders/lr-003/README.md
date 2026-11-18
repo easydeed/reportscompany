@@ -76,7 +76,22 @@ execution. It returned `blocked by policy` without a more specific reason.
 No alternate launch mechanism was used. Authenticated rail, report creation,
 public report and social/PDF browser smoke checks therefore remain pending;
 neither a successful build nor Jest is presented as those screenshots.
-Claude should check the preview and review this limit before passing the PR.
+Claude subsequently completed the missing checks in its independent
+[review of 3140db08](https://github.com/easydeed/reportscompany/pull/297#issuecomment-6932105220):
+all six requested pages at 390px and 1280px, no page errors or 5xx, zero pixel
+differences, and matching self-hosted fonts. It also rebuilt both versions on
+Node 22.23.4 and independently confirmed both updated audits were clean.
+
+## CI correction after Claude's review
+
+The npm lock refresh updated Playwright to 1.65.1. CI installed Chromium in
+`chrome-linux64`, but four measurement scripts recognized only `chrome-linux`.
+The first Release gate therefore had 4,313 passes and three browser-discovery
+errors. All four scripts now accept both layouts without pinning Playwright.
+The 16 discovery tests cover each layout, coexistence and absence across all
+four scripts. Running them against the original scripts gives eight failures;
+the corrected scripts pass all 16. A new exact-head Release gate and Claude's
+re-review remain required.
 
 ## Rollout
 
