@@ -380,7 +380,7 @@ export function buildMarketSnapshotHtml(
     "{{lookback_days}}": String(lookback),
     
     // Hero ribbon KPIs
-    "{{median_price}}": formatCurrency(metrics.median_close_price || metrics.median_list_price),
+    "{{median_price}}": formatCurrency(metrics.median_close_price > 0 ? metrics.median_close_price : null),
     "{{closed_sales}}": formatNumber(closedCount),
     "{{avg_dom}}": formatDecimal(metrics.avg_dom),
     "{{moi}}": formatDecimal(moi),
