@@ -72,15 +72,8 @@ async def delete_branding_file(
     
     - **url**: The full URL of the asset to delete
     """
-    # Security check: ensure URL contains the account_id
-    if account_id not in url:
-        raise HTTPException(
-            status_code=403,
-            detail="You can only delete your own branding assets"
-        )
-    
-    success = await delete_branding_asset(url)
-    
+    success = await delete_branding_asset(url, account_id)
+
     if success:
         return DeleteResponse(ok=True, message="Asset deleted successfully")
     else:
