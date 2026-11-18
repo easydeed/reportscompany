@@ -63,15 +63,15 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 
 | State | Count | Meaning |
 |---|---|---|
-| `recorded` | 85 | Observed, not yet triaged |
-| `open` | 74 | Real, unfixed |
-| `fixed` | 230 | Corrected in code, with the branch or PR named on the entry |
+| `recorded` | 84 | Observed, not yet triaged |
+| `open` | 73 | Real, unfixed |
+| `fixed` | 233 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **404** | D-001 … D-404, contiguous, no duplicates |
+| **Total** | **405** | D-001 … D-405, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 11 · WRONG 37 · FRAGILE 26 · ROUGH 0. (Sums to 74, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 35 · FRAGILE 27 · ROUGH 0. (Sums to 73, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16341,7 +16341,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-385 — Dependency readiness and outcome alerting still require operational proof
 
 **Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-027
-**Status:** `recorded`
+**Status:** `open` — [#317](https://github.com/easydeed/reportscompany/pull/317) specifies operator monitoring. [#319](https://github.com/easydeed/reportscompany/pull/319) corrects two admin screens that inferred delivery from a provider response code. A suppressed message recorded with HTTP 200 appeared delivered, and an uncertain send appeared failed. Verification still requires a named operator to receive an alert and its recovery.
 
 **Evidence:** `apps/api/src/api/routes/health.py:health` reports process/schema only; startup schema_guard deliberately starts if DB is unreachable. Repo inspection does not establish an operator receives stalled-job/webhook/provider alerts. This records missing proof, not a claim that no external monitor exists.
 
@@ -16457,7 +16457,7 @@ The consented request commits before publishing the initial job. A publication e
 ### D-398 — Get Started can repeat a first send while retrying monthly setup
 
 **Severity:** WRONG
-**Status:** `open` — [#301](https://github.com/easydeed/reportscompany/pull/301) recovers the first report and monthly schedule by account even after the seven-day replay window. The setup checks the saved schedule and flags a paused or conflicting schedule. Local verification covered 83 web tests and 25 database tests. Awaiting release.
+**Status:** `fixed` — Account-scoped recovery reuses the original report and monthly schedule when a setup request is retried, including after the seven-day window. A paused or conflicting schedule requires attention. The local checks covered 83 web tests and 25 database tests. API release [#301](https://github.com/easydeed/reportscompany/pull/301) at `6e15d967`.
 
 Creating the report succeeds and creating the schedule fails. The next click requests both again. Verify one initial generation and one recurring schedule across retries.
 
@@ -16485,7 +16485,7 @@ A name-only edit recalculates next_run_at before the ticker claims the due send.
 ### D-402 — Saving from Edit can create another schedule
 
 **Severity:** WRONG · November 18 pilot review
-**Status:** `open` — [#306](https://github.com/easydeed/reportscompany/pull/306) loads the selected schedule and updates only the fields edited. Awaiting release.
+**Status:** `fixed` — The production schedule editor loads the selected record and saves only the fields that changed. Eleven edit-flow checks covered retries, legacy recipients and paused schedules. Website release [#306](https://github.com/easydeed/reportscompany/pull/306) at `1e457335`.
 
 At the November 13 baseline the Edit route passed a schedule ID to the creation wizard, which ignored it. Verify a rename and a retry through the edit screen leave exactly one schedule with its original recipients and active state.
 
@@ -16506,6 +16506,15 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 **Correction:** The middleware lets the report data route verify its server-side caller. The account-authenticated path still scopes its query to the signed-in account. Independent review required two revisions before release. See the [final review](https://github.com/easydeed/reportscompany/pull/305#issuecomment-6990874455) and the earlier [board history](https://github.com/easydeed/reportscompany/commit/f4737541f8a17de2633947cb65571385b818680b).
 
 **Acceptance:** Open a known report from the approved pilot account through Share and Print. Check the report identity, PCT branding and the displayed data. The separate [Market Snapshot price filing](https://github.com/easydeed/reportscompany/pull/316) follows this entry. D-029 and D-101 contain related link history.
+
+### D-405 — Share and Print can label an asking price as a sale price
+
+**Severity:** WRONG · November 18 pilot review
+**Status:** `fixed` — [#314](https://github.com/easydeed/reportscompany/pull/314) deployed to Vercel at `51250c0f` on November 18. The Closed Sales print table repeated the same fallback for individual properties. [#318](https://github.com/easydeed/reportscompany/pull/318) deployed at `4875a170`. All 43 related template checks passed, including two missing-value cases and a recorded closing price in the actual Closed Sales table. The deployed sign-in and API health checks passed. A real PCT Share link still needs its own verification under D-404.
+
+With one active listing at $755,000 and no priced closing, Share called $755K the median sale price and Print displayed $755,000 under Median Sale Price. A withheld closing price produced the same result. This error is separate from D-404, which concerns opening the link.
+
+**Acceptance:** Share uses a city headline and Print shows its missing-value mark for absent, withheld or historical zero sale prices. A $640,000 closing alongside the $755,000 listing must appear as $640K in Share and $640,000 in Print.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
