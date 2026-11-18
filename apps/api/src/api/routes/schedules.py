@@ -713,7 +713,15 @@ def update_schedule(
         )
         was_active = sched_row[6]
         active = was_active if payload.active is None else payload.active
-        if active and (not was_active or timing != previous):
+        # A full form can include both day fields. Only the selected cadence's
+        # day affects delivery, including when a due alert is waiting for a tick.
+        day_index = 1 if timing[0] == "weekly" else 2
+        timing_changed = (
+            timing[0] != previous[0]
+            or timing[day_index] != previous[day_index]
+            or timing[3:] != previous[3:]
+        )
+        if active and (not was_active or timing_changed):
             updates.append("next_run_at = %s")
             params.append(_compute_next_run(*timing))
 
