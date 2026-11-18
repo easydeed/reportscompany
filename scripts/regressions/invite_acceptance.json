@@ -1,0 +1,30 @@
+[
+  {
+    "name": "V1 the claim does not require an unused token",
+    "file": "apps/api/src/api/routes/auth.py",
+    "old": "                  AND used = FALSE\n                  AND (expires_at IS NULL OR expires_at > now()::timestamp)",
+    "new": "                  AND (expires_at IS NULL OR expires_at > now()::timestamp)",
+    "test": "apps/api/tests/test_accept_invite.py::test_two_concurrent_accepts_give_one_session_and_the_loser_cannot_set_the_password apps/api/tests/test_accept_invite.py::test_a_token_is_accepted_once_and_never_again"
+  },
+  {
+    "name": "V2 the claim ignores expiry",
+    "file": "apps/api/src/api/routes/auth.py",
+    "old": "                  AND (expires_at IS NULL OR expires_at > now()::timestamp)\n",
+    "new": "",
+    "test": "apps/api/tests/test_accept_invite.py::test_an_expired_token_is_refused_and_changes_nothing"
+  },
+  {
+    "name": "V3 a token naming another account still signs in",
+    "file": "apps/api/src/api/routes/auth.py",
+    "old": "            if user_account_id != account_id:\n                conn.rollback()\n                raise invalid_token\n",
+    "new": "",
+    "test": "apps/api/tests/test_accept_invite.py::test_a_token_naming_another_account_signs_nobody_in"
+  },
+  {
+    "name": "V4 the cancellation's spent token is ignored (claim not conditional on the row)",
+    "file": "apps/api/src/api/routes/auth.py",
+    "old": "                WHERE token = %s\n                  AND user_id = %s::uuid\n                  AND used = FALSE",
+    "new": "                WHERE token = %s\n                  AND user_id = %s::uuid\n                  AND (used = FALSE OR TRUE)",
+    "test": "apps/api/tests/test_accept_invite.py::test_a_seat_cancelled_while_acceptance_waits_is_refused"
+  }
+]
