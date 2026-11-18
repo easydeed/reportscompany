@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 75 | Real, unfixed |
-| `fixed` | 228 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 73 | Real, unfixed |
+| `fixed` | 230 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **403** | D-001 … D-403, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 11 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 75, the open total.)
+**Open by severity:** BROKEN 10 · WRONG 37 · FRAGILE 26 · ROUGH 0. (Sums to 73, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16159,7 +16159,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-365 — Anonymous property lookup has no shared vendor-backed search budget
 
 **Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-006
-**Status:** `open`
+**Status:** `open` — [#315](https://github.com/easydeed/reportscompany/pull/315) implements the observation stage. Local tests covered 19 API and five web cases. Trusted attribution, shared counters and one day of observation remain rollout requirements before enabling refusals.
 
 **Evidence:** `apps/api/src/api/routes/lead_pages.py:230–259` calls SiteX for public search. Auth skips /v1/cma and the global limiter skips no-account requests. The separate request limit is later and does not bound searches. Search and request web proxies do not correctly preserve visitor attribution (D-339); deployed forwarding trust needs inspection.
 
@@ -16168,11 +16168,11 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-366 — Uploaded image bytes and declared format can disagree
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-007
-**Status:** `open` — [#312](https://github.com/easydeed/reportscompany/pull/312) validates new raster uploads. The read-only production inventory found two existing SVGs in 36 branding fields, 18 header and 18 footer. Transparent PNGs were compared with both originals locally. Public CDN certificate validation from the review machine and the production conversion remain outstanding.
+**Status:** `open` — [#312](https://github.com/easydeed/reportscompany/pull/312) validates new raster uploads. The read-only production inventory found two existing SVGs in 36 branding fields, 18 header and 18 footer. Jerry chose on November 18 to retain both current production logos. The PNG comparison and rollback plan are local review artifacts. All 36 fields still point to the original SVGs.
 
 **Evidence:** `apps/api/src/api/services/upload.py:53–69` trusts MIME and skips SVG parsing; :107–147 derives storage type from the filename and uploads unchanged bytes. Claude stored non-image bytes declared SVG and named .gif as image/gif using fake storage. SVG active-content impact depends on serving/embedding; no production script execution is claimed.
 
-**Acceptance:** Validate actual bytes for every accepted format. Block new SVG uploads and safely convert existing uploaded SVG logos to PNG with preserved historical asset references, as Jerry approved.
+**Acceptance:** Validate actual bytes for every accepted format and block new SVG uploads. Retain both existing PCT logos and their historical references per Jerry’s November 18 decision.
 
 ### D-367 — Both lead CSV exports preserve untrusted spreadsheet formulas
 
@@ -16426,6 +16426,8 @@ A $950,000 listing sold for $900,000 displayed $950K on its card and $900K in th
 
 Mixed priced and unpriced closings raise TypeError. Count all qualifying activity and use only priced rows in monetary tiers.
 
+**Separate Share and Print finding, November 18.** One active listing at $755,000 and no priced closing produced a $755,000 median sale price in both templates. [#314](https://github.com/easydeed/reportscompany/pull/314) corrects both outputs. Forty template checks passed locally, including missing, zero and withheld values and a priced closing. [#305](https://github.com/easydeed/reportscompany/pull/305) is held for the correction.
+
 ### D-394 — A multi-ZIP search can suppress a valid market alert
 
 **Severity:** BROKEN
@@ -16471,14 +16473,14 @@ Platform admin changes accounts.is_active while login, sessions and scheduled de
 ### D-400 — Monthly alert setup can fail near the end of the month
 
 **Severity:** BROKEN
-**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) covers five calendar boundaries, including leap year and December rollover. Awaiting merge.
+**Status:** `fixed` — [#299](https://github.com/easydeed/reportscompany/pull/299) deployed on the API at `ea30d1a7` and passed the production health check. Five calendar cases include leap year and December rollover.
 
 Creating a day-5 schedule on January 31 tries to construct February 31. Verify shorter months, leap years and year rollover.
 
 ### D-401 — Editing a schedule can skip a due occurrence
 
 **Severity:** WRONG
-**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) preserves a due occurrence across name and inactive-cadence changes. PostgreSQL tests exercised both weekly and monthly rows. The web editing fault has its own entry at D-402.
+**Status:** `fixed` — [#299](https://github.com/easydeed/reportscompany/pull/299) preserves a due occurrence across name and inactive-cadence changes. PostgreSQL tests exercised weekly and monthly rows. Production API revision `ea30d1a7` passed its health check. The separate Edit screen defect remains at D-402.
 
 A name-only edit recalculates next_run_at before the ticker claims the due send. Preserve the due time across metadata edits, including unchanged timing values.
 
