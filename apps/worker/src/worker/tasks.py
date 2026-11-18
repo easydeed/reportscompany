@@ -11,6 +11,7 @@ from .compute.validate import filter_valid
 from .compute.calc import snapshot_metrics
 from .cache import get as cache_get, set as cache_set
 from .query_builders import (
+    normalized_zips,
     build_params, build_market_snapshot, build_market_snapshot_closed,
     build_market_snapshot_pending, build_closed_history,
 )
@@ -1620,10 +1621,9 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         # Fix: Properly extract city from params - don't default to Houston
         _params = params or {}
         city = _params.get("city")
-        zips = _params.get("zips")
+        zips = normalized_zips(_params.get("zips"))
         if not city and zips:
             # For ZIP-based reports, use ZIP code(s) as the "city" label
-            # The _filter_by_city function knows to skip filtering when city is a ZIP
             city = ", ".join(zips[:3]) + ("..." if len(zips) > 3 else "")
         if not city:
             city = "Unknown"  # Don't default to Houston - this indicates a problem
@@ -1929,7 +1929,9 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
             
             # Build context for report builders (include market-adaptive data)
             context = {
-                "city": city,
+                "city": None if zips else _params.get("city"),
+                "area_label": city,
+                "zips": zips,
                 "lookback_days": lookback,
                 "generated_at": int(time.time()),
                 "filters": resolved_filters or filters,  # Pass resolved filters
