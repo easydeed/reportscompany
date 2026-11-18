@@ -357,7 +357,8 @@ def list_admin_reports(
             r.pdf_url,
             r.error,
             r.generated_at,
-            r.processing_time_ms
+            r.processing_time_ms,
+            r.additional_params ? 'admin_generation_retry' AS has_retry
         FROM report_generations r
         JOIN accounts a ON r.account_id = a.id
         WHERE 1=1
@@ -398,6 +399,7 @@ def list_admin_reports(
                 "error": row[8],
                 "generated_at": row[9].isoformat() if row[9] else None,
                 "duration_ms": int(row[10]) if row[10] else None,
+                "has_retry": bool(row[11]),
             })
         
         return {"reports": reports, "count": len(reports)}
@@ -409,42 +411,8 @@ def retry_market_report(
     _admin: dict = Depends(get_admin_user)
 ):
     """Re-queue a failed market report for generation."""
-    with db_conn() as (conn, cur):
-        set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
-
-        cur.execute("""
-            SELECT status, account_id::text, report_type,
-                   COALESCE(input_params, '{}'::jsonb) as input_params
-            FROM report_generations
-            WHERE id = %s::uuid
-        """, (report_id,))
-
-        row = cur.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Report not found")
-
-        if row[0] != "failed":
-            raise HTTPException(
-                status_code=400,
-                detail=f"Can only retry failed reports (current status: {row[0]})"
-            )
-
-        cur.execute("""
-            UPDATE report_generations
-            SET status = 'queued', error = NULL, updated_at = NOW()
-            WHERE id = %s::uuid
-        """, (report_id,))
-        conn.commit()
-
-    try:
-        from ..worker_client import enqueue_generate_report
-        params = row[3] if isinstance(row[3], dict) else {}
-        enqueue_generate_report(report_id, row[1], row[2], params)
-        logger.info(f"Admin {_admin.get('email')} retried market report {report_id}")
-    except Exception as e:
-        logger.error(f"Failed to queue market report retry: {e}")
-
-    return {"ok": True, "report_id": report_id, "status": "queued"}
+    from ..services.admin_report_retry import retry_generation
+    return retry_generation(report_id, _admin["account_id"])
 
 
 # ==================== Emails ====================

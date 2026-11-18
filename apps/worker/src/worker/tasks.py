@@ -27,6 +27,7 @@ from . import theme_registry as _theme_registry
 from .pdf_engine import render_pdf
 from .email.send import send_schedule_email
 from .report_builders import build_result_json
+from .manual_generation import serialize_manual_generation
 from . import scheduled_runs
 from .scheduled_runs import OWNED, owned
 from .utils.photo_proxy import proxy_report_photos_inplace
@@ -1551,7 +1552,8 @@ def _send_failure_notification(
     name="generate_report",
     bind=True,
 )
-def generate_report(self, run_id: str, account_id: str, report_type: str, params: dict):
+@serialize_manual_generation(lambda: DATABASE_URL)
+def generate_report(self, run_id: str, account_id: str, report_type: str, params: dict, *, admin_retry_attempt=None):
     started = time.perf_counter()
     pdf_url = html_url = None
     schedule_id = (params or {}).get("schedule_id")  # Check if this is a scheduled report
@@ -2381,7 +2383,8 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         
         # 8) Webhook
         payload = {"report_id": run_id, "status": "completed", "html_url": html_url, "pdf_url": pdf_url, "json_url": json_url}
-        _deliver_webhooks(account_id, "report.completed", payload)
+        if admin_retry_attempt is None:
+            _deliver_webhooks(account_id, "report.completed", payload)
         return {"ok": True, "run_id": run_id}
 
     except Exception as e:
@@ -3741,6 +3744,7 @@ def _mark_run_failed(run_id: str, reason: str) -> bool:
                     SET status = 'failed', error = %s
                     WHERE id = %s::uuid
                       AND status IN ('pending', 'queued')
+                      AND NOT (COALESCE(additional_params, '{}'::jsonb) ? 'admin_generation_retry')
                     """,
                     (reason[:500], run_id),
                 )
