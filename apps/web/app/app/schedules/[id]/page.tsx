@@ -1,15 +1,11 @@
-import { apiFetch } from "@/lib/api"
+import { createServerApi } from "@/lib/api-server"
+import type { Schedule } from "@/components/schedules/types"
 import { ScheduleDetailShell } from "./schedule-detail-shell"
 
 export default async function ScheduleDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  let item: any = null
-
-  try {
-    item = await apiFetch(`/v1/schedules/${id}`)
-  } catch (error) {
-    console.error("Failed to fetch schedule details:", error)
-  }
+  const api = await createServerApi()
+  const { data: item } = await api.get<Schedule>(`/v1/schedules/${encodeURIComponent(id)}`)
 
   if (!item) {
     return (

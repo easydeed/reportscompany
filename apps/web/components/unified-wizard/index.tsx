@@ -68,10 +68,9 @@ const POLLING_STAGES: { label: string; durationMs: number }[] = [
 
 interface UnifiedWizardProps {
   defaultMode?: DeliveryMode
-  scheduleId?: string
 }
 
-export function UnifiedReportWizard({ defaultMode = "send_now", scheduleId }: UnifiedWizardProps) {
+export function UnifiedReportWizard({ defaultMode = "send_now" }: UnifiedWizardProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const [state, setState] = useState<WizardState>({ ...INITIAL_STATE, deliveryMode: defaultMode })
