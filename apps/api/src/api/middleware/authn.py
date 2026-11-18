@@ -17,7 +17,7 @@ import time
 import hashlib
 import logging
 from ..settings import settings
-from ..auth import verify_jwt, hash_api_key
+from ..auth import verify_jwt, hash_api_key, session_password_matches
 from ..db import db_conn_autocommit
 
 logger = logging.getLogger(__name__)
@@ -150,7 +150,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             claims = verify_jwt(token, settings.JWT_SECRET)
             if claims and claims.get("account_id"):
                 # FIX (M2): Blacklist check fails CLOSED — deny on DB error
-                if _is_token_blacklisted(token):
+                if _is_token_blacklisted(token, claims):
                     return JSONResponse(
                         status_code=401,
                         content={"detail": "Token has been invalidated"},
@@ -179,7 +179,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 claims = verify_jwt(cookie_token, settings.JWT_SECRET)
                 if claims and claims.get("account_id"):
                     # FIX (M2): Fail closed on blacklist check error
-                    if _is_token_blacklisted(cookie_token):
+                    if _is_token_blacklisted(cookie_token, claims):
                         return JSONResponse(
                             status_code=401,
                             content={"detail": "Session has expired"},
@@ -235,7 +235,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-def _is_token_blacklisted(token: str) -> bool:
+def _is_token_blacklisted(token: str, claims: dict) -> bool:
     """
     Check if a JWT is blacklisted.
 
@@ -247,11 +247,19 @@ def _is_token_blacklisted(token: str) -> bool:
     try:
         with db_conn_autocommit() as cur:
             cur.execute(
-                "SELECT 1 FROM jwt_blacklist "
-                "WHERE token_hash = %s AND expires_at > NOW()",
-                (token_hash,),
+                """
+                SELECT EXISTS (SELECT 1 FROM jwt_blacklist
+                               WHERE token_hash = %s AND expires_at > NOW()),
+                       u.password_hash, EXTRACT(EPOCH FROM u.password_changed_at)
+                FROM (SELECT %s::uuid AS user_id) AS session_user_id
+                LEFT JOIN users u ON u.id = session_user_id.user_id
+                """,
+                (token_hash, claims.get("user_id")),
             )
-            return cur.fetchone() is not None
+            blacklisted, password_hash, changed_epoch = cur.fetchone()
+            if blacklisted or not claims.get("user_id"):
+                return blacklisted
+            return not session_password_matches(claims, password_hash, changed_epoch, settings.JWT_SECRET)
     except Exception as e:
         logger.error(f"Blacklist check failed (denying request): {e}")
         return True  # Fail CLOSED — deny on error
