@@ -429,7 +429,7 @@ export function GuidedGetStarted() {
                 {firstReportId && (
                   <p className="text-sm">
                     Your first report has been requested. <Link className="underline" href={`/app/reports/${firstReportId}`}>View report</Link>
-                    {monthlySaved && <> · <Link className="underline" href="/app/schedules">View monthly alerts</Link></>}
+                     · <Link className="underline" href="/app/schedules">View monthly alerts</Link>
                   </p>
                 )}
                 {error && (

@@ -14,13 +14,35 @@ it("resumes after a lost response to either step without a new identity", async 
   await expect(report()).rejects.toThrow()
   await expect(report()).resolves.toBe(rid)
   await expect(schedule()).rejects.toThrow()
-  // Re-enter the flow as after a reload. The first report is already confirmed.
+  // The server replays a completed step, even across browsers.
+  api.mockReset()
+  api.mockResolvedValueOnce(ok({ report_id: rid })).mockResolvedValueOnce(ok({ id: sid }))
+    .mockResolvedValueOnce(ok({ active: true })).mockResolvedValueOnce(ok({ id: sid }))
+    .mockResolvedValueOnce(ok({ active: true }))
   await expect(report()).resolves.toBe(rid)
   await expect(schedule()).resolves.toBe(sid)
   await expect(schedule()).resolves.toBe(sid)
-  expect(api).toHaveBeenCalledTimes(4)
-  const keys = api.mock.calls.map(([, init]) => init.headers["Idempotency-Key"])
-  expect(keys[0]).toBe(keys[1])
-  expect(keys[2]).toBe(keys[3])
-  expect(keys[0]).not.toBe(keys[2])
+  const keys = api.mock.calls.filter(([, init]) => init.method === "POST")
+    .map(([, init]) => init.headers["Idempotency-Key"])
+  expect(keys).toEqual(["onboarding-acct-market_reports", "onboarding-acct-schedules", "onboarding-acct-schedules"])
+})
+
+it("recovers the original report after the replay window in a fresh tab", async () => {
+  const api = global.fetch as jest.Mock
+  sessionStorage.clear()
+  api.mockResolvedValueOnce({ ok: false, status: 410, json: async () => ({
+    detail: { error: "idempotency_key_expired", resource_id: rid, request_matches: false },
+  }) }).mockResolvedValueOnce(ok({ id: rid }))
+  await expect(createOnboardingAlert("acct", "market_reports", "{}", sessionStorage)).resolves.toBe(rid)
+  expect(api).toHaveBeenLastCalledWith(`/api/proxy/v1/reports/${rid}`, { cache: "no-store" })
+})
+
+it("identifies changed settings and a paused saved schedule", async () => {
+  const api = global.fetch as jest.Mock
+  api.mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({
+    detail: { error: "idempotency_key_reused", resource_id: sid },
+  }) })
+  await expect(createOnboardingAlert("acct", "schedules", "{}", sessionStorage)).rejects.toThrow("different settings")
+  api.mockResolvedValueOnce(ok({ id: sid })).mockResolvedValueOnce(ok({ active: false }))
+  await expect(createOnboardingAlert("acct", "schedules", "{}", sessionStorage)).rejects.toThrow("paused")
 })
