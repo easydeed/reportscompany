@@ -35,8 +35,10 @@ export async function createOnboardingAlert(
   // A durable receipt can outlive the report or its active schedule. The
   // server is also authoritative if the user resumes in a different browser.
   if (product === "schedules" || result.kind !== "created") {
-    const path = product === "schedules" ? "schedules" : "reports"
-    const check = await fetch(`/api/proxy/v1/${path}/${encodeURIComponent(id)}`, { cache: "no-store" })
+    const resourceId = encodeURIComponent(id)
+    const check = product === "schedules"
+      ? await fetch(`/api/proxy/v1/schedules/${resourceId}`, { cache: "no-store" })
+      : await fetch(`/api/proxy/v1/reports/${resourceId}`, { cache: "no-store" })
     if (!check.ok) throw new Error("Open Reports or Schedules to check the earlier alert before continuing.")
     if (product === "schedules" && (await check.json()).active !== true) {
       throw new Error("Your monthly alert is paused. Open Schedules to review or resume it.")
