@@ -16505,7 +16505,7 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 
 **Correction:** The middleware lets the report data route verify its server-side caller. The account-authenticated path still scopes its query to the signed-in account. Independent review required two revisions before release. See the [final review](https://github.com/easydeed/reportscompany/pull/305#issuecomment-6990874455) and the earlier [board history](https://github.com/easydeed/reportscompany/commit/f4737541f8a17de2633947cb65571385b818680b).
 
-**Acceptance:** Open a known report from the approved pilot account through Share and Print. Check the report identity, PCT branding and the displayed data. The separate Market Snapshot sale-price defect is D-405. D-029 and D-101 contain related link history.
+**Acceptance:** Open a known report from the approved pilot account through Share and Print. Check the report identity, PCT branding and the displayed data. The separate [Market Snapshot price filing](https://github.com/easydeed/reportscompany/pull/316) follows this entry. D-029 and D-101 contain related link history.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
