@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 73 | Real, unfixed |
+| `open` | 74 | Real, unfixed |
 | `fixed` | 230 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **403** | D-001 … D-403, contiguous, no duplicates |
+| **Total** | **404** | D-001 … D-404, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 10 · WRONG 37 · FRAGILE 26 · ROUGH 0. (Sums to 73, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 37 · FRAGILE 26 · ROUGH 0. (Sums to 74, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16495,6 +16495,17 @@ At the November 13 baseline the Edit route passed a schedule ID to the creation 
 **Status:** `open` — [#308](https://github.com/easydeed/reportscompany/pull/308) compares the deadline in PostgreSQL. A valid reset through the API succeeded on the migrated disposable database.
 
 The reset route compared a time-zone-aware database timestamp to a naive UTC datetime. A valid test link raised TypeError. Verify both recovery using an unexpired link and rejection after its deadline.
+
+### D-404 — Report Share and Print can show “Report Not Found”
+
+**Severity:** BROKEN
+**Status:** `open` — [#305](https://github.com/easydeed/reportscompany/pull/305) deployed to Vercel and the Render API at `e2d0d509` on November 18. The production health and sign-in checks passed. A real shared and printed report from the designated pilot account still needs verification.
+
+**Customer-visible behaviour:** The dashboard’s Share and Print links could lead to a missing-report screen. The server-side renderer’s request was refused before the report data route could authenticate it. The initial production example used a synthetic report identifier.
+
+**Correction:** The middleware lets the report data route verify its server-side caller. The account-authenticated path still scopes its query to the signed-in account. Independent review required two revisions before release. See the [final review](https://github.com/easydeed/reportscompany/pull/305#issuecomment-6990874455) and the earlier [board history](https://github.com/easydeed/reportscompany/commit/f4737541f8a17de2633947cb65571385b818680b).
+
+**Acceptance:** Open a known report from the approved pilot account through Share and Print. Check the report identity, PCT branding and the displayed data. The separate [Market Snapshot price filing](https://github.com/easydeed/reportscompany/pull/316) follows this entry. D-029 and D-101 contain related link history.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
