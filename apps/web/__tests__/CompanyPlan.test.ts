@@ -1,4 +1,4 @@
-import { agentPlanCounts, agentPlanLimits, historyDate, holderSentence, planHeadline, seatPeriodLine, seatRows, type AgentPlan, type SeatPeriod } from "@/lib/company-plan"
+import { agentPlanCounts, agentPlanLimits, agentsUpgradeSentence, historyDate, holderSentence, planHeadline, seatPeriodLine, seatRows, type AgentPlan, type SeatPeriod } from "@/lib/company-plan"
 import type { Rep } from "@/lib/company-people"
 
 const rep = (over: Partial<Rep> = {}): Rep => ({
@@ -77,4 +77,14 @@ describe("seat history as sentences", () => {
 describe("history dates carry the year when it isn't this one", () => {
   it("an earlier year", () => expect(historyDate("2025-01-01T12:00:00Z", new Date("2026-10-29T12:00:00Z"))).toBe("Jan 1, 2025"))
   it("no date, no label", () => expect(historyDate(null)).toBe(""))
+})
+
+describe("the agents' upgrade sentence follows the sponsored pilot gate", () => {
+  const sentence = "Agents who want more upgrade and pay for it themselves."
+  it("is not said while the gate is on", () => expect(agentsUpgradeSentence(false)).toBeNull())
+  it("comes back when the API says agents can pay", () => expect(agentsUpgradeSentence(true)).toBe(sentence))
+  it("an answer without the field promises nothing", () => {
+    expect(agentsUpgradeSentence(undefined)).toBeNull()
+    expect(agentsUpgradeSentence(null)).toBeNull()
+  })
 })
