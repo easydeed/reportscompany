@@ -7,7 +7,7 @@
 
 ## Status
 
-**November 18, 2026 pilot review.** Compared GitHub main at `4e248ae1` with the November 13 review at `1eedb22a`. #291 added the database checks and #294 disabled sponsored checkout. #290, #292, #293, #295, #296 and #297 were open at this checkpoint. The scoped code closures below include earlier merges whose register entries were stale. Internal inbox receipt, outcome monitoring and runtime isolation remain release gates.
+**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding.
 
 **November 6 baseline:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
 
@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 77 | Real, unfixed |
+| `open` | 79 | Real, unfixed |
 | `fixed` | 224 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **401** | D-001 … D-401, contiguous, no duplicates |
+| **Total** | **403** | D-001 … D-403, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 13 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 77, the open total.)
+**Open by severity:** BROKEN 14 · WRONG 39 · FRAGILE 26 · ROUGH 0. (Sums to 79, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16186,7 +16186,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-368 — Changing or resetting a password leaves previously issued sessions usable
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-009
-**Status:** `open`
+**Status:** `open` — [#308](https://github.com/easydeed/reportscompany/pull/308) passes 30 authentication checks. Coverage includes active and replaced browser sessions, legacy tokens, a same-second change and a full password reset. Awaiting release.
 
 **Evidence:** `routes/users.py:272` and `routes/auth.py:771` write password_changed_at, but auth middleware never compares it to issued tokens. Claude reproduced 200 for a pre-change token. Six issuers include seven-day register/invite tokens; iat seconds versus DB microseconds matters. The users.py docstring overstates revocation.
 
@@ -16258,7 +16258,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-376 — Invitation acceptance and seat cancellation race the token used flag
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-017
-**Status:** `open`
+**Status:** `open` — [#292](https://github.com/easydeed/reportscompany/pull/292) handles competing acceptance attempts. [#307](https://github.com/easydeed/reportscompany/pull/307) locks the pending owner before checking whether the seat can be withdrawn. A migrated database test waits for an in-flight acceptance and verifies the joined rep remains active.
 
 **Evidence:** `apps/api/src/api/routes/auth.py:401–520` reads boolean used without locking, then changes password and marks used unconditionally. Claude's concurrent test succeeded twice in four of four runs; the last password won. Seat cancellation during acceptance has the same race.
 
@@ -16478,9 +16478,23 @@ Creating a day-5 schedule on January 31 tries to construct February 31. Verify s
 ### D-401 — Editing a schedule can skip a due occurrence
 
 **Severity:** WRONG
-**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) preserves a due occurrence across name and inactive-cadence changes. PostgreSQL tests exercised both weekly and monthly rows. Separately the web Edit page passes a schedule ID that the create wizard ignores. Verify that editing the existing schedule sends an update and creates no second schedule.
+**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) preserves a due occurrence across name and inactive-cadence changes. PostgreSQL tests exercised both weekly and monthly rows. The web editing fault has its own entry at D-402.
 
 A name-only edit recalculates next_run_at before the ticker claims the due send. Preserve the due time across metadata edits, including unchanged timing values.
+
+### D-402 — Saving from Edit can create another schedule
+
+**Severity:** WRONG · November 18 pilot review
+**Status:** `open` — [#306](https://github.com/easydeed/reportscompany/pull/306) loads the selected schedule and updates only the fields edited. Awaiting release.
+
+At the November 13 baseline the Edit route passed a schedule ID to the creation wizard, which ignored it. Verify a rename and a retry through the edit screen leave exactly one schedule with its original recipients and active state.
+
+### D-403 — A valid password-reset link can fail its expiry check
+
+**Severity:** BROKEN · November 18 pilot review
+**Status:** `open` — [#308](https://github.com/easydeed/reportscompany/pull/308) compares the deadline in PostgreSQL. A valid reset through the API succeeded on the migrated disposable database.
+
+The reset route compared a time-zone-aware database timestamp to a naive UTC datetime. A valid test link raised TypeError. Verify both recovery using an unexpired link and rejection after its deadline.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
