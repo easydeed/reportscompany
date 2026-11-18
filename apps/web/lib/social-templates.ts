@@ -259,7 +259,7 @@ export function buildSocialMarketSnapshotHtml(templateHtml: string, data: any): 
   const moi = present(metrics.months_of_inventory)
     ? metrics.months_of_inventory
     : closed > 0 ? active / closed : null;
-  const price = formatCurrency(metrics.median_close_price || metrics.median_list_price);
+  const price = formatCurrency(metrics.median_close_price);
   return fill(templateHtml, statsPairs(
     ctx,
     price === "—" ? `Market snapshot for ${ctx.city}.` : `${ctx.city} median sale price is ${price}.`,
