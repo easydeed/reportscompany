@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 81 | Real, unfixed |
-| `fixed` | 224 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 80 | Real, unfixed |
+| `fixed` | 225 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **405** | D-001 … D-405, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 15 · WRONG 40 · FRAGILE 26 · ROUGH 0. (Sums to 81, the open total.)
+**Open by severity:** BROKEN 15 · WRONG 39 · FRAGILE 26 · ROUGH 0. (Sums to 80, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16516,7 +16516,7 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 ### D-405 — Share and Print can label an asking price as a sale price
 
 **Severity:** WRONG · November 18 pilot review
-**Status:** `open` — [#314](https://github.com/easydeed/reportscompany/pull/314) corrects both Market Snapshot templates. Forty template checks passed locally. Awaiting release.
+**Status:** `fixed` — [#314](https://github.com/easydeed/reportscompany/pull/314) deployed to Vercel at `51250c0f` on November 18. Forty checks passed against the real templates. The deployed sign-in and API health checks passed. A real PCT Share link still needs its own verification under D-404.
 
 With one active listing at $755,000 and no priced closing, Share called $755K the median sale price and Print displayed $755,000 under Median Sale Price. A withheld closing price produced the same result. This error is separate from D-404, which concerns opening the link.
 
