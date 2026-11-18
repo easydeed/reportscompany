@@ -7,7 +7,9 @@
 
 ## Status
 
-**Last reconciled:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
+**November 18, 2026 pilot review.** Compared GitHub main at `4e248ae1` with the November 13 review at `1eedb22a`. #291 added the database checks and #294 disabled sponsored checkout. #290, #292, #293, #295, #296 and #297 were open at this checkpoint. The scoped code closures below include earlier merges whose register entries were stale. Internal inbox receipt, outcome monitoring and runtime isolation remain release gates.
+
+**November 6 baseline:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
 
 **Historical September 29 sweep retained below:** the following 36-entry depth table and conclusion describe `b0c52f9`, not the November 6 reconciliation.
 
@@ -63,13 +65,13 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
 | `open` | 77 | Real, unfixed |
-| `fixed` | 214 | Corrected in code, with the branch or PR named on the entry |
+| `fixed` | 224 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **391** | D-001 … D-391, contiguous, no duplicates |
+| **Total** | **401** | D-001 … D-401, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 10 · WRONG 39 · FRAGILE 28 · ROUGH 0. (Sums to 77, the open total.)
+**Open by severity:** BROKEN 13 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 77, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16130,7 +16132,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-362 — The deployed web dependency set includes published security advisories
 
 **Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-003
-**Status:** `open`
+**Status:** `fixed` — [#297](https://github.com/easydeed/reportscompany/pull/297) shipped at af369f22 on November 18. Vercel reported success. The homepage including pricing and the sign-in page returned 200. The three standalone design apps have no tracked deployment consumer and are excluded from this verification.
 
 **Evidence:** `apps/web/package.json` and `pnpm-lock.yaml` pin Next 16.0.7. The audit and Claude review each reported 61 production advisories: 4 critical, 29 high, 23 moderate, 5 low; 43 concern Next. Other app lockfiles pin 16.0.10. Feature/hosting applicability differs: this is not a claim that each advisory is exploitable on production or that a compromise occurred.
 
@@ -16139,7 +16141,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-363 — Branding deletion authorizes a URL substring instead of the owned storage key
 
 **Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-004
-**Status:** `open`
+**Status:** `open` — [#302](https://github.com/easydeed/reportscompany/pull/302) restricts deletion to the authenticated account’s canonical key. Storage tests use a test double. Awaiting release.
 
 **Evidence:** `apps/api/src/api/routes/upload.py:75–82` tests account ID anywhere in the URL; `services/upload.py:186–200` then extracts branding/ onward and deletes it. Actual functions with fake storage accepted another tenant key when the caller ID was in the host or preceding path. Query/fragment variants only yielded nonexistent keys in the review.
 
@@ -16148,7 +16150,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-364 — The account limiter executes an operation before returning 429
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-005
-**Status:** `open`
+**Status:** `open` — [#303](https://github.com/easydeed/reportscompany/pull/303) checks the limit before invoking the handler. Seven focused tests passed locally. Awaiting release.
 
 **Evidence:** `apps/api/src/api/middleware/authn.py:387` calls the handler before the count>limit branch at :392. Actual middleware with limit one invoked the fake handler three times while returning 200/429/429. The 429 copies handler headers, including potential Set-Cookie/Content-Length. This is a fixed minute window, not a token bucket.
 
@@ -16265,7 +16267,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-377 — Missing close prices and unknown MLS status become comparable sales
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-018
-**Status:** `open`
+**Status:** `fixed` — #277, merged on main. Worker and API comparable-sale calculations use recorded sale prices.
 
 **Evidence:** `worker/tasks.py:2568/2579`, API `routes/property.py:864/874`, `services/simplyrets.py:184`, and `schemas/property.py:225` substitute listPrice and/or Closed status. PDF _v2_closed_prices reads price first. Actual functions included a $950,000 asking price in consumer bounds/median/ppsf and agent PDF prices without a recorded sale. This remains after D-145 corrected the nested field path.
 
@@ -16276,7 +16278,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-378 — Consumer failure handling uses an error column the table does not have
 
 **Severity:** BROKEN · launch readiness, 2026-11-06 · **Ticket:** LR-019
-**Status:** `open`
+**Status:** `fixed` — #274, merged on main. Consumer failures persist in error_message.
 
 **Evidence:** `apps/worker/src/worker/tasks.py:2354,2980,2996,3011` references consumer_reports.error; migration 0038 and production expose error_message. Read-only live schema inspection and SELECT error LIMIT 0 confirmed SQLSTATE 42703; Claude also reproduced against a migrated DB. The outer handler repeats the failure, leaving processing. report_generations.error at :3041 is valid and unrelated.
 
@@ -16285,7 +16287,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-379 — Delivered consumer replay prevents recovery of the agent notification
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-021
-**Status:** `open`
+**Status:** `fixed` — #282, merged on main. Agent notification has independent recovery state.
 
 **Evidence:** `apps/worker/src/worker/tasks.py:2778–2785` returns when consumer timestamps exist, before notification at :2938–2964. If delivery succeeded and the agent stage failed/interrupted, replay cannot recover only that stage. D-069/LR-020 covers consumer delivery ownership and terminal-state regression.
 
@@ -16294,7 +16296,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-380 — A missing PDF is reported as generating without starting generation
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-022
-**Status:** `open`
+**Status:** `fixed` — #283, merged on main. PDF-only recovery and the bounded consumer viewer are covered.
 
 **Evidence:** `apps/api/src/api/routes/mobile_reports.py:353–368` schedules analytics only, and status at :378–389 repeatedly says generating for null pdf_url. Worker PDF failure is nonfatal, so sent-without-PDF is reachable. `MobileReportViewer.tsx:145–157` has unbounded polling. Actual handler/helper fakes queued only track_event; D-314's proxy fix is separate and still holds.
 
@@ -16303,7 +16305,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-381 — A committed scheduled occurrence is not redispatched after broker publication fails
 
 **Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-023
-**Status:** `open`
+**Status:** `fixed` — #286, merged on main. Committed scheduled occurrences recover after failed publication.
 
 **Evidence:** `apps/worker/src/worker/schedules_tick.py:630–646` commits queued rows and advances cadence before publication. Failed dispatch returns None at :370–377; sweep_stale_runs marks it failed instead of republishing. This was deliberate policy in test_enqueue_after_commit, not a regression of the fixed D-072 commit-before-publish invariant.
 
@@ -16312,7 +16314,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-382 — The market report wizard ignores persistent status errors and polls indefinitely
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-024
-**Status:** `open`
+**Status:** `fixed` — #284, merged on main. The unified wizard bounds status polling and retains retry identity.
 
 **Evidence:** `apps/web/components/unified-wizard/index.tsx:225–251` returns on non-ok status requests and ignores exceptions with no deadline/recovery state. It polls /v1/reports, not the consumer PDF endpoint. D-330 separately covers swallowed scheduled-submit errors in this component.
 
@@ -16321,7 +16323,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-383 — Live acquisition wording promises an estimate the product does not return
 
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-025
-**Status:** `open`
+**Status:** `fixed` — #287, merged on main. The estimate promise was corrected on the identified acquisition surfaces. D-343 tracks the separate confirmation copy.
 
 **Evidence:** Four locations remain: marketing/lead-capture.tsx, cma-funnel.tsx:212, lead-page-client.tsx:234, and marketing/property-reports.tsx:49/110. Consumer output deliberately shows comparable-sale bounds rather than a home estimate (D-350). Source checked by Claude; this is a promise mismatch, not a request for a valuation model.
 
@@ -16366,7 +16368,7 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-388 — Database CI uses a different major version and leaves some DB proofs skippable
 
 **Severity:** FRAGILE · launch readiness, 2026-11-06 · **Ticket:** LR-031
-**Status:** `open`
+**Status:** `fixed` — #291, merged on main. Required CI uses PostgreSQL 17 and enforces database-backed suites.
 
 **Evidence:** `.github/workflows/backend-tests.yml` uses postgres:16; production metadata reports PostgreSQL 17.9. Nine API suites already require a CI DB and test_ci_runs_the_database_suites.py guards that work, but db_session/tenant-isolation and other skip-only fixtures need extension. This does not reopen D-285's repaired missing-database provisioning.
 
@@ -16402,13 +16404,83 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 ### D-391 — Cached market-report generation reads uninitialised closed history
 
 **Severity:** BROKEN
-**Status:** `open` — fix present on Claude's #286 branch, not yet code-reviewed, merged or deployed.
+**Status:** `fixed` — #286, merged on main. test_a_report_cache_hit_renders_with_empty_history exercises the worker cache hit.
 
 **Evidence (2026-11-12):** On main at 0f3ebfd4, `apps/worker/src/worker/tasks.py` initialises `closed_history` and `closed_history_truncated` only inside `if not result` following `cache_get("report", cache_payload)`. Later unconditional builder-data assignments read both. A valid 15-minute report-cache hit skips initialisation and raises `UnboundLocalError` (a `NameError` subclass), so the cached run crashes rather than rendering. This is independent of whether the report kind uses a trend chart.
 
 **Branch correction:** #286 at dd05e84e moves the empty-history defaults before the cache branch. Claude owns this fix with LR-023; recording it here does not approve its implementation or claim deployment. Cache hits have no cached trend-history dataset and therefore omit that optional chart.
 
 **Acceptance:** Exercise the actual generate_report cache-hit path, with upstream fetch skipped, and assert successful rendering with defined empty history and truncation=false. Preserve fresh-fetch history behavior. Review with #286 before closing this entry. No production generation or provider send was executed for this inventory.
+
+### D-392 — Closed Sales email can show asking price beside Sold
+
+**Severity:** WRONG
+**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Checks the sale card and table against different asking and closing prices, a withheld sale and active inventory. Awaiting release.
+
+A $950,000 listing sold for $900,000 displayed $950K on its card and $900K in the table. Check both displays and a sale with its price withheld.
+
+### D-393 — Market Snapshot can fail on unpriced activity
+
+**Severity:** BROKEN
+**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Keeps unpriced activity in the total and out of monetary tiers. A missing sale median stays unavailable. Awaiting release.
+
+Mixed priced and unpriced closings raise TypeError. Count all qualifying activity and use only priced rows in monetary tiers.
+
+### D-394 — A multi-ZIP search can suppress a valid market alert
+
+**Severity:** BROKEN
+**Status:** `open` — [#300](https://github.com/easydeed/reportscompany/pull/300) Sends one vendor parameter per ZIP and applies selected ZIPs separately from the area label. Awaiting release.
+
+The request packs multiple postal codes into one parameter and the builder compares the printable area to a city. Verify the encoded request, selected rows and delivery match count.
+
+### D-395 — A rep cannot reliably import a contacts CSV through the web
+
+**Severity:** BROKEN
+**Status:** `open` — [#298](https://github.com/easydeed/reportscompany/pull/298) passes the multipart route test and both FastAPI decoder cases. Awaiting merge.
+
+The contacts proxy loses multipart framing and a UTF-8 BOM hides the name column. Verify upload through the web route with plain and BOM-prefixed CSV.
+
+### D-396 — Admin Retry for a failed market report cannot reach the queue
+
+**Severity:** BROKEN
+**Status:** `open` — The first patch passed database tests. Independent review found a delayed original job and an interrupted retry could still give an incorrect result. Hold release until these cases pass.
+
+The handler updates a nonexistent column and reports success on publication failure. Exercise a retry against the migrated schema, concurrent clicks and broker failure.
+
+### D-397 — A public CMA request can confirm delivery before a failed initial handoff
+
+**Severity:** BROKEN
+**Status:** `open`
+
+The consented request commits before publishing the initial job. A publication exception returns success. Require recoverable dispatch and accurate receipt copy before including homeowner requests.
+
+### D-398 — Get Started can repeat a first send while retrying monthly setup
+
+**Severity:** WRONG
+**Status:** `open` — [#301](https://github.com/easydeed/reportscompany/pull/301) preserves each completed onboarding step and uses a separate account-scoped request key for the report and schedule. Awaiting release.
+
+Creating the report succeeds and creating the schedule fails. The next click requests both again. Verify one initial generation and one recurring schedule across retries.
+
+### D-399 — Platform-admin deactivation can leave an account operational
+
+**Severity:** WRONG
+**Status:** `open`
+
+Platform admin changes accounts.is_active while login, sessions and scheduled delivery check users.is_active. Verify deactivation through the admin route across all three paths.
+
+### D-400 — Monthly alert setup can fail near the end of the month
+
+**Severity:** BROKEN
+**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) covers five calendar boundaries, including leap year and December rollover. Awaiting merge.
+
+Creating a day-5 schedule on January 31 tries to construct February 31. Verify shorter months, leap years and year rollover.
+
+### D-401 — Editing a schedule can skip a due occurrence
+
+**Severity:** WRONG
+**Status:** `open` — [#299](https://github.com/easydeed/reportscompany/pull/299) preserves a due occurrence across name and inactive-cadence changes. PostgreSQL tests exercised both weekly and monthly rows. Separately the web Edit page passes a schedule ID that the create wizard ignores. Verify that editing the existing schedule sends an update and creates no second schedule.
+
+A name-only edit recalculates next_run_at before the ticker claims the due send. Preserve the due time across metadata edits, including unchanged timing values.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
