@@ -37,6 +37,12 @@ from worker.template_filters import (
 
 logger = logging.getLogger(__name__)
 
+
+def _report_today() -> date:
+    """The date printed on the report. A seam for tests."""
+    return date.today()
+
+
 _BUILDER_VERSION = "2026-03-05-v1"
 logger.warning("[DIAGNOSTIC] PropertyReportBuilder version: %s", _BUILDER_VERSION)
 
@@ -2974,7 +2980,9 @@ class PropertyReportBuilder:
         _v2_market = self._build_v2_market(market_trends_data)
         if _v2_market and isinstance(context.get("market_trends"), dict):
             context["market_trends"] = {**context["market_trends"], **_v2_market}
-        context["generated_label"] = date.today().strftime("%b %-d, %Y")
+        # Unpadded day. A dash flag in strftime is a ValueError on Windows.
+        _today = _report_today()
+        context["generated_label"] = f"{_today.strftime('%b')} {_today.day}, {_today.year}"
 
         logger.info("Final page_set: %s", page_set)
         logger.info("Context comparables: %d, price_low: %s, price_high: %s",
