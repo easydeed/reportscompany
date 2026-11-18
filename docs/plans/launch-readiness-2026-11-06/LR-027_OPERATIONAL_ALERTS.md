@@ -1,9 +1,18 @@
-# LR-027 design rev 2: readiness and operator alerts
+# LR-027 design rev 3: readiness and operator alerts
 
 Branch `fix/lr-027-operational-alerts` · Gate PILOT · design review first, then code.
 Ticket: `03-operations-and-acceptance.md` LR-027. Facts below are read from main `688abc1e`.
 
-## 0. What changed from rev 1 (Codex AMEND at `1e0b73cc`)
+## 0. What changed
+
+**Rev 3 (Codex re-review at `2576b692`).** Rev 2's other changes were accepted. Two corrections:
+
+| Codex | Rev 3 |
+|---|---|
+| `pending`/`sent`/`failed` can report an uncertain provider outcome as sent, and a crash after the call leaves a `pending` row that a later run sends again. The unique key prevents duplicate rows, not a duplicate call. | A durable per-channel **claim is committed before the provider call**. Acknowledged acceptance (`accepted`) is stored apart from `unknown`, and an abandoned claim becomes `unknown` for reconciliation. **Only known unsent outcomes are retried.** This reuses LR-023's `claim_send` pattern. The operator's actual receipt remains the acceptance evidence. See section 5. |
+| Membership above the 50 stored IDs would re-announce outstanding incidents as new every 5 minutes. | Membership is complete, in its own table (`ops_alert_members`), bounded at 5,000 per signal per run. Above the bound, "new" means the count grew. See section 5. |
+
+**Rev 2 (Codex AMEND at `1e0b73cc`).**
 
 | # | Codex | Rev 2 |
 |---|---|---|
@@ -127,15 +136,40 @@ The same rule applies to `schedule_overdue` and `schedule_blocked`: the identity
 
 ## 5. Delivery, noise and recovery
 
-- **State:** one additive migration creates two tables, owned by the monitor.
-  - **`ops_alerts`**, one row per incident: `key`, `opened_at`, `resolved_at`, `last_value`, `members` (attempt identities, capped at 50 stored and 5 shown), `last_evaluated_at`.
+- **State:** one additive migration creates three tables, owned by the monitor.
+  - **`ops_alerts`**, one row per incident: `key`, `opened_at`, `resolved_at`, `last_value`, `member_count`, `members_truncated`, `last_evaluated_at`.
+  - **`ops_alert_members`**, the incident's **complete** membership: `(alert_id, identity)` primary key, `first_seen_at`, `last_seen_at`. This replaces rev 2's 50-ID cap (see "New members" below).
   - **`ops_alert_notifications`**, one row per incident × event × channel:
-    - key `(alert_id, event, channel)`, where `event` is `open`, `renotify:<n>` or `resolved`, and `channel` is `email` or `sms`;
-    - columns `status` (`pending`, `sent`, `failed`), `attempts`, `last_attempt_at`, `provider_message_id`, `last_error_class` (a class only, never provider text).
-- **Channels are tracked separately.** Each run sends only rows that are `pending`, or `failed` with fewer than 5 attempts.
-  - A confirmed email (`sent`) is never sent again when the SMS for the same event is retried, and the reverse.
-  - The insert uses `ON CONFLICT DO NOTHING` on the unique key, so a repeated or overlapping run cannot create a second notification for the same event and channel.
-  - An event whose provider outcome is unknown is marked `sent`, not retried: a duplicate operator alert costs less than a pattern of resending.
+    - unique key `(alert_id, event, channel)`, where `event` is `open`, `renotify:<n>` or `resolved`, and `channel` is `email` or `sms`;
+    - columns `state`, `claimed_at`, `claim_token`, `attempts`, `outcome_at`, `provider_message_id`, `last_error_class` (a class only, never provider text), and `resolution`/`resolution_evidence` for an operator's reconciliation.
+
+### Notification delivery: claim before the call, never guess the outcome
+
+This follows the scheduled-delivery pattern LR-023 already uses (`scheduled_runs.claim_send`: `send_claimed_at` is committed before the provider POST and never cleared, and a claim with no recorded outcome is `needs_review`, never resent). The same rule applies here, per channel.
+
+| State | Meaning | Next |
+|---|---|---|
+| `pending` | Created, never attempted. | Claimable. |
+| `claimed` | `claimed_at` and `claim_token` are **committed before the provider call**, by a conditional update (`WHERE state IN ('pending','not_sent') AND claimed_at IS NULL`). Only one run can win the claim. | The same run records the outcome. |
+| `accepted` | The provider acknowledged it: a SendGrid 2xx (single-attempt `ACCEPTED`) or a Twilio message SID. `provider_message_id` is stored. | Terminal. |
+| `not_sent` | Known unsent: no connection was made (`NOT_SENT`: connection refused, not configured, invalid number), or the provider answered with a definite refusal (SendGrid `REJECTED`; Twilio `TwilioRestException` with a 4xx). The claim is released. | **Retried** on a later run, at most 5 attempts per row. |
+| `unknown` | The call may have reached the provider: an exception after the request was sent, a SendGrid `UNKNOWN`, a Twilio 5xx or `outcome_unknown`. | **Never retried automatically.** Shown for reconciliation. |
+| `unknown` (abandoned) | A `claimed` row with no outcome after its lease (**5 min**, longer than the 90 s run budget plus the 10 s call timeout). The process died between the call and the update. The monitor moves it to `unknown`; it does **not** reopen it. | Shown for reconciliation. |
+
+- **Only known unsent outcomes are retried.** Neither a `pending` row left by a crash after the claim (it is `claimed`, then `unknown`) nor an uncertain result is ever sent again by the monitor.
+- **Channels stay independent.** Each channel's row has its own claim. An `accepted` email is never touched by an SMS retry, and the reverse.
+- **Uncertainty never silences the incident.** The next scheduled event (`renotify:<n>` every 6 h, or `resolved`) is a new row with its own claim, so the operator still hears about a still-open incident.
+- **Reconciliation:** `unknown` rows are listed on the admin ops view and in the next email digest, as "an alert may not have been delivered". The operator records `resolution` (`received` or `not_received`) with evidence, the same way `scripts/ops/held_sends.py` resolves held customer sends. `not_received` on a channel lets the operator re-send that one event by hand. The monitor does not.
+- **Provider acceptance is not receipt.** `accepted` proves only that SendGrid or Twilio took the message. Closure evidence (section 7) is the operator's **actual receipt**, recorded against the row's `provider_message_id`.
+- **The destination is never logged.** Today `sms/send.py` logs `to_number` on every send. Operator alerts go through a wrapper that classifies the Twilio outcome identically but logs only the row ID and the outcome class, so the operator's number never appears in logs. A test asserts this.
+
+### New members: complete membership, not a capped sample
+
+- Each run, the signal query returns the outstanding identities (bounded: up to **5,000** per signal per run, ordered oldest first).
+- They are upserted into `ops_alert_members`. An identity is **new** only if it has no row for this incident. Every member already stored, however many there are, is updated (`last_seen_at`) and never re-announced. The alert body still shows at most 5 identities, the newest first.
+- **Above 5,000 outstanding identities:** the run stores the first 5,000, sets `members_truncated`, and records `member_count` from a separate `count(*)`. While truncated, "new" means **`member_count` grew** since the last notification, not "an identity outside the stored set". So a backlog larger than the bound produces one update when it grows, never a "new" announcement every 5 minutes.
+- **A member that leaves and returns** within the same open incident is not new (its row persists until the incident resolves). After resolution, a later trip is a new incident with fresh membership.
+- **Retention:** member rows are deleted with their incident, 90 days after it resolves.
 - **Rules:**
   - **Open:** email and SMS, subject to the per-key "SMS?" column.
   - **Still failing:** re-notify every **6 h**.
@@ -182,7 +216,13 @@ The destinations are set in Render, never in the repo, chat or evidence. Thresho
 | Fake SendGrid 4xx burst | `provider_refusals` over threshold, and not below it. Suppressed and duplicate-suppressed rows in the same window change nothing. |
 | SendGrid key unset | `send_not_attempted`, not `provider_refusals`. |
 | Failing customer webhook | `report_webhook_failures`. |
-| Fake Twilio fails, fake SendGrid succeeds | The email is `sent` once. The SMS is retried on later runs. **No second email.** |
+| Fake Twilio refuses (4xx), fake SendGrid accepts | The email is `accepted` once. The SMS is `not_sent` and retried on later runs. **No second email.** |
+| Fake SendGrid times out after receiving the request | The email row is `unknown`, **not retried**, and listed for reconciliation; the SMS for the same event still goes. |
+| Kill the ticker between the provider call and the outcome update | After the 5-minute lease the row is `unknown` (abandoned), never re-sent. The fake provider shows exactly one call. |
+| Two monitor runs race for one row | One claim wins; the provider sees one call. |
+| Twilio send for an operator alert | The logs contain the row ID and outcome class, never the destination number. |
+| 6,000 outstanding members on one signal | 5,000 stored, `members_truncated`; one notification when the count grows, and none on later runs while it does not. |
+| An incident with 120 stored members, re-evaluated | No member is announced as new again. |
 | Auth rejection on an API route | No alert; `/ready` unaffected. |
 | Flapping, then recovery | One SMS, the email re-open rule, one `resolved`; the SMS cap holds under a burst. |
 
@@ -196,14 +236,14 @@ No live alert is sent before code PASS, and none was sent during this design rev
 
 ## 8. Rollout
 
-1. Code PASS, then the migration (two additive tables) through the usual runbook; Jerry applies it.
+1. Code PASS, then the migration (three additive tables) through the usual runbook; Jerry applies it.
    - The monitor tolerates the tables being absent, for example under `SCHEMA_BEHIND_ACKNOWLEDGED`: it logs and skips, and never crashes the ticker.
 2. Deploy with `OPS_ALERTS_ENABLED=0`. Observe for **48 h**, compare the proposed thresholds with real traffic, and adjust; Jerry approves the values.
 3. Jerry sets the destinations and runs the test alert; the email and SMS evidence is recorded (section 7).
 4. Jerry creates the pinger: `GET https://<api>/ready` every 5 min, alerting on 2 consecutive failures. Its alert and recovery are recorded.
 5. Confirm Render's health-check path is `/health`, not `/ready`.
 6. `OPS_ALERTS_ENABLED=1`.
-7. **Rollback:** reverting the binary leaves the two tables unused; the older code ignores them. `/ready` 404s until the redeploy, and the pinger reports that by design.
+7. **Rollback:** reverting the binary leaves the three tables unused; the older code ignores them. `/ready` 404s until the redeploy, and the pinger reports that by design.
 
 **Cost:** SendGrid is within the plan. Twilio is about a cent per SMS, capped at 10 an hour. The pinger is on a free tier. The database cost is about 12 bounded queries every 5 minutes on one connection.
 
