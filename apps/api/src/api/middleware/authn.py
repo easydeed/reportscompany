@@ -359,7 +359,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 pass  # Use default 60 if DB fails
             self._redis("setex", limit_key, 300, str(limit))  # Cache 5 min
 
-        # ── Token bucket check ───────────────────────────────────────────
+        # ── Fixed one-minute window ───────────────────────────────────────────
         now = int(time.time())
         minute = now - (now % 60)
         key = f"ratelimit:{acct}:{minute}"
@@ -382,13 +382,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Degraded"] = "1"
             return response
 
-        remaining = max(0, limit - count)
-
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-        response.headers["X-RateLimit-Reset"] = str(reset)
-
+        headers = {
+            "X-RateLimit-Limit": str(limit),
+            "X-RateLimit-Remaining": str(max(0, limit - count)),
+            "X-RateLimit-Reset": str(reset),
+        }
         if count > limit:
             return JSONResponse(
                 status_code=429,
@@ -397,6 +395,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "message": f"Rate limit of {limit} requests/minute exceeded",
                     "retry_after": reset,
                 },
-                headers=dict(response.headers),
+                headers={**headers, "Retry-After": str(reset)},
             )
+        response = await call_next(request)
+        response.headers.update(headers)
         return response
