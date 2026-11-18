@@ -191,3 +191,16 @@ def test_without_the_header_the_middleware_still_refuses_first(client):
     which would have answered this malformed id with 400."""
     r = client.get("/v1/reports/not-a-uuid/data")
     assert r.status_code == 401, (r.status_code, r.text)
+
+
+# ── a malformed token is a 401, never a 500 (Codex review of f50d2512) ──────
+# Header values arrive latin-1 decoded, so a byte >= 0x80 becomes a non-ASCII
+# str, and hmac.compare_digest refuses to compare non-ASCII strs (TypeError,
+# 500). Main never reached the comparison; this branch does, so it must hold.
+
+@pytest.mark.parametrize("raw", [b"\xff", b"\xc3\xa9t\xc3\xa9", b"render-token-for-tests\xff", b"\x80" * 64])
+def test_a_non_ascii_token_is_refused_with_401_not_500(client, world, raw):
+    _, rid, _ = world["a"]
+    r = client.get(f"/v1/reports/{rid}/data", headers={b"x-internal-render-token": raw})
+    assert r.status_code == 401, (raw, r.status_code, r.text[:200])
+    assert "Irvine" not in r.text

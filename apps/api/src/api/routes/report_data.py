@@ -35,7 +35,15 @@ def _is_internal_render_caller(request: Request) -> bool:
     provided = request.headers.get("X-Internal-Render-Token", "")
     if not provided:
         return False
-    return hmac.compare_digest(provided, expected)
+    # Compare BYTES. Header values arrive latin-1 decoded, so any byte >= 0x80
+    # becomes a non-ASCII str, and compare_digest raises TypeError on non-ASCII
+    # strs: a malformed token was a 500 instead of a 401 once the middleware
+    # began passing token requests through (Codex review of #305). Bytes
+    # compare for any content, still in constant time.
+    try:
+        return hmac.compare_digest(provided.encode("utf-8"), expected.encode("utf-8"))
+    except UnicodeEncodeError:
+        return False
 
 
 @router.get("/reports/{run_id}/data")

@@ -30,8 +30,8 @@
  {
   "name": "T5 the route trusts any token value",
   "file": "apps/api/src/api/routes/report_data.py",
-  "old": "    return hmac.compare_digest(provided, expected)",
-  "new": "    return bool(provided)",
+  "old": "        return hmac.compare_digest(provided.encode(\"utf-8\"), expected.encode(\"utf-8\"))",
+  "new": "        return bool(provided)",
   "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_a_wrong_token_is_refused_by_the_route"
  },
  {
@@ -40,5 +40,12 @@
   "old": "    if not expected:\n        return False\n",
   "new": "    if not expected:\n        return bool(request.headers.get(\"X-Internal-Render-Token\"))\n",
   "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_no_token_configured_means_the_token_path_is_closed"
+ },
+ {
+  "name": "T7 the route compares strs again (a non-ASCII token is a 500)",
+  "file": "apps/api/src/api/routes/report_data.py",
+  "old": "        return hmac.compare_digest(provided.encode(\"utf-8\"), expected.encode(\"utf-8\"))",
+  "new": "        return hmac.compare_digest(provided, expected)",
+  "test": "apps/api/tests/test_render_token_reaches_report_data.py::test_a_non_ascii_token_is_refused_with_401_not_500"
  }
 ]
