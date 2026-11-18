@@ -7,7 +7,7 @@
 
 ## Status
 
-**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. #300 deployed at `6d68e97c` on Vercel and all four Render services. The homepage, sign-in page and API health check passed. #298 then restored web CSV import at `ba551508` on Vercel and the API. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding.
+**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. #300 deployed at `6d68e97c` on Vercel and all four Render services. The homepage, sign-in page and API health check passed. #298 then restored web CSV import at `ba551508` on Vercel and the API. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding. The next two register filings are [D-404 for report links](https://github.com/easydeed/reportscompany/pull/309) and [D-405 for Share and Print sale prices](https://github.com/easydeed/reportscompany/pull/316).
 
 **November 6 baseline:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
 
@@ -16425,8 +16425,6 @@ A $950,000 listing sold for $900,000 displayed $950K on its card and $900K in th
 **Status:** `fixed` — [#300](https://github.com/easydeed/reportscompany/pull/300) counts unpriced activity and excludes it from monetary tiers. The median stays unavailable when every price is missing. Production release `6d68e97c` passed the API health check on November 18.
 
 Mixed priced and unpriced closings raise TypeError. Count all qualifying activity and use only priced rows in monetary tiers.
-
-**Separate Share and Print finding, November 18.** One active listing at $755,000 and no priced closing produced a $755,000 median sale price in both templates. [#314](https://github.com/easydeed/reportscompany/pull/314) corrects both outputs. Forty template checks passed locally, including missing, zero and withheld values and a priced closing. [#305](https://github.com/easydeed/reportscompany/pull/305) is held for the correction.
 
 ### D-394 — A multi-ZIP search can suppress a valid market alert
 
