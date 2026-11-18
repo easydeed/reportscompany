@@ -233,6 +233,8 @@ def open_seat(cur, company_id: str, rep_account_id: str) -> None:
 
 def _open_seat_rep(cur, company_id: str, rep_account_id: str) -> Dict[str, Any]:
     """The rep, if it is this company's and holds a seat; else SeatNotFound."""
+    # Seat mutations already hold the company lock. Lock the owner as well
+    # so the joined flag reflects any invitation acceptance that commits first.
     cur.execute(
         """
         SELECT a.id::text, a.name, s.id::text,
@@ -245,7 +247,7 @@ def _open_seat_rep(cur, company_id: str, rep_account_id: str) -> Dict[str, Any]:
               SELECT u2.email_verified, u2.password_hash
                 FROM account_users au JOIN users u2 ON u2.id = au.user_id
                WHERE au.account_id = a.id AND au.role = 'OWNER'
-               LIMIT 1
+               LIMIT 1 FOR UPDATE OF u2
           ) u ON true
          WHERE a.id = %s::uuid AND a.parent_account_id = %s::uuid
            AND a.account_type = 'INDUSTRY_AFFILIATE'
