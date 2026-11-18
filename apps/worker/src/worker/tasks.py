@@ -250,33 +250,20 @@ def resolve_recipients_to_emails(cur, account_id: str, recipients_raw: list) -> 
         # Verify sponsorship
         cur.execute(
             """
-            SELECT a.id::text
-            FROM accounts a
+            SELECT u.email
+            FROM accounts a JOIN users u ON u.account_id = a.id
             WHERE a.id = %s::uuid
               AND a.sponsor_account_id = %s::uuid
+              AND a.is_active AND COALESCE(u.is_active, TRUE)
+            ORDER BY u.created_at, u.id
+            LIMIT 1
             """,
             (agent_account_id, account_id),
         )
 
-        if cur.fetchone():
-            # Get agent's primary email from users
-            cur.execute(
-                """
-                SELECT u.email
-                FROM users u
-                WHERE u.account_id = %s::uuid
-                ORDER BY u.created_at
-                LIMIT 1
-                """,
-                (agent_account_id,),
-            )
-            row = cur.fetchone()
-            if row and row[0]:
-                emails.append(row[0])
-            else:
-                print(f"⚠️  Sponsored agent {agent_account_id} has no user email")
-        else:
-            print(f"⚠️  Sponsored agent {agent_account_id} not sponsored by {account_id}")
+        row = cur.fetchone()
+        if row and row[0]:
+            emails.append(row[0])
 
     for recipient_str in recipients_raw:
         try:
@@ -1024,7 +1011,9 @@ def _hold_empty_report(account_id, run_id, schedule_id, recipients, report_type,
                 cur.execute("""
                     SELECT u.email FROM users u
                     JOIN account_users au ON au.user_id = u.id
+                    JOIN accounts a ON a.id = au.account_id AND a.is_active
                     WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
+                      AND COALESCE(u.is_active, TRUE)
                     LIMIT 1
                 """, (account_id,))
                 owner = cur.fetchone()
@@ -1431,7 +1420,9 @@ def _send_failure_notification(
                     SELECT u.email, u.first_name
                     FROM users u
                     JOIN account_users au ON au.user_id = u.id
+                    JOIN accounts a ON a.id = au.account_id AND a.is_active
                     WHERE au.account_id = %s::uuid AND au.role = 'OWNER'
+                      AND COALESCE(u.is_active, TRUE)
                     LIMIT 1
                 """, (account_id,))
                 owner = cur.fetchone()
@@ -2241,6 +2232,16 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
                 with psycopg.connect(DATABASE_URL, autocommit=False) as conn:
                     with conn.cursor() as cur:
                         cur.execute(f"SET LOCAL app.current_account_id TO '{account_id}'")
+
+                        refusal = scheduled_runs.sender_refusal(cur, account_id)
+                        if refusal:
+                            cur.execute("""
+                                UPDATE schedule_runs SET status = %s, error = %s, finished_at = NOW()
+                                WHERE report_run_id = %s::uuid AND NOT recovery_tracked
+                                  AND status IN ('queued', 'processing')
+                            """, (*refusal, run_id))
+                            conn.commit()
+                            return {"ok": False, "reason": refusal[0], "run_id": run_id}
 
                         cur.execute("""
                             SELECT recipients, city, zip_codes

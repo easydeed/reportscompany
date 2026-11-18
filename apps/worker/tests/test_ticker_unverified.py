@@ -69,7 +69,7 @@ class FakeCursor:
             return
 
         if "email_verified" in text and "FROM users" in text:
-            self._rows = [(self.world["any_verified"],)]
+            self._rows = [(True, self.world["any_verified"])]
             return
 
         if "INSERT INTO email_log" in text:

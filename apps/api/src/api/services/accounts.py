@@ -6,6 +6,35 @@ Phase 29C: Multi-account and affiliate support services
 
 from typing import List, Dict, Any, Optional
 
+from ..db import fetchone_dict
+
+
+def active_session_account(cur, user_id: str, account_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """Resolve login's preferred account, or validate one exact signed context."""
+    cur.execute("""
+        SELECT a.id::text AS account_id, a.account_type, a.parent_account_id::text,
+               a.sponsor_account_id IS NOT NULL AS is_sponsored,
+               u.id::text AS user_id, u.email, u.is_platform_admin,
+               CASE WHEN a.id = u.account_id THEN u.role ELSE membership.role END AS role
+        FROM users u
+        JOIN LATERAL (
+            SELECT au.account_id, au.role, FALSE AS primary_fallback
+            FROM account_users au WHERE au.user_id = u.id
+            UNION ALL
+            SELECT u.account_id, u.role, TRUE
+        ) membership ON TRUE
+        JOIN accounts a ON a.id = membership.account_id
+        WHERE u.id = %s::uuid AND COALESCE(u.is_active, TRUE) AND a.is_active
+          AND (%s::uuid IS NULL OR a.id = %s::uuid)
+        ORDER BY membership.primary_fallback, CASE
+            WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 1
+            WHEN a.account_type = 'TITLE_COMPANY' THEN 2
+            WHEN a.id = u.account_id THEN 3 ELSE 4
+        END, a.id
+        LIMIT 1
+    """, (user_id, account_id, account_id))
+    return fetchone_dict(cur)
+
 
 def get_user_accounts(cur, user_id: str) -> List[Dict[str, Any]]:
     """
@@ -40,7 +69,7 @@ def get_user_accounts(cur, user_id: str) -> List[Dict[str, Any]]:
             a.created_at
         FROM accounts a
         JOIN account_users au ON au.account_id = a.id
-        WHERE au.user_id = %s::uuid
+        WHERE au.user_id = %s::uuid AND a.is_active
         ORDER BY 
             CASE WHEN au.role = 'OWNER' THEN 0
                  WHEN au.role = 'MEMBER' THEN 1
@@ -107,9 +136,9 @@ def verify_user_account_access(cur, user_id: str, account_id: str) -> bool:
     """
     cur.execute("""
         SELECT 1
-        FROM account_users
-        WHERE user_id = %s::uuid
-          AND account_id = %s::uuid
+        FROM account_users au JOIN accounts a ON a.id = au.account_id
+        WHERE au.user_id = %s::uuid
+          AND au.account_id = %s::uuid AND a.is_active
     """, (user_id, account_id))
     
     return cur.fetchone() is not None

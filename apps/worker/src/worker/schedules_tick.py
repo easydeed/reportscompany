@@ -413,27 +413,14 @@ BLOCKED_STATUS = "blocked_unverified"
 
 def account_can_send(cur, account_id: str) -> bool:
     """
-    Does this account have any active user with a confirmed email address?
-
-    Must stay identical in meaning to `sender_verification` in
-    apps/api/src/api/verification.py — see the note above for why there are two.
+    Is this account active with at least one active, verified sender?
     Raises on a database error rather than guessing; the caller's handler
     already treats an exception as "do not send this tick".
     """
-    cur.execute(
-        """
-        SELECT COALESCE(bool_or(COALESCE(email_verified, FALSE)), FALSE)
-        FROM users
-        WHERE account_id = %s::uuid
-          AND COALESCE(is_active, TRUE) = TRUE
-        """,
-        (account_id,),
-    )
-    row = cur.fetchone()
-    return bool(row and row[0])
+    return scheduled_runs.sender_refusal(cur, account_id) is None
 
 
-def record_unverified_skip(cur, account_id: str, schedule_id: str, recipients) -> None:
+def record_sender_skip(cur, account_id: str, schedule_id: str, recipients, status: str, reason: str) -> None:
     """
     Leave the refusal in `email_log`, same as the API gate does.
 
@@ -470,14 +457,13 @@ def record_unverified_skip(cur, account_id: str, schedule_id: str, recipients) -
                 # which is what `schedules.recipients` holds.
                 [str(r) for r in (recipients or [])] or None,
                 "[refused] scheduled send",
-                "no user on this account has confirmed their email address "
-                "(users.email_verified is false for all of them)",
-                BLOCKED_STATUS,
+                reason,
+                BLOCKED_STATUS if status == scheduled_runs.BLOCKED else "suppressed",
             ),
         )
     except Exception as e:
         logger.error(
-            "Could not record the unverified skip for schedule %s: %s — "
+            "Could not record the sender refusal for schedule %s: %s — "
             "the send was still skipped",
             schedule_id, e, exc_info=True,
         )
@@ -552,20 +538,12 @@ def process_due_schedules():
                     filters = row[15]  # NEW: Smart Preset filters (JSONB → dict or None)
                     
                     try:
-                        # Pre-check: D-019. An unverified account does not send,
-                        # including from a schedule that already exists. First,
-                        # because it is the more fundamental refusal and the
-                        # cheapest — one aggregate against `users`.
-                        if not account_can_send(cur, account_id):
-                            logger.warning(
-                                "Skipping schedule %s — account %s has no user "
-                                "with a confirmed email address; recorded in "
-                                "email_log as blocked_unverified",
-                                schedule_id, account_id,
-                            )
-                            record_unverified_skip(
-                                cur, account_id, schedule_id, recipients
-                            )
+                        # Check the current account and sender before creating an occurrence.
+                        refusal = scheduled_runs.sender_refusal(cur, account_id)
+                        if refusal:
+                            logger.warning("Skipping schedule %s for account %s: %s",
+                                           schedule_id, account_id, refusal[1])
+                            record_sender_skip(cur, account_id, schedule_id, recipients, *refusal)
                             next_run_at = compute_next_run(
                                 cadence, weekly_dow, monthly_dom,
                                 send_hour, send_minute, timezone

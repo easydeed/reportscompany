@@ -7,6 +7,7 @@ import secrets
 from datetime import datetime, timedelta
 from ..settings import settings
 from ..auth import sign_jwt, check_password, hash_password, verify_jwt
+from ..services.accounts import active_session_account
 import hashlib
 from ..services.email import (
     send_password_reset_email,
@@ -72,7 +73,7 @@ def login(body: LoginIn, response: Response):
                 """, (email,))
                 raise HTTPException(status_code=401, detail="Invalid credentials")
             
-            user_id, default_account_id, pw_hash = row
+            user_id, _, pw_hash = row
             
             if not pw_hash or not check_password(body.password, pw_hash):
                 # Log failed attempt
@@ -82,52 +83,27 @@ def login(body: LoginIn, response: Response):
                 """, (email,))
                 raise HTTPException(status_code=401, detail="Invalid credentials")
             
-            # Log successful login
+            account = active_session_account(cur, user_id)
+            if not account:
+                logger.info("Login refused: no active account for user %s", user_id)
+                raise HTTPException(status_code=401, detail="Invalid credentials")
+
             cur.execute("""
                 INSERT INTO login_attempts (email, success, ip_address)
                 VALUES (%s, TRUE, NULL)
             """, (email,))
-            
-            cur.execute("""
-                SELECT a.id::text, a.account_type,
-                       a.sponsor_account_id IS NOT NULL AS is_sponsored,
-                       a.parent_account_id::text
-                FROM account_users au
-                JOIN accounts a ON a.id = au.account_id
-                WHERE au.user_id = %s::uuid
-                ORDER BY 
-                    CASE 
-                        WHEN a.account_type = 'INDUSTRY_AFFILIATE' THEN 1
-                        WHEN a.account_type = 'TITLE_COMPANY' THEN 2
-                        WHEN a.id = %s::uuid THEN 3
-                        ELSE 4
-                    END
-                LIMIT 1
-            """, (user_id, default_account_id))
-            account_row = cur.fetchone()
-            account_id = account_row[0] if account_row else default_account_id
-            account_type = account_row[1] if account_row else "REGULAR"
-            is_sponsored = bool(account_row[2]) if account_row else False
-            parent_account_id = account_row[3] if account_row else None
-            
-            cur.execute("""
-                SELECT role, is_platform_admin FROM users WHERE id = %s::uuid
-            """, (user_id,))
-            role_row = cur.fetchone()
-            user_role = (role_row[0] or "USER").upper() if role_row else "USER"
-            is_platform_admin = bool(role_row[1]) if role_row else False
 
     token = sign_jwt({
         "sub": user_id,
         "user_id": user_id,
-        "account_id": account_id,
-        "role": user_role,
-        "account_type": account_type,
-        "is_platform_admin": is_platform_admin,
-        "is_company_admin": account_type == "TITLE_COMPANY",
-        "is_affiliate": account_type == "INDUSTRY_AFFILIATE",
-        "is_sponsored": is_sponsored,
-        "parent_account_id": parent_account_id,
+        "account_id": account["account_id"],
+        "role": (account["role"] or "USER").upper(),
+        "account_type": account["account_type"],
+        "is_platform_admin": account["is_platform_admin"],
+        "is_company_admin": account["account_type"] == "TITLE_COMPANY",
+        "is_affiliate": account["account_type"] == "INDUSTRY_AFFILIATE",
+        "is_sponsored": account["is_sponsored"],
+        "parent_account_id": account["parent_account_id"],
         "scopes": ["reports:read", "reports:write"]
     }, settings.JWT_SECRET, ttl_seconds=3600)
     
