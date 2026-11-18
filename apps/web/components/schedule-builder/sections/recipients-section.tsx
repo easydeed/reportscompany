@@ -100,13 +100,18 @@ export function RecipientsSection({
   }
 
   const removeRecipient = (recipient: Recipient) => {
-    onChange(
-      recipients.filter(r =>
-        !(r.type === recipient.type && 
-          ((r.type === "manual_email" && recipient.type === "manual_email" && r.email === recipient.email) ||
-           ((r as any).id === (recipient as any).id)))
-      )
-    )
+    onChange(recipients.filter(r => r !== recipient))
+  }
+
+  const recipientLabel = (recipient: Recipient) => {
+    if (recipient.type === "manual_email") return recipient.email
+    if (recipient.type === "contact") return contacts.find(c => c.id === recipient.id)?.name || recipient.name
+    if (recipient.type === "group") {
+      const group = groups.find(g => g.id === recipient.id)
+      const name = group?.name || recipient.name
+      return group?.member_count != null ? `${name} (${group.member_count})` : name
+    }
+    return recipient.name
   }
 
   const isEmailAlreadyAdded = (email: string) =>
@@ -170,9 +175,8 @@ export function RecipientsSection({
                 )}
               >
                 {r.type === "group" ? <Users className="w-3 h-3" /> : r.type === "manual_email" ? <AtSign className="w-3 h-3" /> : <Mail className="w-3 h-3" />}
-                {r.type === "manual_email" ? r.email : r.name}
-                {r.type === "group" && ` (${r.memberCount})`}
-                <button onClick={() => removeRecipient(r)} className="opacity-60 hover:opacity-100">
+                {recipientLabel(r)}
+                <button aria-label={`Remove ${recipientLabel(r)}`} onClick={() => removeRecipient(r)} className="opacity-60 hover:opacity-100">
                   <X className="w-3 h-3" />
                 </button>
               </span>

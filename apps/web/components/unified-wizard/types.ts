@@ -1,12 +1,10 @@
+import type { Recipient } from "@/lib/types/recipients"
+export type { Recipient } from "@/lib/types/recipients"
+
 export type AudienceFilter = "all" | "first_time" | "luxury" | "families" | "condo" | "investors"
 
 export type DeliveryMode = "send_now" | "schedule"
 export type Cadence = "weekly" | "biweekly" | "monthly" | "quarterly"
-
-export type Recipient =
-  | { type: "contact"; id: string; name: string; email: string }
-  | { type: "group"; id: string; name: string; memberCount: number }
-  | { type: "manual_email"; email: string }
 
 export interface WizardState {
   reportType: string | null
