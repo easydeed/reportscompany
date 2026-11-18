@@ -179,7 +179,9 @@ def test_a_zip_query_is_an_exact_location():
     exact count and keep the removed 1000-row ceiling.
     """
     q = build_inventory_active({"zips": ["77018", "77019"]})
-    assert q.get("postalCodes") == "77018,77019"
+    from httpx import Request
+    request = Request("GET", "https://example.org/properties", params=q)
+    assert request.url.params.get_list("postalCodes") == ["77018", "77019"]
     assert location_is_exact(q)
 
 

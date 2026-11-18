@@ -592,9 +592,16 @@ def _build_stacked_stats(stats: List[Tuple[str, str]]) -> str:
     return render_block("spec_list", variant="strip", stats=stats[:4])
 
 
+def _listing_status(listing: Dict) -> str:
+    status = (listing.get("status") or "").strip()
+    if status.lower() in ("closed", "sold") or (not status and listing.get("close_price")):
+        return "Sold"
+    return status or "Active"
+
+
 def _listing_price_str(listing: Dict) -> str:
     """Format a listing's price for display."""
-    price = listing.get("list_price") or listing.get("close_price")
+    price = listing.get("close_price" if _listing_status(listing) == "Sold" else "list_price")
     if not price:
         return "Price N/A"
     return _format_price_clean(price)
@@ -688,7 +695,7 @@ def _build_rows(listings: List[Dict], tk: Dict[str, str], chips: bool = False) -
         return ""
     return render_block("grid", shape="rows", cards=[
         _build_property_row(
-            l, tk, chip=("Sold" if l.get("close_price") else (l.get("status") or "Active"))
+            l, tk, chip=_listing_status(l)
             if chips else "")
         for l in listings
     ])
@@ -718,14 +725,13 @@ def _sales_table_row(listing: Dict, index: int) -> Dict:
     beds = listing.get("bedrooms") or ""
     baths = listing.get("bathrooms") or ""
     sqft = listing.get("sqft")
-    price = listing.get("close_price") or listing.get("list_price")
-    status = listing.get("status") or ""
+    status = _listing_status(listing)
     bg, fg = _STATUS_CHIPS.get(status.lower(), ("", ""))
     return {
         "address": listing.get("street_address") or "N/A",
         "specs": f"{beds} / {baths}" if beds and baths else "",
         "sqft": f"{sqft:,}" if sqft else "",
-        "price": _format_price_clean(price) if price else "N/A",
+        "price": _listing_price_str(listing),
         "dom": listing.get("days_on_market") or "",
         "zebra": index % 2 == 1,
         "badge_html": (
@@ -784,7 +790,7 @@ def _build_closed_sales_body(
     body += _build_hero_stat(hero_value, hero_label, tk)
     if listings:
         show = listings[:4]
-        label = "Recent sales" if any(l.get("close_price") for l in show) else "Newest listings"
+        label = "Recent sales" if any(_listing_status(l) == "Sold" for l in show) else "Newest listings"
         body += _build_gallery_count(label, len(show))
         body += _build_rows(show, tk, chips=True)
         body += _build_sales_table(listings, tk["primary"])
@@ -1129,7 +1135,7 @@ def _get_metrics_for_report_type(
     if report_type == "market_snapshot":
         return (
             ("Active Listings", _format_number(total_active)),
-            ("Median Price", _format_price_clean(median_close_price or median_list_price)),
+            ("Median Price", _format_price_clean(median_close_price)),
             ("Avg DOM", f"{dom_display} days" if dom_display != "N/A" else "N/A"),
         )
     
@@ -1368,7 +1374,7 @@ def _get_hero_4_metrics(report_type: str, metrics: Dict) -> Tuple[
     if report_type == "market_snapshot":
         # Matches PDF: Median Sale Price, Closed Sales, Avg DOM, MOI
         return (
-            ("Median Sale Price", _format_price_clean(median_close_price or median_list_price)),
+            ("Median Sale Price", _format_price_clean(median_close_price)),
             ("Closed Sales", _format_number(total_closed)),
             ("Avg Days on Market", f"{avg_dom:.0f}" if avg_dom else "N/A"),
             ("Months of Inventory", f"{moi:.1f}" if moi else "N/A"),
@@ -2156,6 +2162,8 @@ def schedule_email_html(
             secondary = [(h2_label, h2_value), (h3_label, h3_value), (h4_label, h4_value)]
         else:
             secondary = [(m2_label, m2_value), (m3_label, m3_value)]
+        if report_type == "closed" and listings:
+            listings = [row if row.get("status") else {**row, "status": "Closed"} for row in listings]
         body_html = _build_closed_sales_body(
             insight_text=insight_text, hero_value=hero_val, hero_label=hero_lbl,
             listings=listings or [], stats=secondary, quick_take=quick_take,
@@ -2273,7 +2281,8 @@ def schedule_email_html(
     else:
         postal_line = f"{PLATFORM_SENDER_LABEL} · {PLATFORM_POSTAL_ADDRESS} · on behalf of {agent_name}"
 
-    as_of = _today().strftime("%B %-d, %Y")
+    today = _today()
+    as_of = f"{today:%B} {today.day}, {today:%Y}"
     signature_html = _build_signature(
         primary=tk["primary"], on_primary=tk["on_primary"], ink=tk["ink"],
         photo_url=rep_photo_url, initials=_initials(agent_name), agent_name=agent_name,
