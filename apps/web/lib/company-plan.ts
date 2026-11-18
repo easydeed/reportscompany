@@ -22,6 +22,16 @@ export type SeatPeriod = {
   agents_moved: number | null
 }
 
+/**
+ * GET /v1/company/seats → `agents_self_upgrade`. The sentence is said only while
+ * it is true: during the sponsored pilot the API refuses checkout for agents
+ * (config/billing.py, SPONSORED_SELF_CHECKOUT), so the page must not promise
+ * it. A response without the field says nothing rather than over-promise.
+ */
+export function agentsUpgradeSentence(selfUpgrade: boolean | undefined | null): string | null {
+  return selfUpgrade === true ? "Agents who want more upgrade and pay for it themselves." : null
+}
+
 /** The plan the API names as the agents' (`seats.AGENT_PLAN`). */
 export const AGENT_PLAN_SLUG = "sponsored_free"
 

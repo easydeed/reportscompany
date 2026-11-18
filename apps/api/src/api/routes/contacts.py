@@ -266,7 +266,7 @@ def import_contacts(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     try:
-        content = file.file.read().decode("utf-8")
+        content = file.file.read().decode("utf-8-sig")
     except Exception:
         raise HTTPException(status_code=400, detail="Unable to read uploaded file as UTF-8")
 
