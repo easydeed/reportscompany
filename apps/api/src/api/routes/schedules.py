@@ -582,7 +582,7 @@ def update_schedule(
 ):
     """
     Update a schedule.
-    Nulls out next_run_at so ticker recomputes on next tick.
+    Keep the due occurrence unless the schedule is retimed or reactivated.
     """
     # Build dynamic update query
     updates = []
@@ -695,29 +695,35 @@ def update_schedule(
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        # Compute next_run_at from updated (or existing) schedule fields.
-        # Fetch the current values first so a partial update (e.g. name-only) still
-        # gets the correct next_run_at instead of NULLing it and firing immediately.
+        # Lock the occurrence while comparing timing so a concurrent edit or tick
+        # cannot replace the values used for this decision.
         cur.execute("""
-            SELECT cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone
-            FROM schedules WHERE id = %s::uuid AND account_id = %s
+            SELECT cadence, weekly_dow, monthly_dom, send_hour, send_minute, timezone, active
+            FROM schedules WHERE id = %s::uuid AND account_id = %s FOR UPDATE
         """, (schedule_id, account_id))
         sched_row = cur.fetchone()
         if not sched_row:
             raise HTTPException(status_code=404, detail="Schedule not found")
-        cur_cadence, cur_dow, cur_dom, cur_hour, cur_min, cur_tz = sched_row
 
-        # Merge: prefer payload values over current values
-        eff_cadence = payload.cadence      if payload.cadence      is not None else cur_cadence
-        eff_dow     = payload.weekly_dow   if payload.weekly_dow   is not None else cur_dow
-        eff_dom     = payload.monthly_dom  if payload.monthly_dom  is not None else cur_dom
-        eff_hour    = payload.send_hour    if payload.send_hour    is not None else cur_hour
-        eff_min     = payload.send_minute  if payload.send_minute  is not None else cur_min
-        eff_tz      = payload.timezone     if payload.timezone     is not None else (cur_tz or "UTC")
-
-        new_next_run = _compute_next_run(eff_cadence, eff_dow, eff_dom, eff_hour, eff_min, eff_tz)
-        updates.append("next_run_at = %s")
-        params.append(new_next_run)
+        timing_fields = ("cadence", "weekly_dow", "monthly_dom", "send_hour", "send_minute", "timezone")
+        previous = sched_row[:6]
+        timing = tuple(
+            getattr(payload, field) if getattr(payload, field) is not None else old
+            for field, old in zip(timing_fields, previous)
+        )
+        was_active = sched_row[6]
+        active = was_active if payload.active is None else payload.active
+        # A full form can include both day fields. Only the selected cadence's
+        # day affects delivery, including when a due alert is waiting for a tick.
+        day_index = 1 if timing[0] == "weekly" else 2
+        timing_changed = (
+            timing[0] != previous[0]
+            or timing[day_index] != previous[day_index]
+            or timing[3:] != previous[3:]
+        )
+        if active and (not was_active or timing_changed):
+            updates.append("next_run_at = %s")
+            params.append(_compute_next_run(*timing))
 
         # Add schedule_id and account_id to params
         # CRITICAL: Always filter by account_id for data isolation
