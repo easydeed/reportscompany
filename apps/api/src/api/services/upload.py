@@ -62,7 +62,12 @@ async def validate_image(file: UploadFile) -> tuple[bytes, str, str]:
     extension = os.path.splitext(filename)[1].lower().lstrip(".")
     try:
         with Image.open(io.BytesIO(contents), formats=list(IMAGE_TYPES)) as img:
-            mime, extensions = IMAGE_TYPES[img.format]
+            # A JPEG container can identify itself as an unsupported
+            # multi-picture format after Pillow reads the image metadata.
+            detected = IMAGE_TYPES.get(img.format)
+            if detected is None:
+                raise HTTPException(status_code=400, detail=allowed)
+            mime, extensions = detected
             if mime != file.content_type or extension not in extensions:
                 raise HTTPException(status_code=400, detail="The image format, filename and content type must match.")
             width, height = img.size

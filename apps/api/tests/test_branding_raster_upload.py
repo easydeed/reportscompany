@@ -50,3 +50,15 @@ def test_refused_upload_never_reaches_storage(monkeypatch, data, filename, mime)
         submit(data, filename, mime)
     assert failure.value.status_code == 400
     get_storage.assert_not_called()
+
+def test_unapproved_container_variant_has_a_client_error(monkeypatch):
+    from unittest.mock import MagicMock
+    image = MagicMock()
+    image.__enter__.return_value.format = "MPO"
+    monkeypatch.setattr(upload.Image, "open", lambda *args, **kwargs: image)
+    store = Mock()
+    monkeypatch.setattr(upload, "get_r2_client", store)
+    with pytest.raises(HTTPException) as failure:
+        submit(b"test-image", "camera.jpg", "image/jpeg")
+    assert failure.value.status_code == 400
+    store.assert_not_called()
