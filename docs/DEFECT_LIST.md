@@ -7,7 +7,7 @@
 
 ## Status
 
-**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. #300 deployed at `6d68e97c` on Vercel and all four Render services. The homepage, sign-in page and API health check passed. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding.
+**November 18, 2026 pilot review.** The November 13 baseline was `1eedb22a`. Before this repair session, #291 added PostgreSQL 17 release checks and #294 disabled sponsored checkout. During this session #297 shipped the dependency repair at `af369f22` and #296 shipped the corresponding Company Plan wording at `8b6bc410`. Vercel and the Render API both reported the #296 revision live. #300 deployed at `6d68e97c` on Vercel and all four Render services. The homepage, sign-in page and API health check passed. #298 then restored web CSV import at `ba551508` on Vercel and the API. Several earlier report fixes had already merged while their entries still said open. The approved internal inbox receipt, delivery monitoring and runtime isolation evidence are outstanding.
 
 **November 6 baseline:** 2026-11-06, LR-001 against `main` at `fd859a28`. The 131 formerly open/recorded entries are classified in `docs/plans/launch-readiness-2026-11-06/LR-001_RECONCILIATION.md`; evidence depth is explicit per row. This source reconciliation is not a fresh live-provider/visual reproduction of every historical mechanism. New launch findings are D-361 onward. Codex alone owns status tokens, count/severity tables, totals, and D-number allocation under the reviewed two-lane agreement.
 
@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 76 | Real, unfixed |
-| `fixed` | 227 | Corrected in code, with the branch or PR named on the entry |
+| `open` | 75 | Real, unfixed |
+| `fixed` | 228 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
 | **Total** | **403** | D-001 … D-403, contiguous, no duplicates |
 
-**Open by severity:** BROKEN 12 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 76, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 75, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16436,7 +16436,7 @@ The request packs multiple postal codes into one parameter and the builder compa
 ### D-395 — A rep cannot reliably import a contacts CSV through the web
 
 **Severity:** BROKEN
-**Status:** `open` — [#298](https://github.com/easydeed/reportscompany/pull/298) passes the multipart route test and both FastAPI decoder cases. Awaiting merge.
+**Status:** `fixed` — [#298](https://github.com/easydeed/reportscompany/pull/298) deployed to Vercel and the Render API at `ba551508` on November 18. Web and API tests verified the multipart upload and plain or BOM-prefixed UTF-8. Sign-in and API health passed after deployment. No production contacts were imported.
 
 The contacts proxy loses multipart framing and a UTF-8 BOM hides the name column. Verify upload through the web route with plain and BOM-prefixed CSV.
 
