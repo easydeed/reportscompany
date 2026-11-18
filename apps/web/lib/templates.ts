@@ -797,7 +797,7 @@ export function buildClosedHtml(
     <tr>
       <td>${escapeHtml(listing.city || r.city) || "—"}</td>
       <td>${escapeHtml(listing.street_address) || "—"}</td>
-      <td class="t-right">${formatCurrency(listing.close_price || listing.list_price)}</td>
+      <td class="t-right">${formatCurrency(listing.close_price > 0 ? listing.close_price : null)}</td>
       <td class="t-right">${formatNumber(listing.bedrooms)}</td>
       <td class="t-right">${formatDecimal(listing.bathrooms, 1)}</td>
       <td class="t-right">${formatNumber(listing.sqft)}</td>
