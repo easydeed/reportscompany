@@ -28,7 +28,7 @@ Ticket: `03-operations-and-acceptance.md` LR-027. Facts below are read from main
 
 ## 2. Decisions recorded
 
-- **Channels (Jerry):** email plus SMS to one named operator. **D1:** alert email goes through **SendGrid**, not Resend; the app does not use Resend. **[JERRY] confirm.**
+- **Channels (Jerry, approved November 18):** alert email goes through **SendGrid**, and **Twilio SMS** is the second channel, both to one named operator. The app does not use Resend. Recorded in `DECISIONS_AND_LANES.md`.
 - **Outside check (Jerry):** a free external pinger polls `/ready`. It is the only path that alerts when the ticker, the worker, Redis or SendGrid is down, so it must not depend on any of them.
 - **Values never invented:** destinations are Render environment variables Jerry sets (section 6). Until they are set, the monitor records alerts and sends nothing.
 
@@ -190,7 +190,7 @@ Every captured body passes the privacy test.
 
 **Closure, from production (Codex point 5).** The closing evidence is **one confirmed alert and one recovery for each configured path**: email, SMS and the pinger. Each is recorded as redacted evidence: the time, the key, the channel, `provider_message_id` or the pinger's event ID, and the destination masked (for example `j***@…`, `+1•••••1234`). Destinations themselves stay in Render.
 - **Email and SMS:** `POST /v1/admin/ops/test-alert` (admin only) opens a labelled test incident and resolves it on the next run. That produces the alert and the recovery through the real code path. Jerry confirms receipt.
-- **Pinger:** a planned pause of the check, or a controlled `/ready` 503 in a maintenance window, then the recovery. **[JERRY]** chooses which.
+- **Pinger (Jerry, approved November 18): briefly pause the check, then resume it.** No outage is induced: no controlled `/ready` 503 and no stopped service. Resuming produces the recovery. Each event is recorded the same redacted way, with the pinger's event ID. If the pinger service does not alert on a paused check, that is reported to Jerry before any other method is tried; nothing is substituted silently.
 
 No live alert is sent before code PASS, and none was sent during this design review.
 
@@ -208,11 +208,14 @@ No live alert is sent before code PASS, and none was sent during this design rev
 **Cost:** SendGrid is within the plan. Twilio is about a cent per SMS, capped at 10 an hour. The pinger is on a free tier. The database cost is about 12 bounded queries every 5 minutes on one connection.
 
 ## 9. Open for Jerry
-1. **D1:** SendGrid for alert email.
-2. Approve the thresholds, after observe mode.
-3. The operator's email and phone, set in Render.
-4. The pinger service and account, and how its alert is exercised (section 7).
-5. Quiet hours or a second contact, if any.
+
+**Decided November 18:** SendGrid alert email with Twilio SMS second (section 2), and the pinger's alert is exercised by briefly pausing the check (section 7).
+
+Still open:
+1. Approve the thresholds, after observe mode.
+2. The operator's email and phone, set in Render.
+3. The pinger service and account.
+4. Quiet hours or a second contact, if any.
 
 ## 10. Not in this ticket, and found while revising
 - LR-026, LR-028 and dashboards; paging rotations.
