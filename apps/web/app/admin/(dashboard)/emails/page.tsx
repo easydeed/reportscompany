@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { emailOutcomeLabel, providerAccepted } from "@/lib/admin-email-outcomes"
 import { Badge } from "@/components/ui/badge"
 import {
   Table,
@@ -34,12 +35,13 @@ interface EmailLog {
   response_code: number | null
   error: string | null
   created_at: string
-  status: string
+  delivery_status?: string
 }
 
 export default function EmailsPage() {
   const [emails, setEmails] = useState<EmailLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     fetchEmails()
@@ -51,12 +53,14 @@ export default function EmailsPage() {
       const res = await fetch("/api/v1/admin/emails?limit=200", {
         credentials: "include",
       })
-      if (res.ok) {
-        const data = await res.json()
-        setEmails(data.emails || [])
-      }
-    } catch (error) {
-      console.error("Failed to fetch emails:", error)
+      if (!res.ok) throw new Error("Email log unavailable")
+      const data = await res.json()
+      if (!Array.isArray(data?.emails)) throw new Error("Invalid email log response")
+      setEmails(data.emails)
+      setLoadError(false)
+    } catch {
+      setEmails([])
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -78,8 +82,8 @@ export default function EmailsPage() {
   // Calculate stats
   const stats = {
     total: emails.length,
-    success: emails.filter(e => e.status === "success").length,
-    failed: emails.filter(e => e.status === "failed").length,
+    success: emails.filter(e => providerAccepted(e.delivery_status)).length,
+    failed: emails.filter(e => e.delivery_status === "failed" || e.delivery_status === "bounced").length,
     totalRecipients: emails.reduce((sum, e) => sum + e.to_count, 0),
   }
 
@@ -94,6 +98,7 @@ export default function EmailsPage() {
         <Button
           variant="outline"
           onClick={fetchEmails}
+          disabled={loading}
           className="border-slate-300 text-slate-600 hover:bg-slate-50"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -101,14 +106,16 @@ export default function EmailsPage() {
         </Button>
       </div>
 
+      {loadError && <p role="alert">Couldn’t load the email log. Use Refresh to try again.</p>}
+
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         <Card className="bg-white border-slate-200 shadow-sm">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Total Emails</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.total}</p>
+                <p className="text-sm text-slate-500">Log entries</p>
+                <p className="text-2xl font-bold text-slate-900">{loadError ? "—" : stats.total}</p>
               </div>
               <Mail className="h-6 w-6 text-slate-300" />
             </div>
@@ -118,8 +125,8 @@ export default function EmailsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-slate-500">Delivered</p>
-                <p className="text-2xl font-bold text-emerald-600">{stats.success}</p>
+                <p className="text-sm text-slate-500">Provider accepted</p>
+                <p className="text-2xl font-bold text-emerald-600">{loadError ? "—" : stats.success}</p>
               </div>
               <CheckCircle className="h-6 w-6 text-emerald-200" />
             </div>
@@ -130,7 +137,7 @@ export default function EmailsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Failed</p>
-                <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
+                <p className="text-2xl font-bold text-red-600">{loadError ? "—" : stats.failed}</p>
               </div>
               <XCircle className="h-6 w-6 text-red-200" />
             </div>
@@ -141,7 +148,7 @@ export default function EmailsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500">Total Recipients</p>
-                <p className="text-2xl font-bold text-slate-900">{stats.totalRecipients}</p>
+                <p className="text-2xl font-bold text-slate-900">{loadError ? "—" : stats.totalRecipients}</p>
               </div>
               <Users className="h-6 w-6 text-blue-200" />
             </div>
@@ -159,7 +166,7 @@ export default function EmailsPage() {
           ) : emails.length === 0 ? (
             <div className="text-center py-12">
               <Mail className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-              <p className="text-slate-500">No emails sent yet</p>
+              <p className="text-slate-500">{loadError ? "Email log unavailable" : "No email activity yet"}</p>
             </div>
           ) : (
             <Table>
@@ -170,7 +177,7 @@ export default function EmailsPage() {
                   <TableHead className="text-slate-500">Recipients</TableHead>
                   <TableHead className="text-slate-500">Provider</TableHead>
                   <TableHead className="text-slate-500">Status</TableHead>
-                  <TableHead className="text-slate-500">Sent</TableHead>
+                  <TableHead className="text-slate-500">Recorded</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -192,17 +199,7 @@ export default function EmailsPage() {
                       {email.provider}
                     </TableCell>
                     <TableCell>
-                      {email.status === "success" ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Delivered
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-red-100 text-red-700 border-red-200">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Failed
-                        </Badge>
-                      )}
+                      <Badge variant="outline">{emailOutcomeLabel(email.delivery_status)}</Badge>
                     </TableCell>
                     <TableCell className="text-slate-400 text-sm">
                       {formatTimeAgo(email.created_at)}

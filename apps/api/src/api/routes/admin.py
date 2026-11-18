@@ -452,7 +452,9 @@ def retry_market_report(
 @router.get("/emails")
 def list_admin_emails(
     limit: int = Query(200, ge=1, le=1000),
-    _admin: dict = Depends(get_admin_user)
+    _admin: dict = Depends(get_admin_user),
+    status: Optional[str] = None,
+    q: Optional[str] = None,
 ):
     """
     List recent email sends across all accounts.
@@ -476,9 +478,15 @@ def list_admin_emails(
             e.subject,
             e.response_code,
             e.error,
-            e.created_at
+            e.created_at,
+            COALESCE(e.status, 'unknown') AS delivery_status
         FROM email_log e
         JOIN accounts a ON e.account_id = a.id
+        WHERE (%s::text IS NULL OR COALESCE(e.status, 'unknown') = %s)
+          AND (%s::text IS NULL OR strpos(lower(a.name), lower(%s)) > 0 OR EXISTS (
+              SELECT 1 FROM unnest(e.to_emails) AS recipients(address)
+              WHERE strpos(lower(address), lower(%s)) > 0
+          ))
         ORDER BY e.created_at DESC
         LIMIT %s
     """
@@ -486,7 +494,8 @@ def list_admin_emails(
     with db_conn() as (conn, cur):
         # Set admin role for RLS bypass
         set_rls(cur, _admin.get("account_id", ""), user_role="ADMIN")
-        cur.execute(query, (limit,))
+        search = (q or "").strip() or None
+        cur.execute(query, (status, status, search, search, search, limit))
         
         emails = []
         for row in cur.fetchall():
@@ -503,7 +512,8 @@ def list_admin_emails(
                 "response_code": row[8],
                 "error": row[9],
                 "created_at": row[10].isoformat() if row[10] else None,
-                "status": "success" if row[8] and row[8] < 300 else "failed"
+                "delivery_status": row[11],
+                "status": "success" if row[11] in ("sent", "delivered") else row[11],
             })
         
         return {"emails": emails, "count": len(emails)}
