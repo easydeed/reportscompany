@@ -6,6 +6,12 @@ export interface ProductLimit {
 }
 
 export interface PlanUsage {
+  account?: {
+    account_type?: string
+    sponsor_account_id?: string | null
+    /** The checkout route's own rule: false means the API refuses checkout. */
+    checkout_available?: boolean
+  }
   plan: {
     plan_slug: string
     plan_name: string
