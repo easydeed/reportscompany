@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import json
 import logging
 from ..db import db_conn, set_rls, fetchone_dict, fetchall_dicts
-from ..services import evaluate_report_limit, log_limit_decision, LimitDecision, get_full_plan_usage
+from ..services.usage import manual_market_admission
 from ..services.email import send_limit_warning_email, send_limit_reached_email
 from ..cache import get_redis
 from ..crmls_cities import VALID_CITY_NAMES
@@ -15,7 +15,7 @@ from ..services import idempotency
 _logger = logging.getLogger(__name__)
 
 
-def _check_and_notify_limit(account_id: str, info: dict):
+def _check_and_notify_limit(account_id: str, plan_name: str, limit: int, count: int):
     """
     After a report is enqueued, check market-report usage % and send one-time
     notifications at 80% and 100% thresholds.
@@ -23,25 +23,11 @@ def _check_and_notify_limit(account_id: str, info: dict):
     """
     try:
         from datetime import datetime
-        plan  = info.get("plan", {})
-        usage = info.get("usage", {})
-        # Support both old keys (report_count) and new keys (market_reports_used)
-        limit = plan.get("market_reports_limit") or plan.get("monthly_report_limit", 0)
-        count = (
-            usage.get("market_reports_used") or usage.get("report_count", 0)
-        ) + 1  # +1 for the report just enqueued
-
         if limit <= 0 or limit >= 10000:
             return
 
         ratio = count / limit
-        # Use period_start from legacy usage, or compute from current month
-        month_key = (
-            usage.get("period_start", "") or
-            datetime.utcnow().strftime("%Y-%m-01")
-        )[:7]  # "YYYY-MM"
-        if not month_key:
-            return
+        month_key = datetime.utcnow().strftime("%Y-%m")
 
         r = get_redis()
 
@@ -62,7 +48,7 @@ def _check_and_notify_limit(account_id: str, info: dict):
             cache_key = f"limit_notify:{account_id}:{month_key}:100"
             if not r.get(cache_key):
                 send_limit_reached_email(email, first_name, limit, count=count,
-                                         plan_name=plan.get("plan_name"))
+                                         plan_name=plan_name)
                 r.setex(cache_key, 30 * 86400, "1")
                 _logger.info(f"Sent 100%% limit notification to {email} for account {account_id}")
 
@@ -70,7 +56,7 @@ def _check_and_notify_limit(account_id: str, info: dict):
             cache_key = f"limit_notify:{account_id}:{month_key}:80"
             if not r.get(cache_key):
                 send_limit_warning_email(email, first_name, count, limit,
-                                         plan_name=plan.get("plan_name"))
+                                         plan_name=plan_name)
                 r.setex(cache_key, 30 * 86400, "1")
                 _logger.info(f"Sent 80%% limit notification to {email} for account {account_id}")
 
@@ -197,7 +183,6 @@ def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTask
         "recipients": payload.recipients,
     }
 
-    limit_info = None
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
 
@@ -243,9 +228,7 @@ def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTask
             )
 
         # ===== PRICING-002: CHECK MARKET REPORT LIMIT =====
-        plan_usage     = get_full_plan_usage(cur, account_id)
-        market_status  = plan_usage["limits"]["market_reports"]
-        limit_info     = plan_usage
+        plan, market_status = manual_market_admission(cur, account_id)
 
         if not market_status["can_proceed"]:
             raise HTTPException(
@@ -326,9 +309,9 @@ def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTask
             """, (f"Failed to enqueue: {str(e)}", row["id"]))
             conn2.commit()
 
-    # Check plan limits and send notifications in background (non-blocking)
-    if limit_info:
-        bg.add_task(_check_and_notify_limit, account_id, limit_info)
+    else:
+        bg.add_task(_check_and_notify_limit, account_id, plan["plan_name"],
+                    market_status["limit"], market_status["used"] + 1)
 
     return {"report_id": row["id"], "status": row["status"]}
 

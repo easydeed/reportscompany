@@ -227,6 +227,27 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
 
 # ─── USAGE COUNTS ─────────────────────────────────────────────────────────────
 
+def manual_market_admission(cur, account_id: str):
+    """Hold this account's admission lock through the caller's pending insert."""
+    cur.execute("SELECT id FROM accounts WHERE id = %s::uuid FOR NO KEY UPDATE", (account_id,))
+    plan = resolve_plan_for_account(cur, account_id)
+    # A separate READ COMMITTED statement sees the previous holder's insert.
+    # generated_at defaults to the transaction time on creation and survives
+    # worker status changes. Each generation occupies at most one slot.
+    cur.execute("""
+        SELECT count(*) FROM report_generations rg
+        WHERE rg.account_id = %s::uuid
+          AND rg.generated_at >= date_trunc('month', now())
+          AND rg.generated_at < date_trunc('month', now()) + interval '1 month'
+          AND rg.billable IS TRUE
+          AND rg.status IN ('pending', 'processing', 'completed')
+          AND rg.input_params->>'schedule_id' IS NULL
+          AND NOT EXISTS (SELECT 1 FROM schedule_runs sr WHERE sr.report_run_id = rg.id)
+    """, (account_id,))
+    used = cur.fetchone()[0]
+    return plan, evaluate_product_limit(used, plan["market_reports_limit"])
+
+
 def get_usage_counts(cur, account_id: str) -> Dict[str, Any]:
     """Count usage for all three product types."""
     # Market reports this month — manual only (scheduled runs are governed by the schedules limit)
