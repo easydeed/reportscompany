@@ -1622,7 +1622,7 @@ def generate_report(self, run_id: str, account_id: str, report_type: str, params
         _params = params or {}
         city = _params.get("city")
         zips = normalized_zips(_params.get("zips"))
-        if not city and zips:
+        if zips:
             # For ZIP-based reports, use ZIP code(s) as the "city" label
             city = ", ".join(zips[:3]) + ("..." if len(zips) > 3 else "")
         if not city:

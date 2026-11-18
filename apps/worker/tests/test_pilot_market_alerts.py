@@ -66,3 +66,21 @@ def test_snapshot_hero_never_labels_asking_price_as_a_sale():
                                "https://example.org/report", "https://example.org/unsubscribe")
     text = " ".join(re.sub(r"<[^>]+>", " ", html).split())
     assert "N/A Median Sale Price" in text
+
+
+@pytest.mark.parametrize("kind", ["market_snapshot", "new_listings", "new_listings_gallery",
+                                  "inventory", "closed", "price_bands", "open_houses", "featured_listings"])
+def test_zip_scope_from_provider_rows_through_each_builder(kind):
+    from worker.compute.extract import PropertyDataExtractor
+
+    raw = [
+        {"address": {"postalCode": code, "city": "Irvine"}, "mls": {"status": "Active"},
+         "listPrice": 850000, "mlsId": str(i)}
+        for i, code in enumerate(["92618-1234", 92620, " 92618 ", "92604", None])
+    ]
+    rows = PropertyDataExtractor(raw).run()
+    assert len(rows) == 5
+    report = build_result_json(kind, rows, {"city": None, "zips": ["92618", "92620"],
+                                           "area_label": "92618, 92620"})
+    assert report["matched"] == 3
+    assert report["city"] == "92618, 92620"

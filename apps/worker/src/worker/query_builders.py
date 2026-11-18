@@ -51,8 +51,18 @@ def _date_window(lookback_days: int) -> tuple[str, str]:
     start = end - timedelta(days=max(1, int(lookback_days or 30)))
     return start.isoformat(), end.isoformat()
 
+def postal_area(value):
+    """Use the five-digit delivery area for a US ZIP or ZIP+4."""
+    if isinstance(value, int) and 0 < value <= 99999:
+        return str(value).zfill(5)
+    text = str(value or "").strip()
+    if len(text) == 10 and text[5] == "-" and text[:5].isdigit() and text[6:].isdigit():
+        return text[:5]
+    return text
+
+
 def normalized_zips(zips):
-    return [code.strip() for code in (zips or []) if code.strip()]
+    return [area for value in (zips or []) if (area := postal_area(value))]
 
 
 def _location(params: dict) -> Dict:

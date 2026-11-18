@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, date
 # Gallery/featured listing photos are proxied to R2 at runtime in `tasks.generate_report`
 # so cloud renderers (PDFShift) load images from our domain rather than MLS/CDN URLs.
 
-from worker.query_builders import normalized_zips
+from worker.query_builders import normalized_zips, postal_area
 from worker.compute.price_bands import build_bands, hottest_and_slowest
 from worker.compute.moi import (
     months_of_supply,
@@ -1148,7 +1148,7 @@ def build_result_json(report_type: str, listings: List[Dict], context: Dict) -> 
     
     if context.get("zips"):
         postal_codes = set(normalized_zips(context["zips"]))
-        listings = [row for row in listings if row.get("zip_code") in postal_codes]
+        listings = [row for row in listings if postal_area(row.get("zip_code")) in postal_codes]
 
     result = builder(listings, context)
     if context.get("area_label"):
