@@ -93,8 +93,8 @@
   {
     "name": "D14 single_attempt ignored inside sendgrid.send_email",
     "file": "apps/worker/src/worker/email/providers/sendgrid.py",
-    "old": "    if single_attempt:\n        result = _one_attempt(payload, http_headers)",
-    "new": "    if False:\n        result = _one_attempt(payload, http_headers)",
+    "old": "    if single_attempt:\n        result = _one_attempt(payload, http_headers, timeout)",
+    "new": "    if False:\n        result = _one_attempt(payload, http_headers, timeout)",
     "test": "apps/worker/tests/test_durable_schedule_dispatch.py::test_a_503_is_one_post_on_the_tracked_path_and_four_on_the_legacy_one"
   },
   {
