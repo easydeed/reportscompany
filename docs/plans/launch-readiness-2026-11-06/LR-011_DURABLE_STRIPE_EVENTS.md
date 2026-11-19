@@ -146,3 +146,18 @@ delivery, retry behavior, signature verification and unordered events.
 [Event retrieval](https://docs.stripe.com/api/events/retrieve) is limited to
 events created within the previous 30 days. Those delivery guarantees inform
 this proposed design; they do not authorize live replay or checkout tests.
+
+## Source-to-envelope contract
+
+The current handler reads `data.object.id`, `status`, `current_period_end`,
+`metadata.account_id` and `items.data[0].price.id`; these are the exact minimum
+subscription fields to normalize for LR-011. Preserve customer ID for LR-012
+binding; do not treat arbitrary metadata as authoritative ownership. Multiple
+items and version-specific period shapes require an explicit quarantine reason,
+not silently selecting the first item or guessing a timestamp.
+
+The existing `db_conn` commits on context exit. Receipt insertion therefore
+needs its own context, followed by the processing context; catching an error
+inside that second context must never accidentally commit partial account work.
+Tests must force both commit failures independently. A paid-launch decision on
+entitlements belongs to LR-013, not to this receipt layer.
