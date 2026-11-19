@@ -1,0 +1,86 @@
+[
+ {
+  "name": "LR-027 s3: the claim is unconditional, so two runs both send",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "                       WHERE id = %s AND state IN ('pending', 'not_sent')\n                         AND claimed_at IS NULL AND attempts < %s",
+  "new": "                       WHERE id = %s AND attempts < %s",
+  "test": "apps/worker/tests/test_ops_notify.py::test_two_runs_racing_for_one_row_send_once"
+ },
+ {
+  "name": "LR-027 s3: an uncertain email is treated as unsent and retried",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "    return UNKNOWN, None, f\"unknown_{attempt.status_code}\" if attempt.status_code else \"unknown\"",
+  "new": "    return NOT_SENT, None, \"unknown\"",
+  "test": "apps/worker/tests/test_ops_notify.py::test_an_uncertain_email_is_never_retried_and_the_text_still_goes"
+ },
+ {
+  "name": "LR-027 s3: an abandoned claim is reopened instead of marked unknown",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "                   SET state = 'unknown', outcome_at = now(), last_error_class = 'abandoned'",
+  "new": "                   SET state = 'not_sent', claimed_at = NULL, outcome_at = now(), last_error_class = 'abandoned'",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_claim_with_no_outcome_becomes_unknown_after_the_lease_and_is_never_sent"
+ },
+ {
+  "name": "LR-027 s3: a known-unsent outcome keeps its claim, so it is never retried",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "                           claimed_at = CASE WHEN %s = 'not_sent' THEN NULL ELSE claimed_at END",
+  "new": "                           claimed_at = CASE WHEN %s = 'never' THEN NULL ELSE claimed_at END",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_refused_text_is_retried_and_the_accepted_email_is_never_resent"
+ },
+ {
+  "name": "LR-027 s3: the OPS_ALERTS_ENABLED switch is ignored",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "    return os.getenv(\"OPS_ALERTS_ENABLED\", \"0\") == \"1\"",
+  "new": "    return True",
+  "test": "apps/worker/tests/test_ops_notify.py::test_switched_off_nothing_is_queued_or_sent"
+ },
+ {
+  "name": "LR-027 s3: a flapping re-open texts again",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "                 and not (event == \"open\" and flapping))",
+  "new": "                 )",
+  "test": "apps/worker/tests/test_ops_notify.py::test_recovery_queues_one_resolved_event_and_a_flap_reopens_by_email_only"
+ },
+ {
+  "name": "LR-027 s3: no SMS cap",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "        if _sms_room(cur):",
+  "new": "        if True:",
+  "test": "apps/worker/tests/test_ops_notify.py::test_sms_are_capped_at_ten_an_hour_with_one_cap_notice"
+ },
+ {
+  "name": "LR-027 s3: member updates are texted",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "    wants_sms = (sms_key and configured[\"sms\"] and not event.startswith(\"update:\")",
+  "new": "    wants_sms = (sms_key and configured[\"sms\"]",
+  "test": "apps/worker/tests/test_ops_notify.py::test_new_members_are_email_only_and_each_update_is_its_own_row"
+ },
+ {
+  "name": "LR-027 s3: the send log line carries the destination",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "    logger.warning(\"OPS_ALERT_SEND row=%s channel=%s event=%s outcome=%s class=%s\",\n                   row_id,",
+  "new": "    logger.warning(\"OPS_ALERT_SEND to=%s row=%s channel=%s event=%s outcome=%s class=%s\",\n                   _sms_to() or _email_to(), row_id,",
+  "test": "apps/worker/tests/test_ops_notify.py::test_the_operator_text_path_logs_no_destination_unlike_the_customer_path"
+ },
+ {
+  "name": "LR-027 s3: a Twilio 4xx refusal is treated as uncertain (never retried)",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "        return NOT_SENT, None, f\"refused_{status}\"      # Twilio answered: no message created",
+  "new": "        return UNKNOWN, None, f\"refused_{status}\"",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_refused_text_is_retried_and_the_accepted_email_is_never_resent"
+ },
+ {
+  "name": "LR-027 s3: retries are unbounded",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "MAX_ATTEMPTS = 5\n",
+  "new": "MAX_ATTEMPTS = 50\n",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_refused_text_is_retried_and_the_accepted_email_is_never_resent"
+ },
+ {
+  "name": "LR-027 s3: renotify fires before six hours",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "                     AND opened_at < now() - make_interval(hours => %s)\"\"\",",
+  "new": "                     AND opened_at < now()\"\"\",",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_still_open_incident_is_renotified_every_six_hours_once"
+ }
+]

@@ -139,6 +139,21 @@ TWILIO_AUTH_TOKEN=your_twilio_token        # sms/send.py
 TWILIO_PHONE_NUMBER=+15555551234           # sms/send.py, tasks.py:1868
 ```
 
+### Operator alerts (LR-027) — ticker service
+
+Off unless `OPS_ALERTS_ENABLED=1`, which stays unset until Jerry approves the
+thresholds. With it off, the monitor records incidents and logs
+`OPS_ALERT mode=observe ...` lines and sends nothing. Destinations are set in
+Render only, never in the repo; a channel with no destination never sends.
+Uses the SendGrid and Twilio credentials above.
+
+```bash
+OPS_ALERTS_ENABLED=0                       # 1 = send (after threshold approval)
+OPS_ALERT_EMAIL=                           # [JERRY] operator address; unset = no email
+OPS_ALERT_SMS_TO=                          # [JERRY] E.164, e.g. +1...; unset = no SMS
+OPS_PUBLIC_BASE=                           # link base in alerts; defaults to WEB_BASE
+```
+
 ## Optional — tuning knobs with working defaults
 
 Listed for completeness. All are read by worker code; none need to be set.
