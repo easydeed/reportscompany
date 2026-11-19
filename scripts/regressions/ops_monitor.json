@@ -1,0 +1,170 @@
+[
+ {
+  "name": "LR-027 a member already stored is announced again every run",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "    new_ids = [ident for ident, inserted in cur.fetchall() if inserted]",
+  "new": "    new_ids = [ident for ident, inserted in cur.fetchall()]",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_incident_announces_each_member_once_and_resolves"
+ },
+ {
+  "name": "LR-027 beyond the stored bound, every run is announced (not only growth)",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "            if reading.count > notified:",
+  "new": "            if True:",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_beyond_the_stored_bound_only_growth_is_announced"
+ },
+ {
+  "name": "LR-027 a held scheduled attempt counted twice (schedule_runs and email_log)",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "            SELECT CASE WHEN schedule_id IS NOT NULL AND report_id IS NOT NULL\n                        THEN 'run:' || report_id::text\n                        ELSE 'email:' || id::text END\n            FROM email_log\n            WHERE status = 'needs_review' AND resolution IS NULL",
+  "new": "            SELECT 'email:' || id::text\n            FROM email_log\n            WHERE status = 'needs_review' AND resolution IS NULL",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_one_held_scheduled_attempt_is_one_member_across_both_tables"
+ },
+ {
+  "name": "LR-027 a synthesized 400 counted as SendGrid refusing",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "              AND COALESCE(error, '') <> ALL (%(synth)s)",
+  "new": "              AND TRUE",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_refusals_count_only_what_sendgrid_refused"
+ },
+ {
+  "name": "LR-027 tracked refusals missed (send_outcomes ignored)",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "              AND send_outcomes @> '[{\"outcome\": \"rejected\"}]'",
+  "new": "              AND FALSE",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_refusals_count_only_what_sendgrid_refused"
+ },
+ {
+  "name": "LR-027 inactive schedules reported as overdue",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "        WHERE active\n          AND COALESCE(next_run_at, created_at)",
+  "new": "        WHERE TRUE\n          AND COALESCE(next_run_at, created_at)",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_overdue_active_schedule_is_reported_and_nothing_else"
+ },
+ {
+  "name": "LR-027 one failing signal stops the rest of the run",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "                conn.rollback()\n                logger.warning(\"OPS_MONITOR signal %s failed: %s\", key, type(exc).__name__)\n                results[key] = \"error\"",
+  "new": "                conn.rollback()\n                raise",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_one_failing_signal_never_stops_the_others"
+ },
+ {
+  "name": "LR-027 the monitor runs without the lease (every ticker, every window)",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "            if not client.set(LEASE_KEY, self.token, nx=True, ex=LEASE_S):",
+  "new": "            if not client.set(LEASE_KEY, self.token, ex=LEASE_S):",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_one_run_per_window_across_tickers_and_never_overlapping"
+ },
+ {
+  "name": "LR-027 a new run starts while the previous one is alive",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "            if self.thread is not None and self.thread.is_alive():\n                return False\n",
+  "new": "",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_one_run_per_window_across_tickers_and_never_overlapping"
+ },
+ {
+  "name": "LR-027 the run budget is ignored",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "            if clock() - started > BUDGET_S:",
+  "new": "            if False:",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_the_budget_defers_what_is_left"
+ },
+ {
+  "name": "LR-027 the monitor's worker threshold drifts from /ready's",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "WORKER_STALE_S = 300",
+  "new": "WORKER_STALE_S = 600",
+  "test": "tests/test_ops_heartbeat_contract.py"
+ },
+ {
+  "name": "Codex #322 principle: the monitor's lease and run execute on the ticker's own thread",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "            self.thread.start()\n            return True",
+  "new": "            self._leased_run(redis_client)\n            return True",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_a_redis_that_never_answers_never_holds_up_a_tick"
+ },
+ {
+  "name": "Codex #323: a provider-refused consumer delivery (claim cleared, status failed) is not reported",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                OR (status = 'failed' AND NOT (",
+  "new": "                OR (FALSE AND NOT (",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_a_provider_refused_consumer_delivery_is_reported"
+ },
+ {
+  "name": "Codex #323: an active consumer retry is reported as terminal",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                        COALESCE(error_message, '') LIKE '%%; retrying)'",
+  "new": "                        FALSE",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_active_retry_is_not_reported_until_it_stops"
+ },
+ {
+  "name": "Codex #323: an abandoned agent 'sending' claim is not reported",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                OR (agent_notify_status = 'sending'",
+  "new": "                OR (FALSE",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_abandoned_agent_claim_is_reported_and_a_sent_one_is_not"
+ },
+ {
+  "name": "Codex #323: an agent refusal is dated by its (cleared) claim time, so its retry reads as terminal",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                OR (agent_notify_status = 'failed'\n                    AND updated_at < now() - make_interval(mins => %(m)s))",
+  "new": "                OR (agent_notify_status = 'failed'\n                    AND (agent_notify_claimed_at IS NULL OR agent_notify_claimed_at < now() - make_interval(mins => %(m)s)))",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_agent_refusal_counts_only_after_its_retries"
+ },
+ {
+  "name": "Codex #323: an already-notified agent is reported as undelivered (evidence ignored, 'sent' treated as 'sending')",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "            OR (agent_sms_sent_at IS NULL AND agent_sms_sid IS NULL AND (\n                agent_notify_status = 'needs_review'\n                OR (agent_notify_status = 'sending'",
+  "new": "            OR (TRUE AND (\n                agent_notify_status = 'needs_review'\n                OR (agent_notify_status IN ('sending', 'sent')",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_abandoned_agent_claim_is_reported_and_a_sent_one_is_not"
+ },
+ {
+  "name": "Codex #323: tracked pre-claim refusals (no email_log, no outcome) are invisible",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "              AND (error LIKE 'failed\\\\_email: nothing sent (%%'",
+  "new": "              AND FALSE AND (error LIKE 'failed\\\\_email: nothing sent (%%'",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_tracked_pre_claim_refusals_reach_send_not_attempted"
+ },
+ {
+  "name": "Codex #323: the run filter stops telling a refusal from an all-suppressed finish (status ignored, any 'nothing sent' text)",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "            WHERE recovery_tracked AND status = 'failed'\n              AND finished_at > now() - interval '1 hour'\n              AND (error LIKE 'failed\\\\_email: nothing sent (%%'",
+  "new": "            WHERE recovery_tracked\n              AND finished_at > now() - interval '1 hour'\n              AND (error LIKE '%%nothing sent%%'",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_tracked_pre_claim_refusals_reach_send_not_attempted"
+ },
+ {
+  "name": "Codex #323 re-review: an agent text that never started is invisible again",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                OR (agent_notify_status IS NULL\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "new": "                OR (agent_notify_status = 'never-matches'\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_agent_text_that_never_started_is_reported"
+ },
+ {
+  "name": "Codex #323 re-review: a fresh homeowner delivery (agent text still due inline) is flagged",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          < now() - make_interval(mins => %(m)s)",
+  "new": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          <= now()",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_agent_text_that_never_started_is_reported"
+ },
+ {
+  "name": "Codex #323 re-review: an agent with no usable phone (intentional skip) is flagged",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                    AND EXISTS (SELECT 1 FROM users u WHERE u.id = consumer_reports.agent_id\n                                AND NULLIF(btrim(u.phone), '') IS NOT NULL))",
+  "new": "                    AND TRUE)",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_unstarted_agent_text_is_not_reported_when_it_is_not_owed"
+ },
+ {
+  "name": "Codex #323 re-review: the writer's `skipped` state is flagged",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                OR (agent_notify_status IS NULL\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "new": "                OR (agent_notify_status IS DISTINCT FROM 'sent'\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_unstarted_agent_text_is_not_reported_when_it_is_not_owed"
+ },
+ {
+  "name": "Codex #323 re-review: a row past the 24-hour recovery window silently drops out of the incident",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          < now() - make_interval(mins => %(m)s)",
+  "new": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          < now() - make_interval(mins => %(m)s)\n                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at) > now() - interval '24 hours'",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_past_the_recovery_window_it_stays_reported_and_is_never_re_texted"
+ }
+]

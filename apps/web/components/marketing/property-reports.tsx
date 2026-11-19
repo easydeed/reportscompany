@@ -1,112 +1,195 @@
 "use client";
 
 /**
- * "Property reports & CMAs" — Design's `Landing v4`, the seller-report card.
+ * "Property reports & CMAs" — Design's `Landing v13`, the template showcase.
  *
- * The house and its comparables are `DEMO_LISTING` and `DEMO_COMPS`; the
- * range and median are `DEMO_COMPS_RANGE`, computed from those comps. The
- * report estimates nothing (LR-025, D-383): it shows the range of the
- * comparable sales it lists, over the last 6 months, and so does this card.
+ * Replaces v4's hand-drawn seller card with the report itself: the three
+ * templates, six pages each, as a fanned stage. Tabs pick the template, the
+ * numbered buttons (or a click on any page) turn the pages.
+ *
+ * NOTHING HERE IS DRAWN OR NAMED BY THE DECK.
+ * - Templates are the wizard's `THEMES` (name, style line, accent), so this
+ *   section cannot offer a template the wizard does not. The deck calls them
+ *   Elegant / Modern / Bold; the product calls them Harbor / Linen / Atlas,
+ *   and the product's names are the ones shown.
+ * - Pages are the wizard's `REPORT_PAGES`, in document order.
+ * - Page images are the renders the wizard's theme step already ships:
+ *   `/previews/pages/{theme.id}/{page.id}.jpg`. Each template therefore keeps
+ *   its own colours and does not follow the hero's "Your colors" swatches —
+ *   that is v13's decision, not a limitation.
+ * - "Six-page" and "Three templates" in the copy are counted from those lists.
+ *
+ * The copy says "the range of comparable sales", never "estimate" or "value":
+ * the report estimates nothing (LR-025, D-383).
+ *
+ * The page images are 510×660. The centre page is shown at 476 wide, so it is
+ * 1:1 on a standard display and soft on a 2× one — see the handoff README.
  */
-import {
-  DEMO_AGENT,
-  DEMO_COMPS,
-  DEMO_COMPS_RANGE,
-  DEMO_LISTING,
-  reportDate,
-} from "@/lib/demo-data";
-import { Glow, SectionCopy, SplitSection, useLandingTheme } from "./landing-primitives";
+import { useState, type CSSProperties } from "react";
+import Image from "next/image";
+import { REPORT_PAGES, THEMES } from "@/components/property-wizard/types";
+import { DotGrid, Eyebrow, SectionTitle, useLandingTheme } from "./landing-primitives";
+
+const WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+const word = (n: number) => WORDS[n] ?? String(n);
+
+const PAGE_SHADOW = "0 40px 80px -24px rgba(15,23,42,0.45), 0 0 0 1px rgba(15,23,42,0.06)";
+
+/** One page of one template, as a button that turns to it. */
+function Sheet({
+  themeId,
+  page,
+  onClick,
+  className,
+  style,
+}: {
+  themeId: number;
+  page: number;
+  onClick: () => void;
+  className: string;
+  style?: CSSProperties;
+}) {
+  const p = REPORT_PAGES[page];
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={`Page ${page + 1}: ${p.name}`}
+      className={`absolute cursor-pointer overflow-hidden rounded-md border-0 bg-white p-0 ${className}`}
+      style={{ aspectRatio: "510 / 660", boxShadow: PAGE_SHADOW, ...style }}
+    >
+      <Image
+        src={`/previews/pages/${themeId}/${p.id}.jpg`}
+        alt=""
+        width={510}
+        height={660}
+        sizes="(min-width: 640px) 476px, 300px"
+        className="block h-full w-full"
+      />
+    </button>
+  );
+}
 
 export function PropertyReports() {
-  const { primary, accent, area } = useLandingTheme();
+  const { primary } = useLandingTheme();
+  const [tpl, setTpl] = useState(0);
+  const [page, setPage] = useState(0);
+  const theme = THEMES[tpl];
+  const n = REPORT_PAGES.length;
+  const at = (i: number) => (page + i) % n;
 
   return (
-    <SplitSection id="property-reports">
-      <div className="relative h-[700px] min-w-0 md:h-[760px]">
-        <Glow />
-        <div
-          className="absolute left-1/2 top-5 flex h-[660px] w-[340px] flex-col overflow-hidden rounded-md bg-white sm:w-[420px] md:h-[710px]"
-          style={{
-            transform: "translateX(-50%) rotate(3deg)",
-            boxShadow: "0 40px 80px -24px rgba(15,23,42,0.4), 0 0 0 1px rgba(15,23,42,0.06)",
-          }}
-        >
-          <div className="flex flex-col gap-[18px] px-[30px] pb-6 pt-[26px] text-white" style={{ background: primary }}>
-            <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.08em] text-white/80">
-              <span>Property report · {reportDate()}</span>
-              <span className="text-sm font-bold normal-case tracking-[-0.01em] text-white">
-                {DEMO_AGENT.brokerage}
-              </span>
-            </div>
-            <div className="text-xl font-semibold leading-[1.15]">
-              {DEMO_LISTING.address}, {area}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <span className="whitespace-nowrap text-[34px] font-semibold leading-[0.95] tracking-[-0.04em] sm:text-[44px]">
-                {DEMO_COMPS_RANGE.low} – {DEMO_COMPS_RANGE.high}
-              </span>
-              <span className="text-[13px] leading-[1.35] text-white/85">
-                range of comparable sales · median {DEMO_COMPS_RANGE.median}
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-3 border-t border-white/25 pt-3.5">
-              {[
-                [`${DEMO_LISTING.beds} / ${DEMO_LISTING.baths}`, "Bd / Ba"],
-                [DEMO_LISTING.sqft, "Sq ft"],
-                [DEMO_LISTING.pricePerSqft, "Per sq ft"],
-              ].map(([v, l]) => (
-                <div key={l}>
-                  <div className="text-lg font-semibold">{v}</div>
-                  <div className="text-[11px] text-white/85">{l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+    <section
+      id="property-reports"
+      className="relative flex flex-col gap-10 overflow-hidden border-t border-[#E6E8F0] bg-white pb-[88px] pt-16 md:pt-24"
+    >
+      <DotGrid from={theme.accentDefault} to={primary} focus="50% 55%" />
 
-          <div className="flex flex-1 flex-col gap-3 px-[30px] pb-[26px] pt-[22px]">
-            <div className="border-b-[1.5px] border-[#14161A] pb-2 text-[11px] uppercase tracking-[0.06em] text-[#5E636B]">
-              Comparable sales · last 6 months
-            </div>
-            {DEMO_COMPS.map((c) => (
-              <div
-                key={c.address}
-                className="grid items-center gap-3.5 border-b border-[#ECECE8] pb-2.5 text-[13px]"
-                style={{ gridTemplateColumns: "minmax(0,1fr) auto auto" }}
-              >
-                <div className="flex min-w-0 flex-col">
-                  <span className="truncate font-semibold text-[#0F172A]">{c.address}</span>
-                  <span className="text-[11px] text-[#5E636B]">{c.specs}</span>
-                </div>
-                <span className="text-[11px] text-[#5E636B]">{c.dist}</span>
-                <span className="font-semibold tabular-nums text-[#0F172A]">{c.price}</span>
-              </div>
-            ))}
-            <div className="mt-auto flex flex-col gap-1.5 pt-6">
-              <div className="relative h-7 rounded-[5px] bg-[#F4F4F1]">
-                <div
-                  className="absolute rounded-[5px] opacity-90"
-                  style={{ inset: "0 28% 0 12%", background: accent }}
-                />
-                <div className="absolute left-[52%] top-[-4px] h-9 w-[3px] rounded-sm bg-[#14161A]" />
-                <span className="absolute left-[52%] top-[-22px] -translate-x-1/2 whitespace-nowrap text-[11px] font-bold text-[#0F172A]">
-                  Your home
-                </span>
-              </div>
-              <div className="flex justify-between text-[11px] text-[#5E636B]">
-                <span>{DEMO_COMPS_RANGE.low}</span>
-                <span>Range of comparable sales</span>
-                <span>{DEMO_COMPS_RANGE.high}</span>
-              </div>
-            </div>
+      <div className="relative mx-auto flex w-full max-w-[1200px] flex-wrap items-end justify-between gap-6 px-4 md:px-8">
+        <div className="flex flex-col gap-3">
+          <Eyebrow>Property reports &amp; CMAs</Eyebrow>
+          <div className="max-w-[640px]">
+            <SectionTitle>Type an address. Walk in with a seller report.</SectionTitle>
           </div>
+          <p
+            className="m-0 max-w-[560px] text-[19px] text-[#475569]"
+            style={{ textWrap: "pretty" } as CSSProperties}
+          >
+            A {word(n).toLowerCase()}-page report on any home: the range of comparable sales, every
+            sale behind it and the local market. {word(THEMES.length)} templates, in your colors,
+            ready before the listing appointment.
+          </p>
+          <span className="text-[15px] font-semibold text-[#0F172A]" aria-live="polite">
+            {theme.name} · {theme.style}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Template">
+          {THEMES.map((t, i) => {
+            const on = i === tpl;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setTpl(i)}
+                className="flex h-12 cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-full border pl-4 pr-5 text-base font-bold"
+                style={{
+                  background: on ? "#0F172A" : "#fff",
+                  color: on ? "#fff" : "#0F172A",
+                  borderColor: on ? "#0F172A" : "#C9CEDF",
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="h-3.5 w-3.5 shrink-0 rounded-full"
+                  style={{ background: t.accentDefault, boxShadow: "0 0 0 2px #fff" }}
+                />
+                {t.name}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <SectionCopy
-        eyebrow="Property reports & CMAs"
-        title="Type an address. Walk in with a seller report."
-        lede="The range of comparable sales, every sale behind it, your branding. Ready before the listing appointment."
-      />
-    </SplitSection>
+      {/* The stage: this page in front, the next two fanned behind it from 1080px. */}
+      <div className="relative h-[460px] w-full sm:h-[680px]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[660px] max-h-full w-[min(980px,100%)] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            background: `radial-gradient(closest-side, color-mix(in oklch, ${theme.accentDefault} 30%, transparent), transparent)`,
+            transition: "background 0.4s",
+          }}
+        />
+        <Sheet
+          themeId={theme.id}
+          page={at(1)}
+          onClick={() => setPage(at(1))}
+          className="top-[120px] z-[1] hidden w-[340px] min-[1080px]:block"
+          style={{ left: "calc(50% - 510px)", transform: "rotate(-6deg)" }}
+        />
+        <Sheet
+          themeId={theme.id}
+          page={at(2)}
+          onClick={() => setPage(at(2))}
+          className="top-[120px] z-[1] hidden w-[340px] min-[1080px]:block"
+          style={{ left: "calc(50% + 170px)", transform: "rotate(6deg)" }}
+        />
+        <Sheet
+          themeId={theme.id}
+          page={page}
+          onClick={() => setPage(at(1))}
+          className="left-1/2 top-8 z-[2] w-[300px] -translate-x-1/2 sm:w-[476px]"
+        />
+      </div>
+
+      <div
+        className="relative flex flex-wrap items-center justify-center gap-2 px-4 md:px-8"
+        role="group"
+        aria-label="Page"
+      >
+        {REPORT_PAGES.map((p, i) => {
+          const on = i === page;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              aria-label={`Page ${i + 1}: ${p.name}`}
+              aria-pressed={on}
+              onClick={() => setPage(i)}
+              className="h-11 w-11 cursor-pointer rounded-full border text-[15px] font-bold tabular-nums"
+              style={{
+                background: on ? "#0F172A" : "#fff",
+                color: on ? "#fff" : "#0F172A",
+                borderColor: on ? "#0F172A" : "#C9CEDF",
+              }}
+            >
+              {i + 1}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }

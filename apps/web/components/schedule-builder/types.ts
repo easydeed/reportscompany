@@ -1,14 +1,13 @@
+import type { Recipient } from "@/lib/types/recipients"
+export type { Recipient } from "@/lib/types/recipients"
+
 export type ReportType = "new_listings" | "new_listings_gallery" | "market_snapshot" | "closed" | "inventory" | "price_bands" | "open_houses" | "featured_listings"
 
 export type AudienceFilter = "all" | "first_time" | "luxury" | "families" | "condo" | "investors" | null
 
-export type Recipient =
-  | { type: "contact"; id: string; name: string; email: string }
-  | { type: "group"; id: string; name: string; memberCount: number }
-  | { type: "manual_email"; email: string }
-
 export interface ScheduleBuilderState {
   name: string
+  active: boolean
   reportType: ReportType | null
   lookbackDays: 7 | 14 | 30 | 60 | 90 | null
   areaType: "city" | "zip"

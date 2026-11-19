@@ -54,3 +54,16 @@ def test_a_limit_the_table_does_not_give_is_dropped_not_invented(client, world, 
 
 def test_the_seats_read_says_who_can_act(client, world):
     assert _seats(client, world)["can_manage"] is True
+
+
+@pytest.mark.parametrize("gate_open", [False, True])
+def test_the_agents_upgrade_promise_follows_the_sponsored_pilot_gate(client, world, monkeypatch, gate_open):
+    """Plan & Seats says agents can upgrade and pay for themselves only while
+    checkout is open to them (config/billing.py, SPONSORED_SELF_CHECKOUT)."""
+    from api.config import billing as billing_config
+    monkeypatch.setattr(billing_config, "SPONSORED_SELF_CHECKOUT", gate_open)
+    assert _seats(client, world)["agents_self_upgrade"] is gate_open
+
+
+def test_the_pilot_gate_is_on_today(client, world):
+    assert _seats(client, world)["agents_self_upgrade"] is False

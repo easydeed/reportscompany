@@ -7,7 +7,7 @@ import ssl
 import urllib.parse
 
 
-def create_redis_connection(redis_url):
+def create_redis_connection(redis_url, **client_kwargs):
     """
     Create a Redis connection with proper SSL configuration.
     
@@ -44,8 +44,8 @@ def create_redis_connection(redis_url):
         cert_reqs = ssl_cert_reqs_map.get(cert_reqs_str, ssl.CERT_REQUIRED)
         
         # Create connection with explicit SSL parameters
-        return redis.from_url(base_url, ssl_cert_reqs=cert_reqs)
+        return redis.from_url(base_url, ssl_cert_reqs=cert_reqs, **client_kwargs)
     else:
         # No SSL parameters, use URL as-is
-        return redis.from_url(redis_url)
+        return redis.from_url(redis_url, **client_kwargs)
 

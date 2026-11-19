@@ -22,6 +22,7 @@ The review verdict is **AMEND, then start**. All findings hold. The amendments i
 | Acquisition wording | “See what homes like yours sold for” and “Get my report.” | Cover all four identified locations, including the live Home Value Page. Do not add an estimate model. |
 | Historical asking-price reports | Consumer-send question closed November 9: Jerry confirmed all 7 affected consumer reports (March 10–April 13, 2026; 105 comparables) were test sends. No corrected reports go out. | Do not rerender or resend these reports. Agent-report classification/inventory remains separate and provisional; this decision does not close LR-018 implementation/review. |
 | Unknown send outcome | Mark `needs review` and alert Codex/the named operator. Never automatically resend an uncertain text. | Keep durable attempt evidence. Twilio message creation and SendGrid send do not offer an idempotency key this design can rely on. Other provider semantics must be verified. |
+| Operator alert channels (November 18) | Alert email through SendGrid; Twilio SMS as the second channel, to one named operator. Not Resend, which the app does not use. The external uptime check's own alert is tested by briefly pausing the check, not by inducing an outage. | LR-027 sends through the existing SendGrid and Twilio integrations, tracked per channel so either can fail without silencing the other. Closure evidence: one confirmed alert and one recovery per path (email, SMS, uptime check), redacted; destinations stay in Render. No controlled `/ready` 503 or stopped service for the uptime-check test. |
 | Uploaded SVG logos | Convert existing uploaded logos to PNG; block new SVG uploads. | Validate actual bytes for every accepted format. Inventory existing assets; use safe conversion and update active references while preserving previously referenced email/report assets. Bundled trusted Design SVGs remain separate. |
 | Password change | Sign out every other device; retain the initiating device. | Issue/retain a valid replacement session without a same-second timestamp revocation bug. Password-reset initiation gets its own valid session according to the existing reset flow. |
 | Named merger | Codex for ordinary reviewed merges. | Other-lane PASS is recorded as a PR comment for the current head; applicable checks must pass. No required GitHub approval count. |
@@ -37,11 +38,23 @@ The review verdict is **AMEND, then start**. All findings hold. The amendments i
 - GitHub identity is settled: no separate reviewer account and no required GitHub approval. Preserve the current-head cross-agent PASS comment before an ordinary merge, with passing enforced checks. Jerry alone handles emergencies.
 - Paused subscription access and any unaddressed Stripe states require an explicit policy before LR-013 closes. Cancellation follows the approved effective-period rules; do not infer immediate Free from a missing period field.
 - Define how the 20-per-visitor budget identifies visitors, handles shared networks, and behaves during limiter outage. The amount is approved; trusted attribution and abuse resistance still need design and review.
-- Pilot/launch peak volume, latency ceilings, provider cost/margin targets, and operator alert destination/access must be documented for LR-027/LR-029. Recovery targets and cohort are already approved.
+- Pilot/launch peak volume, latency ceilings, provider cost/margin targets, and operator alert destination/access must be documented for LR-027/LR-029. Recovery targets and cohort are already approved. Alert channels and the uptime-check test method were approved November 18 (table above). LR-027 still needs: the operator's email and phone set in Render, the uptime-check account, threshold approval after observe mode, and any quiet hours or second contact.
 - PCT legal must confirm consent wording and retention. No date-based deletion is authorized by this packet.
 - Before the first migration merges, Jerry confirms previous-version retention on failed deployment for every affected Render service, including worker, ticker, and bridge; record the result with the migration runbook.
 
 ## Two implementation lanes
+
+**November 12 rebalancing (Jerry):** This supersedes the historical lane sequence
+below for the sponsored pilot. Codex implements LR-031 -> LR-003 -> LR-004 ->
+LR-005 -> LR-009. LR-003 upgrades vulnerable Next.js 16.0.7 to a patched release
+and verifies Node 22 builds. Claude implements LR-006, LR-007, LR-015 and LR-017.
+Implementation takes priority in both lanes; cross-agent review remains required.
+LR-011–LR-014 are deferred until paid launch (pilot agents are sponsored and pay
+nothing). Public-launch gates LR-008, LR-010 and LR-016 remain deferred. This
+reassignment moves LR-015's manual-allowance ownership to Claude; LR-023's
+scheduled-send and copy work has already merged. No broader backlog is reopened.
+
+**Historical estimate and sequence from the original review:**
 
 | Lane | Sequence | Focused hours |
 |---|---|---:|

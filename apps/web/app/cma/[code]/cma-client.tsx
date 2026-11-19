@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useRef } from "react"
-import CmaFunnel, { type Agent, type Lead, type Record_, type Suggestion } from "./cma-funnel"
+import CmaFunnel, { CmaLookupLimit, type Agent, type Lead, type Record_, type Suggestion } from "./cma-funnel"
 import { ensureGooglePlaces, parseAddressComponents } from "@/hooks/useGooglePlaces"
 import { cmaRequestBody, cmaSearchBody, storedProperty, type StoredProperty } from "@/lib/cma-lead"
 
@@ -107,6 +107,12 @@ export function CmaExperience({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       })
+      if (res.status === 429) {
+        const body = await res.json().catch(() => null)
+        if ((body?.code === "lookup_limit" || body?.code === "lookup_busy") && typeof body.detail === "string") {
+          throw new CmaLookupLimit(body.detail)
+        }
+      }
       if (!res.ok) return null
       const rows = await res.json() as StoredProperty[]
       const raw = Array.isArray(rows) ? rows[0] : null

@@ -108,11 +108,14 @@ def lookup(cur, account_id: str, claim: Claim) -> Optional[str]:
     if expired:
         raise HTTPException(status_code=410, detail={
             "error": "idempotency_key_expired",
+            "resource_id": resource_id,
+            "request_matches": request_hash == claim.request_hash,
             "message": "This request is too old to retry safely. Check your list before sending it again.",
         })
     if request_hash != claim.request_hash:
         raise HTTPException(status_code=409, detail={
             "error": "idempotency_key_reused",
+            "resource_id": resource_id,
             "message": "This Idempotency-Key was already used for a different request.",
         })
     return resource_id

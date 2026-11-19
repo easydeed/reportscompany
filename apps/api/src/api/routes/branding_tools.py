@@ -788,18 +788,17 @@ def build_test_email(branding: dict, report_type: str, *, unsubscribe_url: str,
         ],
         
         # CLOSED - Burbank (Recently Sold Properties)
-        # Uses list_price field but displays close/sold price
         "closed": [
-            {"street_address": "1532 N Niagara St", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "list_price": 1385000},
-            {"street_address": "812 E Angeleno Ave", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "list_price": 1125000},
-            {"street_address": "2415 W Clark Ave", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "list_price": 975000},
-            {"street_address": "3201 W Burbank Blvd", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "list_price": 1245000},
-            {"street_address": "1845 N Pass Ave", "city": "Burbank", "bedrooms": 5, "bathrooms": 4, "list_price": 1695000},
-            {"street_address": "456 S Mariposa St", "city": "Burbank", "bedrooms": 2, "bathrooms": 2, "list_price": 825000},
-            {"street_address": "2910 N Keystone St", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "list_price": 1050000},
-            {"street_address": "1127 E Olive Ave", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "list_price": 1325000},
-            {"street_address": "3645 W Victory Blvd", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "list_price": 985000},
-            {"street_address": "2201 N Catalina St", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "list_price": 1195000},
+            {"street_address": "1532 N Niagara St", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "status": "Closed", "close_price": 1385000},
+            {"street_address": "812 E Angeleno Ave", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "status": "Closed", "close_price": 1125000},
+            {"street_address": "2415 W Clark Ave", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "status": "Closed", "close_price": 975000},
+            {"street_address": "3201 W Burbank Blvd", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "status": "Closed", "close_price": 1245000},
+            {"street_address": "1845 N Pass Ave", "city": "Burbank", "bedrooms": 5, "bathrooms": 4, "status": "Closed", "close_price": 1695000},
+            {"street_address": "456 S Mariposa St", "city": "Burbank", "bedrooms": 2, "bathrooms": 2, "status": "Closed", "close_price": 825000},
+            {"street_address": "2910 N Keystone St", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "status": "Closed", "close_price": 1050000},
+            {"street_address": "1127 E Olive Ave", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "status": "Closed", "close_price": 1325000},
+            {"street_address": "3645 W Victory Blvd", "city": "Burbank", "bedrooms": 3, "bathrooms": 2, "status": "Closed", "close_price": 985000},
+            {"street_address": "2201 N Catalina St", "city": "Burbank", "bedrooms": 4, "bathrooms": 3, "status": "Closed", "close_price": 1195000},
         ],
         
         # NEW LISTINGS GALLERY - 9 properties (3x3 grid)

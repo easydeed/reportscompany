@@ -1,17 +1,24 @@
 "use client";
 
 /**
- * "Autopilot" — Design's `Landing v4`, the phone with the monthly email.
+ * "Autopilot" — Design's `Landing v13`, the phone with the monthly email.
+ *
+ * New in v13: the three steps under the copy, and two cards beside the phone
+ * that show the other two ends of the loop — the schedule that was set once
+ * (top right) and the sends that already went out (right). The status card
+ * (bottom left) is v4's. The two new cards are hidden below `sm`, where the
+ * phone fills the stage.
  *
  * The market figures are the Market Snapshot preview's own — the sample the
  * worker renders the Snapshot page on this page from, read from the preview
  * route's `/facts` — so the email and the report it attaches agree about the
- * city. Read from `lib/demo-data.ts` they did not (D-228), and read from
- * `SharedPDFPreview`'s sample they stopped agreeing the moment the page became
- * the worker's. People and dates still come from `lib/demo-data.ts`.
+ * city. The deck prints a delta beside the median ("▲ 3.1%"); `/facts` has no
+ * such figure, so it is left off rather than invented. People and dates come
+ * from `lib/demo-data.ts`; the "Already sent" dates are the last three firsts
+ * of the month, counted back from today, with no figures beside them.
  */
 import { useEffect, useState } from "react";
-import { Phone } from "lucide-react";
+import { CalendarClock, Check, Phone } from "lucide-react";
 import {
   DEMO_AGENT,
   DEMO_SPHERE,
@@ -21,11 +28,29 @@ import {
 import {
   AgentDisc,
   DotField,
+  FloatCard,
   PhoneFrame,
   SectionCopy,
   SplitSection,
   useLandingTheme,
+  type Step,
 } from "./landing-primitives";
+
+const STEPS: readonly Step[] = [
+  ["Pick a city and a report", "Any of the market reports above."],
+  ["Pick a schedule", "Monthly or weekly."],
+  ["It sends itself", "Fresh MLS data, your branding, PDF attached. Nothing more for you to do."],
+];
+
+/** "Nov 1", "Oct 1", "Sep 1" — the last `count` monthly sends, newest first. */
+function pastSends(count: number, now: Date = new Date()): string[] {
+  return Array.from({ length: count }, (_, i) =>
+    new Date(now.getFullYear(), now.getMonth() - i, 1).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+  );
+}
 
 export function Autopilot() {
   const { primary, area } = useLandingTheme();
@@ -37,16 +62,17 @@ export function Autopilot() {
   const median = num(m.median_close_price, (n) => `$${n.toLocaleString("en-US")}`);
 
   return (
-    <SplitSection white>
+    <SplitSection id="autopilot">
       <SectionCopy
         eyebrow="Autopilot"
-        title="Set it once. It goes out every month."
-        lede="Pick a city, pick monthly or weekly. Your sphere hears from you whether you remember or not."
+        title="In their inbox every month. Even when you're busy."
+        lede="Set a schedule once. TrendyReports builds each new report and emails it to your contacts, so you never go quiet."
+        steps={STEPS}
       />
 
       <div className="relative h-[600px] min-w-0 sm:h-[640px]">
         <DotField />
-        <PhoneFrame tilt={-3}>
+        <PhoneFrame tilt={-3} x={42}>
           <div className="flex items-center gap-3 border-b border-[#F1F5F9] px-5 pb-3.5 pt-2.5">
             <AgentDisc />
             <div className="min-w-0">
@@ -89,13 +115,40 @@ export function Autopilot() {
           </div>
         </PhoneFrame>
 
-        <div
-          className="absolute bottom-9 left-0 flex items-center gap-3.5 rounded-[14px] bg-white px-5 py-4"
-          style={{
-            transform: "rotate(2deg)",
-            boxShadow: "0 24px 48px -16px rgba(15,23,42,0.35), 0 0 0 1px rgba(15,23,42,0.06)",
-          }}
-        >
+        {/* 1. The schedule, set once. */}
+        <FloatCard tilt={2} className="-top-5 right-0 hidden items-center gap-3 px-4 py-3 sm:flex">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EEF0F8]">
+            <CalendarClock className="h-[18px] w-[18px] text-[#0F172A]" />
+          </span>
+          <div className="flex flex-col gap-px">
+            <span className="whitespace-nowrap text-sm font-bold text-[#0F172A]">
+              Every month on the 1st
+            </span>
+            <span className="whitespace-nowrap text-xs text-[#64748B]">
+              9:00 AM · {area} Snapshot
+            </span>
+          </div>
+          <span aria-hidden className="relative h-[22px] w-[38px] shrink-0 rounded-full bg-[#059669]">
+            <span className="absolute right-0.5 top-0.5 h-[18px] w-[18px] rounded-full bg-white" />
+          </span>
+        </FloatCard>
+
+        {/* 2. What already went out. */}
+        <FloatCard tilt={-2} className="right-0 top-[300px] hidden flex-col gap-2 px-4 py-3.5 sm:flex">
+          <span className="text-xs font-bold uppercase tracking-[0.1em] text-[#475569]">
+            Already sent
+          </span>
+          {pastSends(3).map((d) => (
+            <div key={d} className="flex items-center gap-2 whitespace-nowrap text-[13px]">
+              <Check className="h-3.5 w-3.5 shrink-0 text-[#059669]" />
+              <span className="font-bold text-[#0F172A]">{d}</span>
+              <span className="text-[#64748B]">Sent</span>
+            </div>
+          ))}
+        </FloatCard>
+
+        {/* 3. Where it stands now. */}
+        <FloatCard tilt={2} className="bottom-9 left-0 flex items-center gap-3.5 px-5 py-4">
           <span
             className="h-3 w-3 shrink-0 rounded-full bg-[#059669]"
             style={{ boxShadow: "0 0 0 5px #D1FAE5" }}
@@ -108,7 +161,7 @@ export function Autopilot() {
               Sent {last} · Next {next}, 9:00 AM
             </span>
           </div>
-        </div>
+        </FloatCard>
       </div>
     </SplitSection>
   );

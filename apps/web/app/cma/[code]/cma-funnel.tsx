@@ -42,6 +42,8 @@ export type Agent = {
 
 export type Suggestion = { address: string; locality: string } // "14 Cartwheel" / "Irvine, CA"
 
+export class CmaLookupLimit extends Error {}
+
 export type Record_ = {
   address: string; city: string; state: string; zip: string; type: string // "Single family"
   beds: number | null; baths: number | null; sqft: number | null; yearBuilt: number | null
@@ -127,8 +129,12 @@ export default function CmaFunnel({ agent, api, cover, initialAddress = "" }: {
 
   const findHome = async (s: Suggestion | string) => {
     setError(null); setStep("looking")
-    const [rec] = await Promise.all([api.lookup(s).catch(() => null), tick(LOOK.length)])
-    if (!rec) { setStep("address"); setError("We couldn't find that address. Try the full street address."); setTimeout(() => addrRef.current?.focus(), 0); return }
+    let message = "We couldn't find that address. Try the full street address."
+    const [rec] = await Promise.all([api.lookup(s).catch((error) => {
+      if (error instanceof CmaLookupLimit) message = error.message
+      return null
+    }), tick(LOOK.length)])
+    if (!rec) { setStep("address"); setError(message); setTimeout(() => addrRef.current?.focus(), 0); return }
     setRecord(rec); setStep("confirm")
   }
 

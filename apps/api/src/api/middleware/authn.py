@@ -15,9 +15,10 @@ from typing import Optional
 import redis
 import time
 import hashlib
+import re
 import logging
 from ..settings import settings
-from ..auth import verify_jwt, hash_api_key
+from ..auth import verify_jwt, hash_api_key, session_password_matches
 from ..db import db_conn_autocommit
 
 logger = logging.getLogger(__name__)
@@ -105,6 +106,32 @@ if _demo_header_allowed():
     )
 
 
+# The two server-side renderers, the report Share page
+# (apps/web/app/api/social/[runId]/route.ts) and the legacy print page
+# (apps/web/app/print/[runId]/page.tsx), read /v1/reports/{id}/data with
+# X-Internal-Render-Token and no account. The route checks that token itself,
+# with hmac.compare_digest (routes/report_data.py, `_is_internal_render_caller`).
+#
+# This middleware used to refuse them first, because it refuses every request
+# without an account, so the route's token check was unreachable. In
+# production every Share link answered "Report Not Found" (404), and the
+# worker's social-image render could not load the report either.
+#
+# Exactly this request shape is passed through, unauthenticated, to that route
+# and nowhere else: the path must be /v1/reports/<one segment>/data and the
+# header must be present. The value is NOT trusted here; the route compares it
+# to INTERNAL_RENDER_TOKEN and 401s a wrong one, and 400s a malformed id before
+# reading anything. request.state.account_id stays unset, so the route takes
+# its token path, and the rate limiter (which counts accounts) skips it.
+_RENDER_TOKEN_PATH = re.compile(r"^/v1/reports/[^/]+/data$")
+
+
+def _render_token_request(request: Request) -> bool:
+    return bool(_RENDER_TOKEN_PATH.match(request.url.path)) and bool(
+        request.headers.get("X-Internal-Render-Token")
+    )
+
+
 def _is_public_path(path: str) -> bool:
     """Check if path is public (no auth required)."""
     if path.startswith(_PUBLIC_PREFIXES):
@@ -116,6 +143,10 @@ def _is_public_path(path: str) -> bool:
     # so the middleware can enforce auth as the default.
     # Special case: exact match
     if path == "/v1/leads/capture":
+        return True
+    # LR-027: readiness has no credential to reject, so it can never answer 401.
+    # Exact match, not a prefix: nothing else becomes public by starting "/ready".
+    if path == "/ready":
         return True
     return False
 
@@ -150,7 +181,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
             claims = verify_jwt(token, settings.JWT_SECRET)
             if claims and claims.get("account_id"):
                 # FIX (M2): Blacklist check fails CLOSED — deny on DB error
-                if _is_token_blacklisted(token):
+                if _is_token_blacklisted(token, claims):
                     return JSONResponse(
                         status_code=401,
                         content={"detail": "Token has been invalidated"},
@@ -179,7 +210,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 claims = verify_jwt(cookie_token, settings.JWT_SECRET)
                 if claims and claims.get("account_id"):
                     # FIX (M2): Fail closed on blacklist check error
-                    if _is_token_blacklisted(cookie_token):
+                    if _is_token_blacklisted(cookie_token, claims):
                         return JSONResponse(
                             status_code=401,
                             content={"detail": "Session has expired"},
@@ -193,6 +224,8 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 acct = demo
 
         if not acct:
+            if _render_token_request(request):
+                return await call_next(request)
             return JSONResponse(
                 status_code=401, content={"detail": "Unauthorized"}
             )
@@ -235,7 +268,7 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-def _is_token_blacklisted(token: str) -> bool:
+def _is_token_blacklisted(token: str, claims: dict) -> bool:
     """
     Check if a JWT is blacklisted.
 
@@ -247,11 +280,19 @@ def _is_token_blacklisted(token: str) -> bool:
     try:
         with db_conn_autocommit() as cur:
             cur.execute(
-                "SELECT 1 FROM jwt_blacklist "
-                "WHERE token_hash = %s AND expires_at > NOW()",
-                (token_hash,),
+                """
+                SELECT EXISTS (SELECT 1 FROM jwt_blacklist
+                               WHERE token_hash = %s AND expires_at > NOW()),
+                       u.password_hash, EXTRACT(EPOCH FROM u.password_changed_at)
+                FROM (SELECT %s::uuid AS user_id) AS session_user_id
+                LEFT JOIN users u ON u.id = session_user_id.user_id
+                """,
+                (token_hash, claims.get("user_id")),
             )
-            return cur.fetchone() is not None
+            blacklisted, password_hash, changed_epoch = cur.fetchone()
+            if blacklisted or not claims.get("user_id"):
+                return blacklisted
+            return not session_password_matches(claims, password_hash, changed_epoch, settings.JWT_SECRET)
     except Exception as e:
         logger.error(f"Blacklist check failed (denying request): {e}")
         return True  # Fail CLOSED — deny on error
@@ -359,7 +400,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 pass  # Use default 60 if DB fails
             self._redis("setex", limit_key, 300, str(limit))  # Cache 5 min
 
-        # ── Token bucket check ───────────────────────────────────────────
+        # ── Fixed one-minute window ───────────────────────────────────────────
         now = int(time.time())
         minute = now - (now % 60)
         key = f"ratelimit:{acct}:{minute}"
@@ -382,13 +423,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Degraded"] = "1"
             return response
 
-        remaining = max(0, limit - count)
-
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-        response.headers["X-RateLimit-Reset"] = str(reset)
-
+        headers = {
+            "X-RateLimit-Limit": str(limit),
+            "X-RateLimit-Remaining": str(max(0, limit - count)),
+            "X-RateLimit-Reset": str(reset),
+        }
         if count > limit:
             return JSONResponse(
                 status_code=429,
@@ -397,6 +436,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "message": f"Rate limit of {limit} requests/minute exceeded",
                     "retry_after": reset,
                 },
-                headers=dict(response.headers),
+                headers={**headers, "Retry-After": str(reset)},
             )
+        response = await call_next(request)
+        response.headers.update(headers)
         return response

@@ -24,6 +24,7 @@ import { usePlanUsage, useMe, useAffiliateOverview, useBranding } from "@/hooks/
 import { Toaster } from "@/components/ui/toaster"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
+import { checkoutOffered } from "@/lib/checkout"
 
 type Icon = ComponentType<{ className?: string }>
 /** `also`: other route prefixes this item owns, so the rail stays on it there
@@ -240,7 +241,7 @@ function Rail({ tier, onNavigate }: { tier: TierProps; onNavigate?: () => void }
           <div className="flex flex-col gap-[10px] border-t border-[var(--border)] px-[10px] pt-[14px]">
             <div className="flex items-baseline justify-between">
               <span className="text-[13px] font-bold">{planName ? `${planName} plan` : "Your plan"}</span>
-              {(planName ?? "").toLowerCase() === "free" && (
+              {(planName ?? "").toLowerCase() === "free" && checkoutOffered(planUsage) && (
                 <Link href="/app/settings/billing" prefetch={false} onClick={onNavigate} className="text-[12px] font-semibold text-[var(--link)] hover:text-[var(--link-hover)]">Upgrade</Link>
               )}
             </div>

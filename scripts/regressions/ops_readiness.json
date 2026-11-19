@@ -1,0 +1,114 @@
+[
+ {
+  "name": "LR-027 /ready compares the newest migration instead of asking for the required one (a rollback reads as down)",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "                    schema_check(cur)\n",
+  "new": "                    cur.execute(\"SELECT max(filename) FROM schema_migrations WHERE filename ~ '^[0-9]{4}_'\")\n                    if cur.fetchone()[0] != __import__('api.schema_guard', fromlist=['x']).REQUIRED_MIGRATION:\n                        raise SchemaBehind('not newest')\n",
+  "test": "apps/api/tests/test_ready.py::test_a_database_ahead_of_the_binary_is_ready"
+ },
+ {
+  "name": "LR-027 /ready waits the pool's full 10 s for a connection",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "get_pool().connection(timeout=POOL_TIMEOUT_S)",
+  "new": "get_pool().connection()",
+  "test": "apps/api/tests/test_ready.py::test_an_exhausted_pool_fails_within_its_budget"
+ },
+ {
+  "name": "LR-027 /ready uses the shared 2 s Redis client",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "    if _redis_client is None:\n        _redis_client = _redis.from_url(\n            settings.REDIS_URL,\n            decode_responses=True,\n            socket_connect_timeout=REDIS_TIMEOUT_S,\n            socket_timeout=REDIS_TIMEOUT_S,\n            retry_on_timeout=False,\n        )\n    return _redis_client",
+  "new": "    from ..cache import get_redis\n    return get_redis()",
+  "test": "apps/api/tests/test_ready.py::test_readiness_uses_its_own_short_timeout_redis_client"
+ },
+ {
+  "name": "LR-027 a backlog makes the deployment not ready",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "c[\"status\"] in (\"ok\", \"backlog\")",
+  "new": "c[\"status\"] == \"ok\"",
+  "test": "apps/api/tests/test_ready.py::test_a_backlog_is_reported_but_still_ready"
+ },
+ {
+  "name": "LR-027 the worker state ignores the queue (a burst reads as a dead worker)",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "    if queued == 0:\n        return \"stale\"",
+  "new": "    if True:\n        return \"stale\"",
+  "test": "apps/api/tests/test_ready.py::test_a_backlog_is_reported_but_still_ready"
+ },
+ {
+  "name": "LR-027 /ready made public as a prefix",
+  "file": "apps/api/src/api/middleware/authn.py",
+  "old": "    if path == \"/ready\":",
+  "new": "    if path.startswith(\"/ready\"):",
+  "test": "apps/api/tests/test_ready.py::test_it_is_public_and_only_the_exact_path_is"
+ },
+ {
+  "name": "LR-027 /ready evaluates once per waiting caller (no single flight)",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "        if _inflight is None:\n            _inflight = threading.Thread(",
+  "new": "        if True:\n            _inflight = threading.Thread(",
+  "test": "apps/api/tests/test_ready.py::test_one_evaluation_per_ten_seconds_however_many_callers"
+ },
+ {
+  "name": "LR-027 a ticker that raises still refreshes its heartbeat",
+  "file": "apps/worker/src/worker/schedules_tick.py",
+  "old": "        logger.error(f\"Ticker error: {e}\", exc_info=True)\n        return False\n",
+  "new": "        logger.error(f\"Ticker error: {e}\", exc_info=True)\n        ops_heartbeat.after_tick(celery)\n        return False\n",
+  "test": "apps/worker/tests/test_ops_heartbeat.py::test_a_loop_that_raises_leaves_the_heartbeat_to_go_stale"
+ },
+ {
+  "name": "LR-027 a late heartbeat work item runs late instead of being dropped",
+  "file": "apps/worker/src/worker/ops_heartbeat.py",
+  "old": "queue=CELERY_QUEUE, expires=HEARTBEAT_EXPIRES_S, retry=False)",
+  "new": "queue=CELERY_QUEUE, retry=False)",
+  "test": "apps/worker/tests/test_ops_heartbeat.py::test_after_tick_writes_the_ticker_key_and_publishes_the_work_item"
+ },
+ {
+  "name": "LR-027 the worker key expires inside the backlog horizon",
+  "file": "apps/worker/src/worker/ops_heartbeat.py",
+  "old": "WORKER_TTL_S = 3600",
+  "new": "WORKER_TTL_S = 600",
+  "test": "tests/test_ops_heartbeat_contract.py apps/worker/tests/test_ops_heartbeat.py::test_the_worker_task_writes_the_worker_key"
+ },
+ {
+  "name": "LR-027 the API reads a heartbeat key the worker does not write",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "WORKER_KEY = \"ops:heartbeat:worker\"",
+  "new": "WORKER_KEY = \"ops:heartbeat:workers\"",
+  "test": "tests/test_ops_heartbeat_contract.py"
+ },
+ {
+  "name": "Codex #322: SET LOCAL outside a transaction (timeouts silently ignored on an autocommit connection)",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "            with conn.transaction(force_rollback=True):\n",
+  "new": "            if True:\n",
+  "test": "apps/api/tests/test_ready.py::test_lock_timeout_applies_on_an_autocommit_connection apps/api/tests/test_ready.py::test_statement_timeout_applies_on_an_autocommit_connection"
+ },
+ {
+  "name": "Codex #322: an expired green result is served when the evaluation stalls",
+  "file": "apps/api/src/api/routes/ready.py",
+  "old": "    with _state_lock:\n        cached = _cached\n    if _fresh(cached):\n        return _respond(cached[1], cached[2])\n    return _respond(503,",
+  "new": "    with _state_lock:\n        cached = _cached\n    if cached:\n        return _respond(cached[1], cached[2])\n    return _respond(503,",
+  "test": "apps/api/tests/test_ready.py::test_a_stalled_evaluation_never_serves_an_expired_green"
+ },
+ {
+  "name": "Codex #322: the heartbeat publish runs on the ticker's own thread (a silent broker stops scheduling)",
+  "file": "apps/worker/src/worker/ops_heartbeat.py",
+  "old": "        _inflight = threading.Thread(target=_publish, args=(celery_app, client),\n                                     name=\"ops-heartbeat\", daemon=True)\n        _inflight.start()\n        return _inflight",
+  "new": "        _publish(celery_app, client)\n        _inflight = threading.Thread(target=lambda: None)\n        _inflight.start()\n        return _inflight",
+  "test": "apps/worker/tests/test_ops_heartbeat.py::test_a_broker_that_never_answers_never_holds_up_a_tick apps/worker/tests/test_ops_heartbeat.py::test_the_real_ticker_keeps_ticking_against_a_silent_broker"
+ },
+ {
+  "name": "Codex #322: heartbeats pile up behind a stuck one",
+  "file": "apps/worker/src/worker/ops_heartbeat.py",
+  "old": "        if _inflight is not None and _inflight.is_alive():",
+  "new": "        if False:",
+  "test": "apps/worker/tests/test_ops_heartbeat.py::test_only_one_heartbeat_is_ever_in_flight"
+ },
+ {
+  "name": "Codex #322: a test fixture wipes the whole Redis database",
+  "file": "apps/worker/tests/test_ops_heartbeat.py",
+  "old": "    conn.delete(*OWNED)\n    yield conn\n",
+  "new": "    conn.flushdb()\n    yield conn\n",
+  "test": "apps/api/tests/test_ready.py::test_no_redis_fixture_flushes_a_database"
+ }
+]
