@@ -14,7 +14,9 @@ redis = pytest.importorskip("redis")
 
 from api.services import lookup_windows as windows  # noqa: E402
 
-URL = "redis://127.0.0.1:6379/15"
+# An explicitly disposable Redis (TEST_REDIS_URL; CI sets it). Cleanup deletes
+# only the keys these tests own, never the database (Codex review of #322).
+URL = os.getenv("TEST_REDIS_URL")
 HOUR_US = 3_600_000_000
 V, IP = ("lb:v:test", 20), ("lb:ip:test", 60)
 
@@ -22,19 +24,34 @@ V, IP = ("lb:v:test", 20), ("lb:ip:test", 60)
 @pytest.fixture
 def r(monkeypatch):
     from api.settings import settings
+    if not URL:
+        if os.getenv("REQUIRE_REDIS_TESTS") == "1":
+            pytest.fail("REQUIRE_REDIS_TESTS=1 but TEST_REDIS_URL is not set")
+        pytest.skip("Set TEST_REDIS_URL to a disposable Redis database")
     conn = redis.from_url(URL)
     try:
         conn.ping()
     except redis.exceptions.ConnectionError:
         if os.getenv("REQUIRE_REDIS_TESTS") == "1":
-            pytest.fail("REQUIRE_REDIS_TESTS=1 but Redis on 127.0.0.1:6379 is unreachable")
-        pytest.skip("Redis on 127.0.0.1:6379 is needed")
+            pytest.fail("REQUIRE_REDIS_TESTS=1 but TEST_REDIS_URL is unreachable")
+        pytest.skip("TEST_REDIS_URL is unreachable")
     monkeypatch.setattr(settings, "REDIS_URL", URL)
     monkeypatch.setattr(windows, "_client", None, raising=False)
     monkeypatch.setattr(windows, "_open_until", 0.0, raising=False)
-    conn.flushdb()
+    owned = (V[0], IP[0], windows.SEQ_KEY)
+    conn.delete(*owned)
     yield conn
-    conn.flushdb()
+    conn.delete(*owned)
+
+
+def test_cleanup_leaves_unrelated_keys(r):
+    r.set("unrelated:sentinel", "keep")
+    try:
+        windows.take_shared((V,))
+        r.delete(V[0], IP[0], windows.SEQ_KEY)
+        assert r.get("unrelated:sentinel") == b"keep"
+    finally:
+        r.delete("unrelated:sentinel")
 
 
 def now_us(r):
