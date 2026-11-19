@@ -1,0 +1,58 @@
+[
+  {
+    "name": "LR-006 the shared window forgets an entry after 55 minutes (rev 1's 40-in-60)",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "    redis.call('ZREMRANGEBYSCORE', KEYS[i], '-inf', now - window)",
+    "new": "    redis.call('ZREMRANGEBYSCORE', KEYS[i], '-inf', now - window + 300000000)",
+    "test": "apps/api/tests/test_public_lookup_windows_redis.py"
+  },
+  {
+    "name": "LR-006 the fallback window forgets an entry after 55 minutes",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "            cutoff = now - WINDOW_SECONDS\n",
+    "new": "            cutoff = now - WINDOW_SECONDS + 300\n",
+    "test": "apps/api/tests/test_public_lookup_budget.py"
+  },
+  {
+    "name": "LR-006 the shared script records a refused request",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "if admit == 1 then\n    local member",
+    "new": "if true then\n    local member",
+    "test": "apps/api/tests/test_public_lookup_windows_redis.py"
+  },
+  {
+    "name": "LR-006 a full fallback evicts a live counter (resets someone's allowance)",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "            if len(self.windows) + len(new_keys) > self.capacity:\n                return WindowResult(False, counts, ())\n",
+    "new": "            while self.windows and len(self.windows) + len(new_keys) > self.capacity:\n                self.windows.popitem(last=False)\n",
+    "test": "apps/api/tests/test_public_lookup_budget.py"
+  },
+  {
+    "name": "LR-006 the limiter uses the shared 2 s Redis client",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "    global _client\n    if _client is None:\n        with _client_lock:",
+    "new": "    from ..cache import get_redis\n    return get_redis()\n    global _client\n    if _client is None:\n        with _client_lock:",
+    "test": "apps/api/tests/test_public_lookup_budget.py"
+  },
+  {
+    "name": "LR-006 the limiter client retries (past the ~500 ms budget)",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "retry=Retry(NoBackoff(), 0),",
+    "new": "retry=Retry(NoBackoff(), 3),",
+    "test": "apps/api/tests/test_public_lookup_budget.py"
+  },
+  {
+    "name": "LR-006 no breaker: every search waits for a dead store",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "        _open_until = clock() + BREAKER_S\n",
+    "new": "        _open_until = 0.0\n",
+    "test": "apps/api/tests/test_public_lookup_budget.py"
+  },
+  {
+    "name": "LR-006 Retry-After taken from the soonest exhausted key, not the latest",
+    "file": "apps/api/src/api/services/public_lookup_budget.py",
+    "old": "key=lambda i: (remaining[i], -result.waits[i])",
+    "new": "key=lambda i: (remaining[i], result.waits[i])",
+    "test": "apps/api/tests/test_public_lookup_budget.py"
+  }
+]

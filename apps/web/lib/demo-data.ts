@@ -108,6 +108,13 @@ export const DEMO_SPHERE = {
   leads: 9,
 } as const;
 
+/** What the landing page's contacts preview says came back from the last send. */
+export const DEMO_SEND = {
+  opened: 68,
+  clicked: 14,
+  newLeads: 1,
+} as const;
+
 /** The home-value lead shown arriving on the lead-capture preview. */
 export const DEMO_LEAD = {
   address: "89 Maple Heights",
