@@ -139,8 +139,8 @@ calls blocked. Keep test credentials and signing secrets separate from live.
 ## Jerry's live configuration checklist
 
 - Jerry alone creates/validates the live products and monthly USD prices:
-  Growth = `starter`, **$19**; Growth Plus = `pro`, **$29**. Existing live
-  product names/prices still need confirmation; do not silently reuse test IDs.
+  Growth = `starter`, **$19**; Growth Plus = `pro`, **$29**. Jerry confirmed
+  the live IDs below on November 19; no Stripe or hosting setting was changed.
 - The live server key stays on Render. Never copy it into chat, evidence,
   browser code or a local test configuration.
 - Verify the live webhook URL is
@@ -236,3 +236,37 @@ webhook endpoint version for signed fixtures, distinct from the SDK outgoing
 API default. Include Clover item-level period fields, a legacy fixture and
 missing/unsupported-period quarantine controls. This confirmation authorizes
 no live provider call or payment test.
+
+
+## Confirmed live prices and go-live configuration handoff
+
+| Plan | Monthly USD | Live price ID | Live product ID |
+|---|---:|---|---|
+| Growth (`starter`) | $19 | `price_1UddpFBa27XowvTp6siwCZ3Q` | `prod_VexkO3eDQhdlDr` |
+| Growth Plus (`pro`) | $29 | `price_1UddpaBa27XowvTpqu8acKJP` | `prod_VexlkMlXRRVr9r` |
+
+Jerry supplied these IDs; this record is not a provider-side verification or
+permission to change anything. Jerry sets live configuration at go-live.
+
+Current code requires this service-specific handoff (recheck after LR-014):
+
+| Host/service | Variable | Value at go-live |
+|---|---|---|
+| Vercel `reportscompany-web` | No Stripe variables | None: hosted Checkout is created by the API; no Stripe browser SDK/key is consumed. |
+| Render `reportscompany-api` | `STRIPE_SECRET_KEY` | Existing live secret key, entered directly by Jerry; exact secret never printed/stored here. |
+| Render `reportscompany-api` | `STRIPE_WEBHOOK_SECRET` | Signing secret for the live `/v1/webhooks/stripe` endpoint, entered directly by Jerry; never printed/stored here. |
+| Render worker/ticker/bridge | No billing Stripe variables | None required by their current code. |
+
+Prices are **database configuration, not environment variables** on the active
+checkout/webhook path. Jerry's reviewed go-live mapping is:
+
+- `plans.stripe_price_id` for `starter` -> `price_1UddpFBa27XowvTp6siwCZ3Q`.
+- `plans.stripe_price_id` for `pro` -> `price_1UddpaBa27XowvTpqu8acKJP`.
+
+The legacy `STRIPE_PRICE_PRO_MONTH` / `STRIPE_PRICE_TEAM_MONTH` map is not the
+active price source. Do not put Growth's ID into a misleading legacy variable
+or invent a team price. Product IDs above are references, not consumed env vars.
+The final LR-014 handoff must repeat the exact variable -> value list separately
+for Vercel and Render, identify secrets to enter directly, and list these DB
+mappings separately. No environment, database mapping, product, price or webhook
+was changed while recording this checklist. No live payment tests.
