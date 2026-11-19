@@ -202,6 +202,11 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
     # The `default=100` is preserved verbatim rather than corrected: it is what
     # an account with no plan row gets today, it is a business number, and
     # changing it is not this fix's to make. See D-093.
+    #
+    # LR-015 (D-375) reverses the premise above: 0 is no longer "unlimited" in
+    # `evaluate_report_limit`. It is a freeze everywhere, as the resolver's
+    # comment always said; unlimited is the high sentinel only. Keeping
+    # `_first_not_none` is still right: it is what lets a 0 reach the freeze.
     effective_limit = _first_not_none(limit_override, plan_limit, default=100)
     has_override    = limit_override is not None
 
@@ -291,7 +296,16 @@ def evaluate_product_limit(used: int, limit: int, strict: bool = False) -> Dict[
     if limit >= 99999:
         return {"used": used, "limit": limit, "status": "ok", "can_proceed": True}
 
-    ratio = used / max(limit, 1)
+    # LR-015 (D-375). A zero allowance is a freeze, not a limit of one. The
+    # resolver above keeps an override of 0 on purpose ("freeze account"), but
+    # `used / max(limit, 1)` then measured usage against 1, so a frozen account
+    # was admitted at usage 0 and again at usage 1 (ratio 1.0 is inside the
+    # grace band). Nothing is allowed against nothing: refuse at any usage,
+    # with no grace, in both modes. A negative value is the same freeze.
+    if limit <= 0:
+        return {"used": used, "limit": limit, "status": "exceeded", "can_proceed": False}
+
+    ratio = used / limit
 
     if ratio < 0.8:
         status = "ok"
@@ -404,7 +418,7 @@ def evaluate_report_limit(
     limit = plan["monthly_report_limit"]
     count = usage["report_count"]
 
-    if limit <= 0 or limit >= 10000:
+    if limit >= 10000:
         return LimitDecision.ALLOW, {
             "usage": usage, "plan": plan,
             "ratio": 0.0,
@@ -412,7 +426,23 @@ def evaluate_report_limit(
             "can_proceed": True,
         }
 
-    ratio = count / limit if limit > 0 else 0.0
+    # LR-015 (D-375). Zero used to read as "Unlimited plan - no restrictions"
+    # here, the opposite of what the admission check (evaluate_product_limit)
+    # and the resolver's "freeze account" rule mean by it. Zero is no
+    # allowance: BLOCK at any usage, and overage billing does not unlock it.
+    # Unlimited is the high sentinel only.
+    if limit <= 0:
+        return LimitDecision.BLOCK, {
+            "usage": usage, "plan": plan,
+            "ratio": 0.0,
+            "message": (
+                f"\U0001f6ab No report allowance this month ({count}/{limit}). "
+                f"Reports are paused for this account."
+            ),
+            "can_proceed": False,
+        }
+
+    ratio = count / limit
 
     if ratio < 0.8:
         decision     = LimitDecision.ALLOW
