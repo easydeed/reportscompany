@@ -277,12 +277,16 @@ mappings separately. No environment, database mapping, product, price or webhook
 was changed while recording this checklist. No live payment tests.
 
 
-### Stripe variable inventory (source verified; deployed Render names pending)
+### Stripe variable inventory (source verified; Render names supplied by Jerry)
 
 Vercel production `reportscompany-web` was inspected read-only on November 19:
 there are no Stripe-related variable names. The Render connector has no env-list
-operation; Jerry has been asked for names only. Do not mistake this source list
-for a verified inventory of configured Render variables.
+operation. Jerry supplied API names `STRIPE_PRICE_PRO_MONTH` and
+`STRIPE_PRICE_TEAM_MONTH`, and reported no Stripe names on worker/ticker. This
+is user-supplied inventory, not a connector inspection. `STRIPE_SECRET_KEY`
+and `STRIPE_WEBHOOK_SECRET` were not included in that names-only reply; their
+API/shared-group presence still needs confirmation. A live key was previously
+confirmed, so do not infer its absence from this shorter list.
 
 | Code-read variable | Purpose | Identifier expected | Slug | Status / exact nonsecret value |
 |---|---|---|---|---|
@@ -302,3 +306,25 @@ Final go-live variable/value handoff remains conditional on the reviewed
 LR-014 cleanup. Nobody has edited Vercel, Render, DB plan mappings or Stripe
 configuration during this inventory. Actual secret values are not requested,
 printed or stored in the checklist.
+
+
+### Jerry-only go-live value list (do not apply during development)
+
+- **Vercel `reportscompany-web`:** no Stripe variables to set.
+- **Render API `STRIPE_SECRET_KEY`:** the existing live secret, entered directly
+  by Jerry; actual value is intentionally not collected in chat.
+- **Render API `STRIPE_WEBHOOK_SECRET`:** the live endpoint signing secret,
+  entered directly by Jerry; actual value is intentionally not collected.
+- **Render API `STRIPE_PRICE_PRO_MONTH`:**
+  `price_1UddpaBa27XowvTpqu8acKJP` if LR-014 retains this legacy name.
+- **Render API `STRIPE_PRICE_TEAM_MONTH`:** no approved value. It maps to retired
+  `team`; LR-014 must remove the validator dependency before go-live. Do not
+  assign the Starter/Growth price here to bypass it.
+- **Worker/ticker:** no Stripe variables required or reported.
+- **Separate DB mapping:** `starter` -> `price_1UddpFBa27XowvTp6siwCZ3Q`;
+  `pro` -> `price_1UddpaBa27XowvTpqu8acKJP`. Product IDs are not price values.
+
+All configured names Jerry reported are accounted for. Required secrets are
+listed by name and purpose, not guessed values. Final instructions must match
+the merged LR-014 code and confirm API/shared-group secret names first. No
+configuration or DB mapping has been changed by this record.
