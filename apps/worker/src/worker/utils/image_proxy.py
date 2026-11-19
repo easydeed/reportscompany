@@ -15,8 +15,11 @@ V2: Enhanced with retry logic, better headers, and rate limit handling.
 """
 
 import base64
+import ipaddress
+import socket
 import httpx
 import time
+from urllib.parse import urlsplit
 from typing import Optional, List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -29,6 +32,9 @@ MAX_CONCURRENT_FETCHES = 3
 # Delay between fetches to avoid rate limiting (seconds)
 FETCH_DELAY = 0.5
 
+# LR-007: a body larger than this is not an image we will embed.
+MAX_IMAGE_BYTES = 15 * 1024 * 1024
+
 # Retry configuration
 MAX_RETRIES = 2
 RETRY_DELAY = 1.0
@@ -39,6 +45,33 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
 ]
+
+
+def _public_url(url: str) -> bool:
+    """LR-007 defence in depth: never fetch a private, loopback, link-local or
+    reserved address (cloud metadata, internal services) on the worker's
+    behalf. Branding saves already accept only our storage URLs; this guards
+    every other image URL that reaches a render, and each redirect hop."""
+    try:
+        parts = urlsplit(url)
+        if parts.scheme not in ("http", "https") or not parts.hostname:
+            return False
+        infos = socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80),
+                                   type=socket.SOCK_STREAM)
+        for info in infos:
+            ip = ipaddress.ip_address(info[4][0])
+            if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
+                ip = ip.ipv4_mapped
+            if not ip.is_global or ip.is_multicast:
+                return False
+        return bool(infos)
+    except (ValueError, OSError, UnicodeError):
+        return False
+
+
+def _refuse_private_hop(request: httpx.Request) -> None:
+    if not _public_url(str(request.url)):
+        raise httpx.RequestError("refused: private or reserved address", request=request)
 
 
 def fetch_image_as_base64(url: str, retry_count: int = 0) -> Optional[str]:
@@ -61,6 +94,10 @@ def fetch_image_as_base64(url: str, retry_count: int = 0) -> Optional[str]:
     # Skip if already base64
     if url.startswith("data:"):
         return url
+
+    if not _public_url(url):
+        print(f"⛔ Refused (not a public address): {url[:60]}...")
+        return None
     
     # Rotate user agent based on retry count
     user_agent = USER_AGENTS[retry_count % len(USER_AGENTS)]
@@ -78,6 +115,7 @@ def fetch_image_as_base64(url: str, retry_count: int = 0) -> Optional[str]:
             timeout=IMAGE_FETCH_TIMEOUT, 
             follow_redirects=True,
             http2=False,  # Some CDNs have issues with HTTP/2
+            event_hooks={"request": [_refuse_private_hop]},   # every redirect hop too
         ) as client:
             response = client.get(
                 url,
@@ -127,6 +165,10 @@ def fetch_image_as_base64(url: str, retry_count: int = 0) -> Optional[str]:
                 print(f"⚠️  Not an image ({content_type}): {url[:60]}...")
                 return None
             
+            if len(response.content) > MAX_IMAGE_BYTES:
+                print(f"⚠️  Image too large to embed ({len(response.content)//1024}KB): {url[:60]}...")
+                return None
+
             # Convert to base64
             image_data = base64.b64encode(response.content).decode("utf-8")
             

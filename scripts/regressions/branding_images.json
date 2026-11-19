@@ -1,0 +1,114 @@
+[
+ {
+  "name": "LR-007 phone multi-picture JPEGs refused again",
+  "file": "apps/api/src/api/services/upload.py",
+  "old": "    \"MPO\": (\"image/jpeg\", {\"jpg\", \"jpeg\"}),\n",
+  "new": "",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_a_phone_multi_picture_jpeg_is_accepted_as_its_primary_image"
+ },
+ {
+  "name": "LR-007 orientation not applied before stripping",
+  "file": "apps/api/src/api/services/upload.py",
+  "old": "            frame = ImageOps.exif_transpose(img) or img.copy()",
+  "new": "            frame = img.copy()",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_a_sideways_phone_photo_is_stored_upright"
+ },
+ {
+  "name": "LR-007 the upload's own bytes stored (no re-encoding: GPS kept)",
+  "file": "apps/api/src/api/services/upload.py",
+  "old": "    return reencode(contents, fmt), ext, mime",
+  "new": "    return contents, ext, mime",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_re_encoding_strips_gps_camera_and_xmp"
+ },
+ {
+  "name": "LR-007 fetcher allows plain http",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "    if parts.scheme != \"https\":",
+  "new": "    if parts.scheme not in (\"https\", \"http\"):",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_the_fetcher_refuses_anything_but_a_public_https_host"
+ },
+ {
+  "name": "LR-007 fetcher skips the private-address check",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "    if not all(_is_public(a) for a in addresses):",
+  "new": "    if False:",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_the_fetcher_refuses_anything_but_a_public_https_host"
+ },
+ {
+  "name": "LR-007 one public answer is enough (any instead of all)",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "    if not all(_is_public(a) for a in addresses):",
+  "new": "    if not any(_is_public(a) for a in addresses):",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_one_private_answer_among_public_ones_refuses_the_host"
+ },
+ {
+  "name": "LR-007 redirect hops are not re-checked",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "        host, address, path = _check(url)\n",
+  "new": "        host, address, path = _check(url) if _hop == 0 else (urlsplit(url).hostname, address, urlsplit(url).path or '/')\n",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_a_redirect_to_a_private_address_is_refused"
+ },
+ {
+  "name": "LR-007 no size cap on the fetched body",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "                    declared = response.headers.get(\"content-length\")\n                    if declared and declared.isdigit() and int(declared) > max_bytes:\n                        raise FetchRefused(\"The image at that link is too large.\")\n                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        body.extend(chunk)\n                        if len(body) > max_bytes:",
+  "new": "                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        body.extend(chunk)\n                        if False:",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_too_many_redirects_and_oversized_bodies_are_refused"
+ },
+ {
+  "name": "LR-007 TLS verified against the IP, not the name (no SNI)",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "                    extensions={\"sni_hostname\": host},\n",
+  "new": "",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_a_public_host_is_fetched_pinned_with_tls_verified_against_its_name"
+ },
+ {
+  "name": "LR-007 the pinned request loses its Host header",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "headers={\"Host\": host, \"Accept\": \"image/*\",",
+  "new": "headers={\"Accept\": \"image/*\",",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_a_public_host_is_fetched_pinned_with_tls_verified_against_its_name"
+ },
+ {
+  "name": "LR-007 any link saves (own-storage rule bypassed)",
+  "file": "apps/api/src/api/services/branding_urls.py",
+  "old": "        if value in stored or is_own_storage_url(value):",
+  "new": "        if True:",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_an_agent_cannot_save_a_link_to_another_site"
+ },
+ {
+  "name": "LR-007 existing saved values no longer accepted (PCT SVGs would break)",
+  "file": "apps/api/src/api/services/branding_urls.py",
+  "old": "        if value in stored or is_own_storage_url(value):",
+  "new": "        if is_own_storage_url(value):",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_existing_and_imported_images_still_save"
+ },
+ {
+  "name": "LR-007 the agent branding save is not checked",
+  "file": "apps/api/src/api/routes/account.py",
+  "old": "        check_image_urls({\"logo_url\": payload.logo_url, \"footer_logo_url\": payload.footer_logo_url,",
+  "new": "        (lambda *a: None)({\"logo_url\": payload.logo_url, \"footer_logo_url\": payload.footer_logo_url,",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_an_agent_cannot_save_a_link_to_another_site"
+ },
+ {
+  "name": "LR-007 the import stores the fetched bytes unchecked",
+  "file": "apps/api/src/api/routes/upload.py",
+  "old": "    stored, ext, content_type = prepare_image(contents)",
+  "new": "    stored, ext, content_type = contents, \"jpg\", \"image/jpeg\"",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_the_import_route_stores_a_checked_copy"
+ },
+ {
+  "name": "LR-007 worker treats private addresses as public",
+  "file": "apps/worker/src/worker/utils/image_proxy.py",
+  "old": "            if not ip.is_global or ip.is_multicast:\n                return False\n",
+  "new": "            if False:\n                return False\n",
+  "test": "apps/worker/tests/test_image_proxy_guard.py::test_private_and_non_http_targets_are_never_requested"
+ },
+ {
+  "name": "LR-007 worker follows a redirect into a private address",
+  "file": "apps/worker/src/worker/utils/image_proxy.py",
+  "old": "            event_hooks={\"request\": [_refuse_private_hop]},   # every redirect hop too\n",
+  "new": "",
+  "test": "apps/worker/tests/test_image_proxy_guard.py::test_a_redirect_into_a_private_address_is_refused_at_that_hop"
+ }
+]

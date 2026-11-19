@@ -513,7 +513,7 @@ export default function BrandingPage() {
             <div className="grid sm:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Header Logo <span className="text-muted-foreground">(light version)</span></Label>
-                <p className="text-[11px] text-muted-foreground -mt-1">For gradient backgrounds. PNG/SVG with transparent bg.</p>
+                <p className="text-[11px] text-muted-foreground -mt-1">For gradient backgrounds. PNG with a transparent background.</p>
                 <div className="flex items-center gap-3">
                   <div
                     className="w-20 h-14 rounded-lg flex items-center justify-center p-1.5"
@@ -539,7 +539,7 @@ export default function BrandingPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-medium">Footer Logo <span className="text-muted-foreground">(dark version)</span></Label>
-                <p className="text-[11px] text-muted-foreground -mt-1">For light backgrounds. PNG/SVG with transparent bg.</p>
+                <p className="text-[11px] text-muted-foreground -mt-1">For light backgrounds. PNG with a transparent background.</p>
                 <div className="flex items-center gap-3">
                   <div className="w-20 h-14 rounded-lg bg-stone-50 border border-border flex items-center justify-center p-1.5">
                     {branding.footer_logo_url ? (

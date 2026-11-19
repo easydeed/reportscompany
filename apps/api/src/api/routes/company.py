@@ -19,6 +19,7 @@ from ..services import seats
 from ..services.timefmt import utc_iso
 from ..services.usage import get_full_plan_usage
 from ..config import billing as billing_config
+from ..services.branding_urls import check_image_urls
 from ..services.invite_service import (
     copy_branding_to_child,
     create_invited_user,
@@ -1144,6 +1145,13 @@ def update_branding(
 
     with db_conn() as (conn, cur):
         set_rls(cur, company_id)
+        # LR-007: only our storage URLs, or a value this company already has.
+        cur.execute("""SELECT logo_url, email_logo_url, footer_logo_url, email_footer_logo_url, rep_photo_url
+                       FROM affiliate_branding WHERE account_id = %s::uuid""", (company_id,))
+        check_image_urls({"logo_url": body.logo_url, "email_logo_url": body.email_logo_url,
+                          "footer_logo_url": body.footer_logo_url,
+                          "email_footer_logo_url": body.email_footer_logo_url,
+                          "rep_photo_url": body.rep_photo_url}, cur.fetchone() or ())
         # Upsert company's own branding. The FIRST save creates the row, and
         # `brand_display_name` is NOT NULL: a form saved with the name left
         # empty inserted NULL and 500ed, so a new company could not save a

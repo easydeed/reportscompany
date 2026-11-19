@@ -126,13 +126,31 @@ export function ImageUpload({
   }, [onChange]);
 
   // Allow pasting URL directly (fallback for users who have external URLs)
-  const handlePasteUrl = useCallback(() => {
-    const url = prompt("Enter image URL:");
-    if (url && url.startsWith("http")) {
-      onChange(url);
-      setError(null);
+  // LR-007: a pasted link is never saved as-is. The API fetches it through a
+  // guarded fetcher, checks and re-encodes it like an upload, and stores OUR
+  // copy; that copy's URL is what the form saves.
+  const handlePasteUrl = useCallback(async () => {
+    const url = prompt("Paste a link to a PNG, JPEG, WebP or GIF image:");
+    if (!url || !url.trim()) return;
+    setError(null);
+    setIsUploading(true);
+    try {
+      const response = await fetch(`/api/proxy/v1/upload/branding/${assetType}/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || "The image couldn't be imported");
+      }
+      onChange(data.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The image couldn't be imported");
+    } finally {
+      setIsUploading(false);
     }
-  }, [onChange]);
+  }, [assetType, onChange]);
 
   return (
     <div className={cn("space-y-2", className)}>

@@ -34,7 +34,9 @@ def test_approved_image_keeps_its_storage_type(monkeypatch, kind, ext, mime):
     result = submit(data, f"brand.{ext}", mime)
     stored = store.put_object.call_args.kwargs
     assert stored["ContentType"] == mime
-    assert stored["Body"] == data
+    # LR-007: the stored file is a fresh encoding of the same picture, not the upload's bytes.
+    with Image.open(BytesIO(stored["Body"])) as kept:
+        assert kept.format == kind and kept.size == (120, 110)
     assert result["url"].endswith(stored["Key"]) and stored["Key"].endswith("." + ext)
 
 
