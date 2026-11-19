@@ -129,7 +129,7 @@ def login(body: LoginIn, response: Response):
         "is_sponsored": is_sponsored,
         "parent_account_id": parent_account_id,
         "scopes": ["reports:read", "reports:write"]
-    }, settings.JWT_SECRET, ttl_seconds=3600)
+    }, settings.JWT_SECRET, ttl_seconds=3600, password_hash=pw_hash)
     
     # Set HTTP-only cookie
     response.set_cookie(
@@ -343,6 +343,7 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
+                password_hash=password_hash,
                 ttl_seconds=7 * 24 * 3600  # 7 days for new users
             )
             
@@ -486,7 +487,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
 
             cur.execute("""
                 UPDATE users
-                SET password_hash = %s, email_verified = TRUE
+                SET password_hash = %s, email_verified = TRUE, password_changed_at = NOW() AT TIME ZONE 'UTC'
                 WHERE id = %s::uuid
             """, (password_hash, user_id))
 
@@ -542,6 +543,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
+                password_hash=password_hash,
                 ttl_seconds=7 * 24 * 3600  # 7 days for new users
             )
             
@@ -728,14 +730,14 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                 SELECT 
                     prt.id::text,
                     prt.user_id::text,
-                    prt.expires_at,
+                    prt.expires_at <= NOW() AS expired,
                     prt.used_at,
                     u.email,
                     u.account_id::text,
                     u.is_active
                 FROM password_reset_tokens prt
                 JOIN users u ON u.id = prt.user_id
-                WHERE prt.token = %s
+                WHERE prt.token = %s FOR UPDATE OF prt, u
             """, (token,))
             
             row = cur.fetchone()
@@ -746,7 +748,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                     detail="Invalid or expired reset link. Please request a new one."
                 )
             
-            token_id, user_id, expires_at, used_at, email, account_id, is_active = row
+            token_id, user_id, expired, used_at, email, account_id, is_active = row
             
             # Check if already used
             if used_at is not None:
@@ -756,7 +758,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                 )
             
             # Check if expired
-            if expires_at < datetime.utcnow():
+            if expired:
                 raise HTTPException(
                     status_code=400,
                     detail="This reset link has expired. Please request a new one."
@@ -775,7 +777,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
             # Update user's password
             cur.execute("""
                 UPDATE users
-                SET password_hash = %s, password_changed_at = NOW(), updated_at = NOW()
+                SET password_hash = %s, password_changed_at = NOW() AT TIME ZONE 'UTC', updated_at = NOW()
                 WHERE id = %s::uuid
             """, (password_hash, user_id))
             
@@ -819,6 +821,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
+                password_hash=password_hash,
                 ttl_seconds=3600
             )
             
