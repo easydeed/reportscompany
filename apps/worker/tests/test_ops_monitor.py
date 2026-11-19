@@ -10,6 +10,7 @@ import logging
 import os
 import sys
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -265,17 +266,26 @@ def test_logs_carry_identities_and_counts_never_contact_details(cur, caplog):
 
 @pytest.fixture
 def r():
+    """An explicitly disposable Redis (TEST_REDIS_URL, set by CI). Cleanup
+    deletes only the keys these tests own, never the database (Codex #322)."""
     redis = pytest.importorskip("redis")
-    conn = redis.from_url("redis://127.0.0.1:6379/15", decode_responses=True)
+    from worker import ops_heartbeat as hb
+    url = os.getenv("TEST_REDIS_URL")
+    if not url:
+        if os.getenv("REQUIRE_REDIS_TESTS") == "1":
+            pytest.fail("REQUIRE_REDIS_TESTS=1 but TEST_REDIS_URL is not set")
+        pytest.skip("Set TEST_REDIS_URL to a disposable Redis database")
+    conn = redis.from_url(url, decode_responses=True)
     try:
         conn.ping()
     except redis.exceptions.ConnectionError:
         if os.getenv("REQUIRE_REDIS_TESTS") == "1":
-            pytest.fail("REQUIRE_REDIS_TESTS=1 but Redis on 127.0.0.1:6379 is unreachable")
-        pytest.skip("Redis on 127.0.0.1:6379 is needed")
-    conn.flushdb()
+            pytest.fail("REQUIRE_REDIS_TESTS=1 but TEST_REDIS_URL is unreachable")
+        pytest.skip("TEST_REDIS_URL is unreachable")
+    owned = (hb.TICKER_KEY, hb.WORKER_KEY, hb.CELERY_QUEUE, ops_monitor.LEASE_KEY)
+    conn.delete(*owned)
     yield conn
-    conn.flushdb()
+    conn.delete(*owned)
 
 
 def test_heartbeat_signals_tell_a_dead_worker_from_a_backlog(r):
@@ -358,7 +368,13 @@ def test_one_run_per_window_across_tickers_and_never_overlapping(monkeypatch, r)
     a = ops_monitor.MonitorRunner("db-a", clock=lambda: clock[0])
     b = ops_monitor.MonitorRunner("db-b", clock=lambda: clock[0])
     assert a.maybe_start(r) is True
-    assert b.maybe_start(r) is False                      # lease held: one run per window
+    for _ in range(100):
+        if started:
+            break
+        time.sleep(0.01)
+    assert b.maybe_start(r) is True
+    b.thread.join(2)
+    assert started == ["db-a"]                            # lease held: b's window did not run
     clock[0] += 400
     r.delete(ops_monitor.LEASE_KEY)
     assert a.maybe_start(r) is False                      # previous run still alive
@@ -370,10 +386,15 @@ def test_one_run_per_window_across_tickers_and_never_overlapping(monkeypatch, r)
     assert 0 < r.ttl(ops_monitor.LEASE_KEY) <= ops_monitor.LEASE_S
 
 
-def test_a_redis_outage_never_reaches_the_ticker_loop():
+def test_a_redis_outage_never_reaches_the_ticker_loop(monkeypatch):
     redis = pytest.importorskip("redis")
+    ran = []
+    monkeypatch.setattr(ops_monitor, "run_once", lambda *a: ran.append(1))
     down = redis.from_url("redis://127.0.0.1:1/0", socket_connect_timeout=0.2, socket_timeout=0.2)
-    assert ops_monitor.MonitorRunner("db").maybe_start(down) is False
+    runner = ops_monitor.MonitorRunner("db")
+    runner.maybe_start(down)                              # never raises
+    runner.thread.join(2)
+    assert ran == []                                      # no lease, no run
 
 
 def test_the_ticker_starts_the_monitor_after_each_tick():
@@ -402,3 +423,40 @@ def ast_code(path):
                 and isinstance(getattr(body[0], "value", None), ast.Constant) and isinstance(body[0].value.value, str):
             body[0] = ast.Pass()
     return ast.unparse(tree).lower()
+
+
+# ── The monitor must never hold up the ticker either (Codex #322 principle) ──
+
+@pytest.fixture
+def silent_redis_client():
+    import socket
+    redis = pytest.importorskip("redis")
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(16)
+    held = []
+
+    def accept():
+        while True:
+            try:
+                held.append(server.accept()[0])
+            except OSError:
+                return
+
+    threading.Thread(target=accept, daemon=True).start()
+    yield redis.from_url(f"redis://127.0.0.1:{server.getsockname()[1]}/0",
+                         socket_connect_timeout=1, socket_timeout=1)
+    server.close()
+    for conn in held:
+        conn.close()
+
+
+def test_a_redis_that_never_answers_never_holds_up_a_tick(silent_redis_client):
+    import time as clock
+    clock_now = [0.0]
+    runner = ops_monitor.MonitorRunner("db", clock=lambda: clock_now[0])
+    started = clock.monotonic()
+    for _ in range(5):
+        runner.maybe_start(silent_redis_client)
+        clock_now[0] += 400                     # a new window every tick
+    assert clock.monotonic() - started < 0.5, "the lease call ran on the ticker's thread"

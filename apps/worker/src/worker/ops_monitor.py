@@ -217,23 +217,37 @@ class MonitorRunner:
         self.token = str(uuid.uuid4())
 
     def maybe_start(self, redis_client=None) -> bool:
+        """Start this window's run on its own thread. Touches nothing external.
+
+        Even the lease is taken on the monitor's thread: a Redis call here
+        could cost the ticker its full timeout on every tick while Redis
+        hangs, and nothing the monitor does may ever hold up scheduling
+        (Codex review of #322).
+        """
         try:
             if self.thread is not None and self.thread.is_alive():
                 return False
             now = self.clock()
             if self.last_start is not None and now - self.last_start < INTERVAL_S:
                 return False
-            client = redis_client or ops_heartbeat._redis()
-            if not client.set(LEASE_KEY, self.token, nx=True, ex=LEASE_S):
-                return False          # another ticker holds this window
             self.last_start = now
-            self.thread = threading.Thread(target=run_once, args=(self.db_url, client),
+            self.thread = threading.Thread(target=self._leased_run, args=(redis_client,),
                                            name="ops-monitor", daemon=True)
             self.thread.start()
             return True
         except Exception as exc:  # noqa: BLE001
             logger.warning("OPS_MONITOR not started: %s", type(exc).__name__)
             return False
+
+    def _leased_run(self, redis_client) -> None:
+        try:
+            client = redis_client or ops_heartbeat._redis()
+            if not client.set(LEASE_KEY, self.token, nx=True, ex=LEASE_S):
+                return          # another ticker holds this window
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("OPS_MONITOR skipped: no lease (%s)", type(exc).__name__)
+            return
+        run_once(self.db_url, client)
 
 
 def enabled_mode() -> str:
