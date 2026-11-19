@@ -575,3 +575,54 @@ def test_the_operator_twilio_client_is_bounded_and_quiet(monkeypatch, caplog):
     with pytest.raises(Exception):
         client.http_client.request("POST", "http://127.0.0.1:1/Messages.json", data={"To": PHONE})
     assert "Twilio API Request" not in caplog.text and PHONE not in caplog.text
+
+
+# ── LR-027 slice 4: an admin's test alert goes through the real path ──
+
+@pytest.fixture
+def test_redis():
+    redis = pytest.importorskip("redis")
+    url = os.getenv("TEST_REDIS_URL")
+    if not url:
+        if os.getenv("REQUIRE_REDIS_TESTS") == "1":
+            pytest.fail("REQUIRE_REDIS_TESTS=1 but TEST_REDIS_URL is not set")
+        pytest.skip("Set TEST_REDIS_URL to a disposable Redis database")
+    conn = redis.from_url(url, decode_responses=True)
+    conn.delete(ops_monitor.TEST_ALERT_KEY)
+    yield conn
+    conn.delete(ops_monitor.TEST_ALERT_KEY)
+
+
+def test_a_test_request_opens_then_resolves_through_the_real_sender(conn, on, providers, monkeypatch, test_redis):
+    monkeypatch.setattr(ops_signals, "SIGNALS", [])
+    monkeypatch.setattr(ops_monitor, "heartbeat_readings", lambda client: {})
+    test_redis.set(ops_monitor.TEST_ALERT_KEY, "req-1")
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "open"}
+    assert test_redis.get(ops_monitor.TEST_ALERT_KEY) is None                 # consumed once
+    assert len(providers.emails) == 1 and len(providers.texts) == 1
+    assert "Test alert requested by an admin" in providers.emails[0]["subject"]
+    assert "test:req-1" in providers.emails[0]["html"]
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "resolved"}
+    assert len(providers.emails) == 2 and len(providers.texts) == 2           # the recovery, both channels
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": None}   # nothing more
+
+
+def test_a_second_test_soon_after_still_exercises_sms(conn, on, providers, monkeypatch, test_redis):
+    """The flap rule (re-open within 30 min = email only) would make a retest prove nothing."""
+    monkeypatch.setattr(ops_signals, "SIGNALS", [])
+    monkeypatch.setattr(ops_monitor, "heartbeat_readings", lambda client: {})
+    for request in ("req-1", "req-2"):
+        test_redis.set(ops_monitor.TEST_ALERT_KEY, request)
+        ops_monitor.run_once(DB, test_redis)
+        ops_monitor.run_once(DB, test_redis)
+    assert len(providers.texts) == 4                                          # open + resolved, twice
+
+
+def test_a_test_request_sends_nothing_while_the_switch_is_off(conn, providers, monkeypatch, test_redis):
+    monkeypatch.delenv("OPS_ALERTS_ENABLED", raising=False)
+    monkeypatch.setenv("OPS_ALERT_EMAIL", EMAIL)
+    monkeypatch.setattr(ops_signals, "SIGNALS", [])
+    monkeypatch.setattr(ops_monitor, "heartbeat_readings", lambda client: {})
+    test_redis.set(ops_monitor.TEST_ALERT_KEY, "req-1")
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "open"}  # recorded, observe-only
+    assert providers.emails == [] and providers.texts == [] and rows(conn) == []
