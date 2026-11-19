@@ -133,7 +133,8 @@ def test_no_plan_number_is_typed_anywhere_in_the_module():
 # ── the limit emails ─────────────────────────────────────────────────────────
 
 def test_the_grace_ceiling_is_the_gates_own_rule():
-    for limit in range(1, 201):
+    # LR-015: from 0. grace_ceiling(0) == 0, so a zero allowance admits nothing.
+    for limit in range(0, 201):
         for used in range(0, 260):
             gate = evaluate_product_limit(used, limit, strict=False)["can_proceed"]
             assert gate == (used < grace_ceiling(limit)), (limit, used)

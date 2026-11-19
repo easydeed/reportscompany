@@ -16,7 +16,7 @@ from api.services import public_lookup_budget as budget
 @pytest.fixture(autouse=True)
 def observation_mode(monkeypatch):
     monkeypatch.setenv("LOOKUP_BUDGET_ENFORCE", "0")
-    monkeypatch.setattr(windows, "_open_until", 0.0, raising=False)
+    monkeypatch.setattr(windows, "_breaker", windows._Breaker())
     monkeypatch.setattr(windows, "_client", None, raising=False)
 
 
@@ -289,6 +289,105 @@ def test_an_unanswering_store_costs_about_half_a_second_then_the_breaker_skips_i
     with pytest.raises(Exception) as tried:
         windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0])
     assert not isinstance(tried.value, windows.LimiterUnavailable)
+
+
+# ── Codex #315 P2: at breaker expiry, ONE half-open probe, not one per caller ──
+
+class SlowStore:
+    """A store that takes `delay` seconds per call, then fails or answers."""
+
+    def __init__(self, delay=0.2, fail=True):
+        import threading
+        self.calls, self.delay, self.fail = 0, delay, fail
+        self.lock = threading.Lock()
+
+    def eval(self, *_args):
+        import time as clock
+        with self.lock:
+            self.calls += 1
+        clock.sleep(self.delay)
+        if self.fail:
+            raise ConnectionError("store still down")
+        n = (len(_args) - 3) // 2          # keys: (n + 1) - SEQ_KEY; see _TAKE
+        return [1] + [1] * n + [3600] * n
+
+
+def expired_breaker(clock_now):
+    windows._breaker.settle(False, False, clock_now[0])     # a failure: open for 30 s
+    clock_now[0] += windows.BREAKER_S + 0.1                 # now half-open
+
+
+def race(n, fn):
+    import threading
+    barrier, results = threading.Barrier(n), []
+
+    def run():
+        barrier.wait()
+        try:
+            results.append(fn())
+        except Exception as exc:  # noqa: BLE001
+            results.append(exc)
+
+    threads = [threading.Thread(target=run) for _ in range(n)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(5)
+    return results
+
+
+def test_at_breaker_expiry_ten_simultaneous_callers_send_one_probe(monkeypatch):
+    store, clock_now = SlowStore(fail=True), [100.0]
+    monkeypatch.setattr(windows, "_redis", lambda: store)
+    expired_breaker(clock_now)
+    results = race(10, lambda: windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0]))
+    assert store.calls == 1, f"{store.calls} callers probed Redis"
+    refused = [r for r in results if isinstance(r, windows.LimiterUnavailable)]
+    assert len(refused) == 9                                # everyone else used the fallback
+    # The probe failed: open for another 30 s, so the next caller is refused at once.
+    with pytest.raises(windows.LimiterUnavailable):
+        windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0] + 1)
+    assert store.calls == 1
+
+
+def test_a_successful_probe_closes_the_breaker_for_everyone(monkeypatch):
+    store, clock_now = SlowStore(delay=0.05, fail=False), [100.0]
+    monkeypatch.setattr(windows, "_redis", lambda: store)
+    expired_breaker(clock_now)
+    first = race(10, lambda: windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0]))
+    assert store.calls == 1 and sum(isinstance(r, windows.WindowResult) for r in first) == 1
+    after = race(10, lambda: windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0]))
+    assert store.calls == 11                                # closed: every caller uses Redis
+    assert all(isinstance(r, windows.WindowResult) for r in after)
+
+
+def test_a_probe_that_raises_never_leaves_the_breaker_stuck_half_open(monkeypatch):
+    clock_now = [100.0]
+
+    def broken():
+        raise RuntimeError("client construction failed")
+
+    monkeypatch.setattr(windows, "_redis", broken)
+    expired_breaker(clock_now)
+    with pytest.raises(RuntimeError):
+        windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0])
+    assert windows._breaker.probing is False
+    store = SlowStore(delay=0, fail=False)
+    monkeypatch.setattr(windows, "_redis", lambda: store)
+    clock_now[0] += windows.BREAKER_S + 0.1                 # the next window gets a probe
+    assert windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0]).allowed
+    assert store.calls == 1
+
+
+def test_simultaneous_callers_open_one_connection_to_a_store_that_never_answers(silent_redis):
+    clock_now = [100.0]
+    expired_breaker(clock_now)
+    before = len(silent_redis)
+    results = race(10, lambda: windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0]))
+    import time as clock
+    clock.sleep(0.1)                                        # let the accept thread record it
+    assert len(silent_redis) - before <= 1
+    assert sum(isinstance(r, windows.LimiterUnavailable) for r in results) == 9
 
 
 def test_the_fallback_cap_counts_keys_not_visitors(signed):
