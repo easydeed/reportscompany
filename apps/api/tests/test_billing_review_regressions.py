@@ -3,7 +3,9 @@ import threading
 
 from api.services import billing_events as billing
 from api.services.billing_envelope import normalize_verified_event
-from test_billing_events_postgres import database, envelope, query, ACCOUNT  # noqa: F401
+from test_billing_events_postgres import (  # noqa: F401
+    database, envelope, query, ACCOUNT, pytestmark,
+)
 from test_billing_envelope import event
 
 
