@@ -227,3 +227,12 @@ with tenant context, and separately record the app connection's role flags.
 When D-005 hardens the role, the writer must retain table-owner access (without
 FORCE RLS), or an explicitly reviewed server-only policy. Do not silently
 change database roles in LR-011 or rely on tenant-context tests as that change.
+
+
+## Live endpoint version confirmed by Jerry
+
+Jerry confirmed `2025-10-29.clover` on November 19. Treat this as the live
+webhook endpoint version for signed fixtures, distinct from the SDK outgoing
+API default. Include Clover item-level period fields, a legacy fixture and
+missing/unsupported-period quarantine controls. This confirmation authorizes
+no live provider call or payment test.
