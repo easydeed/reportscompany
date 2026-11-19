@@ -37,15 +37,15 @@
   {
     "name": "C6 the card names an estimated value",
     "file": "apps/web/components/marketing/property-reports.tsx",
-    "old": "range of comparable sales · median",
-    "new": "estimated value · median",
+    "old": "the range of comparable sales, every",
+    "new": "the estimated value, every",
     "test": "tests/test_acquisition_copy_promises_no_estimate.py"
   },
   {
     "name": "C7 the card claims 90 days",
     "file": "apps/web/components/marketing/property-reports.tsx",
-    "old": "Comparable sales · last 6 months",
-    "new": "Comparable sales · last 90 days",
+    "old": "sale behind it and the local market.",
+    "new": "sale behind it over the last 90 days.",
     "test": "tests/test_acquisition_copy_promises_no_estimate.py"
   },
   {

@@ -12,6 +12,11 @@ Jerry approved the replacement wording (DECISIONS_AND_LANES.md, Acquisition
 wording): "See what homes like yours sold for" and "Get my report"; and on
 2026-11-11: "Based on the last 6 months of sales" for the window line, and on
 the property-report card "last 6 months" and "range of comparable sales".
+
+Landing v13 replaced that card with the real report stage. The card still
+says "range of comparable sales" and still must not name an estimate or a
+90-day window. It no longer states the six-month window; that line stays on
+the home-value page and the landing mock of it.
 """
 import re
 from pathlib import Path
@@ -21,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 APPROVED_HEADING = "See what homes like yours sold for"
 APPROVED_CTA = "Get my report"
 APPROVED_WINDOW = "Based on the last 6 months of sales"
-APPROVED_CARD = ("range of comparable sales", "last 6 months")
+APPROVED_CARD = ("range of comparable sales",)
 
 #: Every live surface that asks a homeowner (or tells an agent what a homeowner
 #: gets) for a report. Historical Design samples under docs/ are not live.
@@ -95,7 +100,7 @@ def test_the_window_line_says_six_months():
         assert APPROVED_WINDOW in _live_text(ROOT / rel).replace("&apos;", "'"), rel
 
 
-def test_the_property_card_shows_a_range_of_comparable_sales_over_six_months():
+def test_the_property_card_shows_a_range_of_comparable_sales():
     text = _live_text(ROOT / SURFACES["property-report card"]).lower()
     for phrase in APPROVED_CARD:
         assert phrase in text, phrase
