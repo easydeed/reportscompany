@@ -227,3 +227,34 @@ def test_rate_limiting_still_happens_when_redis_is_up(authenticated, monkeypatch
     finally:
         authn.redis.from_url = real
         app.middleware_stack = app.build_middleware_stack()
+
+
+def test_only_admitted_requests_reach_the_handler(monkeypatch):
+    import asyncio
+    from unittest.mock import AsyncMock, Mock
+    from starlette.requests import Request
+    from starlette.responses import Response
+
+    limiter = authn.RateLimitMiddleware(app)
+    counter = Mock()
+    counter.get.return_value = "1"
+    counter.incr.side_effect = [1, 2, 3, 1]
+    limiter.r = counter
+    clock = Mock(side_effect=[120, 121, 179, 180])
+    monkeypatch.setattr(authn, "time", Mock(time=clock))
+    request = Request({"type": "http", "path": "/example", "headers": []})
+    request.state.account_id = "test-account"
+
+    async def admitted(_):
+        return Response("accepted", headers={"Set-Cookie": "test=accepted"})
+
+    handler = AsyncMock(side_effect=admitted)
+    responses = [asyncio.run(limiter.dispatch(request, handler)) for _ in range(4)]
+    assert [r.status_code for r in responses] == [200, 429, 429, 200]
+    assert handler.await_count == 2
+    for refusal in responses[1:3]:
+        assert "set-cookie" not in refusal.headers
+        assert int(refusal.headers["Content-Length"]) == len(refusal.body)
+        assert refusal.headers["X-RateLimit-Remaining"] == "0"
+    assert responses[2].headers["Retry-After"] == "1"
+    assert counter.incr.call_args_list[0] != counter.incr.call_args_list[-1]
