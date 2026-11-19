@@ -1,107 +1,182 @@
-"""Atomic rolling counters for LR-006. Only the lb:* namespace holds budget state."""
-import time
-from collections import OrderedDict
-from threading import Lock
-from typing import NamedTuple
+"""Atomic sliding-hour counters for LR-006 (design #290 rev 2, sections 3 and 5).
 
-BUCKET_SECONDS = 300
-BUCKETS = 12
-TTL = (BUCKETS + 1) * BUCKET_SECONDS
+Only the `lb:*` namespace holds budget state.
+
+THE WINDOW IS AN EXACT SLIDING HOUR. Each key is a log of admitted timestamps.
+An admission removes entries at least 3,600 s old, counts the rest, and adds
+`now` to every key only if all of them are below their limit. An admitted
+request is therefore counted until exactly 3,600 s after it was admitted, and
+no key ever holds more than its limit in any 3,600 s span. Rev 1's twelve
+5-minute buckets ("current bucket plus the previous eleven") forgot an entry
+55-60 minutes after admission, which allowed 40 lookups inside 60 minutes.
+Only admitted requests are logged, so a key holds at most `limit` entries.
+
+`waits[i]` is the number of seconds, rounded up, until key i's oldest entry
+leaves the window: when a slot frees there. For an empty key it is the full
+window, the reset an admission now would have.
+
+Two stores, one algorithm:
+  * Redis (shared across workers): one Lua script per admission, timed by
+    the store's own clock (TIME, in microseconds), so every worker agrees.
+    It uses a dedicated client with 250 ms connect and 250 ms read timeouts
+    and no retries, about 500 ms in the worst case. The shared client in
+    `cache.py` allows 2 s for each. After a failure, a breaker sends the
+    process straight to the fallback for 30 s, so an outage does not add a
+    timeout to every search.
+  * LocalWindow (the per-process fallback): the same window in memory,
+    bounded in keys and entries, and locked.
+"""
+import math
+import threading
+import time
+from collections import OrderedDict, deque
+from typing import NamedTuple, Optional
+
+WINDOW_SECONDS = 3600
+WINDOW_US = WINDOW_SECONDS * 1_000_000
+SEQ_KEY = "lb:seq"            # makes two admissions in one microsecond distinct
+REDIS_TIMEOUT_S = 0.25        # connect, and separately read: ~0.5 s worst case
+BREAKER_S = 30.0
 Limits = tuple[tuple[str, int], ...]
 
 
 class WindowResult(NamedTuple):
     allowed: bool
     counts: tuple[int, ...]
-    # Seconds until the oldest counted bucket expires, in store clock time.
+    # Seconds until each key's oldest counted entry leaves the window.
     waits: tuple[int, ...]
 
 
-# Use the store's clock across workers. Each hash holds at most twelve
-# bucket/count pairs. Inspect every limit before incrementing any of them.
+class LimiterUnavailable(RuntimeError):
+    """The breaker is open: the shared store is skipped for now."""
+
+
+# KEYS[1..n] are the budget keys, KEYS[n+1] the sequence key.
+# ARGV[1] is the window in µs, ARGV[2..n+1] the limits.
 _TAKE = """
 if redis.replicate_commands then redis.replicate_commands() end
-local width, slots, ttl = tonumber(ARGV[1]), tonumber(ARGV[2]), tonumber(ARGV[3])
-local now = tonumber(redis.call('TIME')[1])
-local bucket = math.floor(now / width)
-local counts, expired, waits = {}, {}, {}
-local admit = 1
-for i, key in ipairs(KEYS) do
-    local fields = redis.call('HGETALL', key)
-    counts[i], expired[i] = 0, {}
-    local oldest = bucket
-    for j = 1, #fields, 2 do
-        if tonumber(fields[j]) > bucket - slots then
-            counts[i] = counts[i] + tonumber(fields[j + 1])
-            oldest = math.min(oldest, tonumber(fields[j]))
-        else
-            table.insert(expired[i], fields[j])
-        end
-    end
-    if counts[i] >= tonumber(ARGV[3 + i]) then admit = 0 end
-    waits[i] = (oldest + slots) * width - now
+local window = tonumber(ARGV[1])
+local t = redis.call('TIME')
+local now = tonumber(t[1]) * 1000000 + tonumber(t[2])
+local n = #KEYS - 1
+local counts, waits, admit = {}, {}, 1
+for i = 1, n do
+    redis.call('ZREMRANGEBYSCORE', KEYS[i], '-inf', now - window)
+    counts[i] = redis.call('ZCARD', KEYS[i])
+    if counts[i] >= tonumber(ARGV[1 + i]) then admit = 0 end
 end
 if admit == 1 then
-    for i, key in ipairs(KEYS) do
-        for _, field in ipairs(expired[i]) do redis.call('HDEL', key, field) end
-        redis.call('HINCRBY', key, bucket, 1)
-        redis.call('EXPIRE', key, ttl)
+    local member = string.format('%.0f-%d', now, redis.call('INCR', KEYS[n + 1]))
+    for i = 1, n do
+        redis.call('ZADD', KEYS[i], now, member)
+        redis.call('PEXPIRE', KEYS[i], math.floor(window / 1000))
         counts[i] = counts[i] + 1
     end
 end
-table.insert(counts, 1, admit)
-for _, wait in ipairs(waits) do table.insert(counts, wait) end
-return counts
+for i = 1, n do
+    local oldest = redis.call('ZRANGE', KEYS[i], 0, 0, 'WITHSCORES')
+    if oldest[2] then
+        waits[i] = math.max(1, math.ceil((tonumber(oldest[2]) + window - now) / 1000000))
+    else
+        waits[i] = math.floor(window / 1000000)
+    end
+end
+local out = {admit}
+for i = 1, n do table.insert(out, counts[i]) end
+for i = 1, n do table.insert(out, waits[i]) end
+return out
 """
 
+_client = None
+_client_lock = threading.Lock()
+_open_until = 0.0
 
-def take_shared(limits: Limits) -> WindowResult:
-    from ..cache import get_redis
 
+def _redis():
+    """The limiter's own client: 250 ms connect, 250 ms read, no retries."""
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                import redis
+                from redis.backoff import NoBackoff
+                from redis.retry import Retry
+                from ..settings import settings
+                _client = redis.from_url(
+                    settings.REDIS_URL,
+                    socket_connect_timeout=REDIS_TIMEOUT_S,
+                    socket_timeout=REDIS_TIMEOUT_S,
+                    retry_on_timeout=False,
+                    retry=Retry(NoBackoff(), 0),
+                )
+    return _client
+
+
+def take_shared(limits: Limits, clock=time.monotonic) -> WindowResult:
+    global _open_until
+    if clock() < _open_until:
+        raise LimiterUnavailable("lookup limiter breaker open")
     keys, ceilings = zip(*limits)
-    admitted, *values = get_redis().eval(
-        _TAKE, len(keys), *keys, BUCKET_SECONDS, BUCKETS, TTL, *ceilings
-    )
+    try:
+        admitted, *values = _redis().eval(_TAKE, len(keys) + 1, *keys, SEQ_KEY, WINDOW_US, *ceilings)
+    except Exception:
+        _open_until = clock() + BREAKER_S
+        raise
     if admitted not in (0, 1) or len(values) != 2 * len(keys):
         raise ValueError("Invalid lookup budget response")
     return WindowResult(bool(admitted), tuple(values[:len(keys)]), tuple(values[len(keys):]))
 
 
 class LocalWindow:
-    """Process-local fallback. Never evict a live counter to admit a new key."""
+    """Process-local fallback: the same sliding hour, bounded, locked.
+
+    At most `capacity` live keys, each with at most `limit` entries. Expired
+    keys are dropped on every admission. A request that would need a key
+    beyond the capacity is REFUSED: a live counter is never evicted, because
+    eviction would reset someone's allowance. Prune, check and add run under
+    one lock, so two threads cannot both take a key's last slot.
+    """
 
     def __init__(self, capacity: int, clock=time.monotonic):
         self.capacity = capacity
         self.clock = clock
-        self.lock = Lock()
-        self.windows: OrderedDict[str, dict[int, int]] = OrderedDict()
+        self.lock = threading.Lock()
+        # Ordered by last admission, so expired keys are always at the front.
+        self.windows: "OrderedDict[str, deque]" = OrderedDict()
+
+    def _waits(self, logs, now) -> tuple[int, ...]:
+        return tuple(max(1, math.ceil(log[0] + WINDOW_SECONDS - now)) if log else WINDOW_SECONDS
+                     for log in logs)
 
     def take(self, limits: Limits) -> WindowResult:
         with self.lock:
-            now = int(self.clock())
-            bucket = now // BUCKET_SECONDS
-            cutoff = bucket - BUCKETS
-            # Entries are ordered by last increment. Expired keys won't
-            # occupy the cardinality budget when unrelated visitors arrive.
+            now = self.clock()
+            cutoff = now - WINDOW_SECONDS
             while self.windows:
-                oldest = next(iter(self.windows.values()))
-                if max(oldest) > cutoff:
+                first = next(iter(self.windows.values()))
+                if first and first[-1] > cutoff:
                     break
                 self.windows.popitem(last=False)
 
             keys, ceilings = zip(*limits)
-            active = [
-                {b: n for b, n in self.windows.get(k, {}).items() if b > cutoff}
-                for k in keys
-            ]
-            counts = tuple(sum(w.values()) for w in active)
-            waits = tuple((min(w, default=bucket) + BUCKETS) * BUCKET_SECONDS - now for w in active)
+            logs: list[Optional[deque]] = []
+            for key in keys:
+                log = self.windows.get(key)
+                while log and log[0] <= cutoff:
+                    log.popleft()
+                logs.append(log)
+            counts = tuple(len(log) if log else 0 for log in logs)
             if any(n >= limit for n, limit in zip(counts, ceilings)):
-                return WindowResult(False, counts, waits)
-            if len(self.windows) + sum(k not in self.windows for k in keys) > self.capacity:
+                return WindowResult(False, counts, self._waits(logs, now))
+            new_keys = {key for key in keys if key not in self.windows}
+            if len(self.windows) + len(new_keys) > self.capacity:
                 return WindowResult(False, counts, ())
-            for key, window in zip(keys, active):
-                window[bucket] = window.get(bucket, 0) + 1
-                self.windows[key] = window
+            admitted = []
+            for key, log in zip(keys, logs):
+                if log is None:
+                    log = deque()
+                    self.windows[key] = log
+                log.append(now)
                 self.windows.move_to_end(key)
-            return WindowResult(True, tuple(n + 1 for n in counts), waits)
+                admitted.append(log)
+            return WindowResult(True, tuple(n + 1 for n in counts), self._waits(admitted, now))

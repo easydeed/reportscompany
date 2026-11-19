@@ -16,6 +16,8 @@ from api.services import public_lookup_budget as budget
 @pytest.fixture(autouse=True)
 def observation_mode(monkeypatch):
     monkeypatch.setenv("LOOKUP_BUDGET_ENFORCE", "0")
+    monkeypatch.setattr(windows, "_open_until", 0.0, raising=False)
+    monkeypatch.setattr(windows, "_client", None, raising=False)
 
 
 def request(page="sample", headers=()):
@@ -65,14 +67,12 @@ def test_generated_identities_share_only_the_documented_budgets(signed):
 
 
 def test_shared_store_submits_both_limits_in_one_script_call(monkeypatch):
-    from api import cache
-
     redis = Mock()
     redis.eval.return_value = [0, 20, 55, 123, 456]
-    monkeypatch.setattr(cache, "get_redis", lambda: redis)
+    monkeypatch.setattr(windows, "_redis", lambda: redis)
     assert windows.take_shared((("lb:v:generated", 20), ("lb:ip:generated", 60))) == (False, (20, 55), (123, 456))
-    redis.eval.assert_called_once_with(windows._TAKE, 2, "lb:v:generated", "lb:ip:generated",
-                                       300, 12, 3900, 20, 60)
+    redis.eval.assert_called_once_with(windows._TAKE, 3, "lb:v:generated", "lb:ip:generated",
+                                       windows.SEQ_KEY, 3_600_000_000, 20, 60)
 
 
 def test_address_ceiling_and_refused_pair_are_atomic(signed):
@@ -85,19 +85,48 @@ def test_address_ceiling_and_refused_pair_are_atomic(signed):
     assert local.take(people[0]) == (False, (20, 60), (3600, 3600))
 
 
-def test_rolling_hour_preserves_recent_buckets_and_reuses_expired_capacity():
+def test_the_window_is_an_exact_sliding_hour():
     now = [3599]
     local = windows.LocalWindow(1, lambda: now[0])
-    assert local.take(budget.DIRECT) == (True, (1,), (3301,))
+    assert local.take(budget.DIRECT) == (True, (1,), (3600,))
     now[0] = 3600
     for _ in range(19):
         assert local.take(budget.DIRECT)[0]
-    assert local.take(budget.DIRECT) == (False, (20,), (3300,))
-    assert local.take((("lb:v:next", 20),)) == (False, (0,), ())
-    now[0] = 6900  # first five-minute bucket has just left the rolling window
-    assert local.take(budget.DIRECT) == (True, (20,), (300,))
+    assert local.take(budget.DIRECT) == (False, (20,), (3599,))   # the 3599 entry frees in 3599 s
+    assert local.take((("lb:v:next", 20),)) == (False, (0,), ())  # capacity 1: refused, nothing evicted
+    now[0] = 7198
+    assert local.take(budget.DIRECT) == (False, (20,), (1,))      # one second early
+    now[0] = 7199                                                 # exactly 3,600 s after it
+    assert local.take(budget.DIRECT) == (True, (20,), (1,))
     now[0] += 3600
-    assert local.take((("lb:v:next", 20),)) == (True, (1,), (3600,))
+    assert local.take((("lb:v:next", 20),)) == (True, (1,), (3600,))  # expired key dropped, slot reused
+
+
+def test_rev1_bucket_burst_is_refused_twenty_in_any_hour():
+    """Rev 1 forgot an entry 55-60 minutes on: 20 at 4:59 and 20 at 60:00 got 40 in 55:01."""
+    now = [299]
+    local = windows.LocalWindow(4, lambda: now[0])
+    for _ in range(20):
+        assert local.take(budget.DIRECT)[0]
+    for t in (3300, 3600, 3898):
+        now[0] = t
+        assert local.take(budget.DIRECT) == (False, (20,), (299 + 3600 - t,))
+    now[0] = 3899
+    assert local.take(budget.DIRECT).allowed
+
+
+def test_retry_after_is_the_largest_wait_among_exhausted_keys():
+    now = [0]
+    local = windows.LocalWindow(64, lambda: now[0])
+    visitor, address = ("lb:v:a", 20), ("lb:ip:a", 60)
+    for _ in range(40):                       # other visitors fill the address first
+        now[0] += 1
+        assert local.take((("lb:v:other%d" % now[0], 20), address)).allowed
+    now[0] = 1000
+    for _ in range(20):
+        assert local.take((visitor, address)).allowed
+    result = local.take((visitor, address))
+    assert result == (False, (20, 60), (3600, 2601))   # visitor frees at 4600, address at 3601
 
 
 def test_concurrent_fallback_takes_only_twenty():
@@ -197,3 +226,122 @@ async def test_failed_local_counter_uses_busy_response(signed, monkeypatch):
         await budget.check_request(signed(1, "192.0.2.2"))
     assert result.value.body["code"] == "lookup_busy"
     assert result.value.headers == {"Retry-After": "60"}
+
+
+# ── Codex re-review of #290: the actual bounds, measured ────────────────────
+
+def test_the_limiter_client_is_its_own_with_250ms_waits_and_no_retries():
+    from api import cache
+    client = windows._redis()
+    kwargs = client.connection_pool.connection_kwargs
+    assert kwargs["socket_connect_timeout"] == 0.25 and kwargs["socket_timeout"] == 0.25
+    assert client.get_retry()._retries == 0
+    assert client is not cache.get_redis()
+
+
+@pytest.fixture
+def silent_redis(monkeypatch):
+    """A TCP server that accepts and never answers: every read times out."""
+    import socket
+    import threading
+    from api.settings import settings
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen(16)
+    accepted = []
+
+    def accept():
+        while True:
+            try:
+                conn, _ = server.accept()
+            except OSError:
+                return
+            accepted.append(conn)
+
+    threading.Thread(target=accept, daemon=True).start()
+    monkeypatch.setattr(settings, "REDIS_URL", f"redis://127.0.0.1:{server.getsockname()[1]}/0")
+    yield accepted
+    server.close()
+    for conn in accepted:
+        conn.close()
+
+
+def test_an_unanswering_store_costs_about_half_a_second_then_the_breaker_skips_it(silent_redis):
+    import time as clock
+    clock_now = [100.0]
+    started = clock.monotonic()
+    with pytest.raises(Exception):
+        windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0])
+    elapsed = clock.monotonic() - started
+    # Connect is instant here, so this is the 250 ms read timeout. With any
+    # retry it would be at least 0.5 s more; the ~500 ms total is 250 ms
+    # connect plus 250 ms read, and the connect half is pinned by the test above.
+    assert 0.2 <= elapsed < 0.5, elapsed
+    connections = len(silent_redis)
+
+    started = clock.monotonic()
+    with pytest.raises(windows.LimiterUnavailable):
+        windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0] + 29.9)
+    assert clock.monotonic() - started < 0.05            # breaker open: no wait at all
+    assert len(silent_redis) == connections               # and no connection attempt
+
+    clock_now[0] += 30.1                                  # breaker expired: one more try
+    with pytest.raises(Exception) as tried:
+        windows.take_shared(budget.DIRECT, clock=lambda: clock_now[0])
+    assert not isinstance(tried.value, windows.LimiterUnavailable)
+
+
+def test_the_fallback_cap_counts_keys_not_visitors(signed):
+    """4,096 keys. A signed visitor with their own address needs two (visitor, address)."""
+    local = windows.LocalWindow(4096, lambda: 0)
+    first = budget.request_limits(signed(0, "10.0.0.0"))
+    for _ in range(20):
+        assert local.take(first).allowed
+    admitted = 1
+    for n in range(1, 2100):
+        limits = budget.request_limits(signed(n, f"10.{n // 65536}.{n // 256 % 256}.{n % 256}"))
+        result = local.take(limits)
+        assert len(local.windows) <= 4096
+        if not result.allowed:
+            assert result.waits == ()                     # refused for capacity: lookup_busy
+            break
+        admitted += 1
+    assert admitted == 2048 and len(local.windows) == 4096
+    assert local.take(first) == (False, (20, 20), (3600, 3600))   # visitor 1's count was not reset
+    assert len(local.windows) == 4096
+
+
+def test_a_full_fallback_still_admits_known_keys_and_refuses_new_ones(signed):
+    local = windows.LocalWindow(4, lambda: 0)
+    a, b = budget.request_limits(signed(1, "192.0.2.1")), budget.request_limits(signed(2, "192.0.2.2"))
+    assert local.take(a).allowed and local.take(b).allowed           # 4 keys: full
+    assert local.take(budget.request_limits(signed(3, "192.0.2.3"))) == (False, (0, 0), ())
+    assert local.take(a).allowed                                      # existing keys keep working
+
+
+def test_concurrent_final_slot_with_the_store_down_admits_exactly_one():
+    window = windows.LocalWindow(4096, lambda: 0)
+    for _ in range(19):
+        assert window.take(budget.DIRECT).allowed
+    import threading
+    barrier = threading.Barrier(10)
+
+    def race(_):
+        barrier.wait()
+        return window.take(budget.DIRECT).allowed
+
+    with ThreadPoolExecutor(10) as pool:
+        assert sum(pool.map(race, range(10))) == 1
+
+
+async def test_a_store_outage_goes_to_the_bounded_fallback_without_waiting_again(silent_redis, monkeypatch, caplog):
+    import time as clock
+    monkeypatch.setattr(budget, "_request_fallback", windows.LocalWindow(4096, lambda: 0))
+    caplog.set_level(logging.INFO, logger=budget.logger.name)
+    await budget.check_request(request())                 # pays the ~0.25 s once, opens the breaker
+    started = clock.monotonic()
+    for _ in range(25):
+        await budget.check_request(request())
+    assert clock.monotonic() - started < 0.5              # 25 decisions without touching the store
+    degraded = [m for m in caplog.messages if m.startswith("LOOKUP_LIMITER_DEGRADED stage=direct")]
+    assert len(degraded) == 26 and degraded[-1].endswith("would-refuse counts=(20,)")

@@ -88,7 +88,8 @@ class LookupRefusal(Exception):
 
 
 async def _check(stage: str, limits: Limits, fallback: LocalWindow, local_limits: Limits) -> dict[str, str]:
-    # The shared Redis client is synchronous and configured with finite timeouts.
+    # The limiter has its own Redis client (250 ms connect, 250 ms read, no
+    # retries) and a 30 s breaker: lookup_windows.take_shared.
     try:
         result = await asyncio.to_thread(take_shared, limits)
         event = "LOOKUP_BUDGET"

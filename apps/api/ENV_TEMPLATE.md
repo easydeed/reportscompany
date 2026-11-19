@@ -115,7 +115,10 @@ credentials fails at the token call.
 
 The initial API setting is `LOOKUP_BUDGET_ENFORCE=0` (the default). Public
 searches proceed and emit count-only `LOOKUP_BUDGET` decisions. A shared-store
-failure emits `LOOKUP_LIMITER_DEGRADED` and uses per-process counters. Provider
+failure emits `LOOKUP_LIMITER_DEGRADED` and uses per-process counters. The limiter has its own
+Redis connection (250 ms connect, 250 ms read, no retries) and, after a failure,
+skips the shared store for 30 s instead of waiting on every search. Budgets are an
+exact sliding hour. Provider
 decisions count outbound property-search attempts, including retries. Each
 attempt reserves one slot before token acquisition, so a failed token refresh
 consumes that slot and a refused attempt never contacts the token endpoint.
