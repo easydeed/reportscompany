@@ -16514,11 +16514,13 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 
 **Evidence:** `apps/worker/src/worker/sms/send.py:59` logs `to_number` on successful customer sends; lines 67 and 78 also include it on provider and unexpected errors. This is a source-confirmed logging path, not a live send or an inspection of production log contents. LR-027's operator wrapper avoids destinations but does not repair the existing customer sender.
 
+The API's second customer sender, `apps/api/src/api/services/twilio_sms.py:84`, logs `to_phone[:6]` on success; line 96 logs provider error text that can echo the full destination. This sender is used by `routes/leads.py`. The separate fix must cover both senders, including partial destinations and provider echoes.
+
 **Impact:** customer and agent destination numbers enter application logs, expanding access and retention beyond the delivery journal.
 
 **Required fix:** remove raw and normalized destinations from success/error logs, including provider exception text that could echo them. Keep only safe correlation IDs and outcome classes. Preserve send payloads and delivery-state behavior.
 
-**Acceptance:** capture logs for successful, refused and uncertain customer SMS outcomes using fake Twilio responses containing sentinel phone numbers; prove no destination or echoed sentinel appears. No real SMS or production-log purge is authorized by this filing.
+**Acceptance:** capture logs from both the worker and API senders for successful, refused and uncertain customer SMS outcomes using fake Twilio responses containing sentinel phone numbers; prove no full destination, exposed destination prefix or echoed sentinel appears. No real SMS or production-log purge is authorized by this filing.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
