@@ -195,6 +195,12 @@ def consumer_delivery_stuck(cur) -> Reading:
       * `failed`, once its last write is older than the window: the agent task
         retries a refusal up to 3 times (60/120/180 s). release_agent_refused
         clears the claim time, so updated_at (trigger-maintained) dates it.
+      * never started: homeowner sent evidence older than the window, status
+        NULL, and an agent with a usable phone. process_consumer_report can
+        die between the homeowner's `sent` write and claim_agent_notification.
+        The 24-hour automatic-recovery boundary (AGENT_NOTIFY_RECOVERY_HOURS)
+        is the writer's, and unchanged: a row past it stays in the incident
+        for a person, and nothing here makes it eligible for a re-text.
     PDF stage: `failed`, or `queued`/`generating` with a claim older than the
     window.
     """
@@ -222,6 +228,19 @@ def consumer_delivery_stuck(cur) -> Reading:
                 -- dated by its last write (updated_at, kept by a trigger).
                 OR (agent_notify_status = 'failed'
                     AND updated_at < now() - make_interval(mins => %(m)s))
+                -- Never started: the homeowner delivery committed, then the
+                -- run died before _notify_agent claimed (Codex re-review of
+                -- #323). Same shape as the writer's own eligibility: status
+                -- NULL and an agent with a usable phone, so an intentional
+                -- no-phone `skipped` is never flagged. Dated by the homeowner
+                -- delivery. Read-only: past AGENT_NOTIFY_RECOVERY_HOURS the
+                -- row stays visible here and the writer still refuses it.
+                OR (agent_notify_status IS NULL
+                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)
+                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)
+                          < now() - make_interval(mins => %(m)s)
+                    AND EXISTS (SELECT 1 FROM users u WHERE u.id = consumer_reports.agent_id
+                                AND NULLIF(btrim(u.phone), '') IS NOT NULL))
             ))
             OR pdf_status = 'failed'
             OR (pdf_status IN ('queued', 'generating')

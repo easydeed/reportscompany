@@ -555,6 +555,75 @@ def test_an_agent_refusal_counts_only_after_its_retries(cur):
     assert stuck(cur) == {f"consumer:{rid}"}                          # no retry came
 
 
+def homeowner_delivered(cur, *, phone="+15555550100"):
+    """A lead whose homeowner email the REAL writers recorded as sent."""
+    from worker import consumer_delivery as cd
+    agent = u()
+    cur.execute("INSERT INTO users (id, account_id, email, phone) VALUES (%s, %s, %s, %s)",
+                (agent, u(), f"agent-{agent[:8]}@example.com", phone))
+    rid, gen = consumer_row(cur, status="processing", agent_id=agent)
+    attempt, _key = cd.claim_email(cur.connection, rid, gen, account_id=u(),
+                                   to_email="homeowner@example.com", subject="Your report")
+    assert cd.record_email_sent(cur.connection, rid, attempt, account_id=u(),
+                                response_code=200, provider_message_id="msg-test")
+    cur.execute("SELECT status, agent_notify_status FROM consumer_reports WHERE id = %s", (rid,))
+    assert cur.fetchone() == ("sent", None)                           # stopped BEFORE the agent claim
+    return rid
+
+
+def delivered_ago(cur, rid, interval):
+    cur.execute("UPDATE consumer_reports SET consumer_email_sent_at = now() - %s::interval WHERE id = %s",
+                (interval, rid))
+
+
+def test_an_agent_text_that_never_started_is_reported(cur):
+    """Codex re-review of #323: the run died between the homeowner's `sent`
+    write and claim_agent_notification, so no agent claim, SID or time exists."""
+    from worker import consumer_delivery as cd
+    rid = homeowner_delivered(cur)
+    assert stuck(cur) == set()                                        # fresh: _notify_agent runs inline
+    delivered_ago(cur, rid, "20 minutes")
+    assert stuck(cur) == {f"consumer:{rid}"}                          # overdue and never claimed
+    claimed = cd.claim_agent_notification(cur.connection, rid, from_phone="+15555550199",
+                                          build_body=lambda row: "New lead")
+    assert claimed is not None                                        # the writer agrees it is recoverable
+    assert cd.record_agent_sent(cur.connection, rid, claimed[0], sid="SM-test")
+    assert stuck(cur) == set()                                        # already-sent evidence
+
+
+def test_an_unstarted_agent_text_is_not_reported_when_it_is_not_owed(cur):
+    from worker import consumer_delivery as cd
+    no_phone = homeowner_delivered(cur, phone="  ")                   # no usable phone
+    delivered_ago(cur, no_phone, "20 minutes")
+    blank = homeowner_delivered(cur, phone=None)
+    delivered_ago(cur, blank, "20 minutes")
+    assert stuck(cur) == set()
+    skipped = homeowner_delivered(cur)                                # the writer's intentional skip
+    delivered_ago(cur, skipped, "20 minutes")
+    cur.execute("UPDATE consumer_reports SET agent_notify_status = 'skipped' WHERE id = %s", (skipped,))
+    sent = homeowner_delivered(cur)                                   # sent evidence, status untouched
+    delivered_ago(cur, sent, "20 minutes")
+    cur.execute("UPDATE consumer_reports SET agent_sms_sent_at = now() WHERE id = %s", (sent,))
+    sid_only = homeowner_delivered(cur)
+    delivered_ago(cur, sid_only, "20 minutes")
+    cur.execute("UPDATE consumer_reports SET agent_sms_sid = 'SM-x' WHERE id = %s", (sid_only,))
+    assert stuck(cur) == set()
+    assert cd.claim_agent_notification(cur.connection, no_phone, from_phone="+15555550199",
+                                       build_body=lambda row: "x") is None
+
+
+def test_past_the_recovery_window_it_stays_reported_and_is_never_re_texted(cur):
+    """The 24-hour automatic-recovery boundary is the writer's. The alert keeps
+    the row in front of a person; it does not make it eligible again."""
+    from worker import consumer_delivery as cd
+    rid = homeowner_delivered(cur)
+    delivered_ago(cur, rid, f"{cd.AGENT_RECOVERY_HOURS + 1} hours")
+    assert stuck(cur) == {f"consumer:{rid}"}
+    assert cd.agent_stage(cur, rid)[2] is False                       # not eligible
+    assert cd.claim_agent_notification(cur.connection, rid, from_phone="+15555550199",
+                                       build_body=lambda row: "x") is None
+
+
 @pytest.fixture
 def committed_runs():
     made = []

@@ -131,5 +131,40 @@
   "old": "            WHERE recovery_tracked AND status = 'failed'\n              AND finished_at > now() - interval '1 hour'\n              AND (error LIKE 'failed\\\\_email: nothing sent (%%'",
   "new": "            WHERE recovery_tracked\n              AND finished_at > now() - interval '1 hour'\n              AND (error LIKE '%%nothing sent%%'",
   "test": "apps/worker/tests/test_ops_monitor.py::test_tracked_pre_claim_refusals_reach_send_not_attempted"
+ },
+ {
+  "name": "Codex #323 re-review: an agent text that never started is invisible again",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                OR (agent_notify_status IS NULL\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "new": "                OR (agent_notify_status = 'never-matches'\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_agent_text_that_never_started_is_reported"
+ },
+ {
+  "name": "Codex #323 re-review: a fresh homeowner delivery (agent text still due inline) is flagged",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          < now() - make_interval(mins => %(m)s)",
+  "new": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          <= now()",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_agent_text_that_never_started_is_reported"
+ },
+ {
+  "name": "Codex #323 re-review: an agent with no usable phone (intentional skip) is flagged",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                    AND EXISTS (SELECT 1 FROM users u WHERE u.id = consumer_reports.agent_id\n                                AND NULLIF(btrim(u.phone), '') IS NOT NULL))",
+  "new": "                    AND TRUE)",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_unstarted_agent_text_is_not_reported_when_it_is_not_owed"
+ },
+ {
+  "name": "Codex #323 re-review: the writer's `skipped` state is flagged",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                OR (agent_notify_status IS NULL\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "new": "                OR (agent_notify_status IS DISTINCT FROM 'sent'\n                    AND (consumer_sms_sent_at IS NOT NULL OR consumer_email_sent_at IS NOT NULL)",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_an_unstarted_agent_text_is_not_reported_when_it_is_not_owed"
+ },
+ {
+  "name": "Codex #323 re-review: a row past the 24-hour recovery window silently drops out of the incident",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          < now() - make_interval(mins => %(m)s)",
+  "new": "                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at)\n                          < now() - make_interval(mins => %(m)s)\n                    AND GREATEST(consumer_sms_sent_at, consumer_email_sent_at) > now() - interval '24 hours'",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_past_the_recovery_window_it_stays_reported_and_is_never_re_texted"
  }
 ]
