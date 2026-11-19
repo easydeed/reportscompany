@@ -51,6 +51,20 @@ def _date_window(lookback_days: int) -> tuple[str, str]:
     start = end - timedelta(days=max(1, int(lookback_days or 30)))
     return start.isoformat(), end.isoformat()
 
+def postal_area(value):
+    """Use the five-digit delivery area for a US ZIP or ZIP+4."""
+    if isinstance(value, int) and 0 < value <= 99999:
+        return str(value).zfill(5)
+    text = str(value or "").strip()
+    if len(text) == 10 and text[5] == "-" and text[:5].isdigit() and text[6:].isdigit():
+        return text[:5]
+    return text
+
+
+def normalized_zips(zips):
+    return [area for value in (zips or []) if (area := postal_area(value))]
+
+
 def _location(params: dict) -> Dict:
     """
     Location can be provided as a single city string or a list of ZIPs.
@@ -64,7 +78,7 @@ def _location(params: dict) -> Dict:
     We use `q` as a fallback which performs fuzzy search.
 
     Priority:
-    1. If zips present: use postalCodes=comma-separated list
+    1. If zips present: repeat postalCodes once per ZIP
     2. Else if city present (PRODUCTION mode): use q=<city> (fuzzy search)
     3. Else (DEMO mode): return empty (Houston-only data by default)
 
@@ -90,12 +104,12 @@ def _location(params: dict) -> Dict:
     into every listing in the MLS, with a 200 and no warning. The probe canaries
     `cities` against production; the swap waits for that verdict.
     """
-    zips = params.get("zips") or []
+    zips = normalized_zips(params.get("zips"))
     city = (params.get("city") or "").strip()
     
     # ZIP codes work in both demo and production
     if zips:
-        return {"postalCodes": ",".join(z.strip() for z in zips if z.strip())}
+        return {"postalCodes": zips}
     
     # City search - use `q` parameter (fuzzy search) which works with all accounts
     # Note: `cities` parameter is more explicit but may not be supported by all accounts

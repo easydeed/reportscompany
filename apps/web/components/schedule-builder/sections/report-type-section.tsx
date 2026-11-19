@@ -3,8 +3,10 @@
 import { Images, BarChart3, Home, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { ScheduleBuilderState, ReportType, AudienceFilter } from "../types"
+import { REPORT_TYPE_LABELS } from "../types"
 
 interface ReportTypeSectionProps {
+  locked?: boolean
   reportType: ReportType | null
   audienceFilter: AudienceFilter
   audienceFilterName: string | null
@@ -47,6 +49,7 @@ const AUDIENCE_PRESETS = [
 ]
 
 export function ReportTypeSection({
+  locked = false,
   reportType,
   audienceFilter,
   audienceFilterName,
@@ -87,7 +90,9 @@ export function ReportTypeSection({
       </div>
 
       <div className="px-5 pb-5">
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        {locked && reportType ? (
+          <p className="mb-4 text-sm">{REPORT_TYPE_LABELS[reportType]}</p>
+        ) : <div className="grid grid-cols-3 gap-3 mb-4">
           {REPORT_TYPES.map((type) => {
             const isSelected = reportType === type.id
             const Icon = type.icon
@@ -126,11 +131,14 @@ export function ReportTypeSection({
               </button>
             )
           })}
-        </div>
+        </div>}
 
         {showAudiencePills && (
           <div className="pt-3 border-t border-gray-100">
             <p className="text-xs text-gray-500 mb-2">Target audience (optional)</p>
+            {locked && audienceFilter === null && (
+              <p className="mb-2 text-sm">{audienceFilterName || "Custom filters"}</p>
+            )}
             <div className="flex flex-wrap gap-2">
               {AUDIENCE_PRESETS.map((preset) => {
                 const isSelected = audienceFilter === preset.id

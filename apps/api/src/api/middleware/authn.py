@@ -15,6 +15,7 @@ from typing import Optional
 import redis
 import time
 import hashlib
+import re
 import logging
 from ..settings import settings
 from ..auth import verify_jwt, hash_api_key, session_password_matches
@@ -102,6 +103,32 @@ if _demo_header_allowed():
         "X-Demo-Account header is ENABLED (ENVIRONMENT=%r). This accepts an "
         "account id as proof of identity and must never be on outside tests.",
         settings.ENVIRONMENT,
+    )
+
+
+# The two server-side renderers, the report Share page
+# (apps/web/app/api/social/[runId]/route.ts) and the legacy print page
+# (apps/web/app/print/[runId]/page.tsx), read /v1/reports/{id}/data with
+# X-Internal-Render-Token and no account. The route checks that token itself,
+# with hmac.compare_digest (routes/report_data.py, `_is_internal_render_caller`).
+#
+# This middleware used to refuse them first, because it refuses every request
+# without an account, so the route's token check was unreachable. In
+# production every Share link answered "Report Not Found" (404), and the
+# worker's social-image render could not load the report either.
+#
+# Exactly this request shape is passed through, unauthenticated, to that route
+# and nowhere else: the path must be /v1/reports/<one segment>/data and the
+# header must be present. The value is NOT trusted here; the route compares it
+# to INTERNAL_RENDER_TOKEN and 401s a wrong one, and 400s a malformed id before
+# reading anything. request.state.account_id stays unset, so the route takes
+# its token path, and the rate limiter (which counts accounts) skips it.
+_RENDER_TOKEN_PATH = re.compile(r"^/v1/reports/[^/]+/data$")
+
+
+def _render_token_request(request: Request) -> bool:
+    return bool(_RENDER_TOKEN_PATH.match(request.url.path)) and bool(
+        request.headers.get("X-Internal-Render-Token")
     )
 
 
@@ -193,6 +220,8 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 acct = demo
 
         if not acct:
+            if _render_token_request(request):
+                return await call_next(request)
             return JSONResponse(
                 status_code=401, content={"detail": "Unauthorized"}
             )
@@ -367,7 +396,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 pass  # Use default 60 if DB fails
             self._redis("setex", limit_key, 300, str(limit))  # Cache 5 min
 
-        # ── Token bucket check ───────────────────────────────────────────
+        # ── Fixed one-minute window ───────────────────────────────────────────
         now = int(time.time())
         minute = now - (now % 60)
         key = f"ratelimit:{acct}:{minute}"
@@ -390,13 +419,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Degraded"] = "1"
             return response
 
-        remaining = max(0, limit - count)
-
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-        response.headers["X-RateLimit-Reset"] = str(reset)
-
+        headers = {
+            "X-RateLimit-Limit": str(limit),
+            "X-RateLimit-Remaining": str(max(0, limit - count)),
+            "X-RateLimit-Reset": str(reset),
+        }
         if count > limit:
             return JSONResponse(
                 status_code=429,
@@ -405,6 +432,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     "message": f"Rate limit of {limit} requests/minute exceeded",
                     "retry_after": reset,
                 },
-                headers=dict(response.headers),
+                headers={**headers, "Retry-After": str(reset)},
             )
+        response = await call_next(request)
+        response.headers.update(headers)
         return response
