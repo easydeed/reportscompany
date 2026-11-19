@@ -1,41 +1,114 @@
 "use client";
 
 /**
- * "Lead capture" — Design's `Landing v4`, the home-value page on a phone.
+ * "Lead capture" — Design's `Landing v13`, the home-value page on a phone.
+ *
+ * New in v13: the three steps under the copy, and the two ends of the loop
+ * beside the phone — where the homeowner came from (the QR chip, top right)
+ * and what they get back (a property report cover, left). The lead card
+ * (bottom right) is v4's. The two new pieces are hidden below `sm`.
+ *
+ * The page on the phone keeps main's wording, not the deck's: "See what homes
+ * like yours sold for" / "Get my report", not "What's your home worth today?"
+ * / "Get my estimate". The report estimates nothing (LR-025, D-383), so the
+ * page that hands it over does not promise an estimate. The lede was reworded
+ * to match for the same reason.
+ *
+ * The cover is the first template's render the wizard already ships
+ * (`/previews/pages/{id}/cover.jpg`).
  *
  * The arriving lead is a fixture contact rather than the deck's own name, so
- * the person who asks for a value here is the same person the contacts
- * preview below lists as a new lead.
+ * the person who asks here is the same person the contacts preview below
+ * lists as a new lead.
  */
 import type { CSSProperties } from "react";
-import { UserPlus } from "lucide-react";
-import { DEMO_AGENT, DEMO_CONTACTS, DEMO_LEAD } from "@/lib/demo-data";
+import Image from "next/image";
+import { QrCode, UserPlus } from "lucide-react";
+import { DEMO_AGENT, DEMO_CONTACTS, DEMO_LEAD, currentMonthName } from "@/lib/demo-data";
+import { THEMES } from "@/components/property-wizard/types";
 import {
   AgentDisc,
   DotField,
+  FloatCard,
   PhoneFrame,
   SectionCopy,
   SplitSection,
   useLandingTheme,
+  type Step,
 } from "./landing-primitives";
 
 /** The contact who arrives as a lead — shared with the contacts preview. */
 export const LEAD_CONTACT = DEMO_CONTACTS[3];
 
+const STEPS: readonly Step[] = [
+  [
+    "They scan or tap",
+    "A QR code on your reports, and a link for your email signature and open-house sign.",
+  ],
+  ["They ask", "They enter their address and how to reach them."],
+  [
+    "You both get something",
+    "They receive a property report with your branding. You get their name and number.",
+  ],
+];
+
 export function LeadCapture() {
   const { primary } = useLandingTheme();
 
   return (
-    <SplitSection white id="lead-capture">
+    <SplitSection id="lead-capture">
       <SectionCopy
         eyebrow="Lead capture"
         title="A home-value page with your name on it."
-        lede="Put the link in your reports, your signature, your open-house sign. Leads land in your inbox."
+        lede="Homeowners want to know what homes like theirs sold for. They get a report with your brand on it, and you get the lead."
+        steps={STEPS}
       />
 
       <div className="relative h-[600px] min-w-0 sm:h-[640px]">
         <DotField />
-        <PhoneFrame tilt={3}>
+
+        {/* What they get back. */}
+        <div
+          className="absolute left-0 top-[84px] hidden w-[204px] flex-col gap-2.5 sm:flex"
+          style={{ transform: "rotate(-7deg)" }}
+        >
+          <span className="whitespace-nowrap text-[13px] font-semibold text-[#475569]">
+            They receive this
+          </span>
+          <div
+            className="overflow-hidden rounded-md bg-white"
+            style={{
+              aspectRatio: "510 / 660",
+              boxShadow: "0 30px 60px -20px rgba(15,23,42,0.4), 0 0 0 1px rgba(15,23,42,0.06)",
+            }}
+          >
+            <Image
+              src={`/previews/pages/${THEMES[0].id}/cover.jpg`}
+              alt=""
+              width={510}
+              height={660}
+              sizes="204px"
+              className="block h-full w-full"
+            />
+          </div>
+        </div>
+
+        {/* Where they came from. */}
+        <FloatCard tilt={2} className="-top-5 right-0 hidden items-center gap-3 px-4 py-3 sm:flex">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#EEF0F8]">
+            <QrCode className="h-[18px] w-[18px] text-[#0F172A]" />
+          </span>
+          <div className="flex flex-col gap-px">
+            <span className="whitespace-nowrap text-sm font-bold text-[#0F172A]">
+              Scanned from your report
+            </span>
+            <span className="whitespace-nowrap text-xs text-[#64748B]">
+              {currentMonthName()} Snapshot
+            </span>
+          </div>
+        </FloatCard>
+
+        <PhoneFrame tilt={3} x={62}>
           <div className="flex flex-col gap-[18px] px-6 pt-6">
             <div className="flex items-center gap-2.5">
               <AgentDisc size={36} />
@@ -64,12 +137,10 @@ export function LeadCapture() {
           </div>
         </PhoneFrame>
 
-        <div
-          className="absolute bottom-12 right-0 flex w-[280px] items-start gap-3.5 rounded-[14px] bg-white px-[18px] py-4 sm:w-[300px]"
-          style={{
-            transform: "rotate(-2deg)",
-            boxShadow: "0 24px 48px -16px rgba(15,23,42,0.35), 0 0 0 1px rgba(15,23,42,0.06)",
-          }}
+        {/* What the agent gets. */}
+        <FloatCard
+          tilt={-2}
+          className="bottom-12 right-0 flex w-[280px] items-start gap-3.5 px-[18px] py-4 sm:w-[300px]"
         >
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ECFDF5]">
             <UserPlus className="h-[18px] w-[18px] text-[#059669]" />
@@ -80,7 +151,7 @@ export function LeadCapture() {
               {LEAD_CONTACT.name} · wants a value · just now
             </span>
           </div>
-        </div>
+        </FloatCard>
       </div>
     </SplitSection>
   );

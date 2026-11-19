@@ -245,7 +245,7 @@ def change_password(body: PasswordChangeRequest, request: Request, response: Res
         cur.execute("""
             SELECT password_hash, account_id::text
             FROM users
-            WHERE id = %s::uuid AND is_active = TRUE
+            WHERE id = %s::uuid AND is_active = TRUE FOR UPDATE
         """, (user_id,))
 
         row = cur.fetchone()
@@ -269,7 +269,7 @@ def change_password(body: PasswordChangeRequest, request: Request, response: Res
             UPDATE users
             SET
                 password_hash = %s,
-                password_changed_at = NOW(),
+                password_changed_at = NOW() AT TIME ZONE 'UTC',
                 updated_at = NOW()
             WHERE id = %s::uuid
         """, (new_hash, user_id))
@@ -306,7 +306,7 @@ def change_password(body: PasswordChangeRequest, request: Request, response: Res
                 "scopes": ["reports:read", "reports:write"],
             },
             settings.JWT_SECRET,
-            ttl_seconds=3600
+            ttl_seconds=3600, password_hash=new_hash
         )
 
         response.set_cookie(
@@ -351,7 +351,7 @@ def change_email(body: EmailChangeRequest, request: Request, response: Response)
         cur.execute("""
             SELECT password_hash, email, account_id::text
             FROM users
-            WHERE id = %s::uuid AND is_active = TRUE
+            WHERE id = %s::uuid AND is_active = TRUE FOR UPDATE
         """, (user_id,))
 
         row = cur.fetchone()
@@ -429,7 +429,7 @@ def change_email(body: EmailChangeRequest, request: Request, response: Response)
                 "scopes": ["reports:read", "reports:write"],
             },
             settings.JWT_SECRET,
-            ttl_seconds=3600
+            ttl_seconds=3600, password_hash=current_hash
         )
 
         response.set_cookie(
