@@ -248,7 +248,8 @@ no live provider call or payment test.
 Jerry supplied these IDs; this record is not a provider-side verification or
 permission to change anything. Jerry sets live configuration at go-live.
 
-Current code requires this service-specific handoff (recheck after LR-014):
+Target handoff after LR-014 removes the obsolete validator (current legacy
+price-variable requirements are listed in the source inventory below):
 
 | Host/service | Variable | Value at go-live |
 |---|---|---|
@@ -257,16 +258,47 @@ Current code requires this service-specific handoff (recheck after LR-014):
 | Render `reportscompany-api` | `STRIPE_WEBHOOK_SECRET` | Signing secret for the live `/v1/webhooks/stripe` endpoint, entered directly by Jerry; never printed/stored here. |
 | Render worker/ticker/bridge | No billing Stripe variables | None required by their current code. |
 
-Prices are **database configuration, not environment variables** on the active
-checkout/webhook path. Jerry's reviewed go-live mapping is:
+Price selection is **database configuration** on the active checkout/webhook
+path, but checkout and portal still call the legacy configuration validator
+which requires both price environment names below. Jerry's go-live DB mapping is:
 
 - `plans.stripe_price_id` for `starter` -> `price_1UddpFBa27XowvTp6siwCZ3Q`.
 - `plans.stripe_price_id` for `pro` -> `price_1UddpaBa27XowvTpqu8acKJP`.
 
-The legacy `STRIPE_PRICE_PRO_MONTH` / `STRIPE_PRICE_TEAM_MONTH` map is not the
-active price source. Do not put Growth's ID into a misleading legacy variable
-or invent a team price. Product IDs above are references, not consumed env vars.
+The legacy map is not the active price source, but its validator is NOT dead:
+`routes/billing.py` calls it for checkout and portal. Missing either legacy
+price variable currently refuses both routes. LR-014 must remove the obsolete
+Team requirement before go-live; do not invent a Team price or substitute
+Growth's price merely to pass validation. Product IDs are references, not
+consumed environment values.
 The final LR-014 handoff must repeat the exact variable -> value list separately
 for Vercel and Render, identify secrets to enter directly, and list these DB
 mappings separately. No environment, database mapping, product, price or webhook
 was changed while recording this checklist. No live payment tests.
+
+
+### Stripe variable inventory (source verified; deployed Render names pending)
+
+Vercel production `reportscompany-web` was inspected read-only on November 19:
+there are no Stripe-related variable names. The Render connector has no env-list
+operation; Jerry has been asked for names only. Do not mistake this source list
+for a verified inventory of configured Render variables.
+
+| Code-read variable | Purpose | Identifier expected | Slug | Status / exact nonsecret value |
+|---|---|---|---|---|
+| `STRIPE_SECRET_KEY` | API Stripe SDK and plan-catalog reads; LR-011 mode derivation | Live secret key, neither `prod_` nor `price_` | All | Required; Jerry enters actual secret directly. |
+| `STRIPE_WEBHOOK_SECRET` | Verify original webhook bytes | Endpoint `whsec_` signing secret, neither ID type | All | Required; Jerry enters live endpoint secret directly. |
+| `STRIPE_PRICE_PRO_MONTH` | Legacy pro map AND current checkout/portal configuration validation | `price_` | `pro` = Growth Plus | `price_1UddpaBa27XowvTpqu8acKJP` if retained; not the active price selector. |
+| `STRIPE_PRICE_TEAM_MONTH` | Legacy team map AND current checkout/portal configuration validation | `price_` | Retired `team`, not `starter` or `pro` | Stale requirement; no approved value. LR-014 removes the requirement before go-live. |
+
+No source-read Starter price environment variable exists. Starter/Growth uses
+`plans.stripe_price_id = price_1UddpFBa27XowvTp6siwCZ3Q`; Pro/Growth Plus uses
+`plans.stripe_price_id = price_1UddpaBa27XowvTpqu8acKJP`. Neither accepts a product
+ID. The legacy lookup/reverse-lookup helper functions have no callers, but
+`validate_stripe_config` does. Any extra deployed Stripe product/price names
+must be checked against this list and marked unused, not assumed wired up.
+
+Final go-live variable/value handoff remains conditional on the reviewed
+LR-014 cleanup. Nobody has edited Vercel, Render, DB plan mappings or Stripe
+configuration during this inventory. Actual secret values are not requested,
+printed or stored in the checklist.
