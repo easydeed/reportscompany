@@ -42,6 +42,18 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # LR-027: /ready and the heartbeat tests read and write real Redis
+      # (database 15, flushed per test). REQUIRE_REDIS_TESTS below makes their
+      # absence a failure, not a skip, for the same reason as the database.
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
@@ -176,6 +188,7 @@ jobs:
         env:
           PDF_CONTRAST_REQUIRE_BROWSER: "1"
           REQUIRE_DATABASE_TESTS: "1"
+          REQUIRE_REDIS_TESTS: "1"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/market_reports
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scratch
 

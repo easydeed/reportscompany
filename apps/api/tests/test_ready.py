@@ -29,6 +29,10 @@ def r():
     try:
         conn.ping()
     except redis.exceptions.ConnectionError:
+        # CI provides Redis and sets REQUIRE_REDIS_TESTS=1: there, a missing
+        # Redis is a failure, never a silently skipped proof.
+        if os.getenv("REQUIRE_REDIS_TESTS") == "1":
+            pytest.fail("REQUIRE_REDIS_TESTS=1 but Redis on 127.0.0.1:6379 is unreachable")
         pytest.skip("Redis on 127.0.0.1:6379 is needed")
     conn.flushdb()
     yield conn
