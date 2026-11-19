@@ -1,7 +1,8 @@
 # LR-011: durable Stripe ingestion — proposed design
 
 Base main: `79661c427784a412a902037e1da636477cbb66fa`.
-Status: design preparation, not runtime implementation or paid-launch approval.
+Status: revision 2, addressing Claude review 7017738043; awaiting re-review.
+Not runtime implementation or paid-launch approval.
 Stripe in production is **live**, per Jerry. No real-card checkout tests.
 
 ## Problem confirmed in source
@@ -33,9 +34,11 @@ configuration change is included in this design task.
 ## Durable record and acknowledgement
 
 Propose one platform table, `billing_webhook_events`, distinct from outbound
-customer `webhook_deliveries`. Do not reserve a migration number yet: #323 owns
-0069 and remains the one open migration PR. Jerry applies a reviewed billing
-migration before the associated runtime merge when that slot becomes available.
+customer `webhook_deliveries`. #323 and migration 0069 have landed. Coordinate
+the next migration number before code review; Jerry applies the reviewed
+billing migration before runtime merge. Add a separate subscription cursor
+table for the monotonic guard below. Enable RLS with no tenant policies on
+both platform tables; only the existing privileged server/operator role reads them.
 
 Store only an allowlisted envelope: event ID, event type, live/test mode,
 event API version, event creation and receipt times, Stripe customer and
@@ -88,8 +91,17 @@ commit, redelivery finds pending work. If it dies after processing commit,
 redelivery finds the terminal marker. Bound lock acquisition and statements;
 prove timeout behavior against real PostgreSQL rather than relying on mocks.
 
-LR-012 must serialize/reconcile distinct events for one subscription; receipt
-deduplication by event ID does **not** solve out-of-order or tied events.
+LR-011 must itself serialize processing per subscription with a locked cursor
+row keyed by mode and subscription ID. Store latest processed event creation
+time and event ID. In the same transaction as the account mutation and receipt
+disposition, advance this cursor. An event strictly older than the cursor is
+`ignored` with reason `superseded`, returns 200, and mutates no account. The
+receipt lock alone is insufficient for two different events. Replay uses this
+same cursor and refuses superseded work by default; dry-run displays the reason.
+Equal-second distinct events retain current processing behavior in LR-011;
+LR-012 owns authoritative reconciliation of ties and customer binding. Event
+IDs are not chronological tie-breakers. Tests deliver T2 then T1 through both
+redelivery and replay, including concurrent requests and rollback boundaries.
 
 ## Replay, quarantine and operational signal
 
@@ -161,3 +173,39 @@ needs its own context, followed by the processing context; catching an error
 inside that second context must never accidentally commit partial account work.
 Tests must force both commit failures independently. A paid-launch decision on
 entitlements belongs to LR-013, not to this receipt layer.
+
+
+## Revision 2: deterministic dispositions and cancellation safety
+
+- Expected mode comes from configured server key prefix: `sk_live_` or
+  `rk_live_` means live; `sk_test_` or `rk_test_` means test. Unknown or absent
+  prefixes are unavailable configuration (503). A verified mismatching event
+  is quarantined as `mode_mismatch` with no account mutation; test both ways.
+- A signed event with an unexpected business shape must still commit a minimal
+  receipt before quarantine. Normalization is total for verified event identity:
+  safe identity fields and fixed shape errors survive; optional malformed
+  fields never throw before evidence is committed. Unverifiable event identity
+  is a separate invalid-envelope rejection, not a guessed identifier.
+- Terminal `quarantined` and `ignored` redeliveries return 200 with no work.
+  Dashboard resend does not reopen them. Only reviewed replay with dry-run and
+  operator reason can reconsider a receipt, and never bypasses the cursor.
+- `price.*` and `product.*` events are processed cache-only receipts, with no
+  account mutation. Cache invalidation after commit is best effort; it cannot
+  make a duplicate rerun a committed account change. Cross-process cache
+  invalidation is a separate pre-existing defect, not claimed fixed here.
+- A deleted subscription with absent/unrecognized period shape is quarantined
+  as `period_shape_unsupported`, leaving paid access untouched. No missing
+  timestamp can select immediate Free. Record the live webhook endpoint API
+  version before implementation; fixtures must cover legacy top-level period
+  and Basil item-level period shapes. Until a shape is explicitly supported,
+  quarantine it. Immediate downgrade requires a validated expired period.
+- Every new quarantined receipt is an LR-027 incident candidate for configured
+  email then SMS, respecting the alert sender's off-by-default rollout. Add
+  this actual billing-table signal in coordination with that lane; do not
+  infer payment backlog from outbound report webhook logs.
+
+Required regression additions: T2-before-T1 retries and replay; missing period
+and Basil-shaped cancellation retaining access; both mode mismatch directions;
+malformed signed business shapes retained durably; terminal Dashboard resend;
+cache-only disposition; tenant access denied by RLS. All payment fixtures stay
+local with provider HTTP blocked. No live payment tests.
