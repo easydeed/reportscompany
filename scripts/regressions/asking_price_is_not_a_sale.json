@@ -61,5 +61,29 @@
     "old": "             WHEN coalesce(sale_price, price) = list_price                   THEN 'possible'\n             ELSE 'recorded sale'\n           END AS verdict\n    FROM num\n)\nSELECT source, report_status, verdict,",
     "new": "             WHEN coalesce(sale_price, price) = list_price AND NOT has_sale_date THEN 'definite'\n             WHEN coalesce(sale_price, price) = list_price                   THEN 'possible'\n             ELSE 'recorded sale'\n           END AS verdict\n    FROM num\n)\nSELECT source, report_status, verdict,",
     "test": "tests/test_lr018_readonly_count_classifies_comps.py"
+  },
+  {
+    "name": "#305 review comes back: the Closed Sales print shows the asking price under Close Price",
+    "file": "apps/web/lib/templates.ts",
+    "old": "${formatCurrency(listing.close_price > 0 ? listing.close_price : null)}",
+    "new": "${formatCurrency(listing.close_price || listing.list_price)}",
+    "runner": "jest",
+    "test": "__tests__/ClosedPrintSalePrice.test.ts"
+  },
+  {
+    "name": "#314 comes back: the Share card headline shows the median asking price as the sale price",
+    "file": "apps/web/lib/social-templates.ts",
+    "old": "formatCurrency(metrics.median_close_price > 0 ? metrics.median_close_price : null)",
+    "new": "formatCurrency(metrics.median_close_price || metrics.median_list_price)",
+    "runner": "jest",
+    "test": "__tests__/SocialStories.test.ts"
+  },
+  {
+    "name": "#314 comes back: the Market Snapshot print shows the median asking price as the sale price",
+    "file": "apps/web/lib/templates.ts",
+    "old": "\"{{median_price}}\": formatCurrency(metrics.median_close_price > 0 ? metrics.median_close_price : null),",
+    "new": "\"{{median_price}}\": formatCurrency(metrics.median_close_price || metrics.median_list_price),",
+    "runner": "jest",
+    "test": "__tests__/SocialStories.test.ts"
   }
 ]

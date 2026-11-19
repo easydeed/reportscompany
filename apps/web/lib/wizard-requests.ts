@@ -25,13 +25,13 @@ export type SubmitOutcome =
   | { kind: "created"; resourceId: string }
   | { kind: "verification"; refusal: VerificationRefusal }
   | { kind: "limit"; title: string; detail: string }
-  | { kind: "invalid"; message: string }
+  | { kind: "invalid"; message: string; previousId?: string }
   | { kind: "session_expired" }
   | { kind: "server_error" }
   | { kind: "offline" }
   // 410s from the key's replay (design rev 2): the key is past its window, or
   // what it created has since been deleted. Neither creates anything.
-  | { kind: "key_expired" }
+  | { kind: "key_expired"; previousId?: string; matches?: boolean }
   | { kind: "gone" }
   // 503 from the proxy: this API predates the key contract and ran nothing.
   | { kind: "unavailable" }
@@ -118,10 +118,20 @@ export async function classifySubmit(res: Response | null, product: Product): Pr
   const refusal = readVerificationRefusal(body)
   if (refusal) return { kind: "verification", refusal }
   if (res.status === 429) return { kind: "limit", ...limitMessage(body, product) }
+  const fields = refusalFields(body)
+  const previousId = typeof fields.resource_id === "string" && RESOURCE_ID.test(fields.resource_id)
+    ? fields.resource_id : undefined
+  if (res.status === 409 && fields.error === "idempotency_key_reused" && previousId) {
+    return { kind: "invalid", message: messageFrom(body) || "This request was already used.", previousId }
+  }
   if (res.status === 410) {
-    const code = refusalFields(body).error
+    const code = fields.error
     if (code === "idempotent_resource_gone") return { kind: "gone" }
-    if (code === "idempotency_key_expired") return { kind: "key_expired" }
+    if (code === "idempotency_key_expired") {
+      return previousId
+        ? { kind: "key_expired", previousId, matches: fields.request_matches === true }
+        : { kind: "key_expired" }
+    }
   }
   if (res.status === 503 && body.error === "idempotent_create_unavailable") return { kind: "unavailable" }
   if (res.status >= 500) return { kind: "server_error" }

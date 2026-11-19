@@ -1,7 +1,11 @@
 "use client";
 
 /**
- * "Seven reports" — Design's `Landing v4` carousel.
+ * "Seven reports" — Design's `Landing v13` carousel.
+ *
+ * New in v13: the eyebrow, a line saying what each report is, and the
+ * carousel opens on the middle card so there is a page on either side of it.
+ * "Your sphere" became "your clients" here, as it did across the page.
  *
  * THE LIST COMES FROM THE WIZARD, not from the deck. The deck's seventh card is
  * Open Houses, which the product has disabled since 3164cbb4 because
@@ -19,7 +23,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { REPORT_TYPES } from "@/components/unified-wizard/types";
 import type { PreviewReportType } from "@/components/shared/email-preview/sample-data";
-import { ReportSheet } from "./landing-primitives";
+import { Eyebrow, ReportSheet } from "./landing-primitives";
 
 const ORDER: { id: PreviewReportType; note: string }[] = [
   { id: "market_snapshot", note: "One number leads, then the read" },
@@ -42,7 +46,7 @@ export function ReportKinds() {
     return t && !t.disabled ? [{ id, note, name: t.title }] : [];
   });
   const n = offered.length;
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(() => Math.floor(n / 2));
   const frame = useRef<HTMLDivElement>(null);
   const [frameW, setFrameW] = useState(1200);
 
@@ -60,9 +64,13 @@ export function ReportKinds() {
   const current = offered[active];
 
   return (
-    <section id="reports" className="flex flex-col gap-8 pb-24 pt-14">
+    <section
+      id="reports"
+      className="flex flex-col gap-8 border-t border-[#E6E8F0] bg-white pb-24 pt-[72px]"
+    >
       <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-end justify-between gap-6 px-4 md:px-8">
         <div className="flex flex-col gap-2">
+          <Eyebrow>Market reports</Eyebrow>
           <h2
             className="m-0 font-extrabold text-[#0F172A]"
             style={{
@@ -71,9 +79,12 @@ export function ReportKinds() {
               letterSpacing: "-0.03em",
             } as CSSProperties}
           >
-            {WORDS[n] ?? n} reports. Pick what your sphere hears about.
+            {WORDS[n] ?? n} reports. Pick what your clients hear about.
           </h2>
-          <span className="text-[17px] text-[#64748B]">
+          <span className="max-w-[560px] text-[17px] text-[#475569]">
+            Each one is a branded PDF built from live MLS data for the city you pick.
+          </span>
+          <span className="text-[15px] font-semibold text-[#0F172A]" aria-live="polite">
             {current?.name} · {current?.note}
           </span>
         </div>
@@ -82,7 +93,7 @@ export function ReportKinds() {
             type="button"
             aria-label="Previous report"
             onClick={() => setActive((active - 1 + n) % n)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#D6D3CB] bg-white"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[#D6D3CB] bg-white"
           >
             <ArrowLeft className="h-[18px] w-[18px] text-[#0F172A]" />
           </button>
@@ -90,7 +101,7 @@ export function ReportKinds() {
             type="button"
             aria-label="Next report"
             onClick={() => setActive((active + 1) % n)}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#D6D3CB] bg-white"
+            className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-[#D6D3CB] bg-white"
           >
             <ArrowRight className="h-[18px] w-[18px] text-[#0F172A]" />
           </button>
