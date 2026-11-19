@@ -44,8 +44,8 @@
   {
     "name": "LR-006 no breaker: every search waits for a dead store",
     "file": "apps/api/src/api/services/lookup_windows.py",
-    "old": "        _open_until = clock() + BREAKER_S\n",
-    "new": "        _open_until = 0.0\n",
+    "old": "                self.open_until = now + BREAKER_S\n",
+    "new": "                self.open_until = now\n",
     "test": "apps/api/tests/test_public_lookup_budget.py"
   },
   {
@@ -54,5 +54,33 @@
     "old": "key=lambda i: (remaining[i], -result.waits[i])",
     "new": "key=lambda i: (remaining[i], result.waits[i])",
     "test": "apps/api/tests/test_public_lookup_budget.py"
+  },
+  {
+    "name": "Codex #315 P2: half-open admits every caller (no single probe)",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "            if self.probing:\n                raise LimiterUnavailable(\"lookup limiter breaker half-open; probe in flight\")\n",
+    "new": "",
+    "test": "apps/api/tests/test_public_lookup_budget.py::test_at_breaker_expiry_ten_simultaneous_callers_send_one_probe"
+  },
+  {
+    "name": "Codex #315 P2: a settled probe never frees the half-open slot",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "            if probe:\n                self.probing = False",
+    "new": "            if probe:\n                pass",
+    "test": "apps/api/tests/test_public_lookup_budget.py::test_a_probe_that_raises_never_leaves_the_breaker_stuck_half_open"
+  },
+  {
+    "name": "Codex #315 P2: a successful probe does not close the breaker",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "            if ok:\n                self.tripped = False\n",
+    "new": "            if ok:\n                pass\n",
+    "test": "apps/api/tests/test_public_lookup_budget.py::test_a_successful_probe_closes_the_breaker_for_everyone"
+  },
+  {
+    "name": "Codex #315 P2: a probe that raises skips settle",
+    "file": "apps/api/src/api/services/lookup_windows.py",
+    "old": "    finally:\n        # Every outcome settles",
+    "new": "    except ValueError:\n        pass\n    else:\n        # Every outcome settles",
+    "test": "apps/api/tests/test_public_lookup_budget.py::test_a_probe_that_raises_never_leaves_the_breaker_stuck_half_open"
   }
 ]

@@ -22,7 +22,11 @@ Two stores, one algorithm:
     and no retries, about 500 ms in the worst case. The shared client in
     `cache.py` allows 2 s for each. After a failure, a breaker sends the
     process straight to the fallback for 30 s, so an outage does not add a
-    timeout to every search.
+    timeout to every search. When the 30 s are up the breaker is HALF-OPEN:
+    exactly one caller probes Redis while every other caller keeps using the
+    fallback. Success closes the breaker; failure opens it for another 30 s.
+    Without that, every request arriving at expiry would each spend up to
+    ~500 ms on a store that is still down (Codex review of #315).
   * LocalWindow (the per-process fallback): the same window in memory,
     bounded in keys and entries, and locked.
 """
@@ -89,7 +93,50 @@ return out
 
 _client = None
 _client_lock = threading.Lock()
-_open_until = 0.0
+
+
+class _Breaker:
+    """Closed -> open (30 s) -> half-open (one probe) -> closed or open again.
+
+    `admit()` decides, under one lock, whether this caller may use Redis:
+      * closed: everyone may;
+      * open: nobody may (LimiterUnavailable);
+      * half-open: the first caller becomes the probe, everyone else is
+        refused until the probe settles. `settle()` always runs for a probe,
+        so a probe that raises can never leave the breaker stuck half-open.
+    """
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.open_until = 0.0
+        self.tripped = False        # a failure since the last success
+        self.probing = False        # a half-open probe is in flight
+
+    def admit(self, now: float) -> bool:
+        """True if this caller is the half-open probe. Raises if refused."""
+        with self.lock:
+            if now < self.open_until:
+                raise LimiterUnavailable("lookup limiter breaker open")
+            if not self.tripped:
+                return False
+            if self.probing:
+                raise LimiterUnavailable("lookup limiter breaker half-open; probe in flight")
+            self.probing = True
+            return True
+
+    def settle(self, probe: bool, ok: bool, now: float) -> None:
+        with self.lock:
+            if ok:
+                self.tripped = False
+                self.open_until = 0.0
+            else:
+                self.tripped = True
+                self.open_until = now + BREAKER_S
+            if probe:
+                self.probing = False
+
+
+_breaker = _Breaker()
 
 
 def _redis():
@@ -113,15 +160,16 @@ def _redis():
 
 
 def take_shared(limits: Limits, clock=time.monotonic) -> WindowResult:
-    global _open_until
-    if clock() < _open_until:
-        raise LimiterUnavailable("lookup limiter breaker open")
+    breaker = _breaker
+    probe = breaker.admit(clock())
     keys, ceilings = zip(*limits)
+    ok = False
     try:
         admitted, *values = _redis().eval(_TAKE, len(keys) + 1, *keys, SEQ_KEY, WINDOW_US, *ceilings)
-    except Exception:
-        _open_until = clock() + BREAKER_S
-        raise
+        ok = True
+    finally:
+        # Every outcome settles: a probe that raises frees the half-open slot.
+        breaker.settle(probe, ok, clock())
     if admitted not in (0, 1) or len(values) != 2 * len(keys):
         raise ValueError("Invalid lookup budget response")
     return WindowResult(bool(admitted), tuple(values[:len(keys)]), tuple(values[len(keys):]))
