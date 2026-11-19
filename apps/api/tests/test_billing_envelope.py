@@ -52,6 +52,12 @@ def test_conflicting_periods_are_never_guessed():
     assert normalize(e)["reason"] == "period_shape_unsupported"
 
 
+def test_missing_status_cannot_mutate_billing_state():
+    e = event()
+    del e['data']['object']['status']
+    assert normalize(e)['reason'] == 'unsupported_subscription_status'
+
+
 @pytest.mark.parametrize("bad", [None, [], "unexpected", {"object": []}])
 def test_malformed_business_data_retains_receipt_identity(bad):
     e = event()

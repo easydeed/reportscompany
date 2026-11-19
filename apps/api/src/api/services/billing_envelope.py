@@ -66,6 +66,10 @@ def normalize_verified_event(event: Mapping, *, expected_live: bool) -> dict:
     if not out["subscription_id"] or not out["customer_id"] or not out["account_id"]:
         out["reason"] = "invalid_subscription_reference"
         return out
+    if out['status'] not in {'active', 'trialing', 'past_due', 'unpaid', 'incomplete',
+                             'incomplete_expired', 'canceled', 'paused'}:
+        out['reason'] = 'unsupported_subscription_status'
+        return out
     items = _map(obj.get("items")).get("data")
     if not isinstance(items, list) or len(items) != 1 or not isinstance(items[0], Mapping):
         out["reason"] = "unsupported_subscription_items"

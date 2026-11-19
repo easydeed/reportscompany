@@ -1,0 +1,30 @@
+[
+  {
+    "name": "LR011 older retry overwrites newer event",
+    "file": "apps/api/src/api/services/billing_events.py",
+    "old": "return previous is not None and envelope['created'] < previous",
+    "new": "return False",
+    "test": "apps/api/tests/test_billing_events_postgres.py::test_duplicate_and_older_retry_never_revert_newer_plan"
+  },
+  {
+    "name": "LR011 unknown cancellation period removes paid time",
+    "file": "apps/api/src/api/services/billing_envelope.py",
+    "old": "out[\"reason\"] = \"period_shape_unsupported\"",
+    "new": "out[\"period_end\"] = 1",
+    "test": "apps/api/tests/test_billing_envelope.py::test_unrecognised_cancellation_period_is_quarantined"
+  },
+  {
+    "name": "LR011 terminal duplicate repeats account mutation",
+    "file": "apps/api/src/api/services/billing_events.py",
+    "old": "if state in TERMINAL and (not replay_reason or state != 'quarantined'):",
+    "new": "if False:",
+    "test": "apps/api/tests/test_billing_events_postgres.py::test_duplicate_and_older_retry_never_revert_newer_plan"
+  },
+  {
+    "name": "LR011 database error falsely acknowledged",
+    "file": "apps/api/src/api/routes/stripe_webhook.py",
+    "old": "raise HTTPException(status_code=503, detail=\"Billing event not processed\") from None",
+    "new": "return {\"received\": True}",
+    "test": "apps/api/tests/test_stripe_webhook_receipts.py::test_failure_returns_503_not_false_acknowledgement"
+  }
+]
