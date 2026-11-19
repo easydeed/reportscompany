@@ -192,18 +192,150 @@ def test_a_still_open_incident_is_renotified_every_six_hours_once(conn, on):
     assert renotify == [("renotify:2", "email"), ("renotify:2", "sms")]
 
 
-def test_sms_are_capped_at_ten_an_hour_with_one_cap_notice(conn, on):
+def test_twelve_texts_wanted_send_ten_and_one_cap_notice(conn, on, providers):
     keys = [s.key for s in ops_signals.SIGNALS if s.sms][:6]
     assert len(keys) == 6
     for key in keys:                      # six opens and six recoveries: twelve texts wanted
         trip(conn, key, ("x:1",))
     for key in keys:
         clear(conn, key)
-    sms = [e for _, e, ch, *_ in rows(conn) if ch == "sms"]
-    assert len([e for e in sms if not e.startswith("sms_cap:")]) == ops_notify.SMS_CAP_PER_HOUR
-    assert len([e for e in sms if e.startswith("sms_cap:")]) == 1                 # one notice, not two
-    emails = [e for _, e, ch, *_ in rows(conn) if ch == "email"]
-    assert len(emails) == 12                                                      # email is never capped
+    dispatch(conn)
+    dispatch(conn)
+    alerts = [t for t in providers.texts if "more than" not in t["body"]]
+    notices = [t for t in providers.texts if "more than" in t["body"]]
+    assert len(alerts) == ops_notify.SMS_CAP_PER_HOUR and len(notices) == 1      # one notice, not two
+    assert len(providers.emails) == 12                                           # email is never capped
+
+
+# ── Codex #327 P1: the cap is on SENDS in the last hour, reserved at send time ──
+
+_seq = [0]
+
+
+def queued_texts(conn, n, *, age="0 minutes", state="pending", attempts=0, touched=None):
+    """n SMS rows on one email-only incident, inserted as a queue left behind."""
+    with conn.cursor() as cur:
+        cur.execute("SELECT id FROM ops_alerts WHERE key = 'schedule_blocked' AND resolved_at IS NULL")
+        found = cur.fetchone()
+    conn.commit()
+    if found is None:
+        trip(conn, "schedule_blocked", ("schedule:q",))
+        return queued_texts(conn, n, age=age, state=state, attempts=attempts, touched=touched)
+    made = []
+    with conn.cursor() as cur:
+        for _ in range(n):
+            _seq[0] += 1
+            cur.execute(f"""INSERT INTO ops_alert_notifications
+                            (alert_id, event, channel, state, attempts, created_at, claimed_at, outcome_at)
+                            VALUES (%s, %s, 'sms', %s, %s, now() - interval '{age}',
+                                    {'now() - %s::interval' if touched and state == 'claimed' else 'NULL'},
+                                    {'now() - %s::interval' if touched and state != 'claimed' else 'NULL'})
+                            RETURNING id""",
+                        (found[0], f"renotify:{1000 + _seq[0]}", state, attempts) + ((touched,) if touched else ()))
+            made.append(cur.fetchone()[0])
+    conn.commit()
+    return made
+
+
+def alert_texts(providers):
+    return [t for t in providers.texts if "more than" not in t["body"]]
+
+
+def test_ten_older_and_ten_newer_queued_texts_never_exceed_the_cap(conn, on, providers):
+    queued_texts(conn, 10, age="2 hours")          # queued long ago, never sent
+    queued_texts(conn, 10)                         # queued now
+    dispatch(conn)
+    dispatch(conn)
+    assert len(alert_texts(providers)) == ops_notify.SMS_CAP_PER_HOUR
+    with conn.cursor() as cur:                     # the stale ones never went out late
+        cur.execute("""SELECT count(*) FROM ops_alert_notifications
+                       WHERE channel = 'sms' AND created_at < now() - interval '1 hour' AND attempts > 0""")
+        assert cur.fetchone()[0] == 0
+    conn.commit()
+
+
+def test_an_hour_already_spent_sends_no_more_texts(conn, on, providers):
+    queued_texts(conn, 10, state="accepted", attempts=1, touched="10 minutes")   # sent this hour
+    queued_texts(conn, 5)
+    dispatch(conn)
+    assert alert_texts(providers) == []
+    assert len(providers.texts) == 1                                               # the cap notice
+
+
+def test_uncertain_and_refused_attempts_count_against_the_cap(conn, on, providers):
+    queued_texts(conn, 6, state="unknown", attempts=1, touched="5 minutes")
+    queued_texts(conn, 4, state="not_sent", attempts=1, touched="5 minutes")      # retries due
+    queued_texts(conn, 3)
+    dispatch(conn)
+    assert alert_texts(providers) == []            # 10 attempts this hour already: nothing more
+
+
+def test_retries_consume_capacity(conn, on, providers):
+    from twilio.base.exceptions import TwilioRestException
+    providers.sms_result = TwilioRestException(400, "uri", msg="refused", code=21211)
+    queued_texts(conn, 3)                          # 3 rows x 5 attempts would be 15 calls
+    for _ in range(8):
+        dispatch(conn)
+    assert len(alert_texts(providers)) == ops_notify.SMS_CAP_PER_HOUR
+
+
+def test_concurrent_dispatchers_respect_the_cap(conn, on, providers, monkeypatch):
+    providers.delay = 0.05
+    queued_texts(conn, 14)
+    check = ops_notify._sms_capacity
+
+    def slow_check(cur, event):
+        # Widen the check-then-claim window: under the cap lock the other run
+        # waits here; without it, both runs see the same last free slot.
+        ok = check(cur, event)
+        time.sleep(0.1)
+        return ok
+
+    monkeypatch.setattr(ops_notify, "_sms_capacity", slow_check)
+    barrier = threading.Barrier(2)
+
+    def run():
+        c = psycopg.connect(DB)
+        barrier.wait()
+        ops_notify.dispatch(c, time.monotonic, time.monotonic() + 30)
+        c.close()
+
+    threads = [threading.Thread(target=run) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(10)
+    assert len(alert_texts(providers)) == ops_notify.SMS_CAP_PER_HOUR
+    assert len(providers.texts) - len(alert_texts(providers)) <= 1
+
+
+def test_two_runs_claiming_different_rows_cannot_both_take_the_last_slot(conn, on, providers, monkeypatch):
+    """The conditional claim already serialises two runs on the SAME row; the
+    cap lock is what stops two runs on DIFFERENT rows sharing the last slot."""
+    queued_texts(conn, ops_notify.SMS_CAP_PER_HOUR - 1, state="accepted", attempts=1, touched="5 minutes")
+    first, second = queued_texts(conn, 2)
+    check = ops_notify._sms_capacity
+
+    def slow_check(cur, event):
+        ok = check(cur, event)
+        time.sleep(0.2)                    # both runs inside the check-then-claim window
+        return ok
+
+    monkeypatch.setattr(ops_notify, "_sms_capacity", slow_check)
+    barrier = threading.Barrier(2)
+
+    def run(row_id):
+        c = psycopg.connect(DB)
+        barrier.wait()
+        ops_notify.deliver(c, row_id)
+        c.close()
+
+    threads = [threading.Thread(target=run, args=(r,)) for r in (first, second)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(10)
+    assert len(alert_texts(providers)) == 1
 
 
 # ── delivery: claim before the call, never resend an uncertain outcome ──

@@ -30,8 +30,13 @@ Events and channels:
   update:<n>   new members, or growth past the stored bound: email only.
   renotify:<n> every 6 hours while open: as `open`.
   resolved     as `open` for the key, without the flap rule.
-SMS are capped at 10 an hour across all incidents; past the cap one
-`sms_cap:<hour>` text says the rest of the hour is email only.
+SMS are capped at 10 PROVIDER ATTEMPTS an hour across all incidents,
+retries and uncertain outcomes included, reserved atomically at send time
+just before each SMS claim (Codex review of #327: a cap counted at queue time
+let older queued texts and retries all go out in one hour). Past the cap,
+one `sms_cap:<hour>` text says the rest of the hour is email only. A text
+not sent within an hour of being queued is never sent late: the email row
+for the same event carries it.
 """
 import html
 import logging
@@ -98,10 +103,28 @@ def _insert(cur, alert_id, event: str, channel: str) -> bool:
     return cur.fetchone() is not None
 
 
-def _sms_room(cur) -> bool:
-    cur.execute("""SELECT count(*) FROM ops_alert_notifications
-                   WHERE channel = 'sms' AND event NOT LIKE 'sms\\_cap:%%'
-                     AND created_at > now() - interval '1 hour'""")
+SMS_FRESH_HOURS = 1        # an SMS row older than this is never sent; its email row carries it
+
+
+def _sms_capacity(cur, event: str) -> bool:
+    """May one more SMS attempt start now? Call under the cap lock.
+
+    Counts provider ATTEMPTS in the last hour from the rows themselves:
+    `attempts` on every alert-text row claimed or settled within the hour.
+    A refused (`not_sent`) attempt keeps its time in outcome_at after the
+    claim is released; an uncertain one counts like any other. A row's
+    earlier attempts can be older than the hour: counting them anyway errs
+    toward fewer texts, never more. The cap notice has its own allowance:
+    one per hour.
+    """
+    if event.startswith("sms_cap:"):
+        cur.execute("""SELECT count(*) FROM ops_alert_notifications
+                       WHERE channel = 'sms' AND event LIKE 'sms\\_cap:%' AND attempts > 0
+                         AND GREATEST(claimed_at, outcome_at) > now() - interval '1 hour'""")
+        return cur.fetchone()[0] == 0
+    cur.execute("""SELECT COALESCE(sum(attempts), 0) FROM ops_alert_notifications
+                   WHERE channel = 'sms' AND event NOT LIKE 'sms\\_cap:%'
+                     AND GREATEST(claimed_at, outcome_at) > now() - interval '1 hour'""")
     return cur.fetchone()[0] < SMS_CAP_PER_HOUR
 
 
@@ -129,15 +152,9 @@ def enqueue(cur, alert_id, key: str, event: str, *, flapping: bool = False) -> l
         queued.append("email")
     wants_sms = (sms_key and configured["sms"] and not event.startswith("update:")
                  and not (event == "open" and flapping))
-    if wants_sms:
-        # Serialise the cap check across concurrent monitor transactions.
-        cur.execute("SELECT pg_advisory_xact_lock(hashtext('ops_alert_sms_cap'))")
-        if _sms_room(cur):
-            if _insert(cur, alert_id, event, "sms"):
-                queued.append("sms")
-        else:
-            _note_sms_cap(cur, alert_id)
-            queued.append("sms_cap")
+    # The hourly SMS cap is enforced when a text is SENT (claim), not here.
+    if wants_sms and _insert(cur, alert_id, event, "sms"):
+        queued.append("sms")
     return queued
 
 
@@ -183,9 +200,31 @@ def expire_abandoned(cur) -> int:
 
 
 def claim(conn, row_id) -> Optional[str]:
-    """Commit the claim BEFORE any provider call. Returns the token, or None."""
+    """Commit the claim BEFORE any provider call. Returns the token, or None.
+
+    An SMS claim first reserves hourly capacity under a transaction-scoped
+    advisory lock, so concurrent runs cannot both take the last slot; the
+    claim itself is the reservation (attempts + 1, claimed_at now). Refused
+    by the cap: no claim, the row stays queued, and the hour's single cap
+    notice is queued instead.
+    """
     token = str(uuid.uuid4())
     with conn.cursor() as cur:
+        cur.execute("SELECT channel, event, alert_id FROM ops_alert_notifications WHERE id = %s",
+                    (row_id,))
+        found = cur.fetchone()
+        if found is None:
+            conn.commit()
+            return None
+        channel, event, alert_id = found
+        if channel == "sms":
+            cur.execute("SELECT pg_advisory_xact_lock(hashtext('ops_alert_sms_cap'))")
+            if not _sms_capacity(cur, event):
+                if not event.startswith("sms_cap:"):
+                    _note_sms_cap(cur, alert_id)
+                conn.commit()
+                logger.warning("OPS_ALERT_SEND row=%s channel=sms event=%s deferred=sms_cap", row_id, event)
+                return None
         cur.execute("""UPDATE ops_alert_notifications
                        SET state = 'claimed', claimed_at = now(), claim_token = %s,
                            attempts = attempts + 1
@@ -368,15 +407,28 @@ def dispatch(conn, clock, deadline: float) -> dict:
     if not enabled():
         return results
     with conn.cursor() as cur:
-        cur.execute("""SELECT id FROM ops_alert_notifications
-                       WHERE state IN ('pending', 'not_sent') AND claimed_at IS NULL AND attempts < %s
-                       ORDER BY id LIMIT %s""", (MAX_ATTEMPTS, DISPATCH_LIMIT))
-        ids = [r[0] for r in cur.fetchall()]
+        ids = _claimable(cur)
     conn.commit()
-    for row_id in ids:
-        if clock() > deadline:
-            logger.warning("OPS_ALERT_SEND budget spent; %d row(s) wait for the next run",
-                           len(ids) - len(results["sent"]))
+    done = set()
+    for _pass in range(2):            # the second pass sends a cap notice queued by the first
+        for row_id in ids:
+            if clock() > deadline:
+                logger.warning("OPS_ALERT_SEND budget spent; the rest wait for the next run")
+                return results
+            done.add(row_id)
+            results["sent"].append((row_id, deliver(conn, row_id)))
+        with conn.cursor() as cur:
+            ids = [i for i in _claimable(cur, cap_only=True) if i not in done]
+        conn.commit()
+        if not ids:
             break
-        results["sent"].append((row_id, deliver(conn, row_id)))
     return results
+
+
+def _claimable(cur, cap_only: bool = False) -> list:
+    cur.execute("""SELECT id FROM ops_alert_notifications
+                   WHERE state IN ('pending', 'not_sent') AND claimed_at IS NULL AND attempts < %s
+                     AND (channel <> 'sms' OR created_at > now() - make_interval(hours => %s))
+                     AND (NOT %s OR event LIKE 'sms\\_cap:%%')
+                   ORDER BY id LIMIT %s""", (MAX_ATTEMPTS, SMS_FRESH_HOURS, cap_only, DISPATCH_LIMIT))
+    return [r[0] for r in cur.fetchall()]

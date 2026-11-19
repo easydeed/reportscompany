@@ -42,13 +42,6 @@
   "test": "apps/worker/tests/test_ops_notify.py::test_recovery_queues_one_resolved_event_and_a_flap_reopens_by_email_only"
  },
  {
-  "name": "LR-027 s3: no SMS cap",
-  "file": "apps/worker/src/worker/ops_notify.py",
-  "old": "        if _sms_room(cur):",
-  "new": "        if True:",
-  "test": "apps/worker/tests/test_ops_notify.py::test_sms_are_capped_at_ten_an_hour_with_one_cap_notice"
- },
- {
   "name": "LR-027 s3: member updates are texted",
   "file": "apps/worker/src/worker/ops_notify.py",
   "old": "    wants_sms = (sms_key and configured[\"sms\"] and not event.startswith(\"update:\")",
@@ -82,5 +75,40 @@
   "old": "                     AND opened_at < now() - make_interval(hours => %s)\"\"\",",
   "new": "                     AND opened_at < now()\"\"\",",
   "test": "apps/worker/tests/test_ops_notify.py::test_a_still_open_incident_is_renotified_every_six_hours_once"
+ },
+ {
+  "name": "Codex #327 P1: no send-time cap",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "    return cur.fetchone()[0] < SMS_CAP_PER_HOUR\n",
+  "new": "    return True\n",
+  "test": "apps/worker/tests/test_ops_notify.py::test_an_hour_already_spent_sends_no_more_texts"
+ },
+ {
+  "name": "Codex #327 P1: retries consume no capacity (rows counted, not attempts)",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "SELECT COALESCE(sum(attempts), 0) FROM ops_alert_notifications",
+  "new": "SELECT count(*) FROM ops_alert_notifications",
+  "test": "apps/worker/tests/test_ops_notify.py::test_retries_consume_capacity"
+ },
+ {
+  "name": "Codex #327 P1: refused attempts (claim released) are not counted",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "                   WHERE channel = 'sms' AND event NOT LIKE 'sms\\\\_cap:%'\n                     AND GREATEST(claimed_at, outcome_at) > now() - interval '1 hour'",
+  "new": "                   WHERE channel = 'sms' AND event NOT LIKE 'sms\\\\_cap:%'\n                     AND claimed_at > now() - interval '1 hour'",
+  "test": "apps/worker/tests/test_ops_notify.py::test_uncertain_and_refused_attempts_count_against_the_cap"
+ },
+ {
+  "name": "Codex #327 P1: stale queued texts are sent late",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "                     AND (channel <> 'sms' OR created_at > now() - make_interval(hours => %s))",
+  "new": "                     AND (channel <> 'sms' OR %s IS NOT NULL)",
+  "test": "apps/worker/tests/test_ops_notify.py::test_ten_older_and_ten_newer_queued_texts_never_exceed_the_cap"
+ },
+ {
+  "name": "Codex #327 P1: no cap lock, so concurrent runs can share the last slot",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "        if channel == \"sms\":\n            cur.execute(\"SELECT pg_advisory_xact_lock(hashtext('ops_alert_sms_cap'))\")\n",
+  "new": "        if channel == \"sms\":\n",
+  "test": "apps/worker/tests/test_ops_notify.py::test_two_runs_claiming_different_rows_cannot_both_take_the_last_slot"
  }
 ]
