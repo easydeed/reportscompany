@@ -198,7 +198,8 @@ def consumer(cur, created="1 hour", **cols):
 
 def test_consumer_deliveries_that_did_not_complete(cur):
     stuck = consumer(cur, delivery_claimed_at="now() - interval '16 minutes'")
-    agent = consumer(cur, agent_notify_status="'failed'")
+    agent = consumer(cur, agent_notify_status="'failed'", updated_at="now() - interval '20 minutes'")
+    consumer(cur, agent_notify_status="'failed'")                     # just refused: its retry is due
     pdf = consumer(cur, pdf_status="'generating'", pdf_claimed_at="now() - interval '16 minutes'")
     consumer(cur, delivery_claimed_at="now() - interval '16 minutes'", consumer_email_sent_at="now()")
     consumer(cur, delivery_claimed_at="now() - interval '5 minutes'")
@@ -460,3 +461,135 @@ def test_a_redis_that_never_answers_never_holds_up_a_tick(silent_redis_client):
         runner.maybe_start(silent_redis_client)
         clock_now[0] += 400                     # a new window every tick
     assert clock.monotonic() - started < 0.5, "the lease call ran on the ticker's thread"
+
+
+# ── Codex #323: the states the WRITERS leave, driven through the real writers ──
+
+def consumer_row(cur, *, status="processing", sent=False, agent_id=None, updated="now()"):
+    rid, gen = u(), u()
+    cur.execute(f"""INSERT INTO consumer_reports (id, agent_id, agent_code, property_address, status,
+                    generation_id, consumer_email_sent_at, created_at, updated_at)
+                    VALUES (%s, %s, 'code', '1 Secret St', %s, %s, {'now()' if sent else 'NULL'},
+                    now() - interval '1 hour', {updated})""", (rid, agent_id or u(), status, gen))
+    return rid, gen
+
+
+def stuck(cur):
+    return ids(ops_signals.consumer_delivery_stuck(cur))
+
+
+def test_a_provider_refused_consumer_delivery_is_reported(cur):
+    from worker import consumer_delivery as cd
+    rid, gen = consumer_row(cur)
+    attempt, _key = cd.claim_email(cur.connection, rid, gen, account_id=u(),
+                                   to_email="homeowner@example.com", subject="Your report")
+    assert stuck(cur) == set()                                        # claimed just now: in flight
+    assert cd.release_refused(cur.connection, rid, attempt, channel="email",
+                              text="Resend refused the message (422)", response_code=422)
+    cur.execute("SELECT status, delivery_claimed_at FROM consumer_reports WHERE id = %s", (rid,))
+    assert cur.fetchone() == ("failed", None)                         # the claim is cleared
+    assert stuck(cur) == {f"consumer:{rid}"}
+
+
+def test_an_active_retry_is_not_reported_until_it_stops(cur):
+    from worker import consumer_delivery as cd
+    from worker.tasks import consumer_failure_text
+    rid, gen = consumer_row(cur)
+    attempt, _ = cd.claim_email(cur.connection, rid, gen, account_id=u(), to_email="h@example.com", subject="s")
+    cd.release_refused(cur.connection, rid, attempt, channel="email", text="Resend 429", response_code=429)
+    retrying = consumer_failure_text("Resend 429 (attempt 1 of 4; retrying)")    # the task's own note
+    cur.execute("UPDATE consumer_reports SET error_message = %s, updated_at = now() WHERE id = %s", (retrying, rid))
+    assert stuck(cur) == set()                                        # a retry is due within minutes
+    cur.execute("UPDATE consumer_reports SET updated_at = now() - interval '20 minutes' WHERE id = %s", (rid,))
+    assert stuck(cur) == {f"consumer:{rid}"}                          # the retry never came
+    gave_up = consumer_failure_text("Resend 429 (gave up after 4 attempts)")
+    cur.execute("UPDATE consumer_reports SET error_message = %s, updated_at = now() WHERE id = %s", (gave_up, rid))
+    assert stuck(cur) == {f"consumer:{rid}"}                          # exhausted: terminal at once
+
+
+def test_a_held_or_never_generated_consumer_report_is_reported(cur):
+    held, _ = consumer_row(cur, status="needs_review")
+    generating, _ = consumer_row(cur, status="processing", updated="now() - interval '50 minutes'")
+    consumer_row(cur, status="processing")                            # generating normally
+    consumer_row(cur, status="failed", sent=True)                     # delivered: never reported
+    assert stuck(cur) == {f"consumer:{held}", f"consumer:{generating}"}
+
+
+def agent_ready(cur):
+    agent = u()
+    cur.execute("INSERT INTO users (id, account_id, email, phone) VALUES (%s, %s, %s, '+15555550100')",
+                (agent, u(), f"agent-{agent[:8]}@example.com"))
+    rid, _ = consumer_row(cur, status="sent", sent=True, agent_id=agent)
+    return rid
+
+
+def test_an_abandoned_agent_claim_is_reported_and_a_sent_one_is_not(cur):
+    from worker import consumer_delivery as cd
+    rid = agent_ready(cur)
+    claimed = cd.claim_agent_notification(cur.connection, rid, from_phone="+15555550199",
+                                          build_body=lambda row: "New lead")
+    assert claimed is not None
+    attempt = claimed[0]
+    assert stuck(cur) == set()                                        # inside the claim window
+    cur.execute("UPDATE consumer_reports SET agent_notify_claimed_at = now() - interval '20 minutes' WHERE id = %s",
+                (rid,))
+    assert stuck(cur) == {f"consumer:{rid}"}                          # the worker died after the claim
+    cur.execute("UPDATE consumer_reports SET agent_notify_claimed_at = NULL WHERE id = %s", (rid,))
+    assert stuck(cur) == {f"consumer:{rid}"}                          # the undated case
+    assert cd.record_agent_sent(cur.connection, rid, attempt, sid="SM-test")
+    assert stuck(cur) == set()                                        # the agent was notified
+
+
+def test_an_agent_refusal_counts_only_after_its_retries(cur):
+    from worker import consumer_delivery as cd
+    rid = agent_ready(cur)
+    attempt = cd.claim_agent_notification(cur.connection, rid, from_phone="+15555550199",
+                                          build_body=lambda row: "New lead")[0]
+    assert cd.release_agent_refused(cur.connection, rid, attempt, text="Twilio 429")
+    cur.execute("SELECT agent_notify_claimed_at FROM consumer_reports WHERE id = %s", (rid,))
+    assert cur.fetchone() == (None,)                                  # the refusal cleared the claim
+    assert stuck(cur) == set()                                        # a retry re-claims within minutes
+    # The table's trigger stamps updated_at on every write (it is off in this
+    # replica-role transaction, so the test stamps it as the trigger would).
+    cur.execute("UPDATE consumer_reports SET updated_at = now() - interval '20 minutes' WHERE id = %s", (rid,))
+    assert stuck(cur) == {f"consumer:{rid}"}                          # no retry came
+
+
+@pytest.fixture
+def committed_runs():
+    made = []
+    yield made
+    with psycopg.connect(DB, autocommit=True) as conn:
+        conn.execute("DELETE FROM schedule_runs WHERE report_run_id = ANY(%s::uuid[])", (made,))
+
+
+def tracked_run(made):
+    run, token = u(), u()
+    with psycopg.connect(DB, autocommit=True) as conn:
+        conn.execute("SET session_replication_role = replica")
+        conn.execute("""INSERT INTO schedule_runs (schedule_id, report_run_id, status, recovery_tracked,
+                        owner_token, created_at) VALUES (%s, %s, 'processing', TRUE, %s, now())""",
+                     (u(), run, token))
+    made.append(run)
+    return run, token
+
+
+def test_tracked_pre_claim_refusals_reach_send_not_attempted(committed_runs):
+    from worker import scheduled_runs, tasks
+    refused = []
+    for _ in range(3):
+        run, token = tracked_run(committed_runs)
+        result = tasks._send_tracked(None, u(), run, u(), [], "subject", {}, "Account", None, "REGULAR",
+                                     tasks.TrackedSend(run, token))
+        assert result.status == scheduled_runs.FAILED and result.error.startswith("failed_email: nothing sent")
+        assert scheduled_runs.finish(DB, run, token, result.status, result.error)
+        refused.append(f"run:{run}")
+    suppressed, token = tracked_run(committed_runs)                   # all_suppressed: completed
+    scheduled_runs.finish(DB, suppressed, token, scheduled_runs.COMPLETED,
+                          "every recipient has unsubscribed; nothing sent")
+    cancelled, token = tracked_run(committed_runs)
+    scheduled_runs.finish(DB, cancelled, token, "cancelled", "schedule deleted")
+    with psycopg.connect(DB) as conn:
+        reading = ops_signals.send_not_attempted(conn.cursor())
+    assert reading.tripped and set(refused) <= ids(reading)
+    assert f"run:{suppressed}" not in ids(reading) and f"run:{cancelled}" not in ids(reading)

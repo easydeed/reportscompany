@@ -168,23 +168,68 @@ def report_failures(cur) -> Reading:
 
 
 def consumer_delivery_stuck(cur) -> Reading:
-    # LR-020/021/022 states. A terminal failure stays in the row, so the
-    # lookback keeps an old, already-handled one from holding an incident open
-    # forever; observe mode measures whether 7 days is right.
+    """Home-value reports that did not reach the homeowner or their agent.
+
+    Built from what the WRITERS leave (worker/consumer_delivery.py, the
+    process_consumer_report and notify_consumer_report_agent tasks), not from
+    what a stuck row "should" look like (Codex review of #323):
+
+    Consumer stage, with no sent evidence (consumer_sms_sent_at /
+    consumer_email_sent_at):
+      * an abandoned claim: delivery_claimed_at older than the window, or a
+        `sending` row with no claim time;
+      * a held claim: status `needs_review` (hold_stale_claim, hold_attempt);
+      * a definite failure: status `failed`. release_refused CLEARS the claim
+        and sets `failed`, so a claim-age test alone never saw it. Excluded
+        only while a retry is genuinely under way: the task writes "...
+        (attempt N of M; retrying)" and retries after 60/120/180 s, so a
+        `retrying` note updated within the window is in progress; "(gave up
+        after N attempts)" or a non-retryable reason is terminal;
+      * generation that never finished: `pending`/`processing` untouched for
+        REPORT_STUCK_MIN (a worker death leaves `processing`).
+    Agent stage, with no agent_sms_sent_at / agent_sms_sid:
+      * an abandoned claim: `sending` (committed BEFORE the Twilio call by
+        claim_agent_notification) with agent_notify_claimed_at older than the
+        window, or none;
+      * `needs_review`;
+      * `failed`, once its last write is older than the window: the agent task
+        retries a refusal up to 3 times (60/120/180 s). release_agent_refused
+        clears the claim time, so updated_at (trigger-maintained) dates it.
+    PDF stage: `failed`, or `queued`/`generating` with a claim older than the
+    window.
+    """
     return _identities(cur, """
         SELECT 'consumer:' || id::text AS ident
         FROM consumer_reports
         WHERE created_at > now() - make_interval(days => %(d)s)
           AND (
-            (delivery_claimed_at < now() - make_interval(mins => %(m)s)
-             AND consumer_email_sent_at IS NULL AND consumer_sms_sent_at IS NULL)
-            OR agent_notify_status IN ('failed', 'needs_review')
+            (consumer_email_sent_at IS NULL AND consumer_sms_sent_at IS NULL AND (
+                delivery_claimed_at < now() - make_interval(mins => %(m)s)
+                OR (status = 'sending' AND delivery_claimed_at IS NULL)
+                OR status = 'needs_review'
+                OR (status = 'failed' AND NOT (
+                        COALESCE(error_message, '') LIKE '%%; retrying)'
+                        AND updated_at > now() - make_interval(mins => %(m)s)))
+                OR (status IN ('pending', 'processing')
+                    AND updated_at < now() - make_interval(mins => %(stuck)s))
+            ))
+            OR (agent_sms_sent_at IS NULL AND agent_sms_sid IS NULL AND (
+                agent_notify_status = 'needs_review'
+                OR (agent_notify_status = 'sending'
+                    AND (agent_notify_claimed_at IS NULL
+                         OR agent_notify_claimed_at < now() - make_interval(mins => %(m)s)))
+                -- release_agent_refused CLEARS the claim time, so a refusal is
+                -- dated by its last write (updated_at, kept by a trigger).
+                OR (agent_notify_status = 'failed'
+                    AND updated_at < now() - make_interval(mins => %(m)s))
+            ))
             OR pdf_status = 'failed'
             OR (pdf_status IN ('queued', 'generating')
                 AND pdf_claimed_at < now() - make_interval(mins => %(m)s))
           )
         ORDER BY created_at
-    """, {"d": int(CONSUMER_LOOKBACK_D.value), "m": int(CONSUMER_STUCK_MIN.value)})
+    """, {"d": int(CONSUMER_LOOKBACK_D.value), "m": int(CONSUMER_STUCK_MIN.value),
+          "stuck": int(REPORT_STUCK_MIN.value)})
 
 
 def report_webhook_failures(cur) -> Reading:
@@ -265,6 +310,19 @@ def send_not_attempted(cur) -> Reading:
             WHERE provider = 'sendgrid' AND status = 'failed'
               AND created_at > now() - interval '1 hour'
               AND (error = ANY (%(synth)s) OR error LIKE '%%SENDGRID_API_KEY not configured%%')
+            UNION ALL
+            -- Tracked pre-claim refusals (tasks._send_tracked: no_recipients,
+            -- no_pdf, no_unsubscribe_link) return BEFORE the claim, so they
+            -- write no email_log row and no send_outcomes: the only trace is
+            -- the run's own terminal write (Codex review of #323). So is a
+            -- tracked report that completed without a PDF URL. all_suppressed
+            -- finishes `completed` and a cancellation `cancelled`: excluded.
+            SELECT 'run:' || report_run_id::text
+            FROM schedule_runs
+            WHERE recovery_tracked AND status = 'failed'
+              AND finished_at > now() - interval '1 hour'
+              AND (error LIKE 'failed\\_email: nothing sent (%%'
+                   OR error = 'report completed without a PDF URL; nothing was sent')
         ) never_sent
     """, {"synth": list(_SYNTHESIZED_NEVER_SENT)})
     tripped = reading.count >= SEND_NOT_ATTEMPTED_MIN_COUNT.value
