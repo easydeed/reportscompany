@@ -19,6 +19,7 @@ ticker or fail a worker for real work.
 """
 import logging
 import os
+import threading
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -63,10 +64,38 @@ def beat(key: str, ttl_s: int, client=None) -> Optional[int]:
         return None
 
 
-def after_tick(celery_app, client=None) -> None:
-    """Called by the ticker after a loop that completed."""
+_inflight: Optional[threading.Thread] = None
+_inflight_lock = threading.Lock()
+
+
+def _publish(celery_app, client) -> None:
     beat(TICKER_KEY, TICKER_TTL_S, client)
     try:
-        celery_app.send_task(TASK_NAME, queue=CELERY_QUEUE, expires=HEARTBEAT_EXPIRES_S)
+        # retry=False: one attempt per tick. The next tick is the retry.
+        celery_app.send_task(TASK_NAME, queue=CELERY_QUEUE, expires=HEARTBEAT_EXPIRES_S, retry=False)
     except Exception as exc:  # noqa: BLE001
         logger.warning("ops heartbeat work item not published: %s", type(exc).__name__)
+
+
+def after_tick(celery_app, client=None) -> Optional[threading.Thread]:
+    """Called by the ticker after a loop that completed. NEVER WAITS.
+
+    Codex review of #322: a broker that accepts a connection and never replies
+    blocks `send_task` indefinitely (Kombu sets no socket timeout), and a Redis
+    write can take its full timeout. Done inline, either one stopped every
+    later scheduling loop, even with nothing to dispatch: a monitor that can
+    stop scheduled sends is worse than no monitor. So the ticker hands both
+    writes to one background thread and goes on. While that thread is still
+    stuck, later ticks skip their heartbeat (one in flight, never a pile-up),
+    so the ticker key goes stale and /ready reports it: a stuck heartbeat
+    becomes a visible signal instead of a stopped scheduler.
+    """
+    global _inflight
+    with _inflight_lock:
+        if _inflight is not None and _inflight.is_alive():
+            logger.warning("ops heartbeat skipped: the previous one has not finished")
+            return None
+        _inflight = threading.Thread(target=_publish, args=(celery_app, client),
+                                     name="ops-heartbeat", daemon=True)
+        _inflight.start()
+        return _inflight

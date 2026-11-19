@@ -9,8 +9,10 @@ Every wait is bounded, so the worst case is about three seconds:
     `lock_timeout` 250 ms per statement;
   * Redis: a dedicated client with 0.5 s connect and read timeouts. The shared
     client in `cache.py` allows 2 s for each.
-Evaluations are single-flight per process and cached for 10 s, so the pinger,
-or anyone else, cannot turn this into load.
+Evaluations are single-flight per process, on their own thread, and cached for
+10 s, so the pinger, or anyone else, cannot turn this into load. A caller waits
+at most EVAL_BUDGET_S (4 s); an evaluation that has not finished by then is a
+503, and an expired result is never served.
 
 The schema check is `schema_guard.check`, the function that gates startup:
 "the required migration is recorded". A database AHEAD of this binary (a
@@ -50,7 +52,6 @@ REDIS_TIMEOUT_S = 0.5
 CACHE_S = 10.0
 
 _redis_client: Optional[_redis.Redis] = None
-_lock = threading.Lock()
 _cached: Optional[tuple[float, int, dict]] = None  # (monotonic time, status, body)
 
 
@@ -68,18 +69,25 @@ def _readiness_redis() -> _redis.Redis:
 
 
 def _check_database() -> dict:
+    from psycopg.pq import TransactionStatus
     from psycopg_pool import PoolTimeout
     from ..db import get_pool
 
     try:
         with get_pool().connection(timeout=POOL_TIMEOUT_S) as conn:
-            try:
+            # SET LOCAL only holds inside a transaction, and PostgreSQL silently
+            # ignores it outside one. The pool hands back connections in
+            # whatever autocommit state their last borrower left
+            # (db_conn_autocommit sets True), so open the transaction
+            # explicitly: valid in either state, and always rolled back, so no
+            # setting reaches the next borrower (Codex review of #322).
+            if conn.info.transaction_status != TransactionStatus.IDLE:
+                conn.rollback()
+            with conn.transaction(force_rollback=True):
                 with conn.cursor() as cur:
                     cur.execute("SET LOCAL statement_timeout = '1000ms'")
                     cur.execute("SET LOCAL lock_timeout = '250ms'")
                     schema_check(cur)
-            finally:
-                conn.rollback()
         return {"status": "ok"}
     except SchemaBehind:
         return {"status": "behind"}
@@ -142,23 +150,53 @@ def _respond(status: int, body: dict) -> JSONResponse:
     return JSONResponse(status_code=status, content=body, headers={"Cache-Control": "no-store"})
 
 
+# A caller waits at most this long for an evaluation. The checks' own bounds
+# make ~3 s the expected worst case; this is the hard ceiling the pinger sees.
+EVAL_BUDGET_S = 4.0
+_state_lock = threading.Lock()
+_inflight: Optional[threading.Thread] = None
+
+
+def _fresh(cached) -> bool:
+    return bool(cached) and time.monotonic() - cached[0] < CACHE_S
+
+
+def _evaluate_and_store() -> None:
+    global _cached, _inflight
+    try:
+        status, body = evaluate()
+        with _state_lock:
+            _cached = (time.monotonic(), status, body)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("ready: evaluation failed: %s", type(exc).__name__)
+    finally:
+        with _state_lock:
+            _inflight = None
+
+
 @router.get("/ready")
 def ready():
-    global _cached
-    cached = _cached
-    if cached and time.monotonic() - cached[0] < CACHE_S:
-        return _respond(cached[1], cached[2])
-    # Single flight: one evaluation at a time; the others wait for it and reuse it.
-    if not _lock.acquire(timeout=5.0):
-        if cached:
-            return _respond(cached[1], cached[2])
-        return _respond(503, {"ready": False, "schema": REQUIRED_MIGRATION, "checks": {}})
-    try:
+    """Fresh result, or 503. Never an expired one (Codex review of #322).
+
+    One evaluation at a time, on its own thread; every caller, the first
+    included, waits at most EVAL_BUDGET_S for it. A result is served only
+    while it is younger than CACHE_S. If the evaluation has not finished
+    inside the budget, the answer is 503 "evaluation incomplete": a stalled
+    dependency must show up at the pinger, not hide behind the last green.
+    """
+    global _inflight
+    with _state_lock:
         cached = _cached
-        if cached and time.monotonic() - cached[0] < CACHE_S:
+        if _fresh(cached):
             return _respond(cached[1], cached[2])
-        status, body = evaluate()
-        _cached = (time.monotonic(), status, body)
-        return _respond(status, body)
-    finally:
-        _lock.release()
+        if _inflight is None:
+            _inflight = threading.Thread(target=_evaluate_and_store, name="ready-evaluate", daemon=True)
+            _inflight.start()
+        thread = _inflight
+    thread.join(EVAL_BUDGET_S)
+    with _state_lock:
+        cached = _cached
+    if _fresh(cached):
+        return _respond(cached[1], cached[2])
+    return _respond(503, {"ready": False, "schema": REQUIRED_MIGRATION, "checks": {},
+                          "reason": "evaluation_incomplete"})

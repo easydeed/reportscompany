@@ -192,6 +192,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/market_reports
           TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/scratch
           REQUIRE_REDIS_TESTS: "1"
+          TEST_REDIS_URL: redis://localhost:6379/15
 
       # A RED CHECK THAT SAYS WHICH TEST FAILED (D-191).
       #
