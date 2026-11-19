@@ -129,7 +129,7 @@ def login(body: LoginIn, response: Response):
         "is_sponsored": is_sponsored,
         "parent_account_id": parent_account_id,
         "scopes": ["reports:read", "reports:write"]
-    }, settings.JWT_SECRET, ttl_seconds=3600)
+    }, settings.JWT_SECRET, ttl_seconds=3600, password_hash=pw_hash)
     
     # Set HTTP-only cookie
     response.set_cookie(
@@ -343,6 +343,7 @@ def register(body: RegisterIn, response: Response, background_tasks: BackgroundT
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
+                password_hash=password_hash,
                 ttl_seconds=7 * 24 * 3600  # 7 days for new users
             )
             
@@ -395,59 +396,63 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
             }
         )
     
+    invalid_token = HTTPException(
+        status_code=400,
+        detail={"error": "invalid_token", "message": "Invite link is invalid or expired."},
+    )
+
     with psycopg.connect(settings.DATABASE_URL, autocommit=False) as conn:
         with conn.cursor() as cur:
-            # 1. Validate token from signup_tokens
+            # LR-017 (D-376): validating, consuming the token and setting the
+            # password are one atomic operation. Before, the token was read
+            # without a lock and both writes were unconditional, so two
+            # concurrent accepts both succeeded and the last password won (4 of
+            # 4 review runs), and a seat cancelled mid-acceptance was accepted.
+            #
+            # Lock order matters. Seat cancellation (services/seats.py
+            # `_switch_off`) writes users, then signup_tokens, then accounts;
+            # the affiliate deactivation writes accounts, users, signup_tokens.
+            # So this takes the USER row first, then claims the token, and only
+            # reads the account. Any other order can deadlock against a
+            # concurrent cancellation.
+
+            # 1. Whose invitation is this? A plain read, only to know which
+            #    user row to lock.
+            cur.execute("SELECT user_id::text FROM signup_tokens WHERE token = %s", (token,))
+            named = cur.fetchone()
+            if not named:
+                raise invalid_token
+
+            # 2. Lock the user. A concurrent acceptance or cancellation of the
+            #    same seat waits here until the other commits.
             cur.execute("""
-                SELECT user_id::text, account_id::text, expires_at, used
-                FROM signup_tokens
-                WHERE token = %s
-            """, (token,))
-            
-            token_row = cur.fetchone()
-            
-            if not token_row:
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "invalid_token",
-                        "message": "Invite link is invalid or expired."
-                    }
-                )
-            
-            user_id, account_id, expires_at, used = token_row
-            
-            # Check if token already used
-            if used:
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "invalid_token",
-                        "message": "Invite link is invalid or expired."
-                    }
-                )
-            
-            # Check if token expired
-            now = datetime.now()
-            if expires_at and expires_at < now:
-                raise HTTPException(
-                    status_code=400,
-                    detail={
-                        "error": "invalid_token",
-                        "message": "Invite link is invalid or expired."
-                    }
-                )
-            
-            # 2. Load user and verify they exist
-            cur.execute("""
-                SELECT id::text, email, is_active
+                SELECT id::text, email, is_active, account_id::text
                 FROM users
                 WHERE id = %s::uuid
-            """, (user_id,))
-            
+                FOR UPDATE
+            """, (named[0],))
             user_row = cur.fetchone()
-            
+
+            # 3. Claim the token: one conditional UPDATE under the user lock.
+            #    A used, expired or cancelled token, or the loser of a race,
+            #    matches nothing, so it can never reach the password write.
+            cur.execute("""
+                UPDATE signup_tokens
+                SET used = TRUE
+                WHERE token = %s
+                  AND user_id = %s::uuid
+                  AND used = FALSE
+                  AND (expires_at IS NULL OR expires_at > now()::timestamp)
+                RETURNING user_id::text, account_id::text
+            """, (token, named[0]))
+            claimed = cur.fetchone()
+            if not claimed:
+                conn.rollback()
+                raise invalid_token
+            user_id, account_id = claimed
+
             if not user_row:
+                conn.rollback()
                 raise HTTPException(
                     status_code=400,
                     detail={
@@ -455,10 +460,20 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                         "message": "Associated user account not found."
                     }
                 )
-            
-            user_id_confirmed, email, is_active = user_row
-            
+
+            user_id_confirmed, email, is_active, user_account_id = user_row
+
+            # The session is minted for the token's account; it must be the
+            # user's own, or a mismatched row would sign someone into another
+            # account.
+            if user_account_id != account_id:
+                conn.rollback()
+                raise invalid_token
+
             if not is_active:
+                # Rolled back: the token stays unused for an account that is
+                # switched off, exactly as before.
+                conn.rollback()
                 raise HTTPException(
                     status_code=400,
                     detail={
@@ -466,23 +481,16 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                         "message": "This account has been deactivated."
                     }
                 )
-            
-            # 3. Hash password and update user
+
+            # 4. The password, in the same transaction as the claim.
             password_hash = hash_password(password)
-            
+
             cur.execute("""
                 UPDATE users
-                SET password_hash = %s, email_verified = TRUE
+                SET password_hash = %s, email_verified = TRUE, password_changed_at = NOW() AT TIME ZONE 'UTC'
                 WHERE id = %s::uuid
             """, (password_hash, user_id))
-            
-            # 4. Mark token as used
-            cur.execute("""
-                UPDATE signup_tokens
-                SET used = TRUE
-                WHERE token = %s
-            """, (token,))
-            
+
             cur.execute("""
                 SELECT u.role, a.account_type, u.is_platform_admin,
                        a.sponsor_account_id IS NOT NULL AS is_sponsored,
@@ -535,6 +543,7 @@ def accept_invite(body: AcceptInviteRequest, response: Response, background_task
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
+                password_hash=password_hash,
                 ttl_seconds=7 * 24 * 3600  # 7 days for new users
             )
             
@@ -721,14 +730,14 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                 SELECT 
                     prt.id::text,
                     prt.user_id::text,
-                    prt.expires_at,
+                    prt.expires_at <= NOW() AS expired,
                     prt.used_at,
                     u.email,
                     u.account_id::text,
                     u.is_active
                 FROM password_reset_tokens prt
                 JOIN users u ON u.id = prt.user_id
-                WHERE prt.token = %s
+                WHERE prt.token = %s FOR UPDATE OF prt, u
             """, (token,))
             
             row = cur.fetchone()
@@ -739,7 +748,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                     detail="Invalid or expired reset link. Please request a new one."
                 )
             
-            token_id, user_id, expires_at, used_at, email, account_id, is_active = row
+            token_id, user_id, expired, used_at, email, account_id, is_active = row
             
             # Check if already used
             if used_at is not None:
@@ -749,7 +758,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                 )
             
             # Check if expired
-            if expires_at < datetime.utcnow():
+            if expired:
                 raise HTTPException(
                     status_code=400,
                     detail="This reset link has expired. Please request a new one."
@@ -768,7 +777,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
             # Update user's password
             cur.execute("""
                 UPDATE users
-                SET password_hash = %s, password_changed_at = NOW(), updated_at = NOW()
+                SET password_hash = %s, password_changed_at = NOW() AT TIME ZONE 'UTC', updated_at = NOW()
                 WHERE id = %s::uuid
             """, (password_hash, user_id))
             
@@ -812,6 +821,7 @@ def reset_password(body: ResetPasswordRequest, response: Response):
                     "scopes": ["reports:read", "reports:write"]
                 },
                 settings.JWT_SECRET,
+                password_hash=password_hash,
                 ttl_seconds=3600
             )
             

@@ -139,9 +139,10 @@ def test_four_concurrent_requests_with_one_key_create_one(client, account, monke
 def test_the_same_key_with_a_different_request_is_refused_and_creates_nothing(client, account):
     aid, auth = account()
     key = _key()
-    _keyed(client, auth, "reports", REPORT, key)
+    first = _keyed(client, auth, "reports", REPORT, key)
     other = _keyed(client, auth, "reports", {**REPORT, "lookback_days": 90}, key)
     assert other.status_code == 409 and other.json()["detail"]["error"] == "idempotency_key_reused"
+    assert other.json()["detail"]["resource_id"] == first.json()["report_id"]
     assert _count("report_generations", aid) == 1
 
 
@@ -161,6 +162,8 @@ def test_the_replay_window_is_seven_days_and_an_old_key_is_never_new(client, acc
         assert again.status_code == 202 and again.json()["report_id"] == first.json()["report_id"]
     else:
         assert again.status_code == 410 and again.json()["detail"]["error"] == "idempotency_key_expired"
+        assert again.json()["detail"]["request_matches"] is True
+        assert again.json()["detail"]["resource_id"] == first.json()["report_id"]
     assert _count("report_generations", aid) == 1
     assert _count("request_idempotency", aid) == 1, "the old key was dropped or replaced"
 

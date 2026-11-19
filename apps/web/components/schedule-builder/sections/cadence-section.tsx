@@ -40,7 +40,7 @@ export function CadenceSection({
   const formatHour = (h: number) => {
     const ampm = h >= 12 ? "PM" : "AM"
     const hour12 = h % 12 || 12
-    return `${hour12}:00 ${ampm}`
+    return `${hour12}:${String(sendMinute).padStart(2, "0")} ${ampm}`
   }
 
   return (
@@ -129,6 +129,7 @@ export function CadenceSection({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              {!TIMEZONES.some(tz => tz.value === timezone) && <SelectItem value={timezone}>{timezone}</SelectItem>}
               {TIMEZONES.map((tz) => (
                 <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
               ))}
