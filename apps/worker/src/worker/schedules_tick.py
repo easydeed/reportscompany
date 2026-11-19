@@ -24,6 +24,7 @@ import ssl
 from celery import Celery
 from . import theme_registry
 from . import scheduled_runs
+from . import ops_heartbeat
 
 # Create a separate Celery instance for ticker (no result backend needed)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -798,20 +799,31 @@ def run_forever():
     logger.info(f"API keep-alive target: {API_BASE_URL} (every {KEEP_ALIVE_INTERVAL}s)")
     
     while True:
-        try:
-            # Keep API warm to prevent Render cold starts
-            keep_api_warm()
-            
-            logger.debug("Tick: Checking for due schedules...")
-            process_due_schedules()
-
-            # Runs that were enqueued and never finished. Nothing inside the
-            # worker can report these — see sweep_stale_runs.
-            sweep_stale_runs()
-        except Exception as e:
-            logger.error(f"Ticker error: {e}", exc_info=True)
-        
+        tick_once()
         time.sleep(TICK_INTERVAL)
+
+
+def tick_once() -> bool:
+    """One ticker loop. Returns whether it completed.
+
+    LR-027: only a completed loop refreshes the ticker heartbeat and publishes
+    the worker heartbeat, so a ticker that raises on every loop goes stale.
+    """
+    try:
+        # Keep API warm to prevent Render cold starts
+        keep_api_warm()
+
+        logger.debug("Tick: Checking for due schedules...")
+        process_due_schedules()
+
+        # Runs that were enqueued and never finished. Nothing inside the
+        # worker can report these — see sweep_stale_runs.
+        sweep_stale_runs()
+    except Exception as e:
+        logger.error(f"Ticker error: {e}", exc_info=True)
+        return False
+    ops_heartbeat.after_tick(celery)
+    return True
 
 
 if __name__ == "__main__":

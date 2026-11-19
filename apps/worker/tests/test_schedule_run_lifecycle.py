@@ -161,15 +161,21 @@ def test_the_ticker_sweeps_stale_runs_every_tick():
         isinstance(n, ast.FunctionDef) and n.name == "sweep_stale_runs"
         for n in ast.walk(tree)
     ), "sweep_stale_runs is not defined"
-    loop = next(
-        n for n in ast.walk(tree)
-        if isinstance(n, ast.FunctionDef) and n.name == "run_forever"
-    )
-    called = {
-        n.func.id for n in ast.walk(loop)
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
-    }
-    assert "sweep_stale_runs" in called, "the ticker never calls the sweep"
+    def calls(name):
+        fn = next(
+            n for n in ast.walk(tree)
+            if isinstance(n, ast.FunctionDef) and n.name == name
+        )
+        return {
+            n.func.id for n in ast.walk(fn)
+            if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+        }
+
+    # LR-027 moved the loop body into tick_once() so that only a completed
+    # loop refreshes the heartbeat. Follow the call: the loop must call
+    # tick_once, and tick_once must call the sweep.
+    assert "tick_once" in calls("run_forever"), "the ticker loop no longer runs tick_once"
+    assert "sweep_stale_runs" in calls("tick_once"), "the ticker never calls the sweep"
 
 
 def test_the_sweep_only_touches_non_terminal_rows():
