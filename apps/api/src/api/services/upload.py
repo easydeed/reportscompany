@@ -24,7 +24,12 @@ R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_
 
 # Constraints
 MAX_FILE_SIZE_MB = 5
-ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"}
+IMAGE_TYPES = {
+    "PNG": ("image/png", {"png"}),
+    "JPEG": ("image/jpeg", {"jpg", "jpeg"}),
+    "WEBP": ("image/webp", {"webp"}),
+    "GIF": ("image/gif", {"gif"}),
+}
 MAX_DIMENSIONS = (2000, 2000)
 MIN_DIMENSIONS = (100, 100)
 
@@ -44,50 +49,39 @@ def get_r2_client():
     )
 
 
-async def validate_image(file: UploadFile) -> bytes:
-    """
-    Validate uploaded image file.
-    Returns file bytes if valid, raises HTTPException if not.
-    """
-    # Check content type
-    if file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid file type '{file.content_type}'. Allowed: PNG, JPEG, WebP, GIF, SVG"
-        )
-    
-    contents = await file.read()
-    
-    size_mb = len(contents) / (1024 * 1024)
-    if size_mb > MAX_FILE_SIZE_MB:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File too large ({size_mb:.1f}MB). Maximum: {MAX_FILE_SIZE_MB}MB"
-        )
-    
-    # SVGs are vector — skip raster dimension validation
-    if file.content_type != "image/svg+xml":
-        try:
-            image = Image.open(io.BytesIO(contents))
-            width, height = image.size
-            
-            if width < MIN_DIMENSIONS[0] or height < MIN_DIMENSIONS[1]:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Image too small ({width}x{height}px). Minimum: {MIN_DIMENSIONS[0]}x{MIN_DIMENSIONS[1]}px"
-                )
-            
-            if width > MAX_DIMENSIONS[0] or height > MAX_DIMENSIONS[1]:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Image too large ({width}x{height}px). Maximum: {MAX_DIMENSIONS[0]}x{MAX_DIMENSIONS[1]}px"
-                )
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
-    
-    return contents
+async def validate_image(file: UploadFile) -> tuple[bytes, str, str]:
+    """Read a bounded raster upload and verify the three descriptions agree."""
+    allowed = "Choose a PNG, JPEG, WebP or GIF image."
+    if file.content_type not in {mime for mime, extensions in IMAGE_TYPES.values()}:
+        raise HTTPException(status_code=400, detail=allowed)
+    limit = MAX_FILE_SIZE_MB * 1024 * 1024
+    contents = await file.read(limit + 1)
+    if len(contents) > limit:
+        raise HTTPException(status_code=400, detail=f"File exceeds the {MAX_FILE_SIZE_MB}MB limit.")
+    filename = file.filename or ""
+    extension = os.path.splitext(filename)[1].lower().lstrip(".")
+    try:
+        with Image.open(io.BytesIO(contents), formats=list(IMAGE_TYPES)) as img:
+            # A JPEG container can identify itself as an unsupported
+            # multi-picture format after Pillow reads the image metadata.
+            detected = IMAGE_TYPES.get(img.format)
+            if detected is None:
+                raise HTTPException(status_code=400, detail=allowed)
+            mime, extensions = detected
+            if mime != file.content_type or extension not in extensions:
+                raise HTTPException(status_code=400, detail="The image format, filename and content type must match.")
+            width, height = img.size
+            if not (MIN_DIMENSIONS[0] <= width <= MAX_DIMENSIONS[0] and
+                    MIN_DIMENSIONS[1] <= height <= MAX_DIMENSIONS[1]):
+                raise HTTPException(status_code=400, detail="Image dimensions must be between 100 and 2000 pixels on each side.")
+            img.verify()
+        # Reopen after verify() to decode pixels. Pillow identifies some
+        # truncated files from their header alone.
+        with Image.open(io.BytesIO(contents), formats=list(IMAGE_TYPES)) as img:
+            img.load()
+    except (ValueError, OSError, SyntaxError, Image.DecompressionBombError) as exc:
+        raise HTTPException(status_code=400, detail="The uploaded image could not be decoded.") from exc
+    return contents, extension, mime
 
 
 async def upload_branding_asset(
@@ -100,14 +94,9 @@ async def upload_branding_asset(
     Returns dict with url, filename, and size_bytes.
     """
     # Validate
-    contents = await validate_image(file)
-    
-    # Generate unique filename
-    original_filename = file.filename or "image"
-    ext = original_filename.split(".")[-1].lower() if "." in original_filename else "png"
-    if ext not in ("png", "jpg", "jpeg", "webp", "gif", "svg"):
-        ext = "png"
-    
+    contents, ext, content_type = await validate_image(file)
+    original_filename = file.filename
+
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
     s3_key = f"branding/{account_id}/{asset_type}_{timestamp}_{unique_id}.{ext}"
@@ -124,17 +113,6 @@ async def upload_branding_asset(
             "size_bytes": len(contents),
             "s3_key": s3_key,
         }
-    
-    # Determine content type
-    content_type_map = {
-        "png": "image/png",
-        "jpg": "image/jpeg",
-        "jpeg": "image/jpeg",
-        "webp": "image/webp",
-        "gif": "image/gif",
-        "svg": "image/svg+xml",
-    }
-    content_type = content_type_map.get(ext, "image/png")
     
     # Upload to R2
     print(f"[Upload] Uploading to R2: {s3_key}")
