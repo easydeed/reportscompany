@@ -16499,7 +16499,7 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 ### D-404 — Report Share and Print can show “Report Not Found”
 
 **Severity:** BROKEN
-**Status:** `open` — [#305](https://github.com/easydeed/reportscompany/pull/305) deployed to Vercel and the Render API at `e2d0d509` on November 18. The production health and sign-in checks passed. A real shared and printed report from the designated pilot account still needs verification.
+**Status:** `open` — [#305](https://github.com/easydeed/reportscompany/pull/305) deployed to Vercel and the Render API at `e2d0d509` on November 18. The production health and sign-in checks passed. Jerry confirmed a real-account Share link on November 19: the La Verne New Listings snapshot displays its listing details, agent headshot and date, where the same link previously showed Report Not Found. This is production verification supplied by Jerry. Print remains unverified.
 
 **Customer-visible behaviour:** The dashboard’s Share and Print links could lead to a missing-report screen. The server-side renderer’s request was refused before the report data route could authenticate it. The initial production example used a synthetic report identifier.
 
