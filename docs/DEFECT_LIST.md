@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 74 | Real, unfixed |
+| `open` | 75 | Real, unfixed |
 | `fixed` | 230 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **404** | D-001 … D-404, contiguous, no duplicates |
+| **Total** | **405** | D-001 … D-404 and D-406; D-405 is reserved on [#316](https://github.com/easydeed/reportscompany/pull/316); no duplicate IDs |
 
-**Open by severity:** BROKEN 11 · WRONG 37 · FRAGILE 26 · ROUGH 0. (Sums to 74, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 75, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16506,6 +16506,21 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 **Correction:** The middleware lets the report data route verify its server-side caller. The account-authenticated path still scopes its query to the signed-in account. Independent review required two revisions before release. See the [final review](https://github.com/easydeed/reportscompany/pull/305#issuecomment-6990874455) and the earlier [board history](https://github.com/easydeed/reportscompany/commit/f4737541f8a17de2633947cb65571385b818680b).
 
 **Acceptance:** Open a known report from the approved pilot account through Share and Print. Check the report identity, PCT branding and the displayed data. The separate [Market Snapshot price filing](https://github.com/easydeed/reportscompany/pull/316) follows this entry. D-029 and D-101 contain related link history.
+
+### D-406 — Customer SMS logs expose destination phone numbers
+
+**Severity:** WRONG
+**Status:** `open` — filed November 18 from LR-027 design rev 3; separate from operator-alert implementation.
+
+**Evidence:** `apps/worker/src/worker/sms/send.py:59` logs `to_number` on successful customer sends; lines 67 and 78 also include it on provider and unexpected errors. This is a source-confirmed logging path, not a live send or an inspection of production log contents. LR-027's operator wrapper avoids destinations but does not repair the existing customer sender.
+
+The API's second customer sender, `apps/api/src/api/services/twilio_sms.py:84`, logs `to_phone[:6]` on success; line 96 logs provider error text that can echo the full destination. This sender is used by `routes/leads.py`. The separate fix must cover both senders, including partial destinations and provider echoes.
+
+**Impact:** customer and agent destination numbers enter application logs, expanding access and retention beyond the delivery journal.
+
+**Required fix:** remove raw and normalized destinations from success/error logs, including provider exception text that could echo them. Keep only safe correlation IDs and outcome classes. Preserve send payloads and delivery-state behavior.
+
+**Acceptance:** capture logs from both the worker and API senders for successful, refused and uncertain customer SMS outcomes using fake Twilio responses containing sentinel phone numbers; prove no full destination, exposed destination prefix or echoed sentinel appears. No real SMS or production-log purge is authorized by this filing.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 
