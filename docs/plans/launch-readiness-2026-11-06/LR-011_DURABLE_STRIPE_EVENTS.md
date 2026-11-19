@@ -1,7 +1,7 @@
 # LR-011: durable Stripe ingestion — proposed design
 
 Base main: `79661c427784a412a902037e1da636477cbb66fa`.
-Status: revision 2, addressing Claude review 7017738043; awaiting re-review.
+Status: design PASS at 6a36574b (Claude review 7023347174); implementation notes recorded below.
 Not runtime implementation or paid-launch approval.
 Stripe in production is **live**, per Jerry. No real-card checkout tests.
 
@@ -209,3 +209,21 @@ and Basil-shaped cancellation retaining access; both mode mismatch directions;
 malformed signed business shapes retained durably; terminal Dashboard resend;
 cache-only disposition; tenant access denied by RLS. All payment fixtures stay
 local with provider HTTP blocked. No live payment tests.
+
+
+## Design PASS implementation notes (Claude 7023347174)
+
+Create the cursor row with INSERT ON CONFLICT DO NOTHING before SELECT FOR
+UPDATE, so concurrent first events serialize. Key it by mode and subscription.
+Advance it only in the transaction applying an account mutation, never for
+quarantined, ignored or cache-only events. A newer quarantined event must not
+supersede an older valid change that has not yet been applied.
+
+No tenant route exposes these platform tables; that is the current access
+boundary. The app currently connects as a superuser, which bypasses RLS.
+Enabling RLS without tenant policies is future defence, not effective tenant
+isolation under that connection. RLS tests must use a non-superuser probe role
+with tenant context, and separately record the app connection's role flags.
+When D-005 hardens the role, the writer must retain table-owner access (without
+FORCE RLS), or an explicitly reviewed server-only policy. Do not silently
+change database roles in LR-011 or rely on tenant-context tests as that change.
