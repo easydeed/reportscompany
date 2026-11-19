@@ -25,6 +25,7 @@ from celery import Celery
 from . import theme_registry
 from . import scheduled_runs
 from . import ops_heartbeat
+from . import ops_monitor
 
 # Create a separate Celery instance for ticker (no result backend needed)
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -798,8 +799,14 @@ def run_forever():
     logger.info(f"Database: {DATABASE_URL.split('@')[-1]}")  # Log host without credentials
     logger.info(f"API keep-alive target: {API_BASE_URL} (every {KEEP_ALIVE_INTERVAL}s)")
     
+    # LR-027: the operator monitor (observe-only in this slice) runs on its own
+    # thread every 5 minutes, under a Redis lease. It never blocks this loop.
+    monitor = ops_monitor.MonitorRunner(DATABASE_URL)
+    logger.info("Ops monitor: %s, every %ss", ops_monitor.enabled_mode(), ops_monitor.INTERVAL_S)
+
     while True:
         tick_once()
+        monitor.maybe_start()
         time.sleep(TICK_INTERVAL)
 
 

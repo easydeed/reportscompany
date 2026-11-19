@@ -32,7 +32,7 @@ import logging
 import os
 import sys
 
-REQUIRED_MIGRATION = "0068_durable_schedule_dispatch.sql"
+REQUIRED_MIGRATION = "0069_ops_alerts.sql"
 
 logger = logging.getLogger("schema_guard")
 

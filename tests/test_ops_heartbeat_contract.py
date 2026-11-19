@@ -37,3 +37,14 @@ def test_the_worker_key_outlives_the_backlog_horizon_the_api_allows():
 
 def test_the_ticker_key_outlives_the_ticker_staleness_threshold():
     assert constants(WORKER)["TICKER_TTL_S"] > constants(API)["TICKER_STALE_S"]
+
+
+MONITOR = ROOT / "apps/worker/src/worker/ops_monitor.py"
+
+
+def test_the_monitor_judges_heartbeats_by_the_same_thresholds_as_ready():
+    # /ready and the monitor must agree on "stale" and "backlog", or the
+    # pinger and the operator alert would contradict each other.
+    api, monitor = constants(API), constants(MONITOR)
+    for name in ("TICKER_STALE_S", "WORKER_STALE_S", "WORKER_BACKLOG_LIMIT_S"):
+        assert api[name] == monitor[name], name
