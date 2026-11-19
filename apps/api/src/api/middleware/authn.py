@@ -144,6 +144,10 @@ def _is_public_path(path: str) -> bool:
     # Special case: exact match
     if path == "/v1/leads/capture":
         return True
+    # LR-027: readiness has no credential to reject, so it can never answer 401.
+    # Exact match, not a prefix: nothing else becomes public by starting "/ready".
+    if path == "/ready":
+        return True
     return False
 
 
