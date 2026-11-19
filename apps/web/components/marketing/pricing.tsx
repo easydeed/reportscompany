@@ -41,7 +41,7 @@ const plans = [
 
 export function Pricing() {
   return (
-    <SplitSection white id="pricing" align="start">
+    <SplitSection id="pricing" align="start">
       <div className="flex flex-col gap-5">
         <Eyebrow>Pricing</Eyebrow>
         <SectionTitle>Free for one city. Pay when you want more.</SectionTitle>

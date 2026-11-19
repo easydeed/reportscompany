@@ -1,22 +1,34 @@
 "use client";
 
 /**
- * Shared pieces of the landing page, ported from Design's `Landing v4.dc.html`
- * (docs/design-claude/new_package/design_handoff_product/).
+ * Shared pieces of the landing page — Design's `Landing v13.dc.html`
+ * (docs/design-claude/design_handoff_landing/).
  *
- * The deck drives every mock on the page from one `primary`/`accent` pair that
- * the hero's "Your colors" swatches change, and from the city typed into the
- * hero. Both live in `LandingTheme` so the swatches recolour the phone, the
- * property card, the lead page and the closing band at once, as they do in
- * the deck.
+ * Unchanged from the v4 port: `LandingTheme` (one `primary`/`accent` pair and
+ * the typed city drive every mock on the page), `ReportSheet` (the worker's
+ * own render through `ReportThumb`), `Glow`, `DotField`, `AgentDisc`.
  *
- * Report previews are `ReportThumb` — the worker's own render of each kind's
- * first page, the one the wizard and the dashboard show — rather than images,
- * so they recolour with the swatches the way the deck's do. (This said "the
- * real preview" when it was `SharedPDFPreview`, a React redraw of the report
- * that had kept the page seven kinds left in October.)
+ * New in v13:
+ * - `DotGrid`    the brand-to-accent dotted field behind the hero and the
+ *                property templates, drifting a little on scroll.
+ * - `Drift`      scroll parallax for the two hero pages.
+ * - `Steps`      the numbered 01/02/03 list every section now explains itself
+ *                with (a row under the hero, a column elsewhere).
+ * - `FloatCard`  the tilted white cards around the phones.
+ * - `SplitSection` alternates white with a cool tint (#F5F6FB) instead of the
+ *                page's old warm ground; `PhoneFrame` takes an `x`.
+ *
+ * Both motions stop under `prefers-reduced-motion`.
  */
-import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { ReportThumb } from "@/components/shared/report-thumb";
 import type { PreviewReportType } from "@/components/shared/email-preview/sample-data";
 import { DEMO_AGENT, DEMO_MARKET } from "@/lib/demo-data";
@@ -51,6 +63,114 @@ export function useLandingTheme() {
 
 export const INK = "#0F172A";
 export const RULE = "#ECEAE3";
+/** The cool tint every other section sits on, and the hairline between sections. */
+export const TINT = "#F5F6FB";
+export const SECTION_RULE = "#E6E8F0";
+
+const FLOAT_SHADOW = "0 24px 48px -16px rgba(15,23,42,0.35), 0 0 0 1px rgba(15,23,42,0.06)";
+
+/**
+ * Runs `fn` once now and then at most once a frame while the page scrolls or
+ * resizes. Returns the cleanup. Does nothing under reduced motion.
+ */
+function onScrollFrame(fn: () => void): () => void {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return () => {};
+  let raf = 0;
+  const on = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      fn();
+    });
+  };
+  on();
+  window.addEventListener("scroll", on, { passive: true });
+  window.addEventListener("resize", on);
+  return () => {
+    if (raf) cancelAnimationFrame(raf);
+    window.removeEventListener("scroll", on);
+    window.removeEventListener("resize", on);
+  };
+}
+
+/**
+ * The dotted field: a `from`→`to` gradient seen through a 26px dot mask that
+ * fades out around `focus`. Its parent must be `relative overflow-hidden`,
+ * and anything that should sit above it must be positioned (`relative`).
+ * Decorative only: 32% opacity, 1.3px dots.
+ */
+export function DotGrid({
+  from,
+  to,
+  focus = "72% 45%",
+}: {
+  from: string;
+  to: string;
+  focus?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(
+    () =>
+      onScrollFrame(() => {
+        const el = ref.current;
+        const host = el?.parentElement;
+        if (!el || !host) return;
+        const r = host.getBoundingClientRect();
+        const fromCentre = r.top + r.height / 2 - window.innerHeight / 2;
+        const y = Math.round(Math.max(-90, Math.min(90, -fromCentre * 0.1)));
+        el.style.transform = `translateY(${y}px)`;
+      }),
+    [],
+  );
+  const mask = `radial-gradient(circle, #000 1.3px, transparent 1.7px), radial-gradient(ellipse 85% 85% at ${focus}, #000 25%, transparent 90%)`;
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0"
+      style={{
+        top: "-12%",
+        bottom: "-12%",
+        background: `linear-gradient(120deg, ${from}, ${to})`,
+        opacity: 0.32,
+        WebkitMaskImage: mask,
+        WebkitMaskSize: "26px 26px, 100% 100%",
+        WebkitMaskComposite: "source-in",
+        maskImage: mask,
+        maskSize: "26px 26px, 100% 100%",
+        maskComposite: "intersect",
+        willChange: "transform",
+      }}
+    />
+  );
+}
+
+/** Moves its box by `rate` × the scroll position. Put the tilt on the child. */
+export function Drift({
+  rate,
+  className = "",
+  children,
+}: {
+  rate: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(
+    () =>
+      onScrollFrame(() => {
+        if (ref.current) {
+          ref.current.style.transform = `translateY(${Math.round(window.scrollY * rate)}px)`;
+        }
+      }),
+    [rate],
+  );
+  return (
+    <div ref={ref} className={className} style={{ willChange: "transform" }}>
+      {children}
+    </div>
+  );
+}
 
 /** The section frame every split block on the page shares. */
 export function SplitSection({
@@ -60,6 +180,7 @@ export function SplitSection({
   align = "center",
 }: {
   children: ReactNode;
+  /** White ground. Without it the section sits on the cool tint. */
   white?: boolean;
   id?: string;
   align?: "center" | "start";
@@ -67,8 +188,8 @@ export function SplitSection({
   return (
     <section
       id={id}
-      className="border-t border-[#ECEAE3]"
-      style={{ background: white ? "#fff" : undefined }}
+      className="border-t border-[#E6E8F0]"
+      style={{ background: white ? "#fff" : TINT }}
     >
       <div
         className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 md:px-8 md:py-24"
@@ -118,21 +239,76 @@ export function Lede({ children }: { children: ReactNode }) {
   );
 }
 
-/** Eyebrow, title and lede — the text half of each split section. */
+/** A numbered step: title, then one plain sentence. */
+export type Step = readonly [title: string, body: string];
+
+/**
+ * 01 / 02 / 03. `row` lays the steps side by side under one rule (the strip
+ * under the hero); the default stacks them, a rule above each.
+ */
+export function Steps({ items, row = false }: { items: readonly Step[]; row?: boolean }) {
+  const num = (i: number) => (
+    <span className="text-[13px] font-bold tabular-nums text-[#4F46E5]">
+      {String(i + 1).padStart(2, "0")}
+    </span>
+  );
+  const text = ([title, body]: Step) => (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-[17px] font-bold text-[#0F172A]">{title}</span>
+      <span className="text-[15px] text-[#475569]" style={{ textWrap: "pretty" } as CSSProperties}>
+        {body}
+      </span>
+    </div>
+  );
+  if (row) {
+    return (
+      <ol
+        className="m-0 grid list-none border-t border-[#DDE1EE] p-0"
+        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}
+      >
+        {items.map((s, i) => (
+          <li key={s[0]} className="flex items-baseline gap-3.5 pr-6 pt-[22px]">
+            {num(i)}
+            {text(s)}
+          </li>
+        ))}
+      </ol>
+    );
+  }
+  return (
+    <ol className="m-0 mt-2 flex max-w-[440px] list-none flex-col p-0">
+      {items.map((s, i) => (
+        <li
+          key={s[0]}
+          className="grid items-baseline gap-2 border-t border-[#DDE1EE] py-3.5"
+          style={{ gridTemplateColumns: "32px minmax(0, 1fr)" }}
+        >
+          {num(i)}
+          {text(s)}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** Eyebrow, title, lede and (v13) the steps — the text half of each split section. */
 export function SectionCopy({
   eyebrow,
   title,
   lede,
+  steps,
 }: {
   eyebrow: string;
   title: string;
   lede: string;
+  steps?: readonly Step[];
 }) {
   return (
     <div className="flex flex-col gap-5">
       <Eyebrow>{eyebrow}</Eyebrow>
       <SectionTitle>{title}</SectionTitle>
       <Lede>{lede}</Lede>
+      {steps && <Steps items={steps} />}
     </div>
   );
 }
@@ -169,15 +345,30 @@ export function DotField() {
   );
 }
 
-/** A phone: ink bezel, notch, white screen. */
-export function PhoneFrame({ children, tilt }: { children: ReactNode; tilt: number }) {
+/**
+ * A phone: ink bezel, notch, white screen. `x` is where its centre sits across
+ * the stage, in percent, from `sm` up — v13 moves each phone off-centre to
+ * make room for the cards beside it. Below `sm` it is always centred.
+ */
+export function PhoneFrame({
+  children,
+  tilt,
+  x = 50,
+}: {
+  children: ReactNode;
+  tilt: number;
+  x?: number;
+}) {
   return (
     <div
-      className="absolute left-1/2 top-5 w-[300px] rounded-[46px] bg-[#0F172A] p-3.5 sm:w-[340px]"
-      style={{
-        transform: `translateX(-50%) rotate(${tilt}deg)`,
-        boxShadow: "0 40px 80px -24px rgba(15,23,42,0.45)",
-      }}
+      className="absolute left-1/2 top-5 z-[1] w-[300px] rounded-[46px] bg-[#0F172A] p-3.5 sm:left-[var(--phone-x)] sm:w-[340px]"
+      style={
+        {
+          "--phone-x": `${x}%`,
+          transform: `translateX(-50%) rotate(${tilt}deg)`,
+          boxShadow: "0 40px 80px -24px rgba(15,23,42,0.45)",
+        } as CSSProperties
+      }
     >
       <div className="flex h-[540px] flex-col overflow-hidden rounded-[34px] bg-white sm:h-[580px]">
         <div className="flex justify-center pb-2 pt-3">
@@ -185,6 +376,26 @@ export function PhoneFrame({ children, tilt }: { children: ReactNode; tilt: numb
         </div>
         {children}
       </div>
+    </div>
+  );
+}
+
+/** A tilted white card floating over a mock. Position it with `className`. */
+export function FloatCard({
+  tilt,
+  className = "",
+  children,
+}: {
+  tilt: number;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`absolute z-[2] rounded-[14px] bg-white ${className}`}
+      style={{ transform: `rotate(${tilt}deg)`, boxShadow: FLOAT_SHADOW }}
+    >
+      {children}
     </div>
   );
 }
