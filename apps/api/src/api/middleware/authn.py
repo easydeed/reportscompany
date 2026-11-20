@@ -20,6 +20,7 @@ import logging
 from ..settings import settings
 from ..auth import verify_jwt, hash_api_key, session_password_matches
 from ..db import db_conn_autocommit
+from ..services.accounts import active_session_account
 
 logger = logging.getLogger(__name__)
 
@@ -193,15 +194,19 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 try:
                     with db_conn_autocommit() as cur:
                         cur.execute(
-                            "SELECT account_id FROM api_keys "
-                            "WHERE key_hash=%s AND is_active=TRUE",
+                            "SELECT k.account_id, k.is_active AND a.is_active "
+                            "FROM api_keys k JOIN accounts a ON a.id = k.account_id "
+                            "WHERE k.key_hash=%s",
                             (key_hash,),
                         )
                         row = cur.fetchone()
                         if row:
+                            if not row[1]:
+                                return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
                             acct = row[0]
                 except Exception as e:
                     logger.error(f"API key lookup failed: {e}")
+                    return JSONResponse(status_code=503, content={"detail": "Authentication unavailable"})
 
         # ── 2) Cookie fallback (mr_token) ────────────────────────────────
         if not acct:
@@ -230,40 +235,30 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
                 status_code=401, content={"detail": "Unauthorized"}
             )
 
-        request.state.account_id = acct
-
         # ── Fetch user info (single pooled connection) ───────────────────
         user_info = {"account_id": acct, "role": "USER"}
 
-        if claims and claims.get("user_id"):
+        if claims:
             try:
                 with db_conn_autocommit() as cur:
-                    cur.execute(
-                        "SELECT id, email, role, is_platform_admin, COALESCE(is_active, TRUE) FROM users "
-                        "WHERE id=%s::uuid AND account_id=%s::uuid",
-                        (claims["user_id"], acct),
-                    )
-                    user_row = cur.fetchone()
-                    # A deactivated user's token is refused here, not left to
-                    # run until it expires (D-273). Login already refuses them.
-                    if user_row and not user_row[4]:
+                    account = active_session_account(cur, claims.get("user_id"), acct)
+                    if not account:
                         return JSONResponse(
                             status_code=401,
-                            content={"detail": "This account has been deactivated."},
+                            content={"detail": "Session is no longer active for this account."},
                         )
-                    if user_row:
-                        user_info = {
-                            "id": str(user_row[0]),
-                            "email": user_row[1],
-                            "role": (user_row[2] or "USER").upper(),
-                            "is_platform_admin": bool(user_row[3])
-                            if user_row[3] is not None
-                            else False,
-                            "account_id": acct,
-                        }
+                    user_info = {
+                        "id": account["user_id"],
+                        "email": account["email"],
+                        "role": (account["role"] or "USER").upper(),
+                        "is_platform_admin": account["is_platform_admin"],
+                        "account_id": acct,
+                    }
             except Exception as e:
                 logger.error(f"User info fetch failed: {e}")
+                return JSONResponse(status_code=503, content={"detail": "Authentication unavailable"})
 
+        request.state.account_id = acct
         request.state.user = user_info
         return await call_next(request)
 
