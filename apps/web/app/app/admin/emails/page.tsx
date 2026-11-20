@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from "react"
+import { emailOutcomeLabel, emailOutcomeLabels, providerAccepted } from "@/lib/admin-email-outcomes"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,13 +26,12 @@ import {
 import {
   Mail,
   AlertTriangle,
-  CheckCircle,
   Send,
   Search,
   X,
   ChevronDown,
   ChevronUp,
-  Percent,
+  Clock,
 } from "lucide-react"
 
 interface EmailLog {
@@ -43,7 +43,7 @@ interface EmailLog {
   to_count: number
   report_type: string | null
   sender: string | null
-  status: string
+  delivery_status?: string
   error: string | null
   created_at: string
 }
@@ -54,6 +54,7 @@ const STATUS_STYLES: Record<string, string> = {
   success: "bg-green-100 text-green-800",
   failed: "bg-red-100 text-red-800",
   bounced: "bg-red-100 text-red-800",
+  needs_review: "bg-yellow-100 text-yellow-800",
   pending: "bg-yellow-100 text-yellow-800",
   queued: "bg-gray-100 text-gray-700",
 }
@@ -90,12 +91,14 @@ export default function AdminEmailsPage() {
   const searchParams = useSearchParams()
   const [emails, setEmails] = useState<EmailLog[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const filterStatus = searchParams.get("status") || "all"
   const [recipientSearch, setRecipientSearch] = useState(searchParams.get("q") || "")
 
   useEffect(() => {
+    const controller = new AbortController()
     async function fetchEmails() {
       setLoading(true)
       try {
@@ -105,30 +108,39 @@ export default function AdminEmailsPage() {
         if (q) params.set("q", q)
         params.set("limit", "200")
 
-        const res = await fetch(`/api/proxy/v1/admin/emails?${params.toString()}`, { credentials: "include" })
-        if (res.ok) {
-          const data = await res.json()
-          setEmails(data?.emails || data || [])
+        const res = await fetch(`/api/proxy/v1/admin/emails?${params.toString()}`, {
+          credentials: "include", signal: controller.signal,
+        })
+        if (!res.ok) throw new Error("Email log unavailable")
+        const data = await res.json()
+        const entries = data?.emails ?? data
+        if (!Array.isArray(entries)) throw new Error("Invalid email log response")
+        if (!controller.signal.aborted) {
+          setEmails(entries)
+          setLoadError(false)
         }
-      } catch (err) {
-        console.error("Failed to fetch emails:", err)
+      } catch {
+        if (!controller.signal.aborted) {
+          setEmails([])
+          setLoadError(true)
+        }
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
     fetchEmails()
+    return () => controller.abort()
   }, [searchParams, filterStatus])
 
   const stats = useMemo(() => {
     const now = new Date()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const recent = emails.filter(e => new Date(e.created_at) >= thirtyDaysAgo)
-    const total = recent.length
-    const failed = recent.filter(e => e.status === "failed" || e.status === "bounced").length
-    const delivered = recent.filter(e => e.status === "delivered" || e.status === "sent" || e.status === "success").length
-    const deliveryRate = total > 0 ? Math.round((delivered / total) * 100) : 0
-
-    return { total, failed, deliveryRate }
+    return {
+      accepted: recent.filter(e => providerAccepted(e.delivery_status)).length,
+      failed: recent.filter(e => e.delivery_status === "failed" || e.delivery_status === "bounced").length,
+      held: recent.filter(e => e.delivery_status === "needs_review").length,
+    }
   }, [emails])
 
   function updateFilter(key: string, value: string) {
@@ -177,17 +189,19 @@ export default function AdminEmailsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-display font-bold">Email Delivery</h1>
-        <p className="text-muted-foreground mt-2">Email delivery logs across all accounts</p>
+        <p className="text-muted-foreground mt-2">Counts cover the past 30 days within the latest 200 matching entries.</p>
       </div>
+
+      {loadError && <p role="alert">Couldn’t load the email log. Refresh this page to try again.</p>}
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sent (30d)</CardTitle>
+            <CardTitle className="text-sm font-medium">Provider accepted (30d)</CardTitle>
             <Send className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{loadError ? "—" : stats.accepted}</div></CardContent>
         </Card>
         <Card className={stats.failed > 0 ? "bg-red-50 border-red-200" : ""}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -195,18 +209,16 @@ export default function AdminEmailsPage() {
             <AlertTriangle className={`h-4 w-4 ${stats.failed > 0 ? "text-red-500" : "text-muted-foreground"}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${stats.failed > 0 ? "text-red-600" : ""}`}>{stats.failed}</div>
+            <div className={`text-2xl font-bold ${stats.failed > 0 ? "text-red-600" : ""}`}>{loadError ? "—" : stats.failed}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Needs review (30d)</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${stats.deliveryRate < 90 ? "text-yellow-600" : stats.deliveryRate >= 95 ? "text-green-600" : ""}`}>
-              {stats.deliveryRate}%
-            </div>
+            <div className="text-2xl font-bold">{loadError ? "—" : stats.held}</div>
           </CardContent>
         </Card>
       </div>
@@ -230,10 +242,9 @@ export default function AdminEmailsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
-            <SelectItem value="bounced">Bounced</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
+            {Object.entries(emailOutcomeLabels).map(([value, label]) => (
+              <SelectItem key={value} value={value}>{label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -255,7 +266,7 @@ export default function AdminEmailsPage() {
         </CardHeader>
         <CardContent>
           {emails.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">No email logs found</p>
+            <p className="text-muted-foreground text-center py-8">{loadError ? "Email log unavailable" : "No email logs found"}</p>
           ) : (
             <Table>
               <TableHeader>
@@ -271,7 +282,7 @@ export default function AdminEmailsPage() {
               <TableBody>
                 {emails.map((email) => {
                   const isExpanded = expandedId === email.id
-                  const isFailed = email.status === "failed" || email.status === "bounced"
+                  const isFailed = email.delivery_status === "failed" || email.delivery_status === "bounced"
                   return (
                     <>
                       <TableRow
@@ -296,8 +307,8 @@ export default function AdminEmailsPage() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">{email.account_name}</TableCell>
                         <TableCell>
-                          <Badge className={STATUS_STYLES[email.status] || "bg-gray-100"}>
-                            {email.status}
+                          <Badge className={STATUS_STYLES[email.delivery_status ?? "unknown"] || "bg-gray-100"}>
+                            {emailOutcomeLabel(email.delivery_status)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -330,7 +341,7 @@ export default function AdminEmailsPage() {
                                   <p className="font-medium">{REPORT_TYPE_LABELS[email.report_type] || email.report_type}</p>
                                 </div>
                               )}
-                              {isFailed && email.error && (
+                              {(isFailed || email.delivery_status === "needs_review") && email.error && (
                                 <div className="col-span-2">
                                   <span className="text-red-600 font-medium">Error:</span>
                                   <p className="text-red-600 text-xs mt-0.5 font-mono bg-red-50 p-2 rounded">{email.error}</p>
