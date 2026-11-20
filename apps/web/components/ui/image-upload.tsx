@@ -50,9 +50,9 @@ export function ImageUpload({
       setIsUploading(true);
 
       // Client-side validation
-      const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
+      const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"];
       if (!allowedTypes.includes(file.type)) {
-        setError("Please upload an image file (PNG, JPEG, WebP, GIF, or SVG)");
+        setError("Please upload an image file (PNG, JPEG, WebP, or GIF)");
         setIsUploading(false);
         return;
       }
@@ -189,7 +189,7 @@ export function ImageUpload({
         >
           <input
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.svg"
+            accept="image/png,image/jpeg,image/webp,image/gif"
             onChange={handleFileSelect}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={isUploading}
@@ -214,7 +214,7 @@ export function ImageUpload({
                   {isDragging ? "Drop image here" : "Drop image or click to upload"}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">
-                  PNG, JPEG, WebP, GIF, SVG &bull; Max {maxSizeMB}MB
+                  PNG, JPEG, WebP, GIF &bull; Max {maxSizeMB}MB
                 </p>
                 <p className="text-xs text-muted-foreground/70 mt-0.5">
                   Recommended: 400&times;150px PNG with transparent background
