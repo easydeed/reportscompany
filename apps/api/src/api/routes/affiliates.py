@@ -34,6 +34,7 @@ from ..services.invite_service import (
 )
 from .reports import require_account_id
 from ..services.timefmt import utc_iso
+from ..services.branding_urls import check_image_urls
 
 logger = logging.getLogger(__name__)
 
@@ -597,6 +598,15 @@ def save_branding(
                 }
             )
         
+        # LR-007: only our storage URLs, or a value this account already has.
+        cur.execute("""SELECT logo_url, email_logo_url, footer_logo_url, email_footer_logo_url, rep_photo_url
+                       FROM affiliate_branding WHERE account_id = %s::uuid""", (account_id,))
+        check_image_urls({"logo_url": body.logo_url, "email_logo_url": body.email_logo_url,
+                          "footer_logo_url": body.footer_logo_url,
+                          "email_footer_logo_url": body.email_footer_logo_url,
+                          "rep_photo_url": body.rep_photo_url}, cur.fetchone() or (),
+                         owners=[account_id])
+
         # Check if this rep belongs to a company (set override flag if so)
         cur.execute("""
             SELECT parent_account_id FROM accounts WHERE id = %s::uuid

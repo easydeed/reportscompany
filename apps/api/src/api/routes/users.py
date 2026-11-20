@@ -15,6 +15,7 @@ from datetime import datetime
 from ..db import db_conn
 from ..auth import check_password, hash_password, sign_jwt
 from ..settings import settings
+from ..services.branding_urls import check_image_urls
 
 router = APIRouter(prefix="/v1")
 
@@ -167,6 +168,15 @@ def update_user_profile(body: UserProfileUpdate, request: Request):
     params.append(user_id)
 
     with db_conn() as (conn, cur):
+        if body.avatar_url:
+            # LR-007: only our storage URLs, or the photo this user already has.
+            cur.execute("SELECT avatar_url, photo_url FROM users WHERE id = %s::uuid", (user_id,))
+            current = cur.fetchone() or ()
+            # A photo this user uploaded from any account they belong to.
+            cur.execute("""SELECT account_id::text FROM account_users WHERE user_id = %s::uuid
+                           UNION SELECT account_id::text FROM users WHERE id = %s::uuid""", (user_id, user_id))
+            owners = [r[0] for r in cur.fetchall()] + [getattr(request.state, "account_id", None)]
+            check_image_urls({"avatar_url": body.avatar_url.strip()}, current, owners=owners)
         cur.execute(f"""
             UPDATE users
             SET {", ".join(updates)}

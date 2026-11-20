@@ -26,6 +26,7 @@ from ..services.invite_service import (
 )
 from ..settings import settings
 from ..services.property_stats import get_platform_stats, refresh_stats
+from ..services.branding_urls import check_image_urls
 
 logger = logging.getLogger(__name__)
 
@@ -1045,6 +1046,8 @@ def create_affiliate(
             except seats.SeatsFull as e:
                 raise HTTPException(status_code=409, detail={"error": "seats_full", "message": str(e)})
 
+        # LR-007: a new record has no prior value; the admin uploaded the logo.
+        check_image_urls({"logo_url": body.logo_url}, owners=[_admin.get("account_id")])
         slug = body.company_name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
         cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
         if cur.fetchone():
@@ -1200,6 +1203,8 @@ def create_company(
             if cur.fetchone():
                 raise HTTPException(status_code=400, detail="Email already exists")
 
+        # LR-007: a new record has no prior value; the admin uploaded the logo.
+        check_image_urls({"logo_url": body.logo_url}, owners=[_admin.get("account_id")])
         slug = body.company_name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")[:40]
         cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
         if cur.fetchone():
@@ -2495,6 +2500,12 @@ def update_agent_headshot(
             raise HTTPException(status_code=404, detail="Agent account not found")
 
         user_id = row[1]
+
+        # LR-007: only our storage URLs, or the photo this agent already has.
+        cur.execute("SELECT avatar_url, photo_url FROM users WHERE id = %s", (user_id,))
+        # Uploaded by the admin (full-service onboarding) or by the agent's own account.
+        check_image_urls({"headshot_url": body.headshot_url}, cur.fetchone() or (),
+                         owners=[_admin.get("account_id"), account_id])
 
         # Update user's avatar
         cur.execute("""
