@@ -1046,7 +1046,8 @@ def create_affiliate(
             except seats.SeatsFull as e:
                 raise HTTPException(status_code=409, detail={"error": "seats_full", "message": str(e)})
 
-        check_image_urls({"logo_url": body.logo_url})        # LR-007: a new record has no prior value
+        # LR-007: a new record has no prior value; the admin uploaded the logo.
+        check_image_urls({"logo_url": body.logo_url}, owners=[_admin.get("account_id")])
         slug = body.company_name.lower().replace(' ', '-').replace('.', '').replace(',', '')[:50]
         cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
         if cur.fetchone():
@@ -1202,7 +1203,8 @@ def create_company(
             if cur.fetchone():
                 raise HTTPException(status_code=400, detail="Email already exists")
 
-        check_image_urls({"logo_url": body.logo_url})        # LR-007: a new record has no prior value
+        # LR-007: a new record has no prior value; the admin uploaded the logo.
+        check_image_urls({"logo_url": body.logo_url}, owners=[_admin.get("account_id")])
         slug = body.company_name.lower().replace(" ", "-").replace(".", "").replace(",", "").replace("'", "")[:40]
         cur.execute("SELECT id FROM accounts WHERE slug = %s", (slug,))
         if cur.fetchone():
@@ -2501,7 +2503,9 @@ def update_agent_headshot(
 
         # LR-007: only our storage URLs, or the photo this agent already has.
         cur.execute("SELECT avatar_url, photo_url FROM users WHERE id = %s", (user_id,))
-        check_image_urls({"headshot_url": body.headshot_url}, cur.fetchone() or ())
+        # Uploaded by the admin (full-service onboarding) or by the agent's own account.
+        check_image_urls({"headshot_url": body.headshot_url}, cur.fetchone() or (),
+                         owners=[_admin.get("account_id"), account_id])
 
         # Update user's avatar
         cur.execute("""

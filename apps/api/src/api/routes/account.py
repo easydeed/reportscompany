@@ -252,7 +252,8 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
         current = cur.fetchone() or ()
         check_image_urls({"logo_url": payload.logo_url, "footer_logo_url": payload.footer_logo_url,
                           "email_logo_url": payload.email_logo_url,
-                          "email_footer_logo_url": payload.email_footer_logo_url}, current)
+                          "email_footer_logo_url": payload.email_footer_logo_url}, current,
+                         owners=[account_id])
         cur.execute(f"UPDATE accounts SET {', '.join(sets)}, updated_at = NOW() WHERE id = %s RETURNING id::text",
                     (*params, account_id))
         if cur.fetchone() is None:

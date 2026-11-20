@@ -1151,7 +1151,8 @@ def update_branding(
         check_image_urls({"logo_url": body.logo_url, "email_logo_url": body.email_logo_url,
                           "footer_logo_url": body.footer_logo_url,
                           "email_footer_logo_url": body.email_footer_logo_url,
-                          "rep_photo_url": body.rep_photo_url}, cur.fetchone() or ())
+                          "rep_photo_url": body.rep_photo_url}, cur.fetchone() or (),
+                         owners=[company_id])
         # Upsert company's own branding. The FIRST save creates the row, and
         # `brand_display_name` is NOT NULL: a form saved with the name left
         # empty inserted NULL and 500ed, so a new company could not save a

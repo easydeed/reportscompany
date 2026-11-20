@@ -13,7 +13,15 @@ fetcher allows only what a public image needs:
     still verified against the hostname (SNI and certificate), so DNS that
     changes between the check and the connect cannot redirect it;
   * redirects followed by hand, each hop checked the same way, at most 3;
-  * 10 s overall per hop, and the body capped while it streams.
+  * ONE overall deadline for the whole import (Codex #330 P2): DNS, connect,
+    TLS, headers, every body chunk and every redirect hop share DEADLINE_S.
+    HTTPX's timeouts are per operation (a server sending a byte every nine
+    seconds never trips a 10 s read timeout), and getaddrinfo has no timeout
+    at all, so the work runs on a small bounded pool and the caller stops
+    waiting at the deadline. The abandoned work is told to stop (checked
+    between chunks and after DNS) and each of its operations is bounded by
+    TIMEOUT_S, so it cannot run on;
+  * the body capped while it streams.
 
 It returns raw bytes; deciding whether they are an image is the caller's job
 (services/upload.prepare_image). Refusals are FetchRefused with a short,
@@ -21,12 +29,21 @@ user-presentable reason.
 """
 import ipaddress
 import socket
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from urllib.parse import urljoin, urlsplit
 
 import httpx
 
-TIMEOUT_S = 10.0
+TIMEOUT_S = 10.0          # any single operation (connect, one read), and never past the deadline
 MAX_REDIRECTS = 3
+DEADLINE_S = 15.0         # the whole fetch, end to end
+TOO_SLOW = "The link took too long to answer."
+
+# Bounded: imports stuck on a dead DNS server or a slow host cannot pile up
+# threads. A request that waits for a free slot spends its own deadline.
+_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="safe-fetch")
 
 
 class FetchRefused(Exception):
@@ -73,12 +90,33 @@ def _check(url: str) -> tuple[str, str, str]:
 
 
 def fetch(url: str, *, max_bytes: int, verify=True) -> bytes:
-    """GET a public https URL with every hop checked. `verify` is for tests only."""
+    """GET a public https URL with every hop checked, within DEADLINE_S. `verify` is for tests only."""
+    deadline = time.monotonic() + DEADLINE_S
+    stop = threading.Event()
+    future = _pool.submit(_fetch, url, max_bytes, verify, deadline, stop)
+    try:
+        return future.result(timeout=max(0.0, deadline - time.monotonic()))
+    except FuturesTimeout:
+        stop.set()               # the work stops at its next check; a queued one never starts
+        future.cancel()
+        raise FetchRefused(TOO_SLOW) from None
+
+
+def _left(deadline: float, stop: threading.Event) -> float:
+    remaining = deadline - time.monotonic()
+    if stop.is_set() or remaining <= 0:
+        raise FetchRefused(TOO_SLOW)
+    return remaining
+
+
+def _fetch(url: str, max_bytes: int, verify, deadline: float, stop: threading.Event) -> bytes:
     for _hop in range(MAX_REDIRECTS + 1):
+        _left(deadline, stop)
         host, address, path = _check(url)
         target = f"[{address}]" if ":" in address else address
+        timeout = min(TIMEOUT_S, _left(deadline, stop))
         try:
-            with httpx.Client(timeout=TIMEOUT_S, verify=verify, follow_redirects=False, trust_env=False) as client:
+            with httpx.Client(timeout=timeout, verify=verify, follow_redirects=False, trust_env=False) as client:
                 request = client.build_request(
                     "GET", f"https://{target}{path}",
                     headers={"Host": host, "Accept": "image/*", "User-Agent": "TrendyReports-image-import/1"},
@@ -99,6 +137,7 @@ def fetch(url: str, *, max_bytes: int, verify=True) -> bytes:
                         raise FetchRefused("The image at that link is too large.")
                     body = bytearray()
                     for chunk in response.iter_bytes():
+                        _left(deadline, stop)
                         body.extend(chunk)
                         if len(body) > max_bytes:
                             raise FetchRefused("The image at that link is too large.")
@@ -107,6 +146,8 @@ def fetch(url: str, *, max_bytes: int, verify=True) -> bytes:
                     response.close()
         except FetchRefused:
             raise
+        except httpx.TimeoutException as exc:
+            raise FetchRefused(TOO_SLOW) from exc
         except httpx.HTTPError as exc:
             raise FetchRefused("The link couldn't be fetched (connection or certificate problem).") from exc
     raise FetchRefused("The link redirected too many times.")

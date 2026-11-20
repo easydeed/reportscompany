@@ -604,7 +604,8 @@ def save_branding(
         check_image_urls({"logo_url": body.logo_url, "email_logo_url": body.email_logo_url,
                           "footer_logo_url": body.footer_logo_url,
                           "email_footer_logo_url": body.email_footer_logo_url,
-                          "rep_photo_url": body.rep_photo_url}, cur.fetchone() or ())
+                          "rep_photo_url": body.rep_photo_url}, cur.fetchone() or (),
+                         owners=[account_id])
 
         # Check if this rep belongs to a company (set override flag if so)
         cur.execute("""

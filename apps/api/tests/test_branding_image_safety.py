@@ -16,6 +16,7 @@ import os
 import socket
 import ssl
 import threading
+import time
 import uuid
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from io import BytesIO
@@ -31,7 +32,15 @@ from api.services import branding_urls, safe_fetch, upload
 
 DB_URL = os.getenv("DATABASE_URL")
 PUBLIC = "https://assets.example.com"
-OURS = f"{PUBLIC}/branding/acct/logo_20261119_abcd1234.png"
+ACCT = "6f0c1a2b-0000-4000-8000-00000000a001"
+OTHER = "6f0c1a2b-0000-4000-8000-00000000b002"
+
+
+def stored(account, name="logo_20261119_abcd1234.png"):
+    return f"{PUBLIC}/branding/{account}/{name}"
+
+
+OURS = stored(ACCT)
 
 
 def jpeg_with_gps(size=(300, 200), orientation=None):
@@ -174,11 +183,23 @@ def tls_server(tmp_path):
     cert_file.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
     key_file.write_bytes(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8,
                                            serialization.NoEncryption()))
-    seen, routes = [], {}
+    seen, routes, closed = [], {}, threading.Event()
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             seen.append({"path": self.path, "host": self.headers.get("Host")})
+            if self.path == "/trickle.png":            # one byte every 0.3 s: never idle long enough to time out
+                self.send_response(200)
+                self.send_header("Content-Length", "100000")
+                self.end_headers()
+                try:
+                    for _ in range(60):
+                        self.wfile.write(b"x")
+                        self.wfile.flush()
+                        time.sleep(0.3)
+                except OSError:
+                    closed.set()                        # the client hung up
+                return
             status, headers, body = routes.get(self.path, (404, {}, b""))
             self.send_response(status)
             for k, v in headers.items():
@@ -197,7 +218,7 @@ def tls_server(tmp_path):
     port = server.server_address[1]
     threading.Thread(target=server.serve_forever, daemon=True).start()
     client_ctx = ssl.create_default_context(cafile=str(cert_file))
-    yield {"port": port, "seen": seen, "routes": routes, "verify": client_ctx}
+    yield {"port": port, "seen": seen, "routes": routes, "verify": client_ctx, "closed": closed}
     server.shutdown()
 
 
@@ -279,15 +300,34 @@ def ours(monkeypatch):
 
 def test_the_save_rule(ours):
     check = branding_urls.check_image_urls
-    check({"logo_url": OURS})                                             # our storage
-    check({"logo_url": None, "footer_logo_url": ""})                      # not sent, cleared
+    check({"logo_url": OURS}, owners=[ACCT])                              # this account's upload
+    check({"logo_url": OURS}, owners=[ACCT.upper()])                      # the id's case does not matter
+    check({"logo_url": None, "footer_logo_url": ""}, owners=[ACCT])       # not sent, cleared
     legacy = "https://cdn.pct.example/logo.svg"
-    check({"logo_url": legacy, "email_logo_url": legacy}, [legacy, None]) # kept, and copied across fields
+    check({"logo_url": legacy, "email_logo_url": legacy}, [legacy, None], owners=[ACCT])  # kept, copied across
     for bad in ("https://evil.example/x.png", f"{PUBLIC}/elsewhere/x.png", "http://assets.example.com/branding/x.png",
-                f"{PUBLIC}/branding/../secrets.png", "javascript:alert(1)"):
+                f"{PUBLIC}/branding/../secrets.png", f"{PUBLIC}/branding/{ACCT}/../{OTHER}/logo_1_a.png",
+                f"{PUBLIC}/branding/{ACCT}/%2e%2e/{OTHER}/logo_1_a.png", f"{PUBLIC}/branding/{ACCT}/sub/logo_1_a.png",
+                f"{OURS}?v=1", f"{OURS}#x", "javascript:alert(1)"):
         with pytest.raises(HTTPException) as refused:
-            check({"logo_url": bad}, [legacy])
-        assert refused.value.status_code == 400 and "paste an image URL" in refused.value.detail
+            check({"logo_url": bad}, [legacy], owners=[ACCT])
+        assert refused.value.status_code == 400 and "paste an image URL" in refused.value.detail, bad
+
+
+def test_another_accounts_upload_or_an_unchecked_legacy_object_is_refused(ours):
+    """Codex #330 P2: a URL in our storage proves nothing unless THIS account stored it, through
+    the pipeline that checks it. Same-record legacy values (PCT's SVGs) still save."""
+    check = branding_urls.check_image_urls
+    theirs = stored(OTHER)
+    with pytest.raises(HTTPException) as refused:
+        check({"logo_url": theirs}, [OURS], owners=[ACCT])
+    assert refused.value.status_code == 400 and "different account" in refused.value.detail
+    for svg in (stored(OTHER, "logo_20250101_old.svg"), stored(ACCT, "logo_20250101_old.svg")):
+        with pytest.raises(HTTPException):                                # never re-checked: not admissible
+            check({"logo_url": svg}, [OURS], owners=[ACCT])
+        check({"logo_url": svg}, [svg], owners=[ACCT])                    # but stays if already on this record
+    with pytest.raises(HTTPException):                                    # no owners named: nothing is ours
+        check({"logo_url": OURS}, owners=[])
 
 
 PASSWORD = "lr007-test-pass-1"
@@ -355,9 +395,20 @@ def test_existing_and_imported_images_still_save(client, agent, ours):
                      json={"logo_url": agent["legacy"], "email_logo_url": agent["legacy"], "primary_color": "#123456"})
     assert r.status_code == 200, r.text
     assert account_logos(agent["id"]) == (agent["legacy"], agent["legacy"])
-    r = client.patch("/v1/account/branding", headers=auth, json={"logo_url": OURS})
-    assert r.status_code == 200 and account_logos(agent["id"])[0] == OURS
+    mine = stored(agent["id"])
+    r = client.patch("/v1/account/branding", headers=auth, json={"logo_url": mine})
+    assert r.status_code == 200 and account_logos(agent["id"])[0] == mine
     assert client.patch("/v1/users/me", headers=auth, json={"avatar_url": agent["legacy"]}).status_code == 200
+    assert client.patch("/v1/users/me", headers=auth, json={"avatar_url": stored(agent["id"], "headshot_1_a.jpg")}
+                        ).status_code == 200
+
+
+def test_an_agent_cannot_save_another_accounts_upload(client, agent, ours):
+    auth = login(client, agent["email"])
+    for path, field in (("/v1/account/branding", "logo_url"), ("/v1/users/me", "avatar_url")):
+        r = client.patch(path, headers=auth, json={field: stored(OTHER)})
+        assert r.status_code == 400 and "different account" in r.json()["detail"], (path, r.text)
+    assert account_logos(agent["id"])[0] == agent["legacy"]                # nothing written
 
 
 def test_the_import_route_stores_a_checked_copy(client, agent, ours, monkeypatch):
@@ -373,7 +424,9 @@ def test_the_import_route_stores_a_checked_copy(client, agent, ours, monkeypatch
     with Image.open(BytesIO(put["Body"])) as kept:                       # checked and re-encoded, not raw
         assert kept.format == "JPEG" and getattr(kept, "n_frames", 1) == 1 and kept.size == (400, 300)
     assert r.json()["url"] == f"{PUBLIC}/{put['Key']}"
-    assert branding_urls.is_own_storage_url(r.json()["url"])               # so the form can save it
+    assert branding_urls.is_own_storage_url(r.json()["url"], [agent["id"]])  # so the form can save it
+    saved = client.patch("/v1/users/me", headers=auth, json={"avatar_url": r.json()["url"]})
+    assert saved.status_code == 200, saved.text
 
     def refuse(url, max_bytes):
         raise safe_fetch.FetchRefused("That link points to a private or reserved network address.")
@@ -395,3 +448,29 @@ def test_every_route_that_writes_a_branding_image_checks_it():
         text = path.read_text()
         if writes.search(text):
             assert "check_image_urls" in text, f"{path.name} writes a branding image URL without check_image_urls"
+
+
+# ── the guarded fetcher keeps one overall deadline (Codex #330 P2) ─────────
+
+def test_a_slow_dns_answer_is_cut_off_at_the_deadline(monkeypatch):
+    monkeypatch.setattr(safe_fetch, "DEADLINE_S", 0.5)
+
+    def slow(host, port, *args, **kwargs):
+        time.sleep(2)
+        raise socket.gaierror("no answer")      # never reaches the network either way
+    monkeypatch.setattr(socket, "getaddrinfo", slow)
+    started = time.monotonic()
+    with pytest.raises(safe_fetch.FetchRefused, match="took too long"):
+        safe_fetch.fetch("https://slow-dns.example.com/a.png", max_bytes=1024)
+    assert time.monotonic() - started < 1.2
+
+
+def test_a_trickling_body_is_cut_off_at_the_deadline(pinned, monkeypatch):
+    """Per-operation timeouts never fire on a byte every 0.3 s; the overall deadline does."""
+    monkeypatch.setattr(safe_fetch, "DEADLINE_S", 1.0)
+    started = time.monotonic()
+    with pytest.raises(safe_fetch.FetchRefused, match="took too long"):
+        safe_fetch.fetch("https://images.example.com/trickle.png", max_bytes=1 << 20, verify=pinned["verify"])
+    assert time.monotonic() - started < 2.0
+    # ...and the abandoned download stops too: it hangs up instead of reading on for ~18 s.
+    assert pinned["closed"].wait(3)

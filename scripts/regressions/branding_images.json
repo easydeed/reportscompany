@@ -51,8 +51,8 @@
  {
   "name": "LR-007 no size cap on the fetched body",
   "file": "apps/api/src/api/services/safe_fetch.py",
-  "old": "                    declared = response.headers.get(\"content-length\")\n                    if declared and declared.isdigit() and int(declared) > max_bytes:\n                        raise FetchRefused(\"The image at that link is too large.\")\n                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        body.extend(chunk)\n                        if len(body) > max_bytes:",
-  "new": "                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        body.extend(chunk)\n                        if False:",
+  "old": "                    declared = response.headers.get(\"content-length\")\n                    if declared and declared.isdigit() and int(declared) > max_bytes:\n                        raise FetchRefused(\"The image at that link is too large.\")\n                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        _left(deadline, stop)\n                        body.extend(chunk)\n                        if len(body) > max_bytes:",
+  "new": "                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        _left(deadline, stop)\n                        body.extend(chunk)\n                        if False:",
   "test": "apps/api/tests/test_branding_image_safety.py::test_too_many_redirects_and_oversized_bodies_are_refused"
  },
  {
@@ -72,15 +72,15 @@
  {
   "name": "LR-007 any link saves (own-storage rule bypassed)",
   "file": "apps/api/src/api/services/branding_urls.py",
-  "old": "        if value in stored or is_own_storage_url(value):",
+  "old": "        if value in stored or is_own_storage_url(value, owners):",
   "new": "        if True:",
   "test": "apps/api/tests/test_branding_image_safety.py::test_an_agent_cannot_save_a_link_to_another_site"
  },
  {
   "name": "LR-007 existing saved values no longer accepted (PCT SVGs would break)",
   "file": "apps/api/src/api/services/branding_urls.py",
-  "old": "        if value in stored or is_own_storage_url(value):",
-  "new": "        if is_own_storage_url(value):",
+  "old": "        if value in stored or is_own_storage_url(value, owners):",
+  "new": "        if is_own_storage_url(value, owners):",
   "test": "apps/api/tests/test_branding_image_safety.py::test_existing_and_imported_images_still_save"
  },
  {
@@ -100,15 +100,57 @@
  {
   "name": "LR-007 worker treats private addresses as public",
   "file": "apps/worker/src/worker/utils/image_proxy.py",
-  "old": "            if not ip.is_global or ip.is_multicast:\n                return False\n",
-  "new": "            if False:\n                return False\n",
+  "old": "            if not ip.is_global or ip.is_multicast:\n                raise _Refused(\"private or reserved address\")\n",
+  "new": "            if False:\n                raise _Refused(\"private or reserved address\")\n",
   "test": "apps/worker/tests/test_image_proxy_guard.py::test_private_and_non_http_targets_are_never_requested"
  },
  {
   "name": "LR-007 worker follows a redirect into a private address",
   "file": "apps/worker/src/worker/utils/image_proxy.py",
-  "old": "            event_hooks={\"request\": [_refuse_private_hop]},   # every redirect hop too\n",
-  "new": "",
+  "old": "        host, port, scheme, address = _resolve_public(url)\n        parts = urlsplit(url)\n",
+  "new": "        host, port, scheme, address = _resolve_public(url) if _hop == 0 else (urlsplit(url).hostname, urlsplit(url).port or 443, urlsplit(url).scheme, socket.getaddrinfo(urlsplit(url).hostname, 443)[0][4][0])\n        parts = urlsplit(url)\n",
   "test": "apps/worker/tests/test_image_proxy_guard.py::test_a_redirect_into_a_private_address_is_refused_at_that_hop"
+ },
+ {
+  "name": "LR-007 #330 worker connects by name again (DNS rebinding)",
+  "file": "apps/worker/src/worker/utils/image_proxy.py",
+  "old": "\"GET\", f\"{scheme}://{target}:{port}{path}\",",
+  "new": "\"GET\", f\"{scheme}://{host}:{port}{path}\",",
+  "test": "apps/worker/tests/test_image_proxy_guard.py::test_a_name_that_rebinds_after_the_check_cannot_reach_the_private_address"
+ },
+ {
+  "name": "LR-007 #330 any account's storage URL is admitted",
+  "file": "apps/api/src/api/services/branding_urls.py",
+  "old": "    return account is not None and account.lower() in {str(o).lower() for o in owners if o}",
+  "new": "    return account is not None",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_another_accounts_upload_or_an_unchecked_legacy_object_is_refused"
+ },
+ {
+  "name": "LR-007 #330 an unchecked legacy SVG in storage is admitted",
+  "file": "apps/api/src/api/services/branding_urls.py",
+  "old": "(?:png|jpe?g|webp|gif)\")",
+  "new": "(?:png|jpe?g|webp|gif|svg)\")",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_another_accounts_upload_or_an_unchecked_legacy_object_is_refused"
+ },
+ {
+  "name": "LR-007 #330 the agent route checks ownership against the wrong account",
+  "file": "apps/api/src/api/routes/account.py",
+  "old": "                         owners=[account_id])",
+  "new": "                         owners=[account_id, \"6f0c1a2b-0000-4000-8000-00000000b002\"])",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_an_agent_cannot_save_another_accounts_upload"
+ },
+ {
+  "name": "LR-007 #330 the caller waits for the fetch however long it takes",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "        return future.result(timeout=max(0.0, deadline - time.monotonic()))",
+  "new": "        return future.result()",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_a_slow_dns_answer_is_cut_off_at_the_deadline"
+ },
+ {
+  "name": "LR-007 #330 an abandoned download keeps reading",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "                    for chunk in response.iter_bytes():\n                        _left(deadline, stop)\n",
+  "new": "                    for chunk in response.iter_bytes():\n",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_a_trickling_body_is_cut_off_at_the_deadline"
  }
 ]

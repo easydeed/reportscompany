@@ -19,7 +19,7 @@ import ipaddress
 import socket
 import httpx
 import time
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 from typing import Optional, List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -47,31 +47,76 @@ USER_AGENTS = [
 ]
 
 
-def _public_url(url: str) -> bool:
-    """LR-007 defence in depth: never fetch a private, loopback, link-local or
+MAX_REDIRECTS = 5
+
+
+class _Refused(Exception):
+    """The URL (or a redirect hop) points somewhere the worker must not connect."""
+
+
+def _resolve_public(url: str):
+    """(host, port, scheme, the ONE checked address) for a public http(s) URL, else raise _Refused.
+
+    LR-007 defence in depth: never fetch a private, loopback, link-local or
     reserved address (cloud metadata, internal services) on the worker's
-    behalf. Branding saves already accept only our storage URLs; this guards
-    every other image URL that reaches a render, and each redirect hop."""
+    behalf. Every resolved address must be public (one private answer refuses
+    the host), and the caller connects to the returned address itself.
+    """
     try:
         parts = urlsplit(url)
-        if parts.scheme not in ("http", "https") or not parts.hostname:
-            return False
-        infos = socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80),
-                                   type=socket.SOCK_STREAM)
+        if parts.scheme not in ("http", "https") or not parts.hostname or parts.username or parts.password:
+            raise _Refused("not a public http(s) URL")
+        port = parts.port or (443 if parts.scheme == "https" else 80)
+        infos = socket.getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
+        addresses = []
         for info in infos:
             ip = ipaddress.ip_address(info[4][0])
             if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
                 ip = ip.ipv4_mapped
             if not ip.is_global or ip.is_multicast:
-                return False
-        return bool(infos)
-    except (ValueError, OSError, UnicodeError):
+                raise _Refused("private or reserved address")
+            addresses.append(info[4][0])
+        if not addresses:
+            raise _Refused("no address")
+        return parts.hostname.rstrip("."), port, parts.scheme, addresses[0]
+    except (ValueError, OSError, UnicodeError) as exc:
+        raise _Refused(type(exc).__name__) from exc
+
+
+def _public_url(url: str) -> bool:
+    try:
+        _resolve_public(url)
+        return True
+    except _Refused:
         return False
 
 
-def _refuse_private_hop(request: httpx.Request) -> None:
-    if not _public_url(str(request.url)):
-        raise httpx.RequestError("refused: private or reserved address", request=request)
+def _pinned_get(client: httpx.Client, url: str, headers: dict) -> httpx.Response:
+    """GET with redirects followed by hand, each hop CONNECTED to the address that was checked.
+
+    Codex #330 P1: checking DNS and then handing HTTPX the hostname lets it
+    resolve again, and a hostile name can answer public for the check and
+    private for the connect. Here HTTPX is given the checked IP; the request
+    still names the host (Host header) and TLS still verifies the certificate
+    against the host name (SNI), so pinning weakens nothing.
+    """
+    for _hop in range(MAX_REDIRECTS + 1):
+        host, port, scheme, address = _resolve_public(url)
+        parts = urlsplit(url)
+        target = f"[{address}]" if ":" in address else address
+        default = (scheme == "https" and port == 443) or (scheme == "http" and port == 80)
+        path = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
+        request = client.build_request(
+            "GET", f"{scheme}://{target}:{port}{path}",
+            headers={**headers, "Host": host if default else f"{host}:{port}"},
+            extensions={"sni_hostname": host} if scheme == "https" else {},
+        )
+        response = client.send(request)
+        if response.is_redirect and response.headers.get("location"):
+            url = urljoin(url, response.headers["location"])
+            continue
+        return response
+    raise _Refused("too many redirects")
 
 
 def fetch_image_as_base64(url: str, retry_count: int = 0) -> Optional[str]:
@@ -113,13 +158,14 @@ def fetch_image_as_base64(url: str, retry_count: int = 0) -> Optional[str]:
     try:
         with httpx.Client(
             timeout=IMAGE_FETCH_TIMEOUT, 
-            follow_redirects=True,
+            follow_redirects=False,    # followed by hand, every hop checked and pinned (_pinned_get)
             http2=False,  # Some CDNs have issues with HTTP/2
-            event_hooks={"request": [_refuse_private_hop]},   # every redirect hop too
+            trust_env=False,
         ) as client:
-            response = client.get(
+            response = _pinned_get(
+                client,
                 url,
-                headers={
+                {
                     "User-Agent": user_agent,
                     "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
                     "Accept-Language": "en-US,en;q=0.9",
