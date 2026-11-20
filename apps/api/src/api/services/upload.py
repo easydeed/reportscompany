@@ -7,10 +7,13 @@ Pass B1.1: File Upload Infrastructure
 
 import boto3
 import uuid
+import re
+from urllib.parse import urlsplit
 import io
 import os
 from datetime import datetime
 from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import UploadFile, HTTPException
 from PIL import Image
 
@@ -149,36 +152,43 @@ async def upload_branding_asset(
     }
 
 
-async def delete_branding_asset(url: str) -> bool:
-    """
-    Delete a branding asset from R2 by URL.
-    Returns True if deleted, False if not found or failed.
-    """
-    if not url:
-        return False
-    
+def _owned_branding_key(url: str, account_id: str) -> str:
+    """Resolve an upload URL against an exact configured origin and key prefix."""
+    bases = [R2_PUBLIC_URL] if R2_PUBLIC_URL else []
+    if R2_ACCOUNT_ID:
+        host = f"{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+        bases.extend([f"https://{host}/{R2_BUCKET_NAME}", f"https://{R2_BUCKET_NAME}.{host}"])
+    try:
+        target = urlsplit(url)
+    except ValueError:
+        raise HTTPException(403, "Invalid branding asset URL")
+    for base in bases:
+        origin = urlsplit(base)
+        if (target.scheme, target.netloc.lower()) != (origin.scheme, origin.netloc.lower()):
+            continue
+        prefix = origin.path.rstrip("/") + "/"
+        if not target.path.startswith(prefix):
+            continue
+        key = target.path[len(prefix):]
+        parts = key.split("/")
+        if (len(parts) == 3 and parts[:2] == ["branding", account_id]
+                and re.fullmatch(r"[A-Za-z0-9_-]+\.[A-Za-z0-9]+", parts[2])):
+            return key
+    raise HTTPException(403, "You can only delete your own branding assets")
+
+
+async def delete_branding_asset(url: str, account_id: str) -> bool:
+    key = _owned_branding_key(url, account_id)
     client = get_r2_client()
     if not client:
-        return False
-    
-    # Extract key from URL
-    key = None
-    if R2_PUBLIC_URL and url.startswith(R2_PUBLIC_URL):
-        key = url.replace(f"{R2_PUBLIC_URL.rstrip('/')}/", "")
-    elif "branding/" in url:
-        # Try to extract key from any URL format
-        idx = url.find("branding/")
-        if idx >= 0:
-            key = url[idx:]
-    
-    if not key:
-        return False
-    
+        raise HTTPException(503, "Branding storage is unavailable")
     try:
+        client.head_object(Bucket=R2_BUCKET_NAME, Key=key)
         client.delete_object(Bucket=R2_BUCKET_NAME, Key=key)
-        print(f"[Upload] Deleted: {key}")
-        return True
-    except Exception as e:
-        print(f"[Upload] Delete failed: {e}")
-        return False
-
+    except ClientError as exc:
+        if exc.response.get("Error", {}).get("Code") in {"404", "NoSuchKey", "NotFound"}:
+            return False
+        raise HTTPException(502, "Branding storage could not delete this asset") from exc
+    except BotoCoreError as exc:
+        raise HTTPException(502, "Branding storage could not delete this asset") from exc
+    return True
