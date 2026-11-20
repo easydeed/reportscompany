@@ -8,6 +8,7 @@ from .settings import settings
 from .middleware.authn import AuthContextMiddleware, RateLimitMiddleware
 from .routes.health import router as health_router
 from .routes.ready import router as ready_router
+from .routes.ops_admin import router as ops_admin_router
 from .routes.reports import router as reports_router
 from .routes.report_data import router as report_data_router
 from .routes.account import router as account_router
@@ -94,6 +95,7 @@ async def timing_middleware(request, call_next):
 # Routes
 app.include_router(health_router)
 app.include_router(ready_router)
+app.include_router(ops_admin_router)
 app.include_router(auth_router)
 app.include_router(apikeys_router)
 app.include_router(webhooks_router)
