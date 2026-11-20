@@ -319,10 +319,11 @@ def _create_report(payload: ReportCreate, response: Response, bg: BackgroundTask
         logging.getLogger(__name__).error(f"Failed to enqueue report {row['id']}: {e}")
         # Update report status to failed
         with db_conn() as (conn2, cur2):
+            set_rls(cur2, account_id)
             cur2.execute("""
                 UPDATE report_generations 
-                SET status='failed', error_message=%s 
-                WHERE id=%s
+                SET status='failed', error_message=%s
+                WHERE id=%s AND status='pending'
             """, (f"Failed to enqueue: {str(e)}", row["id"]))
             conn2.commit()
 
