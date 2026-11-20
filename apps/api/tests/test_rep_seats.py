@@ -412,6 +412,37 @@ def test_cancelling_a_pending_invite_frees_its_seat(client, world):
     assert _q("SELECT used FROM signup_tokens WHERE account_id = %s", w.b2) == [(True,)], "the link must stop working"
 
 
+def test_cancel_waits_for_a_pending_owner_finishing_acceptance(world):
+    from concurrent.futures import ThreadPoolExecutor
+    from api.services import seats
+
+    # The acceptance transaction is writing the same owner row the real
+    # invite route verifies. The company cancels while that write is in flight.
+    with psycopg.connect(DB_URL) as accepting, psycopg.connect(DB_URL) as cancelling:
+        accepting.execute("""
+            UPDATE users SET email_verified = true, password_hash = crypt(%s, gen_salt('bf'))
+            WHERE id = %s
+        """, (PASSWORD, world.b2))
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(seats.cancel_rep_invite, cancelling.cursor(),
+                                 company_id=world.b, rep_id=world.b2)
+            try:
+                deadline = time.monotonic() + 10
+                while time.monotonic() < deadline:
+                    if accepting.execute("SELECT %s = ANY(pg_blocking_pids(%s))",
+                                         (accepting.info.backend_pid, cancelling.info.backend_pid)).fetchone()[0]:
+                        break
+                    time.sleep(0.05)
+                else:
+                    pytest.fail("cancellation did not wait for the pending owner's transaction")
+            finally:
+                accepting.commit()
+            with pytest.raises(seats.SeatConflict, match="has joined"):
+                future.result(timeout=10)
+    assert world.b2 in _open_seat_reps(world.b)
+    assert _q("SELECT is_active FROM users WHERE id = %s", world.b2) == [(True,)]
+
+
 def test_a_joined_reps_seat_is_not_cancelled_it_is_reassigned(client, world):
     """Rep A2 has joined and has NO agents, so this is the joined rule on its
     own: a rep with agents is refused by the agents check as well, and testing
