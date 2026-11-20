@@ -626,3 +626,24 @@ def test_a_test_request_sends_nothing_while_the_switch_is_off(conn, providers, m
     test_redis.set(ops_monitor.TEST_ALERT_KEY, "req-1")
     assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "open"}  # recorded, observe-only
     assert providers.emails == [] and providers.texts == [] and rows(conn) == []
+
+
+def test_a_request_during_an_open_test_gets_its_own_lifecycle(conn, on, providers, monkeypatch, test_redis):
+    """Codex #329 P2: a second request accepted one pass after the first must not
+    merge into the still-open test (an email-only update, no opening text) or
+    push back the first test's recovery. It waits, then runs open -> resolved."""
+    monkeypatch.setattr(ops_signals, "SIGNALS", [])
+    monkeypatch.setattr(ops_monitor, "heartbeat_readings", lambda client: {})
+    test_redis.set(ops_monitor.TEST_ALERT_KEY, "req-1")
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "open"}
+    assert test_redis.set(ops_monitor.TEST_ALERT_KEY, "req-2", nx=True)      # what the API accepts now
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "resolved"}  # the first recovers on time
+    assert test_redis.get(ops_monitor.TEST_ALERT_KEY) == "req-2"              # still waiting, not merged
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "open"}
+    assert "test:req-2" in providers.emails[-1]["html"]
+    assert ops_monitor.run_once(DB, test_redis) == {"ops_test_alert": "resolved"}
+    assert len(providers.emails) == 4 and len(providers.texts) == 4           # open, resolved; open, resolved
+    cur = conn.cursor()
+    cur.execute("""SELECT n.event, n.channel FROM ops_alert_notifications n JOIN ops_alerts a ON a.id = n.alert_id
+                   WHERE a.key = 'ops_test_alert' ORDER BY n.id""")
+    assert [r[0] for r in cur.fetchall() if r[1] == "sms"] == ["open", "resolved", "open", "resolved"]

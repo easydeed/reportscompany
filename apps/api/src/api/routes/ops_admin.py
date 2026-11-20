@@ -6,7 +6,10 @@ Platform admins only (`get_admin_user`).
       Requests a labelled test incident. The API only records the request (a
       short-lived Redis key); the ticker's monitor consumes it on its next run
       (within 5 minutes), opens `ops_test_alert` through the real incident and
-      delivery path, and resolves it on the run after. So a test proves the
+      delivery path, and resolves it on the run after. One test lifecycle at a
+      time: a request made while a test is still open waits in Redis until that
+      test resolves (the monitor does not consume it), then gets its own open
+      and resolve. So a test proves the
       actual code path, and it sends only what that path would send: nothing
       unless OPS_ALERTS_ENABLED=1 and a destination is set. This is the
       closure evidence route of design section 7.
@@ -59,8 +62,9 @@ def request_test_alert(admin: dict = Depends(get_admin_user)):
         "requested": True,
         "request_id": request_id,
         "detail": ("The monitor opens the test incident on its next run (within 5 minutes) and "
-                   "resolves it on the run after. It is delivered only if OPS_ALERTS_ENABLED=1 "
-                   "and a destination is set for the channel."),
+                   "resolves it on the run after. If an earlier test is still open, this one waits "
+                   "for it to resolve, then opens and resolves on its own. It is delivered only if "
+                   "OPS_ALERTS_ENABLED=1 and a destination is set for the channel."),
     }
 
 

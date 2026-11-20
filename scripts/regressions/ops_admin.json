@@ -54,5 +54,12 @@
   "old": "TEST_ALERT_KEY = \"ops:test_alert:requested\"",
   "new": "TEST_ALERT_KEY = \"ops:test-alert\"",
   "test": "tests/test_ops_heartbeat_contract.py::test_the_admin_test_alert_key_is_the_one_the_monitor_consumes"
+ },
+ {
+  "name": "LR-027 s4: a request is consumed while a test is still open",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "        if cur.fetchone() is not None:\n            return Reading(tripped=False, identities=[], count=0, value={})\n        try:\n            return test_alert_reading(client)",
+  "new": "        if False:\n            return Reading(tripped=False, identities=[], count=0, value={})\n        try:\n            return test_alert_reading(client)",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_request_during_an_open_test_gets_its_own_lifecycle"
  }
 ]

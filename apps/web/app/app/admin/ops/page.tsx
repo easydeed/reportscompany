@@ -149,7 +149,8 @@ export default function OperatorAlertsPage() {
       <p className="text-sm text-slate-500 max-w-3xl">
         A test alert opens a labelled incident on the monitor&rsquo;s next run (within 5 minutes) and resolves it on the
         run after, through the same code as a real alert. It is delivered only when sending is switched on and a
-        destination is set for the channel.
+        destination is set for the channel. If an earlier test is still open, a new one waits for it to resolve, then
+        runs its own open and resolve.
       </p>
 
       {notice && (
