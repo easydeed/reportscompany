@@ -1,14 +1,17 @@
 # Stripe go-live checklist
 
-## Confirmed live prices and go-live configuration handoff
+## Jerry-confirmed live catalog IDs; PLANNED application mappings
 
 | Plan | Monthly USD | Live price ID | Live product ID |
 |---|---:|---|---|
 | Growth (`starter`) | $19 | `price_1UddpFBa27XowvTp6siwCZ3Q` | `prod_VexkO3eDQhdlDr` |
 | Growth Plus (`pro`) | $29 | `price_1UddpaBa27XowvTpqu8acKJP` | `prod_VexlkMlXRRVr9r` |
 
-Jerry supplied these IDs; this record is not a provider-side verification or
-permission to change anything. Jerry sets live configuration at go-live.
+Jerry supplied these catalog IDs. The starter/pro application DB mappings
+below are PLANNED go-live values, NOT a readout of current production. Codex
+has not set them or identified a historical setter/time. This record is not
+provider-side verification or permission to change anything. Jerry alone sets
+configuration at go-live.
 
 Target handoff after LR-014 removes the obsolete validator (current legacy
 price-variable requirements are listed in the source inventory below):
@@ -90,3 +93,27 @@ All configured names Jerry reported are accounted for. Required secrets are
 listed by name and purpose, not guessed values. Final instructions must match
 the merged LR-014 code and confirm API/shared-group secret names first. No
 configuration or DB mapping has been changed by this record.
+
+
+## Verify current production values read-only
+
+Run against mr-staging-db; this does not apply the planned values:
+
+```sql
+BEGIN READ ONLY;
+SELECT plan_slug, is_active, stripe_price_id
+FROM plans
+WHERE plan_slug IN ('starter', 'pro')
+ORDER BY plan_slug;
+COMMIT;
+```
+
+Matching values would establish current configuration, not who set it or when.
+That attribution needs audit/deployment evidence; it cannot be inferred from
+this checklist or from Jerry supplying catalog IDs.
+
+The Vercel product-ID variables Jerry mentions have not been located in the
+inspected reportscompany-web scope. The older reportscompany project was not
+accessible in the configured team. Product IDs have no web-app code consumer;
+confirm the exact names/project and any integration/build use before deleting
+those specific entries at go-live. Nothing was deleted or changed.
