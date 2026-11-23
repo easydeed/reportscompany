@@ -337,8 +337,10 @@ def test_the_budget_defers_what_is_left(monkeypatch, committed_keys, r):
     committed_keys += keys
     monkeypatch.setattr(ops_signals, "SIGNALS",
                         [ops_signals.Signal(k, True, "x", lambda _cur: Reading(False)) for k in keys])
-    ticks = iter([0, 0, 91, 92, 93, 94, 95, 96, 97, 98])
+    # start, the test-alert check (always first, so it is never deferred), keys[0], then over budget
+    ticks = iter([0, 0, 0, 91, 92, 93, 94, 95, 96, 97, 98])
     results = ops_monitor.run_once(DB, r, clock=lambda: next(ticks))
+    assert results["ops_test_alert"] is None
     assert results[keys[0]] is None and results[keys[1]] == "deferred" and results[keys[2]] == "deferred"
 
 

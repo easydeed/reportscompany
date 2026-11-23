@@ -37,7 +37,7 @@
  {
   "name": "LR-027 s3: a flapping re-open texts again",
   "file": "apps/worker/src/worker/ops_notify.py",
-  "old": "                 and not (event == \"open\" and flapping))",
+  "old": "                 and not (event == \"open\" and flap_applies))",
   "new": "                 )",
   "test": "apps/worker/tests/test_ops_notify.py::test_recovery_queues_one_resolved_event_and_a_flap_reopens_by_email_only"
  },

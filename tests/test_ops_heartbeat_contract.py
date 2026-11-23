@@ -48,3 +48,16 @@ def test_the_monitor_judges_heartbeats_by_the_same_thresholds_as_ready():
     api, monitor = constants(API), constants(MONITOR)
     for name in ("TICKER_STALE_S", "WORKER_STALE_S", "WORKER_BACKLOG_LIMIT_S"):
         assert api[name] == monitor[name], name
+
+
+OPS_ADMIN = ROOT / "apps/api/src/api/routes/ops_admin.py"
+
+
+def test_the_admin_test_alert_key_is_the_one_the_monitor_consumes():
+    # The API sets it, the ticker's monitor consumes it; a rename on one side
+    # would make every test alert silently do nothing.
+    assert constants(OPS_ADMIN)["TEST_ALERT_KEY"] == constants(MONITOR)["TEST_ALERT_KEY"]
+
+
+def test_the_test_request_outlives_several_monitor_runs():
+    assert constants(OPS_ADMIN)["TEST_ALERT_TTL_S"] > 3 * constants(MONITOR)["INTERVAL_S"]
