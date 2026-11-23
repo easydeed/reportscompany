@@ -98,6 +98,49 @@ HEARTBEAT_SIGNALS = {
     "worker_backlog": (False, "Reports are delayed behind a backlog."),
 }
 
+# LR-027 slice 4: an admin's test alert (POST /v1/admin/ops/test-alert) is a
+# short-lived Redis key. The run that consumes it opens `ops_test_alert`
+# through the real incident and delivery path; the next run, finding no
+# request, resolves it. The API names the same key (contract test).
+#
+# One test lifecycle at a time (Codex #329 P2): a request that arrives while a
+# test incident is still open is NOT consumed by that run. Consuming it would
+# add a member to the open incident (an email-only update, no opening text)
+# and hold back the first test's recovery. It waits in Redis instead; the run
+# resolves the open test, and the next run opens a fresh incident for it.
+TEST_ALERT_KEY = "ops:test_alert:requested"
+TEST_SIGNALS = {
+    "ops_test_alert": (True, "Test alert requested by an admin. No action is needed."),
+}
+
+
+def test_alert_read(client):
+    """The monitor's read for `ops_test_alert`: consume a request only when no test is open."""
+    def read(cur) -> Reading:
+        cur.execute("SELECT 1 FROM ops_alerts WHERE key = 'ops_test_alert' AND resolved_at IS NULL LIMIT 1")
+        if cur.fetchone() is not None:
+            return Reading(tripped=False, identities=[], count=0, value={})
+        try:
+            return test_alert_reading(client)
+        except Exception as exc:  # noqa: BLE001 - Redis unreachable: no reading, nothing recorded
+            logger.warning("OPS_MONITOR test-alert check skipped: %s", type(exc).__name__)
+            return None
+    return read
+
+
+def test_alert_reading(client) -> Reading:
+    """Consume a pending test request atomically (GET + DEL in one MULTI)."""
+    pipe = client.pipeline(transaction=True)
+    pipe.get(TEST_ALERT_KEY)
+    pipe.delete(TEST_ALERT_KEY)
+    request_id, _ = pipe.execute()
+    if not request_id:
+        return Reading(tripped=False, identities=[], count=0, value={})
+    if isinstance(request_id, bytes):
+        request_id = request_id.decode("utf-8", "replace")
+    ident = f"test:{str(request_id)[:64]}"
+    return Reading(tripped=True, identities=[ident], count=1, value={"test": True})
+
 
 def _observe(key: str, event: str, count: int, new: int, sample, **extra) -> None:
     # Counts, identities (UUID-based references) and timings only.
@@ -187,6 +230,12 @@ def run_once(db_url: str, redis_client=None, clock=time.monotonic) -> dict:
             conn.commit()
 
         readings = []
+        try:
+            # First, so a spent budget never defers it. A request is consumed
+            # inside its read, and only when no test incident is open.
+            readings.append(("ops_test_alert", test_alert_read(redis_client or ops_heartbeat._redis())))
+        except Exception as exc:  # noqa: BLE001 - no Redis client at all
+            logger.warning("OPS_MONITOR test-alert check skipped: %s", type(exc).__name__)
         for sig in ops_signals.SIGNALS:
             readings.append((sig.key, sig.read))
         try:
@@ -203,6 +252,9 @@ def run_once(db_url: str, redis_client=None, clock=time.monotonic) -> dict:
             try:
                 with conn.cursor() as cur:
                     reading = read(cur)
+                    if reading is None:     # the source could not be read; record nothing
+                        conn.rollback()
+                        continue
                     results[key] = record(cur, key, reading)
                 conn.commit()
             except Exception as exc:  # noqa: BLE001 - one signal never stops the others
