@@ -1,0 +1,65 @@
+[
+ {
+  "name": "LR-027 s4: the test-alert route is open to any signed-in user",
+  "file": "apps/api/src/api/routes/ops_admin.py",
+  "old": "def request_test_alert(admin: dict = Depends(get_admin_user)):",
+  "new": "def request_test_alert():",
+  "test": "apps/api/tests/test_ops_admin.py::test_only_platform_admins_reach_the_ops_routes"
+ },
+ {
+  "name": "LR-027 s4: a second test request replaces the pending one",
+  "file": "apps/api/src/api/routes/ops_admin.py",
+  "old": "created = _redis().set(TEST_ALERT_KEY, request_id, nx=True, ex=TEST_ALERT_TTL_S)",
+  "new": "created = _redis().set(TEST_ALERT_KEY, request_id, ex=TEST_ALERT_TTL_S)",
+  "test": "apps/api/tests/test_ops_admin.py::test_a_test_alert_is_one_pending_request_for_the_monitor"
+ },
+ {
+  "name": "LR-027 s4: a refused (not_sent) alert can be marked received",
+  "file": "apps/api/src/api/routes/ops_admin.py",
+  "old": "WHERE id = %s AND state IN ('unknown', 'accepted') AND resolution IS NULL",
+  "new": "WHERE id = %s AND resolution IS NULL",
+  "test": "apps/api/tests/test_ops_admin.py::test_an_operator_records_receipt_once_with_evidence"
+ },
+ {
+  "name": "LR-027 s4: a recorded resolution can be overwritten",
+  "file": "apps/api/src/api/routes/ops_admin.py",
+  "old": "WHERE id = %s AND state IN ('unknown', 'accepted') AND resolution IS NULL",
+  "new": "WHERE id = %s AND state IN ('unknown', 'accepted')",
+  "test": "apps/api/tests/test_ops_admin.py::test_an_operator_records_receipt_once_with_evidence"
+ },
+ {
+  "name": "LR-027 s4: the reconciliation list includes already-resolved alerts",
+  "file": "apps/api/src/api/routes/ops_admin.py",
+  "old": "WHERE n.state = 'unknown' AND n.resolution IS NULL ORDER BY n.id",
+  "new": "WHERE n.state = 'unknown' ORDER BY n.id",
+  "test": "apps/api/tests/test_ops_admin.py::test_an_operator_records_receipt_once_with_evidence"
+ },
+ {
+  "name": "LR-027 s4: the monitor reads the test request without consuming it",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "    pipe.delete(TEST_ALERT_KEY)\n",
+  "new": "    pipe.get(TEST_ALERT_KEY)\n",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_test_request_opens_then_resolves_through_the_real_sender"
+ },
+ {
+  "name": "LR-027 s4: a retest within 30 minutes is email only (flap rule applied to tests)",
+  "file": "apps/worker/src/worker/ops_notify.py",
+  "old": "flap_applies = flapping and key != \"ops_test_alert\"",
+  "new": "flap_applies = flapping",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_second_test_soon_after_still_exercises_sms"
+ },
+ {
+  "name": "LR-027 s4: the worker consumes a different key from the one the API sets",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "TEST_ALERT_KEY = \"ops:test_alert:requested\"",
+  "new": "TEST_ALERT_KEY = \"ops:test-alert\"",
+  "test": "tests/test_ops_heartbeat_contract.py::test_the_admin_test_alert_key_is_the_one_the_monitor_consumes"
+ },
+ {
+  "name": "LR-027 s4: a request is consumed while a test is still open",
+  "file": "apps/worker/src/worker/ops_monitor.py",
+  "old": "        if cur.fetchone() is not None:\n            return Reading(tripped=False, identities=[], count=0, value={})\n        try:\n            return test_alert_reading(client)",
+  "new": "        if False:\n            return Reading(tripped=False, identities=[], count=0, value={})\n        try:\n            return test_alert_reading(client)",
+  "test": "apps/worker/tests/test_ops_notify.py::test_a_request_during_an_open_test_gets_its_own_lifecycle"
+ }
+]

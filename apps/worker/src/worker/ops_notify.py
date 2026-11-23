@@ -91,6 +91,8 @@ def _key_meta(key: str) -> tuple[bool, str]:
             return sig.sms, sig.consequence
     if key in ops_monitor.HEARTBEAT_SIGNALS:
         return ops_monitor.HEARTBEAT_SIGNALS[key]
+    if key in ops_monitor.TEST_SIGNALS:
+        return ops_monitor.TEST_SIGNALS[key]
     return False, key
 
 
@@ -150,8 +152,11 @@ def enqueue(cur, alert_id, key: str, event: str, *, flapping: bool = False) -> l
     queued = []
     if configured["email"] and _insert(cur, alert_id, event, "email"):
         queued.append("email")
+    # A test alert always exercises SMS: the flap rule would otherwise make a
+    # second test within 30 minutes email-only, and the test prove nothing.
+    flap_applies = flapping and key != "ops_test_alert"
     wants_sms = (sms_key and configured["sms"] and not event.startswith("update:")
-                 and not (event == "open" and flapping))
+                 and not (event == "open" and flap_applies))
     # The hourly SMS cap is enforced when a text is SENT (claim), not here.
     if wants_sms and _insert(cur, alert_id, event, "sms"):
         queued.append("sms")

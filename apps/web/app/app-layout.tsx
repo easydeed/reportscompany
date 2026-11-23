@@ -12,7 +12,7 @@ import { Logo } from "@/components/logo"
 import {
   LayoutDashboard, FileText, Calendar, Users, Settings, Building2, Building, Home,
   UserCheck, MessageSquare, Link2, Palette, CreditCard, Plus, CircleHelp, Mail,
-  BarChart3, Server, Shield, BookUser, Menu, LogOut, Lock, Inbox, MapPin,
+  BarChart3, Server, Shield, BookUser, Menu, LogOut, Lock, Inbox, MapPin, BellRing,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import {
@@ -60,6 +60,7 @@ export function getNavGroups({ isAdmin, isCompanyAdmin, isAffiliate, isSponsored
         { name: "Property reports", href: "/app/admin/property-reports", icon: Home },
         { name: "Emails", href: "/app/admin/emails", icon: Mail },
         { name: "SMS", href: "/app/admin/sms", icon: MessageSquare },
+        { name: "Operator alerts", href: "/app/admin/ops", icon: BellRing },
         { name: "Lead pages", href: "/app/admin/lead-pages", icon: Link2 },
         { name: "Leads", href: "/app/admin/leads", icon: UserCheck },
         { name: "Analytics", href: "/app/admin/analytics", icon: BarChart3 },
