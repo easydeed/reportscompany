@@ -49,8 +49,11 @@ below for the sponsored pilot. Codex implements LR-031 -> LR-003 -> LR-004 ->
 LR-005 -> LR-009. LR-003 upgrades vulnerable Next.js 16.0.7 to a patched release
 and verifies Node 22 builds. Claude implements LR-006, LR-007, LR-015 and LR-017.
 Implementation takes priority in both lanes; cross-agent review remains required.
-LR-011–LR-014 are deferred until paid launch (pilot agents are sponsored and pay
-nothing). Public-launch gates LR-008, LR-010 and LR-016 remain deferred. This
+Jerry's later billing instruction supersedes the original deferral: Codex takes
+LR-011 -> LR-012 -> LR-013 -> LR-014 immediately after LR-009, all finished
+before outbound outreach begins. Stripe is live; no live payment tests or real
+cards. The sponsored checkout gate remains until billing acceptance passes.
+Public-launch gates LR-008, LR-010 and LR-016 remain deferred. This
 reassignment moves LR-015's manual-allowance ownership to Claude; LR-023's
 scheduled-send and copy work has already merged. No broader backlog is reopened.
 
@@ -67,6 +70,12 @@ Dependencies still apply: Claude can start LR-019 after the amended plan merges,
 
 ## Shared files and coordination
 
+- **Review attribution (Jerry, November 19):** Every agent starts every review
+  comment with its own agent name and verdict, for example `Codex review: PASS`
+  or `Claude Code review: AMEND`. Include the exact reviewed commit. Never
+  post another agent's approval as if that agent wrote it. A shared GitHub
+  account, a footer or a second-hand claim is not proof of independent review;
+  link the other agent's actual review when carrying a PASS forward.
 - **Defect board:** Codex alone edits `docs/DEFECT_LIST.md` status tokens, count/severity tables, total, and new D-number allocation. Claude may add evidence prose without changing status. Claude lists “status changes requested” in each PR; Codex applies verified changes in its next board update. Use `scripts/derive.py`'s imported canonical parser; do not maintain another parser or hand-count.
 - **Migrations and guards:** At most one open migration PR across both lanes. Claim the number in its PR title before editing. The same PR moves both API and worker `REQUIRED_MIGRATION`. Coordinate additive rollout, deploy retention, and verification before merge.
 - **Property route:** `apps/api/src/api/routes/property.py` is shared by Claude LR-018 normalization and Codex LR-015's evaluator call. Claude's LR-018 goes first; Codex waits for its merge and branches again from main before modifying that route.
