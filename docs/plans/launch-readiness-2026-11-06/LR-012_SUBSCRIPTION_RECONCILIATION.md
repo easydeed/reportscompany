@@ -64,6 +64,24 @@ projection. Prefer one database-backed effective-plan rule, preserving zero
 and unlimited overrides and the schedule/manual allowance separation.
 Avoid duplicate Python implementations in separately deployed applications.
 
+### Consumer inventory at this branch's main baseline
+
+| Reader | Current source | Implementation review requirement |
+|---|---|---|
+| API report/plan allowances | `apps/api/src/api/services/usage.py:79-126` | Raw-plan join plus deadline-triggered mutation; replace or serialize the stale read/write boundary. |
+| Worker product allowances | `apps/worker/src/worker/limit_checker.py:46-62` | Raw-plan join; must use the same effective deadline as API enforcement. |
+| Public lead capture | `apps/api/src/api/routes/leads.py:283` | Raw plan supplies `lead_capture_enabled`; include the post-deadline feature decision in parity tests. |
+| Account billing output | `apps/api/src/api/routes/account.py:138,259` | Raw plan/status is returned; define stored versus effective fields so customer UI does not contradict enforcement. |
+| Affiliate metrics | `apps/api/src/api/services/affiliates.py:142` | Raw-plan allowance join; audit displayed capacity without reopening unrelated counting defects. |
+| Company metrics | `apps/api/src/api/routes/company.py:259` | Same raw-plan allowance join; preserve sponsorship and grandfathered-schedule policy. |
+| Admin SMS summary | `apps/api/src/api/routes/admin.py:3637` | Raw plan supplies credits/features; distinguish diagnostic stored state from an entitlement decision. |
+
+This is a source inventory, not approval to rewrite every listed route. Runtime
+work must identify which outputs enforce access versus report stored billing
+facts. Test customer-visible effective values and preserve explicit raw values
+where an operator needs them. No read/list endpoint may introduce a new billing
+mutation. No scope expands into CSV, pricing policy or unrelated dashboard math.
+
 Remove usage-read mutation if all consumers can use that projection; otherwise
 make any materialization conditional on the exact subscription/deadline state
 still matching, under the same account serialization. A request that read an
