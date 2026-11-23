@@ -133,3 +133,22 @@ inspected reportscompany-web scope. The older reportscompany project was not
 accessible in the configured team. Product IDs have no web-app code consumer;
 confirm the exact names/project and any integration/build use before deleting
 those specific entries at go-live. Nothing was deleted or changed.
+
+
+## Jerry-approved LR-014 variable rename sequence
+
+Keep the existing names and values for now. Implement and review the matching
+code first; Jerry alone changes Render at go-live. No environment rename is
+part of LR-011 or LR-012.
+
+| Existing name | LR-014 target | Slug | Planned go-live value |
+|---|---|---|---|
+| `STRIPE_PRICE_PRO_MONTH` | `STRIPE_PRICE_GROWTH_PLUS_MONTH` | `pro` | `price_1UddpaBa27XowvTpqu8acKJP` |
+| No existing Starter price variable | `STRIPE_PRICE_GROWTH_MONTH` | `starter` | `price_1UddpFBa27XowvTp6siwCZ3Q` |
+| `STRIPE_PRICE_TEAM_MONTH` | Retire after code no longer requires it | Retired `team` | No replacement value; never repurpose it for Growth |
+
+Until the matching code is deployed, keep `STRIPE_PRICE_PRO_MONTH` and set its
+Growth Plus value only at Jerry's approved go-live. Leave Team alone for now.
+The final handoff must show the reviewed code's old -> new names and a tested
+compatible deployment sequence, so removing an old name cannot break checkout
+or the portal. These are planned configuration changes, not current values.

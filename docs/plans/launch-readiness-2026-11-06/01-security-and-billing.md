@@ -123,6 +123,15 @@ Scope incorporates Claude review at `821f71ad`; evidence references are from aud
 
 **Rollout:** Read-only inventory identifies existing duplicate subscriptions, if any. Refunds, cancellations, and customer communication require a separate explicit operator decision; never automatically cancel a real subscription in this ticket.
 
+**Approved environment cleanup (Jerry):** Match price-variable names to the
+plans: `STRIPE_PRICE_PRO_MONTH` -> `STRIPE_PRICE_GROWTH_PLUS_MONTH` (`pro`),
+add `STRIPE_PRICE_GROWTH_MONTH` for `starter`, and retire
+`STRIPE_PRICE_TEAM_MONTH` without reusing it for Growth. Code and compatibility
+proof first; Jerry changes Render at go-live. Keep current names untouched
+until then. Supply the exact old -> new/value list from the go-live checklist;
+production plan mappings and environment values are not changed by this ticket
+without the separate go-live instruction.
+
 ## LR-015 Honor zero report allowances
 
 **Branch:** `fix/lr-015-zero-report-limit` · **Gate:** PILOT · **Hours:** 3–5 · **Depends:** LR-001.
