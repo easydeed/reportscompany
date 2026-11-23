@@ -44,7 +44,7 @@ async def upload_branding_file(
     Returns the public URL of the uploaded file.
     
     The uploaded file will be stored at:
-    `branding/{account_id}/{asset_type}_{timestamp}_{unique_id}.{ext}`
+    `branding/{account_id}/checked/{asset_type}_{timestamp}_{unique_id}.{ext}`
     """
     if asset_type not in ("logo", "headshot"):
         raise HTTPException(

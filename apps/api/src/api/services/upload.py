@@ -181,7 +181,9 @@ def store_branding_image(contents: bytes, ext: str, content_type: str, account_i
     """Store already-checked, re-encoded image bytes; shared by upload and import."""
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
-    s3_key = f"branding/{account_id}/{asset_type}_{timestamp}_{unique_id}.{ext}"
+    # `checked/` marks objects this validating pipeline wrote; branding saves
+    # admit only that shape as a new value (services/branding_urls).
+    s3_key = f"branding/{account_id}/checked/{asset_type}_{timestamp}_{unique_id}.{ext}"
     
     # Get R2 client
     client = get_r2_client()

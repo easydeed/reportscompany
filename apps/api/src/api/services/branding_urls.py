@@ -10,13 +10,19 @@ image field is:
   * a value already stored on the same record, in any image field. Existing
     saved values stay exactly as they are (Jerry: PCT's two SVG logos keep
     rendering), and a form may copy the header logo into the email logo; or
-  * one of OUR storage URLs that an AUTHORIZED account stored (Codex #330 P2).
-    Upload and import write `branding/{account_id}/{asset}_{ts}_{id}.{ext}`
-    under the uploading account, so the caller names the accounts whose
-    uploads this record may use (`owners`), and the object must be one the
-    current pipeline writes: a single file name with a raster extension. A
-    known URL from another account, or an old SVG not on this record, is
-    refused.
+  * one of OUR storage objects that the CHECKED pipeline wrote, for an
+    AUTHORIZED account (Codex #330 rounds 1 and 2). Upload and import now write
+    `branding/{account_id}/checked/{logo|headshot}_{14-digit time}_{8 hex}.{ext}`,
+    and only that exact shape is admissible as a new value:
+      - the account must be one the route names in `owners`, so a known URL
+        from another account is refused;
+      - the `checked/` segment is proof of validation. Before #312 the
+        uploader trusted the declared type and kept the file name, so SVG
+        bytes uploaded as "logo.png" sit at `branding/{account}/logo_….png`.
+        An extension proves nothing; that old layout can never contain the
+        `checked/` segment (its asset type was only ever "logo" or
+        "headshot"), so no pre-#330 object is admissible as a NEW value.
+        Those objects stay where already saved, as decided.
 
 Anything else is refused with 400 before anything is written.
 """
@@ -32,9 +38,11 @@ LINK_REFUSED = ("{field}: images must be uploaded, or pasted with 'Or paste an i
 NOT_YOURS = ("{field}: that image was uploaded by a different account. Upload it again here, or "
              "paste its link with 'Or paste an image URL'.")
 
-# What upload.store_branding_image writes after the account prefix (the
-# extensions upload.IMAGE_TYPES allows). No slash, no dot-segments, no escapes.
-STORED_NAME = re.compile(r"[A-Za-z0-9_-]+\.(?:png|jpe?g|webp|gif)")
+# Exactly what upload.store_branding_image writes after `branding/{account}/`.
+CHECKED_DIR = "checked"
+STORED_NAME = re.compile(r"(?:logo|headshot)_\d{14}_[0-9a-f]{8}\.(?:png|jpe?g|webp|gif)")
+LEGACY_UNCHECKED = ("{field}: that image was stored before uploads were checked, so it can't be newly "
+                    "selected. Upload it again, or paste its link with 'Or paste an image URL'.")
 PLACEHOLDER = "https://via.placeholder.com/"
 
 
@@ -49,28 +57,30 @@ def _bases() -> list[tuple[str, bool]]:
     return bases
 
 
-def storage_account(url: str) -> Optional[str]:
-    """The account whose upload `url` is, if it is a well-formed object in our storage."""
+def storage_object(url: str) -> Optional[tuple[str, bool]]:
+    """(account, written by the checked pipeline) for a URL inside our branding storage, else None."""
     if not url or any(c in url for c in ("\\", "\n", "\r", "#")):
         return None
     for base, signed in _bases():
         if not url.startswith(base):
             continue
-        rest = url[len(base):]
-        path, _, query = rest.partition("?")
-        if query and not signed:
+        path, _, query = url[len(base):].partition("?")
+        account, sep, rest = path.partition("/")
+        if not (sep and account and re.fullmatch(r"[A-Za-z0-9-]+", account)):
             return None
-        account, sep, name = path.partition("/")
-        if sep and account and re.fullmatch(r"[A-Za-z0-9-]+", account) and STORED_NAME.fullmatch(name):
-            return account
+        directory, sep, name = rest.partition("/")
+        checked = (bool(sep) and directory == CHECKED_DIR and STORED_NAME.fullmatch(name) is not None
+                   and (signed or not query))
+        return account, checked
     return None
 
 
 def is_own_storage_url(url: str, owners: Iterable[str]) -> bool:
+    """A checked-pipeline object stored for one of `owners`."""
     if url and url.startswith(PLACEHOLDER) and not upload.get_r2_client():
         return True     # local development without R2: the upload route returns this placeholder
-    account = storage_account(url)
-    return account is not None and account.lower() in {str(o).lower() for o in owners if o}
+    obj = storage_object(url)
+    return obj is not None and obj[1] and obj[0].lower() in {str(o).lower() for o in owners if o}
 
 
 def check_image_urls(changes: Mapping[str, Optional[str]], existing: Iterable[Optional[str]] = (), *,
@@ -83,6 +93,9 @@ def check_image_urls(changes: Mapping[str, Optional[str]], existing: Iterable[Op
             continue
         if value in stored or is_own_storage_url(value, owners):
             continue
-        if storage_account(value) is not None:
+        obj = storage_object(value)
+        if obj is not None and obj[0].lower() not in {str(o).lower() for o in owners}:
             raise HTTPException(status_code=400, detail=NOT_YOURS.format(field=field))
+        if obj is not None:
+            raise HTTPException(status_code=400, detail=LEGACY_UNCHECKED.format(field=field))
         raise HTTPException(status_code=400, detail=LINK_REFUSED.format(field=field))

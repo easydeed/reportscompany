@@ -44,29 +44,29 @@
  {
   "name": "LR-007 redirect hops are not re-checked",
   "file": "apps/api/src/api/services/safe_fetch.py",
-  "old": "        host, address, path = _check(url)\n",
-  "new": "        host, address, path = _check(url) if _hop == 0 else (urlsplit(url).hostname, address, urlsplit(url).path or '/')\n",
+  "old": "            host, address, path = _check(url, deadline)\n",
+  "new": "            host, address, path = _check(url, deadline) if _hop == 0 else (urlsplit(url).hostname, address, urlsplit(url).path or '/')\n",
   "test": "apps/api/tests/test_branding_image_safety.py::test_a_redirect_to_a_private_address_is_refused"
  },
  {
   "name": "LR-007 no size cap on the fetched body",
   "file": "apps/api/src/api/services/safe_fetch.py",
-  "old": "                    declared = response.headers.get(\"content-length\")\n                    if declared and declared.isdigit() and int(declared) > max_bytes:\n                        raise FetchRefused(\"The image at that link is too large.\")\n                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        _left(deadline, stop)\n                        body.extend(chunk)\n                        if len(body) > max_bytes:",
-  "new": "                    body = bytearray()\n                    for chunk in response.iter_bytes():\n                        _left(deadline, stop)\n                        body.extend(chunk)\n                        if False:",
+  "old": "                    declared = headers.get(\"content-length\")\n                    if declared and declared.isdigit() and int(declared) > max_bytes:\n                        raise FetchRefused(\"The image at that link is too large.\")\n                    body = bytearray()\n                    for chunk in response.iter_stream():\n                        deadline.left()\n                        body.extend(chunk)\n                        if len(body) > max_bytes:",
+  "new": "                    body = bytearray()\n                    for chunk in response.iter_stream():\n                        deadline.left()\n                        body.extend(chunk)\n                        if False:",
   "test": "apps/api/tests/test_branding_image_safety.py::test_too_many_redirects_and_oversized_bodies_are_refused"
  },
  {
   "name": "LR-007 TLS verified against the IP, not the name (no SNI)",
   "file": "apps/api/src/api/services/safe_fetch.py",
-  "old": "                    extensions={\"sni_hostname\": host},\n",
-  "new": "",
+  "old": "                    extensions={\"sni_hostname\": host,\n                                \"timeout\":",
+  "new": "                    extensions={\"timeout\":",
   "test": "apps/api/tests/test_branding_image_safety.py::test_a_public_host_is_fetched_pinned_with_tls_verified_against_its_name"
  },
  {
   "name": "LR-007 the pinned request loses its Host header",
   "file": "apps/api/src/api/services/safe_fetch.py",
-  "old": "headers={\"Host\": host, \"Accept\": \"image/*\",",
-  "new": "headers={\"Accept\": \"image/*\",",
+  "old": "headers=[(\"Host\", host), (\"Accept\", \"image/*\"),",
+  "new": "headers=[(\"Accept\", \"image/*\"),",
   "test": "apps/api/tests/test_branding_image_safety.py::test_a_public_host_is_fetched_pinned_with_tls_verified_against_its_name"
  },
  {
@@ -121,8 +121,8 @@
  {
   "name": "LR-007 #330 any account's storage URL is admitted",
   "file": "apps/api/src/api/services/branding_urls.py",
-  "old": "    return account is not None and account.lower() in {str(o).lower() for o in owners if o}",
-  "new": "    return account is not None",
+  "old": "    return obj is not None and obj[1] and obj[0].lower() in {str(o).lower() for o in owners if o}",
+  "new": "    return obj is not None and obj[1]",
   "test": "apps/api/tests/test_branding_image_safety.py::test_another_accounts_upload_or_an_unchecked_legacy_object_is_refused"
  },
  {
@@ -130,7 +130,7 @@
   "file": "apps/api/src/api/services/branding_urls.py",
   "old": "(?:png|jpe?g|webp|gif)\")",
   "new": "(?:png|jpe?g|webp|gif|svg)\")",
-  "test": "apps/api/tests/test_branding_image_safety.py::test_another_accounts_upload_or_an_unchecked_legacy_object_is_refused"
+  "test": "apps/api/tests/test_branding_image_safety.py::test_an_own_account_legacy_object_named_png_is_not_newly_selectable"
  },
  {
   "name": "LR-007 #330 the agent route checks ownership against the wrong account",
@@ -140,17 +140,38 @@
   "test": "apps/api/tests/test_branding_image_safety.py::test_an_agent_cannot_save_another_accounts_upload"
  },
  {
-  "name": "LR-007 #330 the caller waits for the fetch however long it takes",
+  "name": "LR-007 #330r2 socket reads not bounded by the deadline (header trickle)",
   "file": "apps/api/src/api/services/safe_fetch.py",
-  "old": "        return future.result(timeout=max(0.0, deadline - time.monotonic()))",
-  "new": "        return future.result()",
+  "old": "        return self._inner.read(max_bytes, self._bound(timeout))",
+  "new": "        return self._inner.read(max_bytes, timeout)",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_trickling_headers_are_cut_off_at_the_deadline"
+ },
+ {
+  "name": "LR-007 #330r2 DNS lookup not given the time left",
+  "file": "apps/api/src/api/services/safe_fetch.py",
+  "old": "    addresses = sorted(set(_lookup(host, deadline.left())))",
+  "new": "    addresses = sorted(set(_lookup(host, TIMEOUT_S)))",
   "test": "apps/api/tests/test_branding_image_safety.py::test_a_slow_dns_answer_is_cut_off_at_the_deadline"
  },
  {
-  "name": "LR-007 #330 an abandoned download keeps reading",
+  "name": "LR-007 #330r2 resolver query without a lifetime",
   "file": "apps/api/src/api/services/safe_fetch.py",
-  "old": "                    for chunk in response.iter_bytes():\n                        _left(deadline, stop)\n",
-  "new": "                    for chunk in response.iter_bytes():\n",
-  "test": "apps/api/tests/test_branding_image_safety.py::test_a_trickling_body_is_cut_off_at_the_deadline"
+  "old": "RESOLVER.resolve(host, rdtype, lifetime=remaining, search=False)",
+  "new": "RESOLVER.resolve(host, rdtype, search=False)",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_the_real_dns_lookup_is_bounded_by_its_lifetime"
+ },
+ {
+  "name": "LR-007 #330r2 an old-layout own-account object counts as checked",
+  "file": "apps/api/src/api/services/branding_urls.py",
+  "old": "directory == CHECKED_DIR and STORED_NAME.fullmatch(name) is not None",
+  "new": "(STORED_NAME.fullmatch(name) is not None or STORED_NAME.fullmatch(rest) is not None)",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_an_own_account_legacy_object_named_png_is_not_newly_selectable"
+ },
+ {
+  "name": "LR-007 #330r2 the pipeline writes the old layout",
+  "file": "apps/api/src/api/services/upload.py",
+  "old": "s3_key = f\"branding/{account_id}/checked/{asset_type}_",
+  "new": "s3_key = f\"branding/{account_id}/{asset_type}_",
+  "test": "apps/api/tests/test_branding_image_safety.py::test_the_pipeline_writes_the_checked_layout"
  }
 ]
