@@ -37,7 +37,7 @@ def r(monkeypatch):
         pytest.skip("TEST_REDIS_URL is unreachable")
     monkeypatch.setattr(settings, "REDIS_URL", URL)
     monkeypatch.setattr(windows, "_client", None, raising=False)
-    monkeypatch.setattr(windows, "_open_until", 0.0, raising=False)
+    monkeypatch.setattr(windows, "_breaker", windows._Breaker())
     owned = (V[0], IP[0], windows.SEQ_KEY)
     conn.delete(*owned)
     yield conn

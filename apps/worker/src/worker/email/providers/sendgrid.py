@@ -48,10 +48,10 @@ class Attempt:
     detail: str
 
 
-def _one_attempt(payload: dict, http_headers: dict) -> Attempt:
+def _one_attempt(payload: dict, http_headers: dict, timeout: Optional[float] = None) -> Attempt:
     """Exactly one POST. Never sleeps, never retries."""
     try:
-        with httpx.Client(timeout=SENDGRID_TIMEOUT) as client:
+        with httpx.Client(timeout=timeout or SENDGRID_TIMEOUT) as client:
             response = client.post(SENDGRID_API_URL, json=payload, headers=http_headers)
     except (httpx.ConnectError, httpx.ConnectTimeout) as e:
         # The connection was never made, so the request was never sent.
@@ -76,6 +76,7 @@ def send_email(
     from_email: str = None,
     headers: Optional[Dict[str, str]] = None,
     single_attempt: bool = False,
+    timeout: Optional[float] = None,
 ) -> Union[Tuple[int, str], Attempt]:
     """
     Send an email using SendGrid v3 API.
@@ -96,6 +97,8 @@ def send_email(
         single_attempt: LR-023. Exactly one POST, no retries, and an `Attempt`
             is returned instead of the tuple. Legacy callers leave it False and
             keep the retries and the tuple.
+        timeout: single_attempt only. Overrides SENDGRID_TIMEOUT for this call
+            (LR-027's operator alerts bound each call to 10 s).
 
     Returns:
         Tuple of (status_code, response_text), or an `Attempt` when single_attempt.
@@ -147,7 +150,7 @@ def send_email(
     }
     
     if single_attempt:
-        result = _one_attempt(payload, http_headers)
+        result = _one_attempt(payload, http_headers, timeout)
         log = logger.info if result.outcome == ACCEPTED else logger.error
         log("SendGrid single attempt to %d recipient(s): %s %s",
             len(to_emails), result.outcome, result.status_code)

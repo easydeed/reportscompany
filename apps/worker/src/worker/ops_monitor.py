@@ -1,4 +1,4 @@
-"""LR-027 monitor, OBSERVE-ONLY in this slice (design #317 rev 3, sections 3-5, 8).
+"""LR-027 monitor (design #317 rev 3, sections 3-5, 8). Observe-only by default.
 
 Every 5 minutes, on its own thread in the ticker process, the monitor reads
 each signal (ops_signals.SIGNALS plus the heartbeats) and keeps one incident
@@ -7,8 +7,12 @@ ops_alert_members. It writes a count-only log line for what it WOULD send:
 
     OPS_ALERT mode=observe key=<key> event=<open|new_members|grew|resolved> ...
 
-It SENDS NOTHING and writes no ops_alert_notifications row. Sending is slice 3,
-behind OPS_ALERTS_ENABLED, which stays 0 until Jerry approves the thresholds.
+With OPS_ALERTS_ENABLED unset or 0 (the default, until Jerry approves the
+thresholds) that is all it does: it sends nothing and queues nothing. With 1,
+each announced event is also handed to `ops_notify`, which queues one row per
+configured channel in the same transaction and delivers it after the signals
+(claim before the call, never resend an uncertain outcome). This module itself
+never calls a provider.
 
 Why on the ticker and not a Celery task: production runs no Beat, and a task
 in the render queue would wait behind a burst and could never report a dead
@@ -22,13 +26,13 @@ Without the 0069 tables (an emergency start under SCHEMA_BEHIND_ACKNOWLEDGED)
 it logs once per run and does nothing.
 """
 import logging
-import os
 import threading
 import time
 import uuid
 from typing import Optional
 
 from . import ops_heartbeat
+from . import ops_notify
 from . import ops_signals
 from .ops_signals import MEMBER_LIMIT, Reading
 
@@ -116,6 +120,7 @@ def record(cur, key: str, reading: Reading) -> Optional[str]:
                     (row[0],))
         minutes = int(cur.fetchone()[0])
         _observe(key, "resolved", 0, 0, [], after_min=minutes)
+        ops_notify.announce(cur, row[0], key, "resolved")
         return "resolved"
 
     truncated = reading.count > len(reading.identities)
@@ -156,6 +161,7 @@ def record(cur, key: str, reading: Reading) -> Optional[str]:
     if announce:
         _observe(key, event, reading.count, len(new_ids), new_ids or reading.identities,
                  truncated=str(truncated).lower(), flap=str(flapping).lower())
+        ops_notify.announce(cur, alert_id, key, event, flapping=flapping)
     return event
 
 
@@ -203,6 +209,17 @@ def run_once(db_url: str, redis_client=None, clock=time.monotonic) -> dict:
                 conn.rollback()
                 logger.warning("OPS_MONITOR signal %s failed: %s", key, type(exc).__name__)
                 results[key] = "error"
+
+        # Delivery (inert unless OPS_ALERTS_ENABLED=1): renotify marks, then
+        # the claimable rows, inside what is left of this run's budget.
+        try:
+            with conn.cursor() as cur:
+                ops_notify.enqueue_renotifications(cur)
+            conn.commit()
+            ops_notify.dispatch(conn, clock, started + BUDGET_S)
+        except Exception as exc:  # noqa: BLE001 - never reaches the ticker
+            conn.rollback()
+            logger.warning("OPS_MONITOR delivery step failed: %s", type(exc).__name__)
     return results
 
 
@@ -251,5 +268,8 @@ class MonitorRunner:
 
 
 def enabled_mode() -> str:
-    """Slice 2 is observe-only whatever the variable says; reported for clarity."""
-    return "observe" if os.getenv("OPS_ALERTS_ENABLED", "0") != "1" else "observe (sender not built yet)"
+    """For the startup log line: the mode and which channels have a destination."""
+    if not ops_notify.enabled():
+        return "observe"
+    channels = [name for name, ok in ops_notify.channels_configured().items() if ok]
+    return f"send ({', '.join(channels) or 'no destination set: nothing sends'})"

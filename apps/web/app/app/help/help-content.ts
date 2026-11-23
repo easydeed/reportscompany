@@ -50,7 +50,7 @@ export const HELP_SECTIONS: HelpSection[] = [
           },
           {
             title: "Upload your branding",
-            body: "Go to Settings > Branding and upload your company logo (PNG or SVG, at least 400px wide). Choose your primary and accent brand colors using the color picker or enter hex codes directly.",
+            body: "Go to Settings > Branding and upload your company logo (PNG, at least 400px wide). Choose your primary and accent brand colors using the color picker or enter hex codes directly.",
             screenshot: "Branding settings with logo upload and color picker",
           },
           {
@@ -390,7 +390,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         steps: [
           {
             title: "Upload your logo",
-            body: "Go to Settings > Branding and upload your company logo. We recommend a PNG or SVG file with a transparent background, at least 400px wide. The logo appears in the header and footer of every report you generate.",
+            body: "Go to Settings > Branding and upload your company logo. We recommend a PNG file with a transparent background, at least 400px wide. The logo appears in the header and footer of every report you generate.",
             screenshot: "Logo upload area with drag-and-drop zone",
           },
           {
@@ -558,7 +558,7 @@ export const HELP_SECTIONS: HelpSection[] = [
         title: "Blurry logo on reports",
         type: "faq",
         question: "My logo looks blurry on the PDF report.",
-        answer: "For crisp logos on PDF reports, upload a high-resolution image — at least 400px wide. SVG format works best since it scales perfectly. PNG files should be at least 2x the display size. Avoid JPEG logos as compression artifacts are visible at print resolution.",
+        answer: "For crisp logos on PDF reports, upload a high-resolution image — at least 400px wide. PNG files should be at least 2x the display size. Avoid JPEG logos as compression artifacts are visible at print resolution.",
       },
       {
         id: "ts-faq-contact-support",

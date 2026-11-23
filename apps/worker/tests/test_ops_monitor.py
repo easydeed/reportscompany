@@ -406,9 +406,10 @@ def test_the_ticker_starts_the_monitor_after_each_tick():
     assert "tick_once" in calls and "monitor.maybe_start" in calls
 
 
-def test_slice_2_sends_nothing_whatever_the_switch_says(monkeypatch):
-    monkeypatch.setenv("OPS_ALERTS_ENABLED", "1")
-    assert ops_monitor.enabled_mode().startswith("observe")
+def test_the_monitor_module_never_calls_a_provider_itself(monkeypatch):
+    """All delivery lives in ops_notify, behind OPS_ALERTS_ENABLED (slice 3)."""
+    monkeypatch.delenv("OPS_ALERTS_ENABLED", raising=False)
+    assert ops_monitor.enabled_mode() == "observe"
     code = ast_code(ROOT / "src/worker/ops_monitor.py")
     for sender in ("sendgrid", "twilio", "send_sms", "send_email", "ops_alert_notifications", "send_task"):
         assert sender not in code, sender
