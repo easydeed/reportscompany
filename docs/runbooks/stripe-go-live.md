@@ -13,6 +13,21 @@ has not set them or identified a historical setter/time. This record is not
 provider-side verification or permission to change anything. Jerry alone sets
 configuration at go-live.
 
+## Current production snapshot supplied by Jerry
+
+Jerry reports this read-only query result from mr-staging-db. Codex did not
+execute the query or modify these rows. The query timestamp was not supplied.
+
+| plan_slug | is_active | Current stored stripe_price_id |
+|---|---|---|
+| `starter` | `true` | `price_1TX1onBKYbtiKxfsJqCaP4hJ` |
+| `pro` | `true` | `price_1TX1p7BKYbtiKxfs1bUSjny6` |
+
+These are different from the planned go-live IDs above. The stored IDs alone
+do not establish Stripe mode, amount, currency or product. Neither this query
+nor this checklist identifies who set them or when. No mapping change is
+approved or performed by recording this evidence.
+
 Target handoff after LR-014 removes the obsolete validator (current legacy
 price-variable requirements are listed in the source inventory below):
 
@@ -60,9 +75,10 @@ confirmed, so do not infer its absence from this shorter list.
 | `STRIPE_PRICE_PRO_MONTH` | Legacy pro map AND current checkout/portal configuration validation | `price_` | `pro` = Growth Plus | `price_1UddpaBa27XowvTpqu8acKJP` if retained; not the active price selector. |
 | `STRIPE_PRICE_TEAM_MONTH` | Legacy team map AND current checkout/portal configuration validation | `price_` | Retired `team`, not `starter` or `pro` | Stale requirement; no approved value. LR-014 removes the requirement before go-live. |
 
-No source-read Starter price environment variable exists. Starter/Growth uses
-`plans.stripe_price_id = price_1UddpFBa27XowvTp6siwCZ3Q`; Pro/Growth Plus uses
-`plans.stripe_price_id = price_1UddpaBa27XowvTpqu8acKJP`. Neither accepts a product
+No source-read Starter price environment variable exists. The PLANNED go-live
+DB mappings are `starter` -> `price_1UddpFBa27XowvTp6siwCZ3Q` and `pro` ->
+`price_1UddpaBa27XowvTpqu8acKJP`; these are not the current stored snapshot
+reported above. Neither price field accepts a product
 ID. The legacy lookup/reverse-lookup helper functions have no callers, but
 `validate_stripe_config` does. Any extra deployed Stripe product/price names
 must be checked against this list and marked unused, not assumed wired up.
