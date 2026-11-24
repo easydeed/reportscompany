@@ -210,7 +210,7 @@ export default function NewAffiliatePage() {
               onChange={setLogoUrl}
               assetType="logo"
               aspectRatio="wide"
-              helpText="PNG or SVG with transparent background recommended"
+              helpText="PNG with a transparent background recommended"
             />
             <div className="grid grid-cols-2 gap-4">
               <div>
