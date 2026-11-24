@@ -42,6 +42,7 @@ interface Report {
   city: string | null
   zips: string[] | null
   status: string
+  has_retry?: boolean
   duration_ms: number | null
   error: string | null
   pdf_url: string | null
@@ -176,10 +177,11 @@ export default function AdminReportsPage() {
         const data = await res.json()
         throw new Error(data.detail || data.error || "Retry failed")
       }
+      const retry = await res.json()
       setReports((prev) =>
-        prev.map((r) => (r.id === reportId ? { ...r, status: "queued", error: null } : r))
+        prev.map((r) => (r.id === reportId ? { ...r, status: retry.status, has_retry: retry.has_retry, error: retry.error || null } : r))
       )
-      toast({ title: "Report re-queued", description: "Report has been re-queued for generation." })
+      toast({ title: "Retry submitted", description: retry.message })
     } catch (err) {
       console.error("Retry failed:", err)
       toast({
@@ -287,6 +289,7 @@ export default function AdminReportsPage() {
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="queued">Queued</SelectItem>
+            <SelectItem value="retry_pending">Retry awaiting confirmation</SelectItem>
             <SelectItem value="generating">Generating</SelectItem>
             <SelectItem value="completed">Complete</SelectItem>
             <SelectItem value="failed">Failed</SelectItem>
@@ -364,7 +367,8 @@ export default function AdminReportsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {report.status === "failed" && (
+                      {(report.status === "failed" || report.status === "retry_pending" ||
+                        (report.has_retry && ["queued", "processing"].includes(report.status))) && (
                         <Button
                           variant="outline"
                           size="sm"
