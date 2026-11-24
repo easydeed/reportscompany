@@ -22,4 +22,13 @@ FROM (
     GROUP BY stripe_customer_id
     HAVING count(*) > 1
 ) duplicates;
+SELECT count(*) FILTER (WHERE plan_slug IN ('starter','pro') AND stripe_subscription_id IS NULL) AS paid_without_subscription,
+       count(*) FILTER (WHERE plan_slug IN ('free','sponsored_free') AND stripe_subscription_id IS NOT NULL) AS free_with_subscription,
+       count(*) FILTER (WHERE billing_status = 'active' AND plan_downgrade_at <= now()) AS active_with_due_downgrade
+FROM accounts;
+
+SELECT state, reason, count(*) AS events
+FROM billing_webhook_events
+GROUP BY state, reason
+ORDER BY state, reason;
 COMMIT;

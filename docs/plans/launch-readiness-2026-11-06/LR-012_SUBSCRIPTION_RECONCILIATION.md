@@ -1,6 +1,6 @@
 # LR-012: customer-bound subscription reconciliation — proposed design
 
-Base main: `110f9a30327ae9c8506a981f953d97f390b15e22`.
+Design revision 2; reviewed runtime baseline: main `1519cd03` (LR-011 merged).
 Jerry authorized starting this design while Claude reviews LR-011 (#328).
 This is not runtime implementation, migration approval or a live Stripe test.
 LR-013 and LR-014 remain next, before outreach. No configuration changes.
@@ -38,29 +38,75 @@ LR-013 and LR-014 remain next, before outreach. No configuration changes.
    payment-status/grace entitlements; LR-014 owns checkout/customer uniqueness.
    No automatic refunds, cancellation or live historical replay is included.
 
-## Serialization proposal for review
+## Serialization and provider deadline (revision 2)
 
-Reconcile one account at a time, including transitions between different
-subscription IDs. The LR-011 subscription cursor alone cannot serialize those.
-Use a consistently ordered transaction-scoped account advisory lock before
-cursor/account row locks, with bounded acquisition. Every reconciliation and
-replay path must follow that same order; test deadlock/timeout outcomes.
+Every reconciliation and replay takes this exact order:
+receipt row FOR UPDATE → account advisory lock → authoritative provider read →
+subscription cursor FOR UPDATE → account FOR UPDATE → validated writes → commit.
+Use `pg_advisory_xact_lock(hashtextextended('billing_account:' || id, 0))`.
+The receipt lock only serializes that receipt. No cursor/account row lock is
+held across the provider call, so normal account edits never wait for Stripe.
+No provider snapshot fetched before the advisory lock may be applied afterward.
+Acquire the advisory lock with `lock_timeout = '2s'`; contention is retryable
+503 with the receipt preserved. Replay has no bypass or alternate lock order.
 
-The authoritative retrieval must happen within that serialization scope: an
-older snapshot fetched before the lock must not overwrite a newer commit.
-Propose one bounded provider read with SDK retries disabled, while the lock is
-held; transient read failure rolls back processing and retains the receipt.
-Document and measure the maximum lock hold before code PASS. Do not hide an
-unbounded provider wait behind PostgreSQL's statement timeout.
+Use a dedicated `stripe.StripeClient` with `max_network_retries=0`,
+`stripe_version='2025-10-29.clover'`, and `stripe.HTTPXClient` in async-only
+mode (`allow_sync_methods=False`). Set HTTPX connect/read/write timeouts to
+2 seconds and pool timeout to 1 second. Await `subscriptions.list_async`
+with customer, `status='all'`, and `limit=10`, inside an `asyncio.timeout(6)`
+covering the entire single request, response body and normalization. Do not
+use module-global Stripe HTTP defaults (80 seconds), automatic pagination,
+or a thread future that abandons an uncancelled request. Close the async
+client in `finally`; cancellation must close the underlying connection.
+`has_more` means incomplete inventory and quarantine, never a guessed winner.
+All Stripe behavior is exercised using fake/local transports, never live calls.
 
-Only compare provider IDs/statuses/prices/period fields necessary for binding
-and transition. Never store raw subscription/payment/contact objects. Test
-provider retrieval with a fake client; no live customer or payment calls.
+The advisory-lock section has a 10-second total budget: at most 6 seconds
+for the provider, leaving at most 4 seconds for database processing/commit.
+Before each subsequent SQL statement, including commit, cap its timeout by
+the remaining overall budget and abort when exhausted; transaction cleanup
+must release the lock. A 5-second statement timeout alone is insufficient.
+Measure lock-held elapsed time and cleanup in real PostgreSQL tests, including
+provider stall, header/body trickle, lock contention, rollback and replay;
+code PASS requires proof of this bound with explicit scheduling tolerance,
+not merely inspection of configured timeout numbers. Log durations/reasons,
+never raw customer/payment/contact payloads or keys.
+
+## Other billing writers: mandatory rules
+
+| Writer on reviewed main | Rule |
+|---|---|
+| `admin.py` PATCH companies (~1557), affiliates (~1870), accounts (~2030) | Reject plan changes for Stripe-bound accounts. For unbound accounts, take the account advisory lock before the account row lock and recheck binding before writing. Other admin fields do not need the billing lock and never wait for provider work. |
+| `affiliates.py` sponsorship end (~872) | Under the same advisory-before-row order, only convert sponsored_free to free for a still-unbound account. If Stripe-bound, refuse the billing transition; never overwrite its paid plan. |
+| `usage.py` downgrade UPDATE (~120) | Remove it. Reads never take a billing lock or write billing state. |
+| `billing.py` customer-id save (~193) | Acquire the account advisory lock before customer creation and before any account row lock; re-read binding after acquisition and reuse it. Never overwrite an existing different customer. Persist with a conditional null-binding check; fail safely if binding changed. Customer creation must use the same bounded provider client, without holding an account row lock. LR-014 still owns checkout/subscription deduplication and customer-create recovery. |
+| `billing_state.py` helpers and LR-011 processing/replay | Internal writes only after validated reconciliation, under the complete receipt/advisory/provider/cursor/account order above. No direct unguarded helper caller. |
+
+Before code PASS, search all billing-column UPDATE/INSERT writers again and
+prove each existing-account mutation follows these rules. New-account creation
+is not a reconciliation writer; it must not import an unverified paid binding.
+
+### Customer-creation sequencing and operator recovery
+
+Existing checkout races can already have produced mismatched bindings.
+LR-012's serialized non-overwriting customer writer prevents new conflicting
+bindings, but cannot establish the correct owner of historical subscriptions.
+Expose customer-mismatch quarantine through LR-011 backlog/LR-027; do not
+silently repair, acknowledge paid access as healthy, or reassign by metadata.
+Include a dry-run operator inspection/repair procedure in LR-012: capture a
+reviewed account/customer/subscription inventory, prove the intended customer
+from provider evidence, specify exact expected old and proposed new bindings,
+and require Jerry's explicit authorization before a conditional repair under
+the same lock order and reviewed replay. No automatic backfill or live repair
+is authorized by this design. Production rollout requires the read-only
+inventory and reviewed repair path ready; LR-014's checkout uniqueness remains
+a separate required gate before outreach. No live payment test is required.
 
 ## Effective plan and deferred deadlines
 
 Inventory every API/worker entitlement consumer before choosing the shared
-projection. Prefer one database-backed effective-plan rule, preserving zero
+projection. Require one database-backed effective-plan rule, preserving zero
 and unlimited overrides and the schedule/manual allowance separation.
 Avoid duplicate Python implementations in separately deployed applications.
 
@@ -68,7 +114,7 @@ Avoid duplicate Python implementations in separately deployed applications.
 
 | Reader | Current source | Implementation review requirement |
 |---|---|---|
-| API report/plan allowances | `apps/api/src/api/services/usage.py:79-126` | Raw-plan join plus deadline-triggered mutation; replace or serialize the stale read/write boundary. |
+| API report/plan allowances | `apps/api/src/api/services/usage.py:79-126` | Remove the read-time UPDATE; use the shared database projection. |
 | Worker product allowances | `apps/worker/src/worker/limit_checker.py:46-62` | Raw-plan join; must use the same effective deadline as API enforcement. |
 | Public lead capture | `apps/api/src/api/routes/leads.py:283` | Raw plan supplies `lead_capture_enabled`; include the post-deadline feature decision in parity tests. |
 | Account billing output | `apps/api/src/api/routes/account.py:138,259` | Raw plan/status is returned; define stored versus effective fields so customer UI does not contradict enforcement. |
@@ -82,11 +128,20 @@ facts. Test customer-visible effective values and preserve explicit raw values
 where an operator needs them. No read/list endpoint may introduce a new billing
 mutation. No scope expands into CSV, pricing policy or unrelated dashboard math.
 
-Remove usage-read mutation if all consumers can use that projection; otherwise
-make any materialization conditional on the exact subscription/deadline state
-still matching, under the same account serialization. A request that read an
-old cancellation cannot undo a subsequent paid reinstatement. This choice
-must be resolved in code review, not left as two competing behaviors.
+Remove the usage-read UPDATE unconditionally. No GET, usage/list read or
+entitlement check changes stored plan, billing status, subscription or deadline.
+Use one shared database projection for every entitlement consumer, computing
+expired downgrade with the database clock and the inclusive boundary
+`plan_downgrade_at <= now()`. Stored fields remain explicit diagnostics;
+customer-visible access/allowances use the effective result. API and worker
+must query the same projection; no Python/app-clock fallback and no optional
+read-time materialization remain. Overrides retain zero/unlimited semantics;
+existing schedules remain independent of manual-report allowance.
+
+Other plans readers (`email.py` `_plan_limits`, `seats.py` `agent_plan`,
+`plan_lookup.py`, and the `plans.py` catalog cache) are catalog/display reads,
+not account entitlement enforcement. Preserve that distinction; do not widen
+this ticket into catalog or unrelated metrics rewrites.
 
 Any new function/column migration waits until 0070 is applied and #328 merges.
 No migration number is reserved by this design PR. Runtime branches remain
@@ -105,7 +160,11 @@ Real PostgreSQL plus fake Stripe snapshots:
   state wins regardless of arrival order; do not sort event IDs.
 - Provider timeout/refusal, processing/commit failure and replay: no partial
   transition, no false acknowledgement and bounded waits.
-- A usage read racing reinstatement cannot downgrade the fresh subscription.
+- Usage reads perform zero billing writes; racing reinstatement cannot downgrade a fresh subscription.
+- Provider-held advisory lock does not block unrelated account-row edits; every
+  other billing writer is serialized or refused for Stripe-bound accounts.
+- Concurrent checkout customer creation cannot overwrite a binding; existing
+  mismatches remain visible quarantine requiring reviewed operator repair.
 - API and worker agree just before/at/after the same deadline, preserving all
   overrides and existing scheduled-send policy.
 - Legacy/Clover periods and missing/conflicting periods; terminal redelivery.
