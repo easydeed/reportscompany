@@ -16170,6 +16170,8 @@ Source baseline: `fd859a28` (application code unchanged from the reviewed audit)
 **Severity:** WRONG · launch readiness, 2026-11-06 · **Ticket:** LR-007
 **Status:** `open` — [#312](https://github.com/easydeed/reportscompany/pull/312) validates new raster uploads. The read-only production inventory found two existing SVGs in 36 branding fields, 18 header and 18 footer. Jerry chose on November 18 to retain both current production logos. The PNG comparison and rollback plan are local review artifacts. All 36 fields still point to the original SVGs.
 
+**LR-007 decision (Jerry, November 19): option 1.** Keep the paste-image-URL button, validate pasted URLs and copy accepted images into our own storage before use. Build this follow-up after #312 merges. The existing URL path bypasses upload checks and lets the worker fetch arbitrary remote URLs; #312 alone does not close that path. Decision approved, implementation still pending.
+
 **Evidence:** `apps/api/src/api/services/upload.py:53–69` trusts MIME and skips SVG parsing; :107–147 derives storage type from the filename and uploads unchanged bytes. Claude stored non-image bytes declared SVG and named .gif as image/gif using fake storage. SVG active-content impact depends on serving/embedding; no production script execution is claimed.
 
 **Acceptance:** Validate actual bytes for every accepted format and block new SVG uploads. Retain both existing PCT logos and their historical references per Jerry’s November 18 decision.
@@ -16499,7 +16501,7 @@ The reset route compared a time-zone-aware database timestamp to a naive UTC dat
 ### D-404 — Report Share and Print can show “Report Not Found”
 
 **Severity:** BROKEN
-**Status:** `open` — [#305](https://github.com/easydeed/reportscompany/pull/305) deployed to Vercel and the Render API at `e2d0d509` on November 18. The production health and sign-in checks passed. A real shared and printed report from the designated pilot account still needs verification.
+**Status:** `open` — [#305](https://github.com/easydeed/reportscompany/pull/305) deployed to Vercel and the Render API at `e2d0d509` on November 18. The production health and sign-in checks passed. Jerry confirmed a real-account Share link on November 19: the La Verne New Listings snapshot displays its listing details, agent headshot and date, where the same link previously showed Report Not Found. This is production verification supplied by Jerry. Print remains unverified.
 
 **Customer-visible behaviour:** The dashboard’s Share and Print links could lead to a missing-report screen. The server-side renderer’s request was refused before the report data route could authenticate it. The initial production example used a synthetic report identifier.
 
