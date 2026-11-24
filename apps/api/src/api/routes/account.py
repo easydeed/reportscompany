@@ -16,6 +16,7 @@ from ..services.usage import (
 )
 from ..services.plans import get_plan_catalog
 from ..config.billing import checkout_available
+from ..services.branding_urls import check_image_urls
 from ..services.brand_resolver import resolve_brand
 from ..theme_registry import SELECTABLE_THEME_IDS
 
@@ -245,6 +246,14 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
 
     with db_conn() as (conn, cur):
         set_rls(cur, account_id)
+        # LR-007: only our storage URLs, or a value this account already has.
+        cur.execute("""SELECT logo_url, footer_logo_url, email_logo_url, email_footer_logo_url
+                       FROM accounts WHERE id = %s""", (account_id,))
+        current = cur.fetchone() or ()
+        check_image_urls({"logo_url": payload.logo_url, "footer_logo_url": payload.footer_logo_url,
+                          "email_logo_url": payload.email_logo_url,
+                          "email_footer_logo_url": payload.email_footer_logo_url}, current,
+                         owners=[account_id])
         cur.execute(f"UPDATE accounts SET {', '.join(sets)}, updated_at = NOW() WHERE id = %s RETURNING id::text",
                     (*params, account_id))
         if cur.fetchone() is None:

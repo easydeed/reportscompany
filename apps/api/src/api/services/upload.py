@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 from botocore.config import Config
 from fastapi import UploadFile, HTTPException
-from PIL import Image
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 # Configuration from environment
 R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
@@ -24,14 +24,28 @@ R2_ENDPOINT = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com" if R2_ACCOUNT_
 
 # Constraints
 MAX_FILE_SIZE_MB = 5
+MAX_FILE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 IMAGE_TYPES = {
     "PNG": ("image/png", {"png"}),
     "JPEG": ("image/jpeg", {"jpg", "jpeg"}),
+    # Phones save photos as "multi-picture" JPEGs (MPO: a primary image plus
+    # depth or preview frames). It is a JPEG to the person uploading it, so it
+    # is accepted as one and only the primary image is kept (LR-007, Jerry).
+    "MPO": ("image/jpeg", {"jpg", "jpeg"}),
     "WEBP": ("image/webp", {"webp"}),
     "GIF": ("image/gif", {"gif"}),
 }
+# What Pillow may open. MPO is not listed: Pillow opens it through its JPEG
+# plugin and only then reports the format as "MPO" (naming MPO here raises).
+OPEN_FORMATS = ["PNG", "JPEG", "WEBP", "GIF"]
+# The stored format: an MPO is stored as an ordinary JPEG.
+STORED_FORMAT = {"PNG": "PNG", "JPEG": "JPEG", "MPO": "JPEG", "WEBP": "WEBP", "GIF": "GIF"}
+CANONICAL_EXT = {"PNG": "png", "JPEG": "jpg", "WEBP": "webp", "GIF": "gif"}
 MAX_DIMENSIONS = (2000, 2000)
 MIN_DIMENSIONS = (100, 100)
+
+NOT_AN_IMAGE = "This file isn't a PNG, JPEG, WebP or GIF image. Choose one of those formats."
+UNREADABLE = "The image couldn't be read; it may be damaged or incomplete. Try exporting it again."
 
 
 def get_r2_client():
@@ -49,39 +63,104 @@ def get_r2_client():
     )
 
 
-async def validate_image(file: UploadFile) -> tuple[bytes, str, str]:
-    """Read a bounded raster upload and verify the three descriptions agree."""
-    allowed = "Choose a PNG, JPEG, WebP or GIF image."
-    if file.content_type not in {mime for mime, extensions in IMAGE_TYPES.values()}:
-        raise HTTPException(status_code=400, detail=allowed)
-    limit = MAX_FILE_SIZE_MB * 1024 * 1024
-    contents = await file.read(limit + 1)
-    if len(contents) > limit:
-        raise HTTPException(status_code=400, detail=f"File exceeds the {MAX_FILE_SIZE_MB}MB limit.")
-    filename = file.filename or ""
-    extension = os.path.splitext(filename)[1].lower().lstrip(".")
+def inspect_image(contents: bytes, declared_mime=None, extension=None) -> str:
+    """Check the bytes are a supported raster image; return Pillow's format.
+
+    `declared_mime` and `extension` (an upload's) must agree with the
+    detected format; an import has neither. Every refusal is a 400 that
+    says what is wrong.
+    """
     try:
-        with Image.open(io.BytesIO(contents), formats=list(IMAGE_TYPES)) as img:
-            # A JPEG container can identify itself as an unsupported
-            # multi-picture format after Pillow reads the image metadata.
-            detected = IMAGE_TYPES.get(img.format)
-            if detected is None:
-                raise HTTPException(status_code=400, detail=allowed)
-            mime, extensions = detected
-            if mime != file.content_type or extension not in extensions:
-                raise HTTPException(status_code=400, detail="The image format, filename and content type must match.")
+        with Image.open(io.BytesIO(contents), formats=OPEN_FORMATS) as img:
+            fmt = img.format
+            if fmt not in IMAGE_TYPES:
+                raise HTTPException(status_code=400, detail=NOT_AN_IMAGE)
+            mime, extensions = IMAGE_TYPES[fmt]
+            if declared_mime is not None and (mime != declared_mime or extension not in extensions):
+                raise HTTPException(
+                    status_code=400,
+                    detail=(f"This file is a {CANONICAL_EXT[STORED_FORMAT[fmt]].upper()} image, but its name or "
+                            "type says otherwise. Rename it with the right extension, or export it again."))
             width, height = img.size
             if not (MIN_DIMENSIONS[0] <= width <= MAX_DIMENSIONS[0] and
                     MIN_DIMENSIONS[1] <= height <= MAX_DIMENSIONS[1]):
-                raise HTTPException(status_code=400, detail="Image dimensions must be between 100 and 2000 pixels on each side.")
+                raise HTTPException(
+                    status_code=400,
+                    detail=(f"This image is {width}x{height} pixels. Use one between {MIN_DIMENSIONS[0]} and "
+                            f"{MAX_DIMENSIONS[0]} pixels on each side."))
             img.verify()
         # Reopen after verify() to decode pixels. Pillow identifies some
         # truncated files from their header alone.
-        with Image.open(io.BytesIO(contents), formats=list(IMAGE_TYPES)) as img:
+        with Image.open(io.BytesIO(contents), formats=OPEN_FORMATS) as img:
             img.load()
+    except HTTPException:
+        raise
+    except UnidentifiedImageError as exc:
+        raise HTTPException(status_code=400, detail=NOT_AN_IMAGE) from exc
     except (ValueError, OSError, SyntaxError, Image.DecompressionBombError) as exc:
-        raise HTTPException(status_code=400, detail="The uploaded image could not be decoded.") from exc
-    return contents, extension, mime
+        raise HTTPException(status_code=400, detail=UNREADABLE) from exc
+    return fmt
+
+
+def reencode(contents: bytes, fmt: str) -> bytes:
+    """Decode the primary image and encode it afresh (LR-007, approved by Jerry).
+
+    The stored file is a new encoding of the decoded pixels, so nothing from
+    the upload but the picture survives: no EXIF (GPS location, camera,
+    times), no XMP, no text chunks, no extra frames, no bytes appended after
+    the image. The EXIF orientation is applied to the pixels first, or a
+    phone photo would be stored sideways once its orientation tag is gone.
+    Only transparency and the colour profile are carried over.
+    """
+    out = io.BytesIO()
+    try:
+        with Image.open(io.BytesIO(contents), formats=OPEN_FORMATS) as img:
+            img.seek(0)                                    # the primary image of an MPO, GIF or WebP
+            icc = img.info.get("icc_profile")
+            frame = ImageOps.exif_transpose(img) or img.copy()
+            frame.load()
+        stored = STORED_FORMAT[fmt]
+        if stored == "JPEG" and frame.mode not in ("RGB", "L"):
+            frame = frame.convert("RGB")
+        elif stored in ("PNG", "WEBP") and frame.mode not in ("RGB", "RGBA", "L", "LA"):
+            frame = frame.convert("RGBA")
+        clean = frame.copy()
+        clean.info = {k: frame.info[k] for k in ("transparency",) if k in frame.info}
+        options = {"icc_profile": icc} if icc else {}
+        if stored == "JPEG":
+            clean.save(out, "JPEG", quality=90, optimize=True, **options)
+        elif stored == "PNG":
+            clean.save(out, "PNG", optimize=True, **options)
+        elif stored == "WEBP":
+            clean.save(out, "WEBP", quality=90, **options)
+        else:
+            clean.save(out, "GIF")
+    except (ValueError, OSError, SyntaxError, Image.DecompressionBombError) as exc:
+        raise HTTPException(status_code=400, detail=UNREADABLE) from exc
+    return out.getvalue()
+
+
+def prepare_image(contents: bytes, declared_mime=None, extension=None) -> tuple[bytes, str, str]:
+    """Inspect, then re-encode. Returns (stored bytes, extension, content type)."""
+    if len(contents) > MAX_FILE_BYTES:
+        raise HTTPException(status_code=400, detail=f"The image is larger than {MAX_FILE_SIZE_MB}MB.")
+    fmt = inspect_image(contents, declared_mime, extension)
+    stored = STORED_FORMAT[fmt]
+    mime = IMAGE_TYPES[stored][0]
+    # An upload keeps its own (validated) extension; an import gets the canonical one.
+    ext = extension if extension in IMAGE_TYPES[stored][1] else CANONICAL_EXT[stored]
+    return reencode(contents, fmt), ext, mime
+
+
+async def validate_image(file: UploadFile) -> tuple[bytes, str, str]:
+    """Read a bounded raster upload, check it, and return it re-encoded."""
+    if file.content_type not in {mime for mime, extensions in IMAGE_TYPES.values()}:
+        raise HTTPException(status_code=400, detail=NOT_AN_IMAGE)
+    contents = await file.read(MAX_FILE_BYTES + 1)
+    if len(contents) > MAX_FILE_BYTES:
+        raise HTTPException(status_code=400, detail=f"The image is larger than {MAX_FILE_SIZE_MB}MB.")
+    extension = os.path.splitext(file.filename or "")[1].lower().lstrip(".")
+    return prepare_image(contents, file.content_type, extension)
 
 
 async def upload_branding_asset(
@@ -93,13 +172,18 @@ async def upload_branding_asset(
     Upload a branding asset to R2.
     Returns dict with url, filename, and size_bytes.
     """
-    # Validate
     contents, ext, content_type = await validate_image(file)
-    original_filename = file.filename
+    return store_branding_image(contents, ext, content_type, account_id, asset_type, file.filename)
 
+
+def store_branding_image(contents: bytes, ext: str, content_type: str, account_id: str,
+                         asset_type: str, original_filename) -> dict:
+    """Store already-checked, re-encoded image bytes; shared by upload and import."""
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
     unique_id = uuid.uuid4().hex[:8]
-    s3_key = f"branding/{account_id}/{asset_type}_{timestamp}_{unique_id}.{ext}"
+    # `checked/` marks objects this validating pipeline wrote; branding saves
+    # admit only that shape as a new value (services/branding_urls).
+    s3_key = f"branding/{account_id}/checked/{asset_type}_{timestamp}_{unique_id}.{ext}"
     
     # Get R2 client
     client = get_r2_client()
