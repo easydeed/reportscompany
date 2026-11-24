@@ -83,6 +83,18 @@ _CAN_SEND = ("EXISTS (SELECT 1 FROM users u WHERE u.account_id = a.id "
              "AND COALESCE(u.is_active, TRUE) AND COALESCE(u.email_verified, FALSE))")
 
 
+def sender_refusal(cur, account_id: str) -> Optional[tuple[str, str]]:
+    """Apply the account and verified-sender checks used by the tracked send claim."""
+    cur.execute(f"SELECT a.is_active, {_CAN_SEND} FROM accounts a WHERE a.id = %s::uuid",
+                (account_id,))
+    row = cur.fetchone()
+    if not row or not row[0]:
+        return CANCELLED, MSG_DEACTIVATED
+    if not row[1]:
+        return BLOCKED, MSG_UNVERIFIED
+    return None
+
+
 class Superseded(Exception):
     """This worker no longer owns the run: a token-conditioned write matched nothing."""
 
@@ -190,8 +202,8 @@ def write_terminal(cur, st: RunState, status: str, error: str) -> bool:
             WHERE id = %s::uuid AND status IN ('queued', 'processing')
         """, (error, st.run_id))
     if status == BLOCKED:
-        from .schedules_tick import record_unverified_skip
-        record_unverified_skip(cur, st.account_id, st.schedule_id, st.recipients)
+        from .schedules_tick import record_sender_skip
+        record_sender_skip(cur, st.account_id, st.schedule_id, st.recipients, status, error)
     logger.error("SCHEDULED RUN %s (schedule %s, account %s): %s — %s",
                  st.run_id, st.schedule_id, st.account_id, status, error)
     return True

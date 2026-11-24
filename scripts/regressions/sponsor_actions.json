@@ -14,10 +14,10 @@
     "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
   },
   {
-    "name": "A3 the session check ignores is_active",
+    "name": "A3 an inactive session reports success",
     "file": "apps/api/src/api/middleware/authn.py",
-    "old": "                    if user_row and not user_row[4]:",
-    "new": "                    if False:",
+    "old": "status_code=401,\n                            content={\"detail\": \"Session is no longer active for this account.\"}",
+    "new": "status_code=200,\n                            content={\"detail\": \"Session is no longer active for this account.\"}",
     "test": "apps/api/tests/test_sponsor_actions_do_what_they_say.py"
   },
   {
