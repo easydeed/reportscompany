@@ -58,6 +58,37 @@ since migration 0069. For each signal it lists:
 The thresholds stay proposals until Jerry records his approval in `DECISIONS_AND_LANES.md`.
 Then come the destinations, the test alert, the pinger, and `OPS_ALERTS_ENABLED=1`.
 
+## The uptime pinger's URL (design section 8, step 4)
+
+**Point it at `https://reportscompany.onrender.com/ready`, method GET.**
+
+Checked by Claude Code on 2026-11-24 at about 13:50 UTC, from outside the platform, with
+unauthenticated requests:
+
+| Request | Result |
+|---|---|
+| `GET https://reportscompany.onrender.com/ready` | **200** `application/json`, about 0.2–0.7 s: `{"ready":true,"schema":"0070_billing_webhook_events.sql","checks":{"database":{"status":"ok"},"redis":{"status":"ok"},"ticker":{"status":"ok","age_s":43},"worker":{"status":"ok","age_s":43}}}` |
+| The same GET with the curl, python-requests, UptimeRobot, Better Stack, browser and empty user agents | **200** every time. No Cloudflare challenge (`cf-mitigated`) was seen. |
+| `HEAD https://reportscompany.onrender.com/ready` | **405** (`allow: GET`). A pinger left on HEAD alerts on every check. |
+| `http://reportscompany.onrender.com/ready` | 301 to https |
+| `GET https://reportscompany.onrender.com/health` | 200 `{"ok":true,...}`. This is Render's own health check; leave it there (design step 5). |
+| `https://reportscompany-api.onrender.com/ready` | 404 `x-render-routing: no-server`. No service runs there, although older notes name it. |
+| `https://www.trendyreports.io/ready`, via `https://trendyreports.io` | Vercel, the web app: 404 page. It is not the API. |
+| `https://api.trendyreports.io/ready` | The host does not resolve. |
+
+All `onrender.com` traffic passes through Cloudflare (`server: cloudflare`, `cf-ray`). Codex's
+"Cloudflare blocked it" could not be reproduced from here. A challenge depends on the caller's
+IP and its reputation, so it may have come from Codex's sandbox network. The pinger settings
+below fail **closed** if a challenge ever happens, so it would show up as an alert rather than
+being missed.
+
+Pinger settings:
+- **URL:** `https://reportscompany.onrender.com/ready`. Use https; http only redirects.
+- **Method:** **GET.** Do not use HEAD (405).
+- **Success:** status 200 **and** the body contains `"ready":true`, a keyword monitor if the
+  service offers one. A Cloudflare challenge page or a 503 ("ready": false) then counts as down.
+- **Schedule:** every 5 minutes; alert after 2 consecutive failures (design step 4).
+
 ## Results
 
 _Pending Jerry's run. Paste the report's output here, or into the PR, and Claude Code writes up
