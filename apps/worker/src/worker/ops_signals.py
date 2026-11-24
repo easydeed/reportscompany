@@ -148,21 +148,23 @@ def report_stuck(cur) -> Reading:
     """, {"m": int(REPORT_STUCK_MIN.value)})
 
 
-def report_failures(cur) -> Reading:
-    cur.execute("""
+def report_failures(cur, at=None) -> Reading:
+    """`at`: evaluate as of that instant (the threshold report); None = now."""
+    cur.execute(f"""
         SELECT count(*) FILTER (WHERE status = 'failed'), count(*)
         FROM report_generations
-        WHERE generated_at > LOCALTIMESTAMP - interval '1 hour'
-    """)
+        WHERE generated_at > {_LOCAL_AT} - interval '1 hour' AND {_upto_local('generated_at')}
+    """, {"at": at})
     failed, total = cur.fetchone()
     tripped = (failed >= REPORT_FAILURES_MIN_COUNT.value
                and total > 0 and failed / total >= REPORT_FAILURES_MIN_SHARE.value)
-    reading = _identities(cur, """
+    reading = _identities(cur, f"""
         SELECT 'report:' || id::text AS ident
         FROM report_generations
-        WHERE status = 'failed' AND generated_at > LOCALTIMESTAMP - interval '1 hour'
+        WHERE status = 'failed' AND generated_at > {_LOCAL_AT} - interval '1 hour'
+          AND {_upto_local('generated_at')}
         ORDER BY generated_at DESC
-    """, {})
+    """, {"at": at})
     return Reading(tripped=tripped, identities=reading.identities if tripped else [],
                    count=reading.count if tripped else 0, value={"failed": failed, "total": total})
 
@@ -281,33 +283,51 @@ def report_webhook_failures(cur) -> Reading:
 # "not sent": never guessed. Unknown outcomes are send_needs_review.
 # Resend rows (consumer and owner notices) are not SendGrid's and are excluded.
 
+# The rate signals' clock. None evaluates at now(), exactly as before; the
+# threshold report (scripts/ops_threshold_report.py) passes past instants to
+# replay the same queries over the observe window, so its numbers can never
+# drift from what the monitor checks.
+_AT = "COALESCE(%(at)s::timestamptz, now())"
+_LOCAL_AT = "(COALESCE(%(at)s::timestamptz, now()) AT TIME ZONE current_setting('TimeZone'))"
+
+
+def _upto(col: str) -> str:
+    """The window's upper edge, only when replaying (live: no upper bound, as before)."""
+    return f"(%(at)s::timestamptz IS NULL OR {col} <= %(at)s::timestamptz)"
+
+
+def _upto_local(col: str) -> str:
+    return (f"(%(at)s::timestamptz IS NULL OR "
+            f"{col} <= (%(at)s::timestamptz AT TIME ZONE current_setting('TimeZone')))")
+
 _SYNTHESIZED_NEVER_SENT = ("No recipients", "No PDF URL", "No recipients provided",
                            "Unsubscribe URL missing from rendered email body")
 
 
-def provider_refusals(cur) -> Reading:
-    cur.execute("""
+def provider_refusals(cur, at=None) -> Reading:
+    """`at`: evaluate as of that instant (the threshold report); None = now."""
+    cur.execute(f"""
         SELECT count(*) FROM email_log
-        WHERE provider = 'sendgrid' AND created_at > now() - interval '1 hour'
+        WHERE provider = 'sendgrid' AND created_at > {_AT} - interval '1 hour' AND {_upto('created_at')}
           AND status IN ('sent', 'failed', 'needs_review', 'sending')
-    """)
+    """, {"at": at})
     deliveries = cur.fetchone()[0]
-    reading = _identities(cur, """
+    reading = _identities(cur, f"""
         SELECT DISTINCT ident FROM (
             SELECT 'run:' || report_run_id::text AS ident
             FROM schedule_runs
-            WHERE recovery_tracked AND created_at > now() - interval '1 hour'
-              AND send_outcomes @> '[{"outcome": "rejected"}]'
+            WHERE recovery_tracked AND created_at > {_AT} - interval '1 hour' AND {_upto('created_at')}
+              AND send_outcomes @> '[{{"outcome": "rejected"}}]'
             UNION ALL
             SELECT CASE WHEN schedule_id IS NOT NULL AND report_id IS NOT NULL
                         THEN 'run:' || report_id::text ELSE 'email:' || id::text END
             FROM email_log
             WHERE provider = 'sendgrid' AND status = 'failed'
-              AND created_at > now() - interval '1 hour'
+              AND created_at > {_AT} - interval '1 hour' AND {_upto('created_at')}
               AND response_code BETWEEN 400 AND 499
               AND COALESCE(error, '') <> ALL (%(synth)s)
         ) refused
-    """, {"synth": list(_SYNTHESIZED_NEVER_SENT)})
+    """, {"synth": list(_SYNTHESIZED_NEVER_SENT), "at": at})
     refused = reading.count
     tripped = (refused >= PROVIDER_REFUSALS_MIN_COUNT.value and deliveries > 0
                and refused / deliveries >= PROVIDER_REFUSALS_MIN_SHARE.value)
@@ -315,19 +335,20 @@ def provider_refusals(cur) -> Reading:
                    count=refused if tripped else 0, value={"refused": refused, "deliveries": deliveries})
 
 
-def send_not_attempted(cur) -> Reading:
-    reading = _identities(cur, """
+def send_not_attempted(cur, at=None) -> Reading:
+    """`at`: evaluate as of that instant (the threshold report); None = now."""
+    reading = _identities(cur, f"""
         SELECT DISTINCT ident FROM (
             SELECT 'run:' || report_run_id::text AS ident
             FROM schedule_runs
-            WHERE recovery_tracked AND created_at > now() - interval '1 hour'
-              AND send_outcomes @> '[{"outcome": "not_sent"}]'
+            WHERE recovery_tracked AND created_at > {_AT} - interval '1 hour' AND {_upto('created_at')}
+              AND send_outcomes @> '[{{"outcome": "not_sent"}}]'
             UNION ALL
             SELECT CASE WHEN schedule_id IS NOT NULL AND report_id IS NOT NULL
                         THEN 'run:' || report_id::text ELSE 'email:' || id::text END
             FROM email_log
             WHERE provider = 'sendgrid' AND status = 'failed'
-              AND created_at > now() - interval '1 hour'
+              AND created_at > {_AT} - interval '1 hour' AND {_upto('created_at')}
               AND (error = ANY (%(synth)s) OR error LIKE '%%SENDGRID_API_KEY not configured%%')
             UNION ALL
             -- Tracked pre-claim refusals (tasks._send_tracked: no_recipients,
@@ -339,11 +360,11 @@ def send_not_attempted(cur) -> Reading:
             SELECT 'run:' || report_run_id::text
             FROM schedule_runs
             WHERE recovery_tracked AND status = 'failed'
-              AND finished_at > now() - interval '1 hour'
+              AND finished_at > {_AT} - interval '1 hour' AND {_upto('finished_at')}
               AND (error LIKE 'failed\\_email: nothing sent (%%'
                    OR error = 'report completed without a PDF URL; nothing was sent')
         ) never_sent
-    """, {"synth": list(_SYNTHESIZED_NEVER_SENT)})
+    """, {"synth": list(_SYNTHESIZED_NEVER_SENT), "at": at})
     tripped = reading.count >= SEND_NOT_ATTEMPTED_MIN_COUNT.value
     return Reading(tripped=tripped, identities=reading.identities if tripped else [],
                    count=reading.count if tripped else 0, value={"not_sent": reading.count})
