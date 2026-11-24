@@ -40,5 +40,19 @@
   "old": "        conn.read_only = True",
   "new": "        conn.read_only = False",
   "test": "apps/worker/tests/test_ops_threshold_report.py::test_the_script_runs_read_only"
+ },
+ {
+  "name": "LR-027 report: the cap simulation never holds a text back",
+  "file": "scripts/ops_threshold_report.py",
+  "old": "        if len(recent) < ops_notify.SMS_CAP_PER_HOUR:",
+  "new": "        if True:",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_the_cap_is_a_rolling_hour_not_a_clock_hour"
+ },
+ {
+  "name": "LR-027 report: the rolling window includes its lower edge (not the sender's boundary)",
+  "file": "scripts/ops_threshold_report.py",
+  "old": "        while times[start] <= t - hour:",
+  "new": "        while times[start] < t - hour:",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_the_cap_is_a_rolling_hour_not_a_clock_hour"
  }
 ]

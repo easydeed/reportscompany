@@ -12,13 +12,18 @@ What it answers, for Jerry's threshold approval:
   re-opened within the flap window, and the email/SMS load the SAME incidents
   would have produced with sending switched on.
 
-  Part B, headroom on the three count/share thresholds (report_failures,
-  provider_refusals, send_not_attempted). It re-runs the monitor's own queries
-  (worker/ops_signals.py, with `at=`) at every monitor interval across the
-  window, so the numbers cannot drift from what the monitor checks: how often
-  each would have tripped, the highest value seen, and the near misses.
-  Those three read only terminal states (failed rows, refusals, finished
-  runs), so replaying them at a past instant counts what the monitor saw then.
+  Part B, an ESTIMATE of headroom on the three count/share thresholds
+  (report_failures, provider_refusals, send_not_attempted). It re-runs the
+  monitor's own queries (worker/ops_signals.py, with `at=`) at every monitor
+  interval across the window, so the predicates cannot drift from the monitor's.
+  It is NOT a reconstruction of what the monitor saw then (Codex #332): the
+  queries read each row's CURRENT status against its CREATION time, because
+  report_generations and email_log record no time for the status change. A
+  report created at 10:00 that failed at 10:30 counts as failed in a 10:05
+  replay (a failure appears early, by its processing time), and a row whose
+  status later changed is counted in its current state. Only send_not_attempted's
+  schedule_runs part uses a transition time (finished_at). Section A is the
+  record of what the monitor actually saw.
 
 Usage (Jerry, against production, from a machine that already has access):
 
@@ -90,7 +95,7 @@ def message_load(rows, now) -> dict:
     flap = timedelta(minutes=ops_monitor.FLAP_WINDOW_MIN)
     by_key: dict = {}
     last_resolved: dict = {}
-    texts_by_hour: dict = {}
+    text_times: list = []
     for r in sorted(rows, key=lambda r: r["opened"]):
         sms, _ = ops_notify._key_meta(r["key"])
         k = by_key.setdefault(r["key"], {"emails": 0, "texts": 0, "flapped_opens": 0})
@@ -101,23 +106,46 @@ def message_load(rows, now) -> dict:
         renotifies = int((end - r["opened"]).total_seconds() // (ops_notify.RENOTIFY_HOURS * 3600))
         updates = max(r["batches"] - 1, 0)
         k["emails"] += 1 + updates + renotifies + (1 if r["resolved"] else 0)
-        text_times = []
+        incident_texts = []
         if sms:
             if not flapping:
-                text_times.append(r["opened"])
-            text_times += [r["opened"] + timedelta(hours=ops_notify.RENOTIFY_HOURS * (n + 1))
-                           for n in range(renotifies)]
+                incident_texts.append(r["opened"])
+            incident_texts += [r["opened"] + timedelta(hours=ops_notify.RENOTIFY_HOURS * (n + 1))
+                               for n in range(renotifies)]
             if r["resolved"]:
-                text_times.append(r["resolved"])
-        k["texts"] += len(text_times)
-        for t in text_times:
-            hour = t.replace(minute=0, second=0, microsecond=0)
-            texts_by_hour[hour] = texts_by_hour.get(hour, 0) + 1
+                incident_texts.append(r["resolved"])
+        k["texts"] += len(incident_texts)
+        text_times += incident_texts
         if r["resolved"]:
             last_resolved[r["key"]] = r["resolved"]
-    return {"by_key": by_key,
-            "max_texts_in_an_hour": max(texts_by_hour.values(), default=0),
-            "hours_over_cap": sum(1 for v in texts_by_hour.values() if v > ops_notify.SMS_CAP_PER_HOUR)}
+    peak, held = rolling_cap(text_times)
+    return {"by_key": by_key, "max_texts_in_any_hour": peak, "texts_held_by_cap": held}
+
+
+def rolling_cap(times) -> tuple[int, int]:
+    """(most proposed texts in any rolling 60 minutes, texts the cap would hold back).
+
+    The sender's cap is a ROLLING hour, not a clock hour (ops_notify._sms_allowed:
+    attempts with GREATEST(claimed_at, outcome_at) > now() - 1 hour must be under
+    SMS_CAP_PER_HOUR). The same boundary here: a window is (t - 1 h, t]. Held texts
+    are simulated as the sender would: a text is sent only if fewer than the cap
+    were SENT in the preceding hour; held texts do not count against later ones.
+    """
+    hour = timedelta(hours=1)
+    times = sorted(times)
+    peak, start = 0, 0
+    for end, t in enumerate(times):
+        while times[start] <= t - hour:
+            start += 1
+        peak = max(peak, end - start + 1)
+    sent, held = [], 0
+    for t in times:
+        recent = [s for s in sent if s > t - hour]
+        if len(recent) < ops_notify.SMS_CAP_PER_HOUR:
+            sent.append(t)
+        else:
+            held += 1
+    return peak, held
 
 
 def replay(cur, since, now, step: timedelta) -> dict:
@@ -189,12 +217,17 @@ def report(conn, hours: float, step_min: int) -> str:
     for key in other:
         lines.append(f"| `{key}` | – | {sum(1 for r in rows if r['key'] == key)} | – | – | – | – | – | – | – |")
     lines += ["",
-              f"- Most alert texts in any one clock hour: {load['max_texts_in_an_hour']} "
-              f"(the cap is {ops_notify.SMS_CAP_PER_HOUR}; hours over it: {load['hours_over_cap']}).",
+              f"- Most alert texts proposed in any rolling 60 minutes: {load['max_texts_in_any_hour']} "
+              f"(the sender's cap is {ops_notify.SMS_CAP_PER_HOUR} in any rolling hour; texts it would have "
+              f"held back: {load['texts_held_by_cap']}, each replaced by one cap notice per clock hour).",
               "- Emails/texts are an estimate from the recorded incidents: open, member updates, a "
               f"renotify every {ops_notify.RENOTIFY_HOURS} h, and the recovery.",
               "",
-              f"## B. Headroom on the count/share thresholds (replayed every {step_min} min)",
+              f"## B. Estimated headroom on the count/share thresholds (replayed every {step_min} min)",
+              "",
+              "An estimate, not a record: each row's CURRENT status is counted from its creation time, so a "
+              "failure can appear up to its processing time early, and a later status change is not seen. "
+              "Section A is what the monitor actually recorded.",
               "",
               "| Signal | Proposed threshold | Evaluations | Would have tripped | Hours tripped | Near misses (>= half the count) | Highest count | 95th percentile |",
               "|---|---|---|---|---|---|---|---|"]

@@ -131,7 +131,7 @@ def test_message_load_follows_the_sender_rules():
     assert load["by_key"]["report_stuck"] == {"emails": 5, "texts": 3, "flapped_opens": 1}
     assert load["by_key"]["dispatch_stranded"] == {"emails": 4, "texts": 4, "flapped_opens": 0}
     assert load["by_key"]["schedule_blocked"] == {"emails": 1, "texts": 0, "flapped_opens": 0}
-    assert load["max_texts_in_an_hour"] == 1 and load["hours_over_cap"] == 0       # no two in one clock hour
+    assert load["max_texts_in_any_hour"] == 1 and load["texts_held_by_cap"] == 0   # texts 1 h apart: separate windows
 
 
 def test_the_report_carries_counts_never_identities(conn):
@@ -163,3 +163,31 @@ def test_the_script_runs_read_only(monkeypatch, capsys):
     assert report_mod.main(["--hours", "1"]) == 0
     assert seen["ro"] == "on"
     assert "LR-027 observe-mode threshold report" in capsys.readouterr().out
+
+
+def test_the_cap_is_a_rolling_hour_not_a_clock_hour():
+    """Codex #332: six SMS signals open at 00:59 and resolve at 01:01. That is twelve texts in
+    two minutes. Bucketed by clock hour it looked like six and six, under the cap; the sender's
+    rolling hour sends ten and holds two."""
+    keys = ["schedule_overdue", "dispatch_stranded", "send_needs_review", "provider_refusals",
+            "send_not_attempted", "report_stuck"]
+    rows = [{"key": k, "opened": at(0) + timedelta(minutes=59), "resolved": at(1) + timedelta(minutes=1),
+             "members": 1, "truncated": False, "batches": 1} for k in keys]
+    load = report_mod.message_load(rows, at(2))
+    assert load["max_texts_in_any_hour"] == 12 and load["texts_held_by_cap"] == 2
+    # The window is (t - 1 h, t], the sender's boundary: exactly an hour apart is a new window.
+    peak, held = report_mod.rolling_cap([at(0)] * 10 + [at(1)])
+    assert (peak, held) == (10, 0)
+    peak, held = report_mod.rolling_cap([at(0)] * 10 + [at(1) - timedelta(seconds=1)])
+    assert (peak, held) == (11, 1)
+
+
+def test_replay_counts_a_delayed_failure_from_its_creation_time(conn):
+    """The documented limit of section B (Codex #332): report_generations has no failure time,
+    so a report created at T and failed later counts as failed in a replay at T + 5 min, when
+    the monitor would have seen it still processing. Section B is an estimate for this reason."""
+    cur = conn.cursor()
+    for _ in range(5):
+        report_row(cur, "failed", "3 hours")                 # created 3 h ago; failed at some later time
+    shortly_after_creation = db_now(cur) - timedelta(hours=3) + timedelta(minutes=5)
+    assert ops_signals.report_failures(cur, at=shortly_after_creation).value == {"failed": 5, "total": 5}

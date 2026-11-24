@@ -33,14 +33,23 @@ since migration 0069. For each signal it lists:
 - the most members;
 - the **emails and texts the same incidents would have sent** with alerts switched on: the
   open, member updates, a renotify every 6 h, and the recovery, with the flap rule applied;
-- the most alert texts in any one hour, against the 10-per-hour cap.
+- the most texts proposed in any **rolling** 60 minutes, and how many the cap would have held
+  back. The sender's cap is a rolling hour (`ops_notify._sms_allowed`), not a clock hour, so
+  the report uses the same rule.
 
-**B. Headroom on the three count/share thresholds.** For `report_failures`,
+Section A is the **record**: the monitor wrote these rows at the time, using the statuses it
+saw then.
+
+**B. An estimate of headroom on the three count/share thresholds.** For `report_failures`,
 `provider_refusals` and `send_not_attempted`, the report re-runs the monitor's **own queries**
 (`worker/ops_signals.py`, with a past `at=`) every 5 minutes across the window.
-- It cannot drift from what the monitor checks: it is the same code.
-- These three count only terminal states (failed rows, refusals, finished runs), so a replay at
-  a past instant sees what the monitor saw then.
+- Its predicates cannot drift from the monitor's: it is the same code.
+- **It is an estimate, not a reconstruction.** `report_generations` and `email_log` record no
+  time for a status change. So each row's **current** status is counted from its **creation**
+  time. A report created at 10:00 that failed at 10:30 counts as failed in a 10:05 replay (the
+  failure appears early, by its processing time), and a row whose status later changed is
+  counted in its current state. Only `send_not_attempted`'s `schedule_runs` part uses a
+  transition time (`finished_at`).
 - For each one it reports how often it would have tripped, the near misses (at least half the
   count threshold), the highest count, and the 95th percentile.
 
@@ -52,7 +61,7 @@ since migration 0069. For each signal it lists:
 | An "any" signal (`schedule_overdue`, `report_stuck`, `dispatch_stranded`, `send_needs_review`, `consumer_delivery_stuck`) opened, and each incident was a real problem | Keep it. That is the alert working. |
 | An "any" signal opened for something that was not a problem | Fix the signal's definition (a code change and review), not the number. |
 | A signal re-opened within 30 minutes more than once | It flaps. Discuss a longer window before switching texts on. |
-| Section B shows frequent near misses on a count threshold | Keep the count. Note that the margin is thin, and look again after the first week. |
+| Section B shows frequent near misses on a count threshold | Keep the count. Note that the margin is thin, and look again after the first week. Section B is an estimate, so a trip there that section A never recorded is a reason to look, not proof that an alert would have fired. |
 | The estimated texts are more than a few a day, or any hour is near the cap of 10 | Too noisy to text. Consider making that signal email-only. |
 
 The thresholds stay proposals until Jerry records his approval in `DECISIONS_AND_LANES.md`.
