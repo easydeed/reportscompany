@@ -1,6 +1,6 @@
 # LR-012: customer-bound subscription reconciliation — proposed design
 
-Design revision 2; reviewed runtime baseline: main `1519cd03` (LR-011 merged).
+Design revision 3; reviewed runtime baseline: main `1519cd03` (LR-011 merged).
 Jerry authorized starting this design while Claude reviews LR-011 (#328).
 This is not runtime implementation, migration approval or a live Stripe test.
 LR-013 and LR-014 remain next, before outreach. No configuration changes.
@@ -72,6 +72,25 @@ provider stall, header/body trickle, lock contention, rollback and replay;
 code PASS requires proof of this bound with explicit scheduling tolerance,
 not merely inspection of configured timeout numbers. Log durations/reasons,
 never raw customer/payment/contact payloads or keys.
+
+### Event-loop boundary
+
+Keep the synchronous database/transaction path, but the async webhook route
+must `await run_in_threadpool(...)` for the entire receipt-store/process unit.
+Receipt durability remains a separate commit before processing. Inside that
+worker thread only, the bounded provider helper uses `asyncio.run(...)`; it
+never calls it from the running API event loop and never uses a background
+future whose timed-out caller abandons provider work. The worker awaits the
+async cancellation and client cleanup before returning to the thread pool.
+The replay CLI is synchronous and uses the same helper directly. Checkout
+must follow the same boundary: if its route is async, offload the complete
+synchronous customer-create/database unit using `await run_in_threadpool`;
+if synchronous, FastAPI's normal worker-thread dispatch is sufficient.
+
+Add a same-app concurrency test: hold a webhook's fake provider for the full
+6-second budget while an unrelated `/health` request completes within 300 ms
+(with explicit CI scheduling tolerance). Cover checkout and replay entry-point
+compatibility too; `RuntimeError` from a nested event loop is not retry logic.
 
 ## Other billing writers: mandatory rules
 
