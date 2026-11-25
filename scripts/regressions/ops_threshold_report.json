@@ -1,0 +1,58 @@
+[
+ {
+  "name": "LR-027 report: the replay clock is ignored (always now)",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "        WHERE generated_at > {_LOCAL_AT} - interval '1 hour' AND {_upto_local('generated_at')}\n    \"\"\", {\"at\": at})",
+  "new": "        WHERE generated_at > LOCALTIMESTAMP - interval '1 hour'\n    \"\"\", {\"at\": at})",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_a_past_burst_trips_when_replayed_at_its_hour_and_not_now"
+ },
+ {
+  "name": "LR-027 report: the replay window has no upper edge",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "    return (f\"(%(at)s::timestamptz IS NULL OR \"\n            f\"{col} <= (%(at)s::timestamptz AT TIME ZONE current_setting('TimeZone')))\")",
+  "new": "    return \"TRUE\"",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_a_past_burst_trips_when_replayed_at_its_hour_and_not_now"
+ },
+ {
+  "name": "LR-027 report: the live query gains an upper edge",
+  "file": "apps/worker/src/worker/ops_signals.py",
+  "old": "    return f\"(%(at)s::timestamptz IS NULL OR {col} <= %(at)s::timestamptz)\"",
+  "new": "    return f\"({col} <= COALESCE(%(at)s::timestamptz, now() - interval '10 minutes'))\"",
+  "test": "apps/worker/tests/test_ops_monitor.py::test_refusals_count_only_what_sendgrid_refused"
+ },
+ {
+  "name": "LR-027 report: the flap rule is not applied to the text estimate",
+  "file": "scripts/ops_threshold_report.py",
+  "old": "        flapping = prev is not None and r[\"opened\"] - prev <= flap",
+  "new": "        flapping = False",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_message_load_follows_the_sender_rules"
+ },
+ {
+  "name": "LR-027 report: renotifies are not counted",
+  "file": "scripts/ops_threshold_report.py",
+  "old": "        renotifies = int((end - r[\"opened\"]).total_seconds() // (ops_notify.RENOTIFY_HOURS * 3600))",
+  "new": "        renotifies = 0",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_message_load_follows_the_sender_rules"
+ },
+ {
+  "name": "LR-027 report: the connection is not read-only",
+  "file": "scripts/ops_threshold_report.py",
+  "old": "        conn.read_only = True",
+  "new": "        conn.read_only = False",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_the_script_runs_read_only"
+ },
+ {
+  "name": "LR-027 report: the cap simulation never holds a text back",
+  "file": "scripts/ops_threshold_report.py",
+  "old": "        if len(recent) < ops_notify.SMS_CAP_PER_HOUR:",
+  "new": "        if True:",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_the_cap_is_a_rolling_hour_not_a_clock_hour"
+ },
+ {
+  "name": "LR-027 report: the rolling window includes its lower edge (not the sender's boundary)",
+  "file": "scripts/ops_threshold_report.py",
+  "old": "        while times[start] <= t - hour:",
+  "new": "        while times[start] < t - hour:",
+  "test": "apps/worker/tests/test_ops_threshold_report.py::test_the_cap_is_a_rolling_hour_not_a_clock_hour"
+ }
+]
