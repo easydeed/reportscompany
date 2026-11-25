@@ -64,14 +64,14 @@ Every defect carries its own `**Status:**` line. **That line is the source of tr
 | State | Count | Meaning |
 |---|---|---|
 | `recorded` | 85 | Observed, not yet triaged |
-| `open` | 75 | Real, unfixed |
+| `open` | 76 | Real, unfixed |
 | `fixed` | 230 | Corrected in code, with the branch or PR named on the entry |
 | `closed-not-live` | 12 | Not occurring in production, with the evidence named on the entry |
 | `duplicate` | 1 | The same defect as an earlier entry, which carries the work. Kept as a pointer, never deleted |
 | `accepted` | 2 | The owner decided the behaviour stands as it is, with the decision and its date named on the entry |
-| **Total** | **405** | D-001 … D-404 and D-406; D-405 is reserved on [#316](https://github.com/easydeed/reportscompany/pull/316); no duplicate IDs |
+| **Total** | **406** | D-001 … D-404 and D-406 … D-407; D-405 is reserved on [#316](https://github.com/easydeed/reportscompany/pull/316); no duplicate IDs |
 
-**Open by severity:** BROKEN 11 · WRONG 38 · FRAGILE 26 · ROUGH 0. (Sums to 75, the open total.)
+**Open by severity:** BROKEN 11 · WRONG 38 · FRAGILE 27 · ROUGH 0. (Sums to 76, the open total.)
 
 > **THIS TABLE WENT STALE AND NOTHING NOTICED — including the sweep that was about exactly that.**
 > On 2026-09-23 it read `open 33 · fixed 53 · Total 91`, with a severity line summing to 34 against
@@ -16521,6 +16521,19 @@ The API's second customer sender, `apps/api/src/api/services/twilio_sms.py:84`, 
 **Required fix:** remove raw and normalized destinations from success/error logs, including provider exception text that could echo them. Keep only safe correlation IDs and outcome classes. Preserve send payloads and delivery-state behavior.
 
 **Acceptance:** capture logs from both the worker and API senders for successful, refused and uncertain customer SMS outcomes using fake Twilio responses containing sentinel phone numbers; prove no full destination, exposed destination prefix or echoed sentinel appears. No real SMS or production-log purge is authorized by this filing.
+
+### D-407 — Stripe webhook processing stalls unrelated API requests
+
+**Severity:** FRAGILE
+**Status:** `open` — filed November 25; LR-012 owns the correction. LR-011 introduced the current request-loop processing.
+
+**Evidence:** `apps/api/src/api/routes/stripe_webhook.py:33-34` calls synchronous `store_receipt` and `process_receipt` directly inside an async route. Database waits block the API worker's event loop. Jerry/Claude report up to approximately 7 seconds on the live path; Codex has not independently repeated a production webhook. A same-loop offline ASGI regression on main `986cc000` reproduced the mechanism: an unrelated health request waited 0.609 seconds behind a 0.6-second processing fixture.
+
+**Impact:** unrelated requests on the same API worker stall while Stripe receipts are processed, even though those requests do not use billing.
+
+**Required fix:** LR-012 offloads the complete synchronous receipt-store/process unit using awaited `run_in_threadpool`, preserving the independent durable receipt commit and truthful 503 behavior. Bounded asynchronous provider work runs and completes cancellation within that worker thread, never through a nested event loop or abandoned future.
+
+**Acceptance:** on the same ASGI event loop, hold fake processing/provider work for six seconds and prove an unrelated health request responds within 300 ms (document scheduling tolerance). Preserve receipt-before-processing ordering, invalid-signature no-write behavior, failure 503, and replay/checkout compatibility. No live Stripe event, payment or production mutation is authorized by this entry. Keep open until the complete LR-012 change is independently reviewed and released.
 
 ## PROBE RETURNED — 2026-09-30, production credentials, read only
 

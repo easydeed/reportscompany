@@ -2,6 +2,7 @@
 import logging
 
 from fastapi import APIRouter, HTTPException, Request
+from starlette.concurrency import run_in_threadpool
 
 from ..config.billing import STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
 from ..services.billing_envelope import expected_live_mode, normalize_verified_event
@@ -13,6 +14,12 @@ try:
     import stripe
 except ImportError:
     stripe = None
+
+
+def _store_and_process(envelope):
+    """One worker-thread unit; the receipt still commits before processing."""
+    store_receipt(envelope)
+    return process_receipt(envelope['event_id'], envelope['livemode'])
 
 
 @router.post("/webhooks/stripe")
@@ -27,8 +34,7 @@ async def stripe_webhook(req: Request):
     except (TypeError, ValueError, stripe.error.SignatureVerificationError):
         raise HTTPException(status_code=400, detail="Invalid billing event") from None
     try:
-        store_receipt(envelope)  # Commits independently before account processing.
-        process_receipt(envelope['event_id'], envelope['livemode'])
+        await run_in_threadpool(_store_and_process, envelope)
     except Exception:
         # Never log provider payloads, DB exception text, signatures or contacts.
         logger.warning("Billing receipt or processing failed; provider retry required")
