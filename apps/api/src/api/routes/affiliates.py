@@ -882,6 +882,8 @@ def unsponsor_account(
         cur.execute("""
             UPDATE accounts
             SET sponsor_account_id = NULL,
+                plan_downgrade_at = CASE WHEN plan_slug = 'sponsored_free' THEN NULL ELSE plan_downgrade_at END,
+                plan_downgrade_to = CASE WHEN plan_slug = 'sponsored_free' THEN NULL ELSE plan_downgrade_to END,
                 plan_slug = CASE 
                     WHEN plan_slug = 'sponsored_free' THEN 'free'
                     ELSE plan_slug

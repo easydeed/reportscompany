@@ -220,3 +220,20 @@ def test_duplicate_customer_binding_is_held(database,monkeypatch):
     query(database,"INSERT INTO accounts(id,plan_slug) VALUES ('22222222-2222-4222-8222-222222222222','free') RETURNING id")
     monkeypatch.setattr(reconcile,'subscriptions',lambda *a:pytest.fail('ambiguous customer must not be fetched'))
     assert process(envelope())['reason']=='customer_binding_ambiguous'
+
+
+def test_unsponsor_cannot_leave_a_deferred_paid_plan_on_a_free_account(database,monkeypatch):
+    from api.routes import affiliates
+    from types import SimpleNamespace
+    sponsor='33333333-3333-4333-8333-333333333333'
+    with database() as (_,cur):
+        cur.execute("""ALTER TABLE accounts ADD name text DEFAULT 'Fixture',ADD account_type text,
+            ADD sponsor_account_id uuid,ADD updated_at timestamptz DEFAULT now()""")
+        cur.execute("INSERT INTO accounts(id,account_type) VALUES (%s,'INDUSTRY_AFFILIATE')",(sponsor,))
+        cur.execute("""UPDATE accounts SET stripe_customer_id=NULL,plan_slug='sponsored_free',
+            sponsor_account_id=%s,plan_downgrade_at=now()-interval '1 second',
+            plan_downgrade_to='pro' WHERE id=%s""",(sponsor,ACCOUNT))
+    monkeypatch.setattr(affiliates,'db_conn',database)
+    assert affiliates.unsponsor_account(ACCOUNT,SimpleNamespace(),sponsor)['ok']
+    assert query(database,'SELECT plan_slug,plan_downgrade_to,plan_downgrade_at FROM accounts WHERE id=%s',(ACCOUNT,)) == [
+        ('free',None,None)]
