@@ -1,4 +1,4 @@
-"""LR-011 durable ingestion. No provider calls; all writes use db_conn.
+"""Durable ingestion; LR-012 authoritative reconciliation; all writes use db_conn.
 
 Receipt commit is independent of processing commit. A row lock serializes
 duplicates; a subscription cursor serializes distinct events, including replay.
@@ -9,9 +9,8 @@ from psycopg.types.json import Jsonb
 
 from ..db import db_conn
 from .billing_envelope import SUBSCRIPTIONS
-from .billing_state import update_account_billing_state
-from .plan_lookup import get_plan_slug_for_stripe_price
 from .plans import invalidate_plan_cache
+from .billing_reconcile import reconcile
 
 logger = logging.getLogger(__name__)
 TERMINAL = frozenset({'processed', 'quarantined', 'ignored'})
@@ -45,42 +44,13 @@ def _cursor(cur, envelope):
 def _apply(cur, e):
     """Returns (state, reason, cache_changed); never catches DB exceptions."""
     if e['reason']:
-        return 'quarantined', e['reason'], False
+        return 'quarantined', e['reason'], False, None
     kind = e['event_type']
     if kind in CACHE_EVENTS:
-        return 'processed', None, True
+        return 'processed', None, True, None
     if kind not in SUBSCRIPTIONS:
-        return 'ignored', 'unsupported_event', False
-    if _cursor(cur, e):
-        return 'ignored', 'superseded', False
-    cur.execute('SELECT id FROM accounts WHERE id=%s::uuid FOR UPDATE', (e['account_id'],))
-    if cur.fetchone() is None:
-        return 'quarantined', 'account_missing', False
-    if kind.endswith('.deleted'):
-        # Normalization requires a validated period. Re-check at the mutation
-        # boundary as defence against malformed stored envelopes/replay.
-        if type(e['period_end']) is not int or e['period_end'] <= 0:
-            return 'quarantined', 'period_shape_unsupported', False
-        cur.execute('SELECT to_timestamp(%s) > now()', (e['period_end'],))
-        if cur.fetchone()[0]:
-            cur.execute("""UPDATE accounts SET plan_downgrade_at=to_timestamp(%s),
-                plan_downgrade_to='free',billing_status='cancel_at_period_end'
-                WHERE id=%s::uuid""", (e['period_end'], e['account_id']))
-        else:
-            cur.execute("""UPDATE accounts SET plan_slug='free',plan_downgrade_at=NULL,
-                plan_downgrade_to=NULL WHERE id=%s::uuid""", (e['account_id'],))
-            update_account_billing_state(cur, account_id=e['account_id'], subscription=None)
-    else:
-        plan = get_plan_slug_for_stripe_price(cur, e['price_id'])
-        if not plan:
-            return 'quarantined', 'price_unmapped', False
-        cur.execute('UPDATE accounts SET plan_slug=%s WHERE id=%s::uuid', (plan, e['account_id']))
-        update_account_billing_state(cur, account_id=e['account_id'],
-                                    subscription={'id': e['subscription_id'], 'status': e['status']})
-    cur.execute("""UPDATE billing_subscription_cursors SET created=%s,event_id=%s
-        WHERE livemode=%s AND subscription_id=%s""",
-                (e['created'], e['event_id'], e['livemode'], e['subscription_id']))
-    return 'processed', None, True
+        return 'ignored', 'unsupported_event', False, None
+    return reconcile(cur, e, _cursor)
 
 
 def process_receipt(event_id, live, *, replay_reason=None):
@@ -88,7 +58,7 @@ def process_receipt(event_id, live, *, replay_reason=None):
     if replay_reason is not None and not (1 <= len(replay_reason.strip()) <= 200):
         raise ValueError('replay_reason_required')
     changed = False
-    with db_conn() as (_, cur):
+    with db_conn() as (conn, cur):
         _timeouts(cur)
         cur.execute("""SELECT envelope,state,reason FROM billing_webhook_events
             WHERE livemode=%s AND event_id=%s FOR UPDATE""", (live, event_id))
@@ -98,13 +68,17 @@ def process_receipt(event_id, live, *, replay_reason=None):
         e, state, reason = row
         if state in TERMINAL and (not replay_reason or state != 'quarantined'):
             return {'state': state, 'reason': reason}
-        state, reason, changed = _apply(cur, e)
+        state, reason, changed, budget = _apply(cur, e)
+        if budget:
+            budget.limit(cur)
         cur.execute("""UPDATE billing_webhook_events SET state=%s,reason=%s,
             processed_at=now(),attempts=attempts+1,
             replay_reason=COALESCE(%s,replay_reason),
             replayed_at=CASE WHEN %s::text IS NOT NULL THEN now() ELSE replayed_at END
             WHERE livemode=%s AND event_id=%s""",
                     (state, reason, replay_reason, replay_reason, live, event_id))
+        if budget:
+            budget.limit(cur)  # Covers commit as well as the last receipt write.
     if changed:
         try:
             invalidate_plan_cache()

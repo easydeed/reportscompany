@@ -16,7 +16,8 @@ def test_existing_cursor_serializes_two_different_events(database, monkeypatch):
     billing.store_receipt(envelope('evt_old', 100, 'price_pro'))
     paused, release = threading.Event(), threading.Event()
     old_started, old_read = threading.Event(), threading.Event()
-    real_price, real_cursor = billing.get_plan_slug_for_stripe_price, billing._cursor
+    from api.services import billing_reconcile
+    real_price, real_cursor = billing_reconcile.get_plan_slug_for_stripe_price, billing._cursor
     results, errors = {}, []
 
     def slow_price(cur, price):
@@ -39,7 +40,7 @@ def test_existing_cursor_serializes_two_different_events(database, monkeypatch):
         except Exception as exc:
             errors.append(type(exc).__name__)
 
-    monkeypatch.setattr(billing, 'get_plan_slug_for_stripe_price', slow_price)
+    monkeypatch.setattr(billing_reconcile, 'get_plan_slug_for_stripe_price', slow_price)
     monkeypatch.setattr(billing, '_cursor', observed_cursor)
     newer = threading.Thread(target=run, args=('evt_new',))
     older = threading.Thread(target=run, args=('evt_old',))
@@ -47,7 +48,8 @@ def test_existing_cursor_serializes_two_different_events(database, monkeypatch):
         newer.start()
         assert paused.wait(5)
         older.start()
-        assert old_started.wait(5)
+        # LR-012 account serialization blocks before the subscription cursor.
+        assert not old_started.wait(0.4)
         # With the real lock the old cursor read cannot finish yet. Removing
         # FOR UPDATE lets it read the stale value before the newer commit.
         old_read.wait(0.4)

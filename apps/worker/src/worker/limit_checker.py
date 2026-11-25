@@ -52,7 +52,7 @@ def check_usage_limit(account_id: str, product: str = "market_reports") -> Dict[
                     a.monthly_report_limit_override,
                     p.plan_slug
                 FROM accounts a
-                LEFT JOIN plans p ON p.plan_slug = a.plan_slug
+                LEFT JOIN plans p ON p.plan_slug = effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to)
                 WHERE a.id = %s::uuid
             """, (account_id,))
             row = cur.fetchone()

@@ -27,6 +27,7 @@ from ..services.invite_service import (
 from ..settings import settings
 from ..services.property_stats import get_platform_stats, refresh_stats
 from ..services.branding_urls import check_image_urls
+from ..services.billing_lock import require_unbound
 
 logger = logging.getLogger(__name__)
 
@@ -1559,6 +1560,8 @@ def update_company(
             updates.append("is_active = %s")
             params.append(is_active)
         if plan_slug is not None:
+            require_unbound(cur, company_id)
+            updates.extend(["plan_downgrade_at = NULL", "plan_downgrade_to = NULL"])
             updates.append("plan_slug = %s")
             params.append(plan_slug)
 
@@ -1872,6 +1875,8 @@ def update_affiliate(
             params.append(is_active)
 
         if plan_slug is not None:
+            require_unbound(cur, affiliate_id)
+            updates.extend(["plan_downgrade_at = NULL", "plan_downgrade_to = NULL"])
             updates.append("plan_slug = %s")
             params.append(plan_slug)
 
@@ -2032,6 +2037,8 @@ def update_account(
             params.append(is_active)
 
         if plan_slug is not None:
+            require_unbound(cur, account_id)
+            updates.extend(["plan_downgrade_at = NULL", "plan_downgrade_to = NULL"])
             updates.append("plan_slug = %s")
             params.append(plan_slug)
 
@@ -3645,7 +3652,7 @@ def get_sms_credits(_admin: dict = Depends(get_admin_user)):
                 COALESCE(p.sms_credits_per_month, 0) as sms_credits_per_month,
                 COALESCE(p.lead_capture_enabled, false) as lead_capture_enabled
             FROM accounts a
-            LEFT JOIN plans p ON a.plan_slug = p.plan_slug
+            LEFT JOIN plans p ON effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to) = p.plan_slug
             WHERE a.sms_credits > 0 OR p.lead_capture_enabled = true
             ORDER BY a.sms_credits DESC
         """)

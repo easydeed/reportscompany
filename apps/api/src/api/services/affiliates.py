@@ -139,7 +139,7 @@ def get_affiliate_overview(cur, affiliate_account_id: str) -> Dict[str, Any]:
         SELECT COUNT(*) FROM (
             SELECT a.id
             FROM accounts a
-            LEFT JOIN plans p ON p.plan_slug = a.plan_slug
+            LEFT JOIN plans p ON p.plan_slug = effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to)
             LEFT JOIN report_generations rg ON rg.account_id = a.id
                 AND rg.generated_at >= date_trunc('month', NOW())
                 AND rg.status IN ('completed', 'processing')

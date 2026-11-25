@@ -70,13 +70,13 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
     """
     Resolve effective limits for all three product types.
 
-    Handles deferred downgrades inline.  Returns both the new per-product
+    Projects deferred downgrades without mutating billing state.  Returns both the new per-product
     limit keys AND the legacy ``monthly_report_limit`` key for backward
     compatibility.
     """
     cur.execute("""
         SELECT
-            a.plan_slug,
+            effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to) AS plan_slug,
             a.monthly_report_limit_override,
             a.account_type,
             p.plan_name,
@@ -92,7 +92,7 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
             a.schedules_limit_override,
             a.property_reports_limit_override
         FROM accounts a
-        LEFT JOIN plans p ON a.plan_slug = p.plan_slug
+        LEFT JOIN plans p ON effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to) = p.plan_slug
         WHERE a.id = %s::uuid
     """, (account_id,))
 
@@ -105,34 +105,6 @@ def resolve_plan_for_account(cur, account_id: str) -> Dict[str, Any]:
      downgrade_at, downgrade_to,
      mkt_plan_limit, sched_plan_limit, prop_plan_limit,
      mkt_override, sched_override, prop_override) = row
-
-    # ── Deferred downgrade ────────────────────────────────────────────────────
-    if downgrade_at and downgrade_to:
-        now = datetime.utcnow()
-        downgrade_dt = downgrade_at.replace(tzinfo=None) if downgrade_at.tzinfo else downgrade_at
-        if now >= downgrade_dt:
-            logger.info(
-                f"Executing deferred downgrade for account {account_id}: "
-                f"{plan_slug} -> {downgrade_to}"
-            )
-            cur.execute("""
-                UPDATE accounts
-                SET plan_slug         = %s,
-                    plan_downgrade_at  = NULL,
-                    plan_downgrade_to  = NULL,
-                    billing_status     = 'canceled'
-                WHERE id = %s
-            """, (downgrade_to, account_id))
-            plan_slug = downgrade_to
-            cur.execute("""
-                SELECT plan_name, monthly_report_limit, allow_overage, overage_price_cents,
-                       market_reports_limit, schedules_limit, property_reports_per_month
-                FROM plans WHERE plan_slug = %s
-            """, (plan_slug,))
-            new_plan = cur.fetchone()
-            if new_plan:
-                plan_name, plan_limit, allow_overage, overage_price_cents = new_plan[:4]
-                mkt_plan_limit, sched_plan_limit, prop_plan_limit = new_plan[4:]
 
     # ── Default if no plan assigned ───────────────────────────────────────────
     #

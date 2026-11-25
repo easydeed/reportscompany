@@ -280,7 +280,7 @@ async def capture_lead(payload: LeadCaptureInput, request: Request):
                 p.lead_capture_enabled
             FROM property_reports pr
             JOIN accounts a ON pr.account_id = a.id
-            LEFT JOIN plans p ON a.plan_slug = p.plan_slug
+            LEFT JOIN plans p ON effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to) = p.plan_slug
             WHERE pr.short_code = %s
         """, (payload.short_code,))
         

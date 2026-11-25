@@ -28,17 +28,10 @@
     "test": "apps/api/tests/test_stripe_webhook_receipts.py::test_failure_returns_503_not_false_acknowledgement"
   },
   {
-    "name": "LR011 existing cursor lock removed",
-    "file": "apps/api/src/api/services/billing_events.py",
-    "old": "WHERE livemode=%s AND subscription_id=%s FOR UPDATE",
-    "new": "WHERE livemode=%s AND subscription_id=%s",
-    "test": "apps/api/tests/test_billing_review_regressions.py::test_existing_cursor_serializes_two_different_events"
-  },
-  {
     "name": "LR011 expired cancellation retains paid billing state",
-    "file": "apps/api/src/api/services/billing_events.py",
-    "old": "            update_account_billing_state(cur, account_id=e['account_id'], subscription=None)",
-    "new": "            pass",
+    "file": "apps/api/src/api/services/billing_reconcile.py",
+    "old": "subscription=None if terminal else",
+    "new": "subscription={'id':snapshot['subscription_id'],'status':'active'} if terminal else",
     "test": "apps/api/tests/test_billing_review_regressions.py::test_expired_cancellation_clears_subscription_billing_state"
   },
   {

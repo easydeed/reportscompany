@@ -136,7 +136,7 @@ def get_account(request: Request, account_id: str = Depends(require_account_id))
                    a.logo_url, a.footer_logo_url, a.email_logo_url, a.email_footer_logo_url,
                    a.primary_color, a.secondary_color,
                    a.subscription_status, a.monthly_report_limit, a.api_rate_limit,
-                   a.plan_slug, a.billing_status, a.stripe_customer_id,
+                   effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to) AS plan_slug, a.billing_status, a.stripe_customer_id,
                    a.default_theme_id,
                    a.account_type, a.parent_account_id::text,
                    pa.name AS parent_company_name
@@ -265,7 +265,7 @@ def patch_branding(payload: BrandingPatch, request: Request, account_id: str = D
                    a.logo_url, a.footer_logo_url, a.email_logo_url, a.email_footer_logo_url,
                    a.primary_color, a.secondary_color,
                    a.subscription_status, a.monthly_report_limit, a.api_rate_limit,
-                   a.plan_slug, a.billing_status, a.stripe_customer_id,
+                   effective_account_plan(a.plan_slug,a.plan_downgrade_at,a.plan_downgrade_to) AS plan_slug, a.billing_status, a.stripe_customer_id,
                    a.default_theme_id,
                    a.account_type, a.parent_account_id::text,
                    pa.name AS parent_company_name
