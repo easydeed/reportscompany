@@ -35,6 +35,7 @@ from ..services.invite_service import (
 from .reports import require_account_id
 from ..services.timefmt import utc_iso
 from ..services.branding_urls import check_image_urls
+from ..services.billing_lock import require_unbound
 
 logger = logging.getLogger(__name__)
 
@@ -875,18 +876,22 @@ def unsponsor_account(
                 detail="Sponsored account not found or not sponsored by you"
             )
         
+        require_unbound(cur, sponsored_account_id)
+
         # Remove sponsorship and optionally downgrade to free
         cur.execute("""
             UPDATE accounts
             SET sponsor_account_id = NULL,
+                plan_downgrade_at = CASE WHEN plan_slug = 'sponsored_free' THEN NULL ELSE plan_downgrade_at END,
+                plan_downgrade_to = CASE WHEN plan_slug = 'sponsored_free' THEN NULL ELSE plan_downgrade_to END,
                 plan_slug = CASE 
                     WHEN plan_slug = 'sponsored_free' THEN 'free'
                     ELSE plan_slug
                 END,
                 updated_at = NOW()
-            WHERE id = %s::uuid
+            WHERE id = %s::uuid AND sponsor_account_id = %s::uuid
             RETURNING id::text, name, plan_slug, sponsor_account_id
-        """, (sponsored_account_id,))
+        """, (sponsored_account_id, account_id))
         
         updated_row = cur.fetchone()
         if not updated_row:

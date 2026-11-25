@@ -16,6 +16,8 @@ from ..config.billing import (
     validate_stripe_config
 )
 from ..services.plan_lookup import get_plan_by_slug
+from ..services.billing_lock import lock_account, BudgetCursor
+from ..services.billing_provider import create_customer
 
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
 
@@ -112,6 +114,9 @@ def create_checkout_session(
             )
         set_rls(cur, account_id)
         
+        billing_budget = lock_account(cur, account_id)
+        cur = BudgetCursor(cur, billing_budget)
+
         # Load account details
         cur.execute("""
             SELECT 
@@ -177,34 +182,27 @@ def create_checkout_session(
         # Ensure Stripe customer exists
         if not stripe_customer_id:
             try:
-                # Create Stripe customer
-                customer = stripe.Customer.create(
-                    email=user_email,
-                    metadata={
-                        "account_id": acc_id,
-                        "account_name": acc_name,
-                    }
-                )
-                stripe_customer_id = customer.id
+                stripe_customer_id = create_customer(user_email, acc_id, acc_name)
+                billing_budget.limit(cur)
                 
                 # Save customer ID
                 cur.execute("""
                     UPDATE accounts
                     SET stripe_customer_id = %s
-                    WHERE id = %s::uuid
+                    WHERE id = %s::uuid AND stripe_customer_id IS NULL
                 """, (stripe_customer_id, account_id))
+                if cur.rowcount != 1:
+                    raise HTTPException(status_code=409, detail="Customer binding changed")
+                billing_budget.limit(cur)
                 
-                conn.commit()
-                
-            except stripe.error.StripeError as e:
-                raise HTTPException(
-                    status_code=500,
-                    detail={
-                        "error": "stripe_customer_creation_failed",
-                        "message": str(e)
-                    }
-                )
-        
+            except (stripe.error.StripeError, TimeoutError, ValueError):
+                raise HTTPException(status_code=503, detail={
+                    'error':'stripe_customer_unavailable',
+                    'message':'Customer setup is temporarily unavailable. Try again.'}) from None
+
+        billing_budget.limit(cur)
+        conn.commit()  # Release account lock before the separate checkout session call.
+
         # Create Checkout Session
         try:
             session = stripe.checkout.Session.create(

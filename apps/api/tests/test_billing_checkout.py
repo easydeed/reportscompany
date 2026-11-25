@@ -12,7 +12,8 @@ client = TestClient(app)
 @pytest.fixture
 def mock_stripe():
     """Mock Stripe API for testing without hitting real API."""
-    with patch('api.routes.billing.stripe') as mock:
+    with patch('api.routes.billing.stripe') as mock, \
+         patch('api.routes.billing.create_customer', return_value='cus_test123'):
         # Mock Stripe customer creation
         mock_customer = Mock()
         mock_customer.id = "cus_test123"
@@ -43,6 +44,7 @@ def mock_db_with_account():
         # Mock connection context manager
         mock_conn = MagicMock()
         mock_cur = MagicMock()
+        mock_cur.rowcount = 1
         mock_db.return_value.__enter__.return_value = (mock_conn, mock_cur)
         
         # Mock account query
@@ -227,6 +229,7 @@ def test_portal_url_uses_correct_path(mock_stripe, mock_auth):
         # Mock connection
         mock_conn = MagicMock()
         mock_cur = MagicMock()
+        mock_cur.rowcount = 1
         mock_db.return_value.__enter__.return_value = (mock_conn, mock_cur)
         
         # Mock account with existing Stripe customer
@@ -272,6 +275,7 @@ def test_checkout_lets_a_sponsored_agent_pay_for_itself(mock_stripe, mock_auth, 
         
         mock_conn = MagicMock()
         mock_cur = MagicMock()
+        mock_cur.rowcount = 1
         mock_db.return_value.__enter__.return_value = (mock_conn, mock_cur)
         
         mock_cur.fetchone.side_effect = [
@@ -303,6 +307,7 @@ def test_checkout_rejects_invalid_account_type(mock_stripe, mock_auth, mock_stri
         
         mock_conn = MagicMock()
         mock_cur = MagicMock()
+        mock_cur.rowcount = 1
         mock_db.return_value.__enter__.return_value = (mock_conn, mock_cur)
         
         # Mock affiliate account (not REGULAR)

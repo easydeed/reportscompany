@@ -36,12 +36,29 @@ def database(monkeypatch):
         conn.execute(sql.SQL('CREATE SCHEMA {}').format(sql.Identifier(schema)))
         conn.execute(sql.SQL('SET search_path TO {}').format(sql.Identifier(schema)))
         conn.execute('''CREATE TABLE accounts (id uuid PRIMARY KEY,plan_slug text,
+            stripe_customer_id text DEFAULT 'cus_fixture',
             stripe_subscription_id text,billing_status text,plan_downgrade_at timestamptz,
             plan_downgrade_to text)''')
-        conn.execute('CREATE TABLE plans (plan_slug text,stripe_price_id text,is_active boolean)')
-        conn.execute("INSERT INTO plans VALUES ('starter','price_starter',true),('pro','price_pro',true)")
+        conn.execute('CREATE TABLE plans (plan_slug text,stripe_price_id text,is_active boolean,market_reports_limit int DEFAULT 10,schedules_limit int DEFAULT 2,property_reports_per_month int DEFAULT 2)')
+        conn.execute("INSERT INTO plans (plan_slug,stripe_price_id,is_active) VALUES ('starter','price_starter',true),('pro','price_pro',true)")
+        conn.execute("UPDATE plans SET market_reports_limit=20 WHERE plan_slug='starter'")
+        conn.execute("INSERT INTO plans(plan_slug,is_active,market_reports_limit,schedules_limit,property_reports_per_month) VALUES ('free',true,3,1,1)")
         conn.execute("INSERT INTO accounts (id,plan_slug) VALUES (%s,'free')", (ACCOUNT,))
         conn.execute((ROOT / 'db/migrations/0070_billing_webhook_events.sql').read_text())
+        conn.execute((ROOT / 'db/migrations/0071_effective_account_plan.sql').read_text())
+    from api.services import billing_reconcile as reconcile
+    local = threading.local()
+    real_apply = billing._apply
+    def apply(cur, e):
+        local.event = e
+        return real_apply(cur, e)
+    def snapshot(customer, live):
+        e = local.event
+        return {'has_more': False, 'data': [{'id':e['subscription_id'], 'customer':customer,
+            'livemode':live, 'status':e['status'], 'current_period_end':e['period_end'],
+            'items':{'data':[{'price':{'id':e['price_id']}}]}}]}
+    monkeypatch.setattr(billing, '_apply', apply)
+    monkeypatch.setattr(reconcile, 'subscriptions', snapshot)
     monkeypatch.setattr(billing, 'db_conn', connection)
     monkeypatch.setattr(billing, 'invalidate_plan_cache', lambda: None)
     try:
@@ -79,13 +96,13 @@ def test_duplicate_and_older_retry_never_revert_newer_plan(database):
 
 
 def test_quarantined_event_does_not_advance_cursor_and_replay_uses_guard(database):
-    billing.store_receipt(envelope('evt_bad', 300, 'price_unknown'))
+    billing.store_receipt(envelope('evt_bad', 300, 'price_unknown', period_end=int(time.time())+3600))
     assert billing.process_receipt('evt_bad', False)['state'] == 'quarantined'
     assert query(database, 'SELECT created FROM billing_subscription_cursors') == [(None,)]
     billing.store_receipt(envelope('evt_good', 200, 'price_starter'))
     billing.process_receipt('evt_good', False)
     # Dashboard resend stays terminal even after configuration is repaired.
-    query(database, "INSERT INTO plans VALUES ('pro','price_unknown',true) RETURNING plan_slug")
+    query(database, "INSERT INTO plans (plan_slug,stripe_price_id,is_active) VALUES ('pro','price_unknown',true) RETURNING plan_slug")
     assert billing.process_receipt('evt_bad', False)['state'] == 'quarantined'
     assert billing.process_receipt('evt_bad', False, replay_reason='price mapping corrected')['state'] == 'processed'
     billing.store_receipt(envelope('evt_held_old', 100, reason='period_shape_unsupported'))
@@ -95,16 +112,17 @@ def test_quarantined_event_does_not_advance_cursor_and_replay_uses_guard(databas
 
 def test_account_failure_rolls_back_but_receipt_survives(database, monkeypatch):
     billing.store_receipt(envelope())
-    original = billing.update_account_billing_state
+    from api.services import billing_reconcile
+    original = billing_reconcile.update_account_billing_state
     def fail(*args, **kwargs):
         raise RuntimeError('simulated crash after plan update')
-    monkeypatch.setattr(billing, 'update_account_billing_state', fail)
+    monkeypatch.setattr(billing_reconcile, 'update_account_billing_state', fail)
     with pytest.raises(RuntimeError):
         billing.process_receipt('evt_one', False)
     assert query(database, 'SELECT plan_slug FROM accounts') == [('free',)]
     assert query(database, 'SELECT state FROM billing_webhook_events') == [('pending',)]
     assert query(database, 'SELECT created FROM billing_subscription_cursors') == []
-    monkeypatch.setattr(billing, 'update_account_billing_state', original)
+    monkeypatch.setattr(billing_reconcile, 'update_account_billing_state', original)
     assert billing.process_receipt('evt_one', False)['state'] == 'processed'
 
 
@@ -130,7 +148,7 @@ def test_concurrent_first_events_serialize_cursor_creation(database):
 
 def test_missing_period_keeps_paid_plan_and_dry_run_is_read_only(database):
     query(database, "UPDATE accounts SET plan_slug='pro' RETURNING id")
-    billing.store_receipt(envelope(event_type='customer.subscription.deleted'))
+    billing.store_receipt(envelope(event_type='customer.subscription.deleted', status='canceled'))
     assert billing.process_receipt('evt_one', False)['reason'] == 'period_shape_unsupported'
     before = query(database, 'SELECT envelope,state,attempts,replayed_at FROM billing_webhook_events')
     billing.inspect_replay('evt_one', False)

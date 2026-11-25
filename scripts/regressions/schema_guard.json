@@ -2,8 +2,8 @@
   {
     "name": "G1 a new migration lands and the required one is not moved",
     "file": "apps/api/src/api/schema_guard.py",
-    "old": "REQUIRED_MIGRATION = \"0070_billing_webhook_events.sql\"",
-    "new": "REQUIRED_MIGRATION = \"0069_ops_alerts.sql\"",
+    "old": "REQUIRED_MIGRATION = \"0071_effective_account_plan.sql\"",
+    "new": "REQUIRED_MIGRATION = \"0070_billing_webhook_events.sql\"",
     "test": "tests/test_schema_guard.py"
   },
   {

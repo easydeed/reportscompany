@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Customer mismatch is trusted",
+    "file": "apps/api/src/api/services/billing_reconcile.py",
+    "old": "if not binding[0] or binding[0] != e['customer_id']:",
+    "new": "if False:",
+    "test": "apps/api/tests/test_billing_reconciliation.py::test_customer_mismatch_never_calls_stripe_or_changes_account"
+  },
+  {
+    "name": "Incomplete provider inventory is trusted",
+    "file": "apps/api/src/api/services/billing_provider.py",
+    "old": "if inventory.get('has_more') is not False or not isinstance(inventory.get('data'), list):",
+    "new": "if not isinstance(inventory.get('data'), list):",
+    "test": "apps/api/tests/test_billing_reconciliation.py::test_ambiguous_inventory_is_reviewed_without_mutation"
+  },
+  {
+    "name": "Advisory serialization is removed",
+    "file": "apps/api/src/api/services/billing_lock.py",
+    "old": "cur.execute(\"SELECT pg_advisory_xact_lock(hashtextextended('billing_account:' || %s::text, 0))\",\n                (str(account_id),))",
+    "new": "pass",
+    "test": "apps/api/tests/test_billing_reconciliation.py::test_slow_provider_does_not_hold_account_row_and_serializes_other_receipts"
+  },
+  {
+    "name": "Provider retries re-enabled",
+    "file": "apps/api/src/api/services/billing_provider.py",
+    "old": "max_network_retries=0, http_client=transport",
+    "new": "max_network_retries=2, http_client=transport",
+    "test": "apps/api/tests/test_billing_provider.py::test_provider_timeout_cancels_and_closes_before_return"
+  },
+  {
+    "name": "Webhook runs synchronously on event loop again",
+    "file": "apps/api/src/api/routes/stripe_webhook.py",
+    "old": "await run_in_threadpool(_store_and_process, envelope)",
+    "new": "_store_and_process(envelope)",
+    "test": "apps/api/tests/test_stripe_webhook_receipts.py::test_slow_processing_does_not_block_the_api_event_loop"
+  },
+  {
+    "name": "Shared database boundary excludes equality",
+    "file": "db/migrations/0071_effective_account_plan.sql",
+    "old": "deadline <= now()",
+    "new": "deadline < now()",
+    "test": "apps/api/tests/test_billing_reconciliation.py::test_admin_billing_gate_and_shared_clock_projection"
+  }
+]

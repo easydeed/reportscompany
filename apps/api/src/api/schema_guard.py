@@ -32,7 +32,7 @@ import logging
 import os
 import sys
 
-REQUIRED_MIGRATION = "0070_billing_webhook_events.sql"
+REQUIRED_MIGRATION = "0071_effective_account_plan.sql"
 
 logger = logging.getLogger("schema_guard")
 
