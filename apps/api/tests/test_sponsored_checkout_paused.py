@@ -81,6 +81,9 @@ def stripe(monkeypatch):
             create=lambda **kw: calls.append(("Session.create", kw)) or SimpleNamespace(url="https://checkout.test/s"))),
     )
     monkeypatch.setattr(billing, "stripe", fake)
+    monkeypatch.setattr(billing, "create_customer", lambda email, aid, name:
+        calls.append(("Customer.create", {"email": email, "metadata": {"account_id": aid,
+            "account_name": name}})) or "cus_test")
     monkeypatch.setattr(billing, "validate_stripe_config", lambda: (True, []))
     monkeypatch.setattr(billing, "get_plan_by_slug",
                         lambda cur, slug: {"plan_slug": slug, "plan_name": "Growth", "stripe_price_id": "price_test"})

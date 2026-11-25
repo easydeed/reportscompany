@@ -83,3 +83,21 @@ def test_sdk_transport_is_wired_to_bounded_dns_with_tls_verification():
             assert not transport._client_async._trust_env
         finally: await transport.close_async()
     asyncio.run(run())
+
+
+def test_customer_create_uses_stable_account_key_and_closes_transport(monkeypatch):
+    calls={}
+    class Transport:
+        def __init__(self,**kw): pass
+        async def close_async(self): calls['closed']=True
+    async def configure(transport): pass
+    async def create(params,options):
+        calls.update(params=params,options=options)
+        return {'id':'cus_fixture'}
+    monkeypatch.setattr(provider,'configure',configure)
+    monkeypatch.setattr(provider.stripe,'HTTPXClient',Transport)
+    monkeypatch.setattr(provider.stripe,'StripeClient',lambda *a,**k:
+        SimpleNamespace(customers=SimpleNamespace(create_async=create)))
+    assert provider.create_customer('fixture@example.com','account-fixture','Fixture')=='cus_fixture'
+    assert calls['options']=={'idempotency_key':'billing-customer:account-fixture'}
+    assert calls['closed']
