@@ -30,7 +30,7 @@
  {
   "name": "LR-027 tracked refusals missed (send_outcomes ignored)",
   "file": "apps/worker/src/worker/ops_signals.py",
-  "old": "              AND send_outcomes @> '[{\"outcome\": \"rejected\"}]'",
+  "old": "              AND send_outcomes @> '[{{\"outcome\": \"rejected\"}}]'",
   "new": "              AND FALSE",
   "test": "apps/worker/tests/test_ops_monitor.py::test_refusals_count_only_what_sendgrid_refused"
  },
@@ -128,8 +128,8 @@
  {
   "name": "Codex #323: the run filter stops telling a refusal from an all-suppressed finish (status ignored, any 'nothing sent' text)",
   "file": "apps/worker/src/worker/ops_signals.py",
-  "old": "            WHERE recovery_tracked AND status = 'failed'\n              AND finished_at > now() - interval '1 hour'\n              AND (error LIKE 'failed\\\\_email: nothing sent (%%'",
-  "new": "            WHERE recovery_tracked\n              AND finished_at > now() - interval '1 hour'\n              AND (error LIKE '%%nothing sent%%'",
+  "old": "            WHERE recovery_tracked AND status = 'failed'\n              AND finished_at > {_AT} - interval '1 hour' AND {_upto('finished_at')}\n              AND (error LIKE 'failed\\\\_email: nothing sent (%%'",
+  "new": "            WHERE recovery_tracked\n              AND finished_at > {_AT} - interval '1 hour' AND {_upto('finished_at')}\n              AND (error LIKE '%%nothing sent%%'",
   "test": "apps/worker/tests/test_ops_monitor.py::test_tracked_pre_claim_refusals_reach_send_not_attempted"
  },
  {
